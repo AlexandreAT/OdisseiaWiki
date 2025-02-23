@@ -1,0 +1,51 @@
+@import url('https://fonts.cdnfonts.com/css/cyberpunk-is-not-dead');
+@import url('https://fonts.googleapis.com/css2?family=Comfortaa&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito&display=swap');
+@import url('https://fonts.cdnfonts.com/css/do-futuristic');
+
+:root {
+  /*-----------------------------------*/
+  --clearneonBlue: #4deeea;
+  --neonBlue: #00b8ff;
+  --deepneonBlue: #4700ff;
+  --clearneonPink: #ff00b8;
+  --neonPink: #c610ae;
+  --deepneonPink: #B71DDE;
+
+  --clearneonGreen: #00ff47;
+  --neonGreen: #04e762;
+  --deepneonGreen: #098200;
+  --clearneonRed: #ff4700;
+  --neonRed: #D22730;
+  --deepneonRed: #860f0f;
+
+  --clearneonYellow: #e5ec1a;
+  --neonYellow: #FFDE00;
+  --deepneonYellow: #deb00a;
+  --clearneonViolet: #9400d3;
+  --neonViolet: #663399;
+  --deepneonViolet: #4b0082;
+
+  --neonOrange: #FFAD00;
+  /*-----------------------------------*/
+
+  /*-----------------------------------*/
+  --whitesmoke: rgb(229, 229, 229);
+  --lightGrey: rgb(189, 189, 189);
+  --grey: rgb(106, 106, 106);
+  --mediumgrey: rgb(80, 80, 80);
+  --deepgray: #2C2C2C;
+  --clearblack: rgba(35, 35, 35, 0.8);
+  --lightBlack: rgb(30, 30, 30);
+  --black: rgb(23, 23, 23);
+  --black-blue: rgb(20, 20, 25);
+  /*-----------------------------------*/
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Lato', sans-serif;
+  color: var(--whitesmoke);
+}

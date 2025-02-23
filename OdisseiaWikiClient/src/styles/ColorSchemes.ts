@@ -1,0 +1,50 @@
+export const colorSchemes = {
+    bluePink: {
+        primary: '--neonBlue',
+        primaryClear: '--clearneonBlue',
+        primaryDeep: '--deepneonBlue',
+        secondary: '--neonPink',
+        secondaryClear: '--clearneonPink',
+        secondaryDeep: '--deepneonPink',
+    },
+    pinkBlue: {
+        primary: '--neonPink',
+        primaryClear: '--clearneonPink',
+        primaryDeep: '--deepneonPink',
+        secondary: '--neonBlue',
+        secondaryClear: '--clearneonBlue',
+        secondaryDeep: '--deepneonBlue',
+    },
+    greenRed: {
+        primary: '--neonGreen',
+        primaryClear: '--clearneonGreen',
+        primaryDeep: '--deepneonGreen',
+        secondary: '--neonRed',
+        secondaryClear: '--clearneonRed',
+        secondaryDeep: '--deepneonRed',
+    },
+    redGreen: {
+        primary: '--neonRed',
+        primaryClear: '--clearneonRed',
+        primaryDeep: '--deepneonRed',
+        secondary: '--neonGreen',
+        secondaryClear: '--clearneonGreen',
+        secondaryDeep: '--deepneonGreen',
+    },
+    yellowViolet: {
+        primary: '--neonYellow',
+        primaryClear: '--clearneonYellow',
+        primaryDeep: '--deepneonYellow',
+        secondary: '--neonViolet',
+        secondaryClear: '--clearneonViolet',
+        secondaryDeep: '--deepneonViolet',
+    },
+    violetYellow: {
+        primary: '--neonViolet',
+        primaryClear: '--clearneonViolet',
+        primaryDeep: '--deepneonViolet',
+        secondary: '--neonYellow',
+        secondaryClear: '--clearneonYellow',
+        secondaryDeep: '--deepneonYellow',
+    }
+};
