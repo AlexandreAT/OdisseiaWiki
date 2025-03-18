@@ -2,37 +2,73 @@
     "characters": [
       {
         "name": "Sute",
-        "imageSrc": "/assets/Token Sute.png",
+        "imageSrc": "src/assets/Token Sute.png",
         "description": "Lorem ipsum dolor sit amet, consectetur adipisicing elit. Nemo explicabo necessitatibus cum totam! Sunt iusto, molestias modi sequi, voluptate ad, corporis voluptas neque vel doloremque quidem labore dicta officia ducimus!",
         "link": "/"
       },
       {
         "name": "Gunther",
-        "imageSrc": "/assets/Token Azura.png",
+        "imageSrc": "src/assets/Token Azura.png",
         "description": "Lorem ipsum dolor sit amet, consectetur adipisicing elit. Nemo explicabo necessitatibus cum totam! Sunt iusto, molestias modi sequi, voluptate ad, corporis voluptas neque vel doloremque quidem labore dicta officia ducimus!",
         "link": "/"
       },
       {
-        "name": "a",
-        "imageSrc": "/assets/Token Sute.png",
+        "name": "Gunther",
+        "imageSrc": "src/assets/Token Gunther.png",
         "description": "Lorem ipsum dolor sit amet, consectetur adipisicing elit. Nemo explicabo necessitatibus cum totam! Sunt iusto, molestias modi sequi, voluptate ad, corporis voluptas neque vel doloremque quidem labore dicta officia ducimus!",
         "link": "/"
       },
       {
-        "name": "b",
-        "imageSrc": "/assets/Token Azura.png",
+        "name": "Laraki",
+        "imageSrc": "src/assets/Token Laraki.png",
         "description": "Lorem ipsum dolor sit amet, consectetur adipisicing elit. Nemo explicabo necessitatibus cum totam! Sunt iusto, molestias modi sequi, voluptate ad, corporis voluptas neque vel doloremque quidem labore dicta officia ducimus!",
         "link": "/"
       },
       {
-        "name": "c",
-        "imageSrc": "/assets/Token Sute.png",
+        "name": "Tigre",
+        "imageSrc": "src/assets/Token Tigre.png",
         "description": "Lorem ipsum dolor sit amet, consectetur adipisicing elit. Nemo explicabo necessitatibus cum totam! Sunt iusto, molestias modi sequi, voluptate ad, corporis voluptas neque vel doloremque quidem labore dicta officia ducimus!",
         "link": "/"
       },
       {
-        "name": "d",
-        "imageSrc": "/assets/Token Azura.png",
+        "name": "Faevh",
+        "imageSrc": "src/assets/Token Faevh.png",
+        "description": "Lorem ipsum dolor sit amet, consectetur adipisicing elit. Nemo explicabo necessitatibus cum totam! Sunt iusto, molestias modi sequi, voluptate ad, corporis voluptas neque vel doloremque quidem labore dicta officia ducimus!",
+        "link": "/"
+      },
+      {
+        "name": "Elias",
+        "imageSrc": "src/assets/Token Elias Thorn.png",
+        "description": "Lorem ipsum dolor sit amet, consectetur adipisicing elit. Nemo explicabo necessitatibus cum totam! Sunt iusto, molestias modi sequi, voluptate ad, corporis voluptas neque vel doloremque quidem labore dicta officia ducimus!",
+        "link": "/"
+      },
+      {
+        "name": "Boston",
+        "imageSrc": "src/assets/Token Boston.png",
+        "description": "Lorem ipsum dolor sit amet, consectetur adipisicing elit. Nemo explicabo necessitatibus cum totam! Sunt iusto, molestias modi sequi, voluptate ad, corporis voluptas neque vel doloremque quidem labore dicta officia ducimus!",
+        "link": "/"
+      },
+      {
+        "name": "Brognar",
+        "imageSrc": "src/assets/Token Brognar.png",
+        "description": "Lorem ipsum dolor sit amet, consectetur adipisicing elit. Nemo explicabo necessitatibus cum totam! Sunt iusto, molestias modi sequi, voluptate ad, corporis voluptas neque vel doloremque quidem labore dicta officia ducimus!",
+        "link": "/"
+      },
+      {
+        "name": "Trixi",
+        "imageSrc": "src/assets/Token Trixi.png",
+        "description": "Lorem ipsum dolor sit amet, consectetur adipisicing elit. Nemo explicabo necessitatibus cum totam! Sunt iusto, molestias modi sequi, voluptate ad, corporis voluptas neque vel doloremque quidem labore dicta officia ducimus!",
+        "link": "/"
+      },
+      {
+        "name": "Mark",
+        "imageSrc": "src/assets/Token Mark 1.png",
+        "description": "Lorem ipsum dolor sit amet, consectetur adipisicing elit. Nemo explicabo necessitatibus cum totam! Sunt iusto, molestias modi sequi, voluptate ad, corporis voluptas neque vel doloremque quidem labore dicta officia ducimus!",
+        "link": "/"
+      },
+      {
+        "name": "Elijha",
+        "imageSrc": "src/assets/Token Elijha.png",
         "description": "Lorem ipsum dolor sit amet, consectetur adipisicing elit. Nemo explicabo necessitatibus cum totam! Sunt iusto, molestias modi sequi, voluptate ad, corporis voluptas neque vel doloremque quidem labore dicta officia ducimus!",
         "link": "/"
       }
@@ -40,37 +76,37 @@
     "cities": [
       {
         "name": "Loryzon",
-        "imageSrc": "/assets/Cidade Loryzon.png",
+        "imageSrc": "src/assets/Cidade Loryzon.png",
         "description": "Lorem ipsum dolor sit amet, consectetur adipisicing elit. Nemo explicabo necessitatibus cum totam! Sunt iusto, molestias modi sequi, voluptate ad, corporis voluptas neque vel doloremque quidem labore dicta officia ducimus!",
         "link": "/"
       },
       {
         "name": "Ravena",
-        "imageSrc": "/assets/Cidade Ravena.png",
+        "imageSrc": "src/assets/Cidade Ravena.png",
         "description": "Lorem ipsum dolor sit amet, consectetur adipisicing elit. Nemo explicabo necessitatibus cum totam! Sunt iusto, molestias modi sequi, voluptate ad, corporis voluptas neque vel doloremque quidem labore dicta officia ducimus!",
         "link": "/"
       },
       {
-        "name": "u",
-        "imageSrc": "/assets/Cidade Loryzon.png",
+        "name": "Alurën",
+        "imageSrc": "src/assets/Cidade Alurën.png",
         "description": "Lorem ipsum dolor sit amet, consectetur adipisicing elit. Nemo explicabo necessitatibus cum totam! Sunt iusto, molestias modi sequi, voluptate ad, corporis voluptas neque vel doloremque quidem labore dicta officia ducimus!",
         "link": "/"
       },
       {
-        "name": "j",
-        "imageSrc": "/assets/Cidade Ravena.png",
+        "name": "Ironhold Keep",
+        "imageSrc": "src/assets/Cidade Ironhold Keep.png",
         "description": "Lorem ipsum dolor sit amet, consectetur adipisicing elit. Nemo explicabo necessitatibus cum totam! Sunt iusto, molestias modi sequi, voluptate ad, corporis voluptas neque vel doloremque quidem labore dicta officia ducimus!",
         "link": "/"
       },
       {
-        "name": "k",
-        "imageSrc": "/assets/Cidade Ravena.png",
+        "name": "Grimdal",
+        "imageSrc": "src/assets/Cidade Grimdal.png",
         "description": "Lorem ipsum dolor sit amet, consectetur adipisicing elit. Nemo explicabo necessitatibus cum totam! Sunt iusto, molestias modi sequi, voluptate ad, corporis voluptas neque vel doloremque quidem labore dicta officia ducimus!",
         "link": "/"
       },
       {
-        "name": "x",
-        "imageSrc": "/assets/Cidade Ravena.png",
+        "name": "Elysium",
+        "imageSrc": "src/assets/Cidade Elysium.png",
         "description": "Lorem ipsum dolor sit amet, consectetur adipisicing elit. Nemo explicabo necessitatibus cum totam! Sunt iusto, molestias modi sequi, voluptate ad, corporis voluptas neque vel doloremque quidem labore dicta officia ducimus!",
         "link": "/"
       }

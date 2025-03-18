@@ -2,33 +2,26 @@ import { Main } from '../styles/Home.style';
 import InfoBlock from '../components/Generic/InfoBlock/InfoBlock';
 import Banner from '../components/Banner';
 import InfoCarousel from '../components/Generic/InfoCarousel/InfoCarousel';
+import data from '../Mock/MockData.json';
 
 import BannerCampaing from '../assets/Banner Campanha.png';
 import BannerAbout from '../assets/Banner Sobre.jpg';
-import TokenAzura from '../assets/Token Azura.png';
-import TokenSute from '../assets/Token Sute.png';
-import CityLoryzon from '../assets/Cidade Loryzon.png';
-import CityRavena from '../assets/Cidade Ravena.png';
 
 const Home = () => {
+  const importImage = (path: string) => {
+    return(`..${path}`)
+  };
+  
+  const characters = data.characters.map(char => ({
+    ...char,
+    imageSrc: importImage(char.imageSrc),
+  }));
 
-  const characters = [
-    { name: 'Sute', imageSrc: TokenSute, description: 'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Nemo explicabo necessitatibus cum totam! Sunt iusto, molestias modi sequi, voluptate ad, corporis voluptas neque vel doloremque quidem labore dicta officia ducimus!', link: '/'},
-    { name: 'Gunther', imageSrc: TokenAzura, description: 'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Nemo explicabo necessitatibus cum totam! Sunt iusto, molestias modi sequi, voluptate ad, corporis voluptas neque vel doloremque quidem labore dicta officia ducimus!', link: '/'},
-    { name: 'a', imageSrc: TokenSute, description: 'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Nemo explicabo necessitatibus cum totam! Sunt iusto, molestias modi sequi, voluptate ad, corporis voluptas neque vel doloremque quidem labore dicta officia ducimus!', link: '/'},
-    { name: 'b', imageSrc: TokenAzura, description: 'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Nemo explicabo necessitatibus cum totam! Sunt iusto, molestias modi sequi, voluptate ad, corporis voluptas neque vel doloremque quidem labore dicta officia ducimus!', link: '/'},
-    { name: 'c', imageSrc: TokenSute, description: 'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Nemo explicabo necessitatibus cum totam! Sunt iusto, molestias modi sequi, voluptate ad, corporis voluptas neque vel doloremque quidem labore dicta officia ducimus!', link: '/'},
-    { name: 'd', imageSrc: TokenAzura, description: 'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Nemo explicabo necessitatibus cum totam! Sunt iusto, molestias modi sequi, voluptate ad, corporis voluptas neque vel doloremque quidem labore dicta officia ducimus!', link: '/'},
-  ];
+  const cities = data.cities.map(city => ({
+    ...city,
+    imageSrc: importImage(city.imageSrc),
+  }));
 
-  const cities = [
-    { name: 'Loryzon', imageSrc: CityLoryzon, description: 'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Nemo explicabo necessitatibus cum totam! Sunt iusto, molestias modi sequi, voluptate ad, corporis voluptas neque vel doloremque quidem labore dicta officia ducimus!', link: '/'},
-    { name: 'Ravena', imageSrc: CityRavena, description: 'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Nemo explicabo necessitatibus cum totam! Sunt iusto, molestias modi sequi, voluptate ad, corporis voluptas neque vel doloremque quidem labore dicta officia ducimus!', link: '/'},
-    { name: 'u', imageSrc: CityLoryzon, description: 'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Nemo explicabo necessitatibus cum totam! Sunt iusto, molestias modi sequi, voluptate ad, corporis voluptas neque vel doloremque quidem labore dicta officia ducimus!', link: '/'},
-    { name: 'j', imageSrc: CityRavena, description: 'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Nemo explicabo necessitatibus cum totam! Sunt iusto, molestias modi sequi, voluptate ad, corporis voluptas neque vel doloremque quidem labore dicta officia ducimus!', link: '/'},
-    { name: 'k', imageSrc: CityRavena, description: 'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Nemo explicabo necessitatibus cum totam! Sunt iusto, molestias modi sequi, voluptate ad, corporis voluptas neque vel doloremque quidem labore dicta officia ducimus!', link: '/'},
-    { name: 'x', imageSrc: CityRavena, description: 'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Nemo explicabo necessitatibus cum totam! Sunt iusto, molestias modi sequi, voluptate ad, corporis voluptas neque vel doloremque quidem labore dicta officia ducimus!', link: '/'},
-  ];
 
   return (
     <Main>
@@ -67,8 +60,8 @@ const Home = () => {
         subtitleBottom='Cidades'
         imageStyleTop='circle'
         imageStyleBottom='rectangle'
-        listTop={characters}
-        listBottom={cities}
+        listTop={data.characters}
+        listBottom={data.cities}
         colorScheme='bluePink'
       />
       <InfoCarousel
@@ -79,8 +72,8 @@ const Home = () => {
         subtitleBottom='Cidades'
         imageStyleTop='circle'
         imageStyleBottom='rectangle'
-        listTop={characters}
-        listBottom={cities}
+        listTop={data.characters}
+        listBottom={data.cities}
         colorScheme='greenRed'
       />
       <InfoCarousel
@@ -91,8 +84,8 @@ const Home = () => {
         subtitleBottom='Cidades'
         imageStyleTop='circle'
         imageStyleBottom='rectangle'
-        listTop={characters}
-        listBottom={cities}
+        listTop={data.characters}
+        listBottom={data.cities}
         colorScheme='violetYellow'
       />
     </Main>
