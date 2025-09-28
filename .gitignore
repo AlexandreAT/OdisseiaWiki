@@ -1,1 +1,7 @@
 .vs/
+
+# Ignorar wwwroot da pasta OdisseiaWiki
+OdisseiaWiki/wwwroot/
+
+# Ignorar secrets da pasta OdisseiaWikiClient
+OdisseiaWikiClient/src/secrets/

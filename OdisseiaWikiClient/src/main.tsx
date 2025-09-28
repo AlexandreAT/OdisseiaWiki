@@ -4,15 +4,16 @@ import App from './App.tsx'
 import './index.css'
 
 // Importações
-import { createBrowserRouter, RouterProvider } from 'react-router-dom'
-import { Provider } from 'react-redux'
-import store from './redux/store.ts'
-import ErrorPage from './routes/ErrorPage.tsx'
-import Home from './routes/Home.tsx'
-import Login from './routes/Login.tsx'
-import Register from './routes/Register.tsx'
-import Wiki from './routes/Wiki.tsx'
-import CharacterWiki from './routes/CharacterWiki.tsx'
+import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { Provider } from 'react-redux';
+import store from './redux/store.ts';
+import ErrorPage from './routes/Error/ErrorPage.tsx';
+import Home from './routes/Home/Home.tsx';
+import Login from './routes/Login/Login.tsx';
+import Wiki from './routes/Wiki/Wiki.tsx';
+import { GoogleOAuthProvider } from '@react-oauth/google';
+import { Management } from './routes/Management/Management.tsx';
+import { Hub } from './routes/Hub/Hub.tsx';
 
 const router = createBrowserRouter([{
   path: '/',
@@ -28,24 +29,26 @@ const router = createBrowserRouter([{
       element: <Login />
     },
     {
-      path: 'register',
-      element: <Register />
-    },
-    {
       path: 'wiki',
       element: <Wiki />
     },
     {
-      path: 'characters',
-      element: <CharacterWiki />
+      path: 'management',
+      element: <Management />
+    },
+    {
+      path: 'hub',
+      element: <Hub />
     }
   ]
 }])
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <Provider store = {store}>
-      <RouterProvider router={router} />
-    </Provider>
+    <GoogleOAuthProvider clientId="1000361239674-p29f1mb5mdardrmucofq5m2r0v340nu2.apps.googleusercontent.com">
+      <Provider store = {store}>
+        <RouterProvider router={router} />
+      </Provider>
+    </GoogleOAuthProvider>
   </React.StrictMode>,
 )

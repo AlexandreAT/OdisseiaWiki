@@ -1,14 +1,14 @@
 import React from 'react'
-import { colorSchemes } from '../../../styles/ColorSchemes';
+import { colorCardsSchemes } from '../../../Global Styles/ColorCardsSchemes';
 import { useSelector } from 'react-redux'
 
 interface Props {
-  colorScheme: keyof typeof colorSchemes;
+  colorScheme: keyof typeof colorCardsSchemes;
 }
 
 const ListCharacters:React.FC<Props> = ({ colorScheme }) => {
 
-  const scheme = colorSchemes[colorScheme];
+  const scheme = colorCardsSchemes[colorScheme];
   const { theme, neon } = useSelector((state: any) => state.themesReducer);
   return (
     <div>
