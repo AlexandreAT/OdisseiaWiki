@@ -25,7 +25,7 @@ namespace OdisseiaWiki
 
             builder.Services.AddScoped<ITokenService, TokenService>();
 
-            // Registrar o repositório
+            // Registrando o repositório
             builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
             builder.Services.AddScoped<IPersonagemRepository, PersonagemRepository>();
             builder.Services.AddScoped<IPersonagemJogadorRepository, PersonagemJogadorRepository>();
@@ -34,7 +34,7 @@ namespace OdisseiaWiki
             builder.Services.AddScoped<IItemRepository, ItemRepository>();
             builder.Services.AddScoped<IMesaRepository, MesaRepository>();
 
-            // Registrar o serviço
+            // Registrando o serviço
             builder.Services.AddScoped<IUsuarioService, UsuarioService>();
             builder.Services.AddScoped<IAssetService, AssetService>();
             builder.Services.AddScoped<IPersonagemService, PersonagemService>();
