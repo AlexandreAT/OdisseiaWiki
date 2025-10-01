@@ -11,7 +11,7 @@ export const Main = styled.div`
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    width: 100%;
+    max-width: 1300px;
     height: 100%;
     gap: 30px;
     margin-bottom: 20px;
@@ -50,7 +50,7 @@ export const Title = styled.h2<Props>`
 `
 
 export const ListController = styled.div`
-  width: 90%;
+  width: 100%;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -152,12 +152,16 @@ export const StyledIconButton = styled(IconButton)<Props>`
 `;
 
 export const CharacterCard = styled.button`
+  width: 250px;
+  height: 300px;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  width: 100px;
+  gap: 5px;
   border: none;
   background: none;
+  border-radius: 6px;
+  padding: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
 
@@ -165,7 +169,30 @@ export const CharacterCard = styled.button`
     transform: scale(1.05);
     transition: all 0.3s ease;
   }
+
+  background-color: var(--clearblack);
 `;
+
+export const CardRight = styled.div`
+  height: 100%;
+  width: 60%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  padding: 5px;
+`
+
+export const CardLeft = styled.div`
+  height: 100%;
+  width: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 15px;
+  padding: 10px 0;
+`
 
 export const CharacterImage = styled.img<Props>`
   width: 110px;
@@ -187,10 +214,34 @@ export const CharacterImage = styled.img<Props>`
   }
 `;
 
+export const CharacterInfos = styled.div`
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  gap: 8px;
+`
+
+export const CharacterLabel = styled.p`
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: bold;
+  text-shadow: 1px 1px 3px black;
+  word-wrap: break-word;
+  max-width: 100%;
+`
+
 export const CharacterName = styled.span`
   margin-top: 5px;
   text-align: center;
   font-size: 0.9rem;
   color: white;
   font-weight: bold;
+  font-family: 'DO Futuristic', sans-serif;
+  letter-spacing: 2px;
+  text-shadow: 1px 1px 3px black;
+  word-wrap: break-word;
+  max-width: 100%;
 `;

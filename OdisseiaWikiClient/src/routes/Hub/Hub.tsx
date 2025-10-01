@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { useSelector } from 'react-redux';
 import { useState } from 'react';
 import { ContentController, MainContainer, Content, ClipButton, ButtonSpan, Header, Title, ClipButtonAnimated } from './Hub.style';
@@ -13,7 +13,10 @@ export const Hub = () => {
     const [selected, setSelected] = useState<'mesas' | 'personagens' | ''>('');
     const [isCollapsed, setIsCollapsed] = useState(false);
 
-    // Exemplo do usuário logado
+    useEffect(() => {
+
+    }, [])
+
     const usuarioLogado = {
         id: 1,
         email: "alexandre.arribamar@gmail.com",
