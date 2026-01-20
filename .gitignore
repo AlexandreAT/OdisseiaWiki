@@ -1,7 +1,32 @@
+# .NET
+bin/
+obj/
+*.dll
+*.exe
+*.pdb
+
+# NuGet
+project.assets.json
+project.nuget.cache
+*.nuget.dgspec.json
+*.nuget.g.props
+*.nuget.g.targets
+
+# Assembly cache
+*.AssemblyInfo.cs
+*.AssemblyInfoInputs.cache
+*.assets.cache
+*.AssemblyReference.cache
+
+# Visual Studio
 .vs/
+*.user
+*.suo
 
-# Ignorar wwwroot da pasta OdisseiaWiki
-OdisseiaWiki/wwwroot/
+# Frontend
+node_modules/
+.vite/
+dist/
 
-# Ignorar secrets da pasta OdisseiaWikiClient
-OdisseiaWikiClient/src/secrets/
+# Env
+.env

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
-import { ADMIN_EMAIL } from '../../../../secrets/adminEmail';
 import { PerfilDropdown, PerfilOption, PerfilButton } from './PerfilList.style';
+
+const adminEmail = import.meta.env.VITE_ADMIN_EMAIL;
 
 interface Props {
     usuario: {
@@ -42,7 +43,7 @@ export const PerfilList = ({ usuario, onClose, avatarRef, theme }: Props) => {
         <PerfilDropdown ref={dropdownRef} themeMode={theme}>
             <PerfilOption to="/profile" themeMode={theme}>Perfil</PerfilOption>
             <PerfilOption to="/hub" themeMode={theme}>Mesas e personagens</PerfilOption>
-            {usuario.email === ADMIN_EMAIL && (
+            {usuario.email === adminEmail && (
                 <PerfilOption to="/management" themeMode={theme}>Gerenciamento</PerfilOption>
             )}
             <PerfilButton onClick={handleLogout} themeMode={theme}>Sair</PerfilButton>
