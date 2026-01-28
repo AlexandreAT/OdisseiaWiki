@@ -64,7 +64,7 @@ namespace OdisseiaWiki.Services
                 AtributosJson = dto.AtributosJson,
                 IditemBase = dto.IditemBase,
                 Idpersonagem = dto.Idpersonagem,
-                DataCriacao = DateOnly.FromDateTime(DateTime.UtcNow)
+                DataCriacao = DateTime.UtcNow
             };
 
             await _repository.AddAsync(item);

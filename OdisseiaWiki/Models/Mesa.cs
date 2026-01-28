@@ -19,8 +19,7 @@ public partial class Mesa
     [MaxLength(255, ErrorMessage = "O caminho da imagem deve ter no máximo 255 caracteres.")]
     public string? Imagem { get; set; }
 
-    [Column(TypeName = "date")]
-    public DateOnly DataCriacao { get; set; }
+    public DateTime DataCriacao { get; set; } = DateTime.UtcNow;
 
     public virtual Usuario? IdusuarioCriacaoNavigation { get; set; }
 

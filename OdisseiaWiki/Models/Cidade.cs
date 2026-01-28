@@ -21,8 +21,7 @@ public partial class Cidade
 
     public string? GaleriaImagem { get; set; }
 
-    [Column(TypeName = "date")]
-    public DateOnly DataCriacao { get; set; }
+    public DateTime DataCriacao { get; set; } = DateTime.UtcNow;
 
     public virtual ICollection<Personagen> Personagens { get; set; } = new List<Personagen>();
 }

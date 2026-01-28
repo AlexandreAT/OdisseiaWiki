@@ -37,7 +37,7 @@ namespace OdisseiaWiki.Services
                 Alinhamento = dto.Alinhamento,
                 Tracos = dto.Tracos != null ? JsonSerializer.Serialize(dto.Tracos) : null,
                 Nanites = dto.Nanites?.ToString(),
-                DataCriacao = DateOnly.FromDateTime(DateTime.UtcNow)
+                DataCriacao = DateTime.UtcNow
             };
 
             var criado = await _repository.CreateAsync(personagem);

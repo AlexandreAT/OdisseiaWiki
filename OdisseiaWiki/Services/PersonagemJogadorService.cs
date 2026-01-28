@@ -55,8 +55,8 @@ namespace OdisseiaWiki.Services
             personagem ??= new PersonagemJogador
             {
                 DataCriacao = personagemDto.DataCriacao != default
-                    ? DateOnly.FromDateTime(personagemDto.DataCriacao)
-                    : DateOnly.FromDateTime(DateTime.UtcNow)
+                    ? personagemDto.DataCriacao
+                    : DateTime.UtcNow
             };
 
             personagem.Nome = personagemDto.Nome ?? personagem.Nome;

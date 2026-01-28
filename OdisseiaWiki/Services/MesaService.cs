@@ -24,7 +24,7 @@ namespace OdisseiaWiki.Services
                 IdusuarioCriacao = dto.IdusuarioCriacao,
                 Nome = dto.Nome,
                 Imagem = dto.Imagem,
-                DataCriacao = DateOnly.FromDateTime(DateTime.UtcNow)
+                DataCriacao = DateTime.UtcNow
             };
 
             var criada = await _repository.CreateAsync(mesa);

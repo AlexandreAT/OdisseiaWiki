@@ -12,8 +12,8 @@ using OdisseiaWiki.Data;
 namespace OdisseiaWiki.Migrations
 {
     [DbContext(typeof(OdisseiaContext))]
-    [Migration("20250919164202_ahhhhSocorro")]
-    partial class ahhhhSocorro
+    [Migration("20260127171056_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -37,9 +37,7 @@ namespace OdisseiaWiki.Migrations
                         .HasColumnType("longtext");
 
                     b.Property<DateTime>("DataCriacao")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("date")
-                        .HasDefaultValueSql("current_timestamp()");
+                        .HasColumnType("datetime");
 
                     b.Property<string>("Descricao")
                         .HasMaxLength(200)
@@ -97,10 +95,8 @@ namespace OdisseiaWiki.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Idcidade"));
 
-                    b.Property<DateOnly>("DataCriacao")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("date")
-                        .HasDefaultValueSql("current_timestamp()");
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("datetime");
 
                     b.Property<string>("Descricao")
                         .HasColumnType("text");
@@ -132,10 +128,8 @@ namespace OdisseiaWiki.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("IdinfoLore"));
 
-                    b.Property<DateOnly>("DataCriacao")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("date")
-                        .HasDefaultValueSql("current_timestamp()");
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("datetime");
 
                     b.Property<string>("Descricao")
                         .HasColumnType("text");
@@ -167,10 +161,8 @@ namespace OdisseiaWiki.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Idmesa"));
 
-                    b.Property<DateOnly>("DataCriacao")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("date")
-                        .HasDefaultValueSql("current_timestamp()");
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("datetime");
 
                     b.Property<int?>("IdusuarioCriacao")
                         .HasColumnType("int(11)")
@@ -250,6 +242,96 @@ namespace OdisseiaWiki.Migrations
                     b.ToTable("mesausuarios", (string)null);
                 });
 
+            modelBuilder.Entity("OdisseiaWiki.Models.PersonagemJogador", b =>
+                {
+                    b.Property<int>("IdpersonagemJogador")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasColumnName("IDPersonagemJogador");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("IdpersonagemJogador"));
+
+                    b.Property<string>("Alinhamento")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("Costumes")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("GaleriaImagem")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Historia")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("Idcidade")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("IDCidade");
+
+                    b.Property<int>("Idmesa")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("IDMesa");
+
+                    b.Property<int>("Idraca")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("IDRaca");
+
+                    b.Property<int>("Idusuario")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("IDUsuario");
+
+                    b.Property<string>("Imagem")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("InfoSecundariasJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("InventarioJson")
+                        .HasColumnType("json");
+
+                    b.Property<string>("Magia")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Nanites")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<string>("PersonagemsVinculados")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Skills")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("StatusJson")
+                        .IsRequired()
+                        .HasColumnType("json");
+
+                    b.Property<string>("Tracos")
+                        .HasColumnType("text");
+
+                    b.HasKey("IdpersonagemJogador")
+                        .HasName("PRIMARY");
+
+                    b.HasIndex(new[] { "Idcidade" }, "ID_cidades");
+
+                    b.HasIndex(new[] { "Idmesa" }, "ID_mesas");
+
+                    b.HasIndex(new[] { "Idraca" }, "ID_racas");
+
+                    b.HasIndex(new[] { "Idusuario" }, "ID_usuarios");
+
+                    b.ToTable("personagensJogador", (string)null);
+                });
+
             modelBuilder.Entity("OdisseiaWiki.Models.Personageminfolore", b =>
                 {
                     b.Property<int>("IdpersonagemInfoLore")
@@ -289,10 +371,8 @@ namespace OdisseiaWiki.Migrations
                     b.Property<string>("Costumes")
                         .HasColumnType("text");
 
-                    b.Property<DateOnly>("DataCriacao")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("date")
-                        .HasDefaultValueSql("current_timestamp()");
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("datetime");
 
                     b.Property<string>("GaleriaImagem")
                         .HasColumnType("longtext");
@@ -309,8 +389,8 @@ namespace OdisseiaWiki.Migrations
                         .HasColumnName("IDRaca");
 
                     b.Property<string>("Imagem")
-                        .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
 
                     b.Property<string>("InventarioJson")
                         .HasColumnType("longtext");
@@ -359,10 +439,8 @@ namespace OdisseiaWiki.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Idraca"));
 
-                    b.Property<DateOnly>("DataCriacao")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("date")
-                        .HasDefaultValueSql("current_timestamp()");
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("datetime");
 
                     b.Property<string>("GaleriaImagem")
                         .HasColumnType("longtext");
@@ -398,10 +476,11 @@ namespace OdisseiaWiki.Migrations
                         .HasMaxLength(15)
                         .HasColumnType("varchar(15)");
 
-                    b.Property<DateOnly>("DataRegistro")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("date")
-                        .HasDefaultValueSql("current_timestamp()");
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("DataRegistro")
+                        .HasColumnType("datetime");
 
                     b.Property<string>("Email")
                         .IsRequired()
@@ -488,6 +567,42 @@ namespace OdisseiaWiki.Migrations
                     b.Navigation("IdusuarioNavigation");
                 });
 
+            modelBuilder.Entity("OdisseiaWiki.Models.PersonagemJogador", b =>
+                {
+                    b.HasOne("OdisseiaWiki.Models.Cidade", "IdcidadeNavigation")
+                        .WithMany()
+                        .HasForeignKey("Idcidade")
+                        .HasConstraintName("FK_PersonagensJogador_Cidade");
+
+                    b.HasOne("OdisseiaWiki.Models.Mesa", "Mesa")
+                        .WithMany("PersonagensJogadores")
+                        .HasForeignKey("Idmesa")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_PersonagensJogador_Mesa");
+
+                    b.HasOne("OdisseiaWiki.Models.Raca", "IdracaNavigation")
+                        .WithMany()
+                        .HasForeignKey("Idraca")
+                        .IsRequired()
+                        .HasConstraintName("FK_PersonagensJogador_Raca");
+
+                    b.HasOne("OdisseiaWiki.Models.Usuario", "Usuario")
+                        .WithMany("PersonagensJogadores")
+                        .HasForeignKey("Idusuario")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_PersonagensJogador_Usuario");
+
+                    b.Navigation("IdcidadeNavigation");
+
+                    b.Navigation("IdracaNavigation");
+
+                    b.Navigation("Mesa");
+
+                    b.Navigation("Usuario");
+                });
+
             modelBuilder.Entity("OdisseiaWiki.Models.Personagen", b =>
                 {
                     b.HasOne("OdisseiaWiki.Models.Cidade", "IdcidadeNavigation")
@@ -516,6 +631,8 @@ namespace OdisseiaWiki.Migrations
                     b.Navigation("Mesaracaconfigs");
 
                     b.Navigation("Mesausuarios");
+
+                    b.Navigation("PersonagensJogadores");
                 });
 
             modelBuilder.Entity("OdisseiaWiki.Models.Raca", b =>
@@ -530,6 +647,8 @@ namespace OdisseiaWiki.Migrations
                     b.Navigation("Mesas");
 
                     b.Navigation("Mesausuarios");
+
+                    b.Navigation("PersonagensJogadores");
                 });
 #pragma warning restore 612, 618
         }

@@ -33,8 +33,7 @@ public partial class Item
     [MaxLength(50)]
     public string? IditemBase { get; set; }
 
-    [Column(TypeName = "date")]
-    public DateOnly DataCriacao { get; set; } = DateOnly.FromDateTime(DateTime.UtcNow);
+    public DateTime DataCriacao { get; set; } = DateTime.UtcNow;
 
     public int? Idpersonagem { get; set; }
     public virtual Personagen? Personagem { get; set; }

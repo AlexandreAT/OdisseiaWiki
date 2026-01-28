@@ -30,7 +30,7 @@ namespace OdisseiaWiki.Services
                 Senha = PasswordHasher.Hash(usuarioDto.Senha),
                 Nickname = usuarioDto.Nickname,
                 ImagemUrl = usuarioDto.ImagemUrl,
-                DataRegistro = DateOnly.FromDateTime(DateTime.UtcNow)
+                DataRegistro = DateTime.UtcNow
             };
 
             Usuario criado = await _repository.CreateAsync(usuario);
@@ -59,7 +59,7 @@ namespace OdisseiaWiki.Services
                     Email = email,
                     Nickname = nickname,
                     ImagemUrl = imagem,
-                    DataRegistro = DateOnly.FromDateTime(DateTime.UtcNow),
+                    DataRegistro = DateTime.UtcNow,
                     Senha = Guid.NewGuid().ToString()
                 };
 

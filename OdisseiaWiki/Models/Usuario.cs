@@ -19,7 +19,9 @@ public partial class Usuario
 
     public string? ImagemUrl { get; set; }
 
-    public DateOnly DataRegistro { get; set; }
+    public DateTime DataRegistro { get; set; }
+
+    public DateTime DataCriacao { get; set; } = DateTime.UtcNow;
 
     public virtual ICollection<PersonagemJogador> PersonagensJogadores { get; set; } = new List<PersonagemJogador>();
 

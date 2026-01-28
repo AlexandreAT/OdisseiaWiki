@@ -22,8 +22,7 @@ public partial class Raca
 
     public string? GaleriaImagem { get; set; }
 
-    [Column(TypeName = "date")]
-    public DateOnly DataCriacao { get; set; }
+    public DateTime DataCriacao { get; set; } = DateTime.UtcNow;
 
     public virtual ICollection<Mesaracaconfig> Mesaracaconfigs { get; set; } = new List<Mesaracaconfig>();
 

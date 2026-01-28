@@ -15,5 +15,5 @@ public partial class Infolore
 
     public int? Ordem { get; set; }
 
-    public DateOnly DataCriacao { get; set; }
+    public DateTime DataCriacao { get; set; } = DateTime.UtcNow;
 }

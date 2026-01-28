@@ -34,9 +34,7 @@ namespace OdisseiaWiki.Migrations
                         .HasColumnType("longtext");
 
                     b.Property<DateTime>("DataCriacao")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("date")
-                        .HasDefaultValueSql("current_timestamp()");
+                        .HasColumnType("datetime");
 
                     b.Property<string>("Descricao")
                         .HasMaxLength(200)
@@ -94,10 +92,8 @@ namespace OdisseiaWiki.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Idcidade"));
 
-                    b.Property<DateOnly>("DataCriacao")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("date")
-                        .HasDefaultValueSql("current_timestamp()");
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("datetime");
 
                     b.Property<string>("Descricao")
                         .HasColumnType("text");
@@ -129,10 +125,8 @@ namespace OdisseiaWiki.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("IdinfoLore"));
 
-                    b.Property<DateOnly>("DataCriacao")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("date")
-                        .HasDefaultValueSql("current_timestamp()");
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("datetime");
 
                     b.Property<string>("Descricao")
                         .HasColumnType("text");
@@ -164,10 +158,8 @@ namespace OdisseiaWiki.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Idmesa"));
 
-                    b.Property<DateOnly>("DataCriacao")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("date")
-                        .HasDefaultValueSql("current_timestamp()");
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("datetime");
 
                     b.Property<int?>("IdusuarioCriacao")
                         .HasColumnType("int(11)")
@@ -263,10 +255,8 @@ namespace OdisseiaWiki.Migrations
                     b.Property<string>("Costumes")
                         .HasColumnType("text");
 
-                    b.Property<DateOnly>("DataCriacao")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("date")
-                        .HasDefaultValueSql("current_timestamp()");
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<string>("GaleriaImagem")
                         .HasColumnType("longtext");
@@ -378,10 +368,8 @@ namespace OdisseiaWiki.Migrations
                     b.Property<string>("Costumes")
                         .HasColumnType("text");
 
-                    b.Property<DateOnly>("DataCriacao")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("date")
-                        .HasDefaultValueSql("current_timestamp()");
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("datetime");
 
                     b.Property<string>("GaleriaImagem")
                         .HasColumnType("longtext");
@@ -448,10 +436,8 @@ namespace OdisseiaWiki.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Idraca"));
 
-                    b.Property<DateOnly>("DataCriacao")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("date")
-                        .HasDefaultValueSql("current_timestamp()");
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("datetime");
 
                     b.Property<string>("GaleriaImagem")
                         .HasColumnType("longtext");
@@ -487,10 +473,11 @@ namespace OdisseiaWiki.Migrations
                         .HasMaxLength(15)
                         .HasColumnType("varchar(15)");
 
-                    b.Property<DateOnly>("DataRegistro")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("date")
-                        .HasDefaultValueSql("current_timestamp()");
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("DataRegistro")
+                        .HasColumnType("datetime");
 
                     b.Property<string>("Email")
                         .IsRequired()

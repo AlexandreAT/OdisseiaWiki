@@ -37,8 +37,7 @@ namespace OdisseiaWiki.Models
         [MaxLength(50)]
         public string? Nanites { get; set; }
 
-        [Column(TypeName = "date")]
-        public DateOnly DataCriacao { get; set; }
+        public DateTime DataCriacao { get; set; } = DateTime.UtcNow;
 
         public virtual Cidade? IdcidadeNavigation { get; set; }
         public virtual Raca IdracaNavigation { get; set; } = null!;

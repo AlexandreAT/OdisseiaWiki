@@ -54,7 +54,7 @@ public partial class OdisseiaContext : DbContext
             entity.Property(e => e.Idcidade)
                 .HasColumnType("int(11)")
                 .HasColumnName("IDCidade");
-            entity.Property(e => e.DataCriacao).HasDefaultValueSql("current_timestamp()");
+            entity.Property(e => e.DataCriacao).HasColumnType("datetime");
             entity.Property(e => e.Descricao).HasColumnType("text");
             entity.Property(e => e.Imagem).HasMaxLength(255);
             entity.Property(e => e.Nome).HasMaxLength(100);
@@ -69,7 +69,7 @@ public partial class OdisseiaContext : DbContext
             entity.Property(e => e.IdinfoLore)
                 .HasColumnType("int(11)")
                 .HasColumnName("IDInfoLore");
-            entity.Property(e => e.DataCriacao).HasDefaultValueSql("current_timestamp()");
+            entity.Property(e => e.DataCriacao).HasColumnType("datetime");
             entity.Property(e => e.Descricao).HasColumnType("text");
             entity.Property(e => e.Imagem).HasMaxLength(255);
             entity.Property(e => e.Ordem).HasColumnType("int(11)");
@@ -87,7 +87,7 @@ public partial class OdisseiaContext : DbContext
             entity.Property(e => e.Idmesa)
                 .HasColumnType("int(11)")
                 .HasColumnName("IDMesa");
-            entity.Property(e => e.DataCriacao).HasDefaultValueSql("current_timestamp()");
+            entity.Property(e => e.DataCriacao).HasColumnType("datetime");
             entity.Property(e => e.IdusuarioCriacao)
                 .HasColumnType("int(11)")
                 .HasColumnName("IDUsuarioCriacao");
@@ -191,7 +191,7 @@ public partial class OdisseiaContext : DbContext
                 .HasColumnName("IDPersonagem");
             entity.Property(e => e.Alinhamento).HasMaxLength(50);
             entity.Property(e => e.Costumes).HasColumnType("text");
-            entity.Property(e => e.DataCriacao).HasDefaultValueSql("current_timestamp()");
+            entity.Property(e => e.DataCriacao).HasColumnType("datetime");
             entity.Property(e => e.Idcidade)
                 .HasColumnType("int(11)")
                 .HasColumnName("IDCidade");
@@ -222,7 +222,7 @@ public partial class OdisseiaContext : DbContext
             entity.Property(e => e.Idraca)
                 .HasColumnType("int(11)")
                 .HasColumnName("IDRaca");
-            entity.Property(e => e.DataCriacao).HasDefaultValueSql("current_timestamp()");
+            entity.Property(e => e.DataCriacao).HasColumnType("datetime");
             entity.Property(e => e.Imagem).HasMaxLength(255);
             entity.Property(e => e.Nome).HasMaxLength(100);
         });
@@ -237,7 +237,7 @@ public partial class OdisseiaContext : DbContext
                 .HasColumnType("int(11)")
                 .HasColumnName("IDUsuario");
             entity.Property(e => e.Celular).HasMaxLength(15);
-            entity.Property(e => e.DataRegistro).HasDefaultValueSql("current_timestamp()");
+            entity.Property(e => e.DataRegistro).HasColumnType("datetime");
             entity.Property(e => e.Email).HasMaxLength(50);
             entity.Property(e => e.ImagemUrl).HasMaxLength(255);
             entity.Property(e => e.Nickname).HasMaxLength(50);
@@ -263,11 +263,7 @@ public partial class OdisseiaContext : DbContext
                 .HasColumnName("Tipo");
 
             entity.Property(e => e.DataCriacao)
-                .HasColumnType("date")
-                .HasConversion(
-                    v => v.ToDateTime(TimeOnly.MinValue),
-                    v => DateOnly.FromDateTime(v))
-                .HasDefaultValueSql("current_timestamp()");
+                .HasColumnType("datetime");
         });
 
         modelBuilder.Entity<PersonagemJogador>(entity =>
@@ -313,9 +309,8 @@ public partial class OdisseiaContext : DbContext
             entity.Property(e => e.StatusJson).HasColumnType("json");
             entity.Property(e => e.InfoSecundariasJson).HasColumnType("text");
 
-            entity.Property(e => e.DataCriacao)
-                .HasDefaultValueSql("current_timestamp()");
-
+            entity.Property(e => e.DataCriacao);
+              
             entity.HasOne(d => d.Mesa).WithMany(p => p.PersonagensJogadores)
                 .HasForeignKey(d => d.Idmesa)
                 .OnDelete(DeleteBehavior.Cascade)

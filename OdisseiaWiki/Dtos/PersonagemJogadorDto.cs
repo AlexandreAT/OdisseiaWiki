@@ -18,5 +18,5 @@
     public object? Magia { get; set; }
     public object? StatusJson { get; set; }
     public List<string>? PersonagemsVinculados { get; set; }
-    public DateTime DataCriacao { get; set; }
+    public DateTime DataCriacao { get; set; } = DateTime.UtcNow;
 }
