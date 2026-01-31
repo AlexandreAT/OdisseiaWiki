@@ -40,7 +40,7 @@ namespace OdisseiaWiki.Controllers
 
         [HttpGet]
         public async Task<IActionResult> GetAll()
-        {
+         {
             List<PersonagemJogador> personagens = await _service.GetAllAsync();
             return Ok(personagens);
         }

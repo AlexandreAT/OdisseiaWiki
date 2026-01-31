@@ -1,4 +1,4 @@
-import { forwardRef } from "react";
+import { forwardRef, memo } from "react";
 import { ContentController, StatusLabel, StatusInputField } from "./StatusInput.style";
 
 type StatusType = "vida" | "estamina" | "mana";
@@ -54,3 +54,5 @@ export const StatusInput = forwardRef<HTMLInputElement, Props>(
     );
   }
 );
+
+StatusInput.displayName = 'StatusInput';

@@ -1,4 +1,4 @@
-import { useState, forwardRef, useEffect } from 'react';
+import { useState, forwardRef, useEffect, memo, useCallback } from 'react';
 import {
   ContentController,
   Label,
@@ -55,6 +55,15 @@ export const Select = forwardRef<HTMLSelectElement, Props>(
       if (value) setFocus(true);
     }, [value]);
 
+    const handleFocus = useCallback((e: React.FocusEvent<HTMLSelectElement>) => {
+      setFocus(true);
+      onFocus?.(e);
+    }, [onFocus]);
+
+    const handleBlur = useCallback(() => {
+      setFocus(!!value);
+    }, [value]);
+
     return (
       <ContentController width={width}>
         <Label width={width} height={height}>
@@ -69,11 +78,8 @@ export const Select = forwardRef<HTMLSelectElement, Props>(
             ref={ref}
             width={width}
             height={height}
-            onFocus={e => {
-              setFocus(true);
-              if (onFocus) onFocus(e);
-            }}
-            onBlur={() => setFocus(!!value)}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
             disabled={disabled}
           >
             <option value="" disabled hidden></option>
@@ -90,3 +96,5 @@ export const Select = forwardRef<HTMLSelectElement, Props>(
     );
   }
 );
+
+Select.displayName = 'Select';

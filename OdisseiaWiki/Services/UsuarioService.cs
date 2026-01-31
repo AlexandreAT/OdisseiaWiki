@@ -39,35 +39,44 @@ namespace OdisseiaWiki.Services
 
         public async Task<ResultLoginUsuario> LoginGoogleAsync(string tokenJwtGoogle)
         {
-            var payload = await GoogleJwtHelper.ValidarTokenAsync(tokenJwtGoogle);
-            if (payload == null)
-                return ResultLoginUsuario.Falha("Token inválido.");
-
-            string? email = payload.Email;
-            string? nome = payload.Name;
-            string? imagem = payload.Picture;
-
-            Usuario? usuario = await _repository.GetByEmailAsync(email);
-            if (usuario == null)
+            try
             {
-                string? baseNick = nome.Split(" ").FirstOrDefault()?.ToLower() ?? "user";
-                string? nickname = await GenerateNicknameUniqueAsync(baseNick);
+                var payload = await GoogleJwtHelper.ValidarTokenAsync(tokenJwtGoogle);
+                if (payload == null)
+                    return ResultLoginUsuario.Falha("Token inválido.");
 
-                usuario = new Usuario
+                string? email = payload.Email;
+                string? nome = payload.Name;
+                string? imagem = payload.Picture;
+
+                Usuario? usuario = await _repository.GetByEmailAsync(payload.Email);
+                if (usuario == null)
                 {
-                    Nome = nome,
-                    Email = email,
-                    Nickname = nickname,
-                    ImagemUrl = imagem,
-                    DataRegistro = DateTime.UtcNow,
-                    Senha = Guid.NewGuid().ToString()
-                };
+                    string? baseNick = nome.Split(" ").FirstOrDefault()?.ToLower() ?? "user";
+                    string? nickname = await GenerateNicknameUniqueAsync(baseNick);
 
-                await _repository.CreateAsync(usuario);
+                    usuario = new Usuario
+                    {
+                        Nome = nome,
+                        Email = email,
+                        Nickname = nickname,
+                        ImagemUrl = imagem,
+                        DataRegistro = DateTime.UtcNow,
+                        Senha = Guid.NewGuid().ToString()
+                    };
+
+                    await _repository.CreateAsync(usuario);
+                }
+
+                string? token = _tokenService.GerarToken(usuario);
+                return ResultLoginUsuario.Ok(token);
             }
-
-            string? token = _tokenService.GerarToken(usuario);
-            return ResultLoginUsuario.Ok(token);
+            catch (Exception ex)
+            {
+                Console.WriteLine("🔥 ERRO NO LOGIN GOOGLE:");
+                Console.WriteLine(ex.ToString());
+                throw;
+            }
         }
 
         private async Task<ResultRegisterUsuario> ValidateRegister(RegisterUsuarioDto usuarioDto)

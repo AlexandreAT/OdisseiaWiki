@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, memo, useCallback } from 'react';
 import {
   ContentController,
   TextAreaLabel,
@@ -25,7 +25,7 @@ interface Props {
   fullWidth?: boolean;
 }
 
-export const TextArea = ({
+const TextAreaComponent = ({
   theme,
   neon,
   label,
@@ -45,6 +45,16 @@ export const TextArea = ({
   const [focus, setFocus] = useState(false);
   const [atTop, setAtTop] = useState(true);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
+  console.log('🟠 [TextArea] RENDER - value length:', value?.length ?? 0);
+  
+  const handleFocus = useCallback((e: React.FocusEvent<HTMLTextAreaElement>) => {
+    setFocus(true);
+    onFocus?.(e);
+  }, [onFocus]);
+
+  const handleBlur = useCallback(() => {
+    setFocus(false);
+  }, []);
 
   const handleScroll = () => {
     if (!textAreaRef.current) return;
@@ -60,11 +70,8 @@ export const TextArea = ({
           neon={neon}
           value={value}
           onChange={onChange}
-          onFocus={e => {
-            setFocus(true);
-            if (onFocus) onFocus(e);
-          }}
-          onBlur={() => setFocus(false)}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
           onScroll={handleScroll}
           error={error}
           required={required}
@@ -85,3 +92,5 @@ export const TextArea = ({
     </ContentController>
   );
 };
+
+export const TextArea = memo(TextAreaComponent);

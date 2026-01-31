@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, memo, useCallback, useMemo } from "react";
 import MUIDataTable from "mui-datatables";
 import { TextField, IconButton } from "@mui/material";
 import { Add, Delete } from "@mui/icons-material";
@@ -30,7 +30,7 @@ interface ColumnConfig<T> {
   customRender?: (value: any, row: T, onChange: (val: any) => void) => React.ReactNode;
 }
 
-export function DataTable<T extends { [key: string]: any }>({
+function DataTableComponent<T extends { [key: string]: any }>({
   data,
   onChange,
   columns,
@@ -51,15 +51,17 @@ export function DataTable<T extends { [key: string]: any }>({
   }, [data]);
 
   // 🔹 Atualiza célula
-  const updateValue = (rowIndex: number, key: keyof T, value: any) => {
-    const updated = [...rows];
-    updated[rowIndex] = { ...updated[rowIndex], [key]: value };
-    setRows(updated);
-    onChange(updated);
-  };
+  const updateValue = useCallback((rowIndex: number, key: keyof T, value: any) => {
+    setRows(prev => {
+      const updated = [...prev];
+      updated[rowIndex] = { ...updated[rowIndex], [key]: value };
+      onChange(updated);
+      return updated;
+    });
+  }, [onChange]);
 
   // 🔹 Renderiza célula baseado no tipo
-  const renderCell = (col: ColumnConfig<T>, row: T, rowIndex: number) => {
+  const renderCell = useCallback((col: ColumnConfig<T>, row: T, rowIndex: number) => {
     const value = row[col.key];
 
     if (col.customRender) {
@@ -129,10 +131,10 @@ export function DataTable<T extends { [key: string]: any }>({
           />
         );
     }
-  };
+  }, [theme, neon, updateValue]);
 
   // 🔹 Colunas formatadas para MUIDataTable
-  const muiColumns = columns.map((col) => ({
+  const muiColumns = useMemo(() => columns.map((col) => ({
     name: String(col.key),
     label: col.label,
     options: {
@@ -148,9 +150,9 @@ export function DataTable<T extends { [key: string]: any }>({
         },
       }),
     },
-  }));
+  })), [columns, rows, renderCell]);
 
-  const handleAddRow = () => {
+  const handleAddRow = useCallback(() => {
     const emptyRow = columns.reduce((acc, col) => {
       // preencha tipos base: number -> 0, text/select -> ""
       (acc as any)[col.key] = col.inputType === "number" ? 0 : "";
@@ -159,13 +161,32 @@ export function DataTable<T extends { [key: string]: any }>({
     const updated = [...rows, emptyRow];
     setRows(updated);
     onChange(updated);
-  };
+  }, [columns, rows, onChange]);
 
-  const handleRemoveRow = (index: number) => {
+  const handleRemoveRow = useCallback((index: number) => {
     const updated = rows.filter((_, i) => i !== index);
     setRows(updated);
     onChange(updated);
-  };
+  }, [rows, onChange]);
+
+  const searchSuggestions = useMemo(() => {
+    if (!searchData || !searchKeys) return [];
+    return searchData
+      .filter(item =>
+        searchKeys.some(key =>
+          String(item[key]).toLowerCase().includes(search.toLowerCase())
+        )
+      )
+      .map(item => item.nome);
+  }, [searchData, searchKeys, search]);
+
+  const handleSelectSuggestion = useCallback((nomeSelecionado: string) => {
+    const itemSelecionado = searchData?.find(item => item.nome === nomeSelecionado);
+    if (itemSelecionado) {
+      onSelectSearch?.(itemSelecionado);
+    }
+    setSearch("");
+  }, [searchData, onSelectSearch]);
 
   return (
     <DataTableContainer theme={theme} neon={neon}>
@@ -178,22 +199,8 @@ export function DataTable<T extends { [key: string]: any }>({
           onChange={(e) => setSearch(e.target.value)}
           icon={<BiSearchAlt className='icon' />}
           iconSize={20}
-          suggestions={
-            searchData
-              .filter(item =>
-                searchKeys?.some(key =>
-                  String(item[key]).toLowerCase().includes(search.toLowerCase())
-                )
-              )
-              .map(item => item.nome) // 🔹 apenas string
-          }
-          onSelectSuggestion={(nomeSelecionado) => {
-            const itemSelecionado = searchData?.find(item => item.nome === nomeSelecionado);
-            if (itemSelecionado) {
-              onSelectSearch?.(itemSelecionado); // atualiza última linha do DataTable
-            }
-            setSearch(""); // opcional: limpa search
-          }}
+          suggestions={searchSuggestions}
+          onSelectSuggestion={handleSelectSuggestion}
         />
       )}
       <MUIDataTable
@@ -238,3 +245,5 @@ export function DataTable<T extends { [key: string]: any }>({
     </DataTableContainer>
   );
 }
+
+export const DataTable = memo(DataTableComponent) as typeof DataTableComponent;

@@ -1,19 +1,15 @@
 import { mapToItem } from './../../../../utils/mapItem';
-import { getRacas } from './../../../../services/racasService';
-import { ItemPayload } from './../../../../services/itensService';
-import { RacaPayload } from './../../../../services/racasService';
+import { getRacas, RacaPayload } from './../../../../services/racasService';
 import { CidadePayload, getCidades } from './../../../../services/cidadesService';
-import { PersonagemPayload } from './../../../../services/personagensService';
 import { saveAsset } from './../../../../services/assetsService';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { personagensMock } from '../../../../Mock/characters.mock';
 import { CharacterFormData, CharacterFormErrors } from './FormUserCharacter/FormUserCharacter.type';
 import toast from 'react-hot-toast';
-import { Personagem, Principais, Secundarios } from '../../../../models/Characters';
+import { Principais, Secundarios } from '../../../../models/Characters';
 import { SkillElemento, Skills, SkillTipoString } from '../../../../models/Skills';
 import { Item, ItemTipo } from '../../../../models/Itens';
 import { Magia, MagiaElemento, MagiaTipoString } from '../../../../models/Magias';
-import { salvarPersonagem } from '../../../../services/personagensService';
 import { getItens } from '../../../../services/itensService';
 import { Mesa } from '../../../../models/Mesa';
 import { getMesas } from '../../../../services/mesaService';
@@ -126,7 +122,10 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
   const isFirstStep = step === 1;
   const isLastStep = step === TOTAL_STEPS;
 
-  const selectedRace = listRaces.find(r => r.idraca === race);
+  const selectedRace = useMemo(() => 
+    listRaces.find(r => r.idraca === race), 
+    [listRaces, race]
+  );
 
   useEffect(() => {
     const fetchCities = async () => {
@@ -206,57 +205,71 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     fetchMesas();
   }, []);
 
-  useEffect(() => {
-    if (selectedRace?.statusJson) {
-      const basePrincipais: Principais = {
-        resistencia: 0,
-        agilidade: 0,
-        sabedoria: 0,
-        precisao: 0,
-        forca: 0,
-      };
-
-      const key = selectedRace.statusJson.atributoInicial
-        ?.trim()
-        ?.toLowerCase() as keyof Principais;
-
-      if (key && key in basePrincipais) basePrincipais[key] = 1;
-      setAtributosPrincipais(basePrincipais);
-
-      setAtributosSecundarios({
-        sanidade: 0,
-        coragem: 0,
-        inteligencia: 0,
-        percepcao: 0,
-        labia: 0,
-        intimidacao: 0,
-      });
-
-      setStatusBasico({
-        vida: selectedRace.statusJson.status.vida,
-        estamina: selectedRace.statusJson.status.estamina,
-        mana: selectedRace.statusJson.status.mana,
-        capacidadeCarga: selectedRace.statusJson.status.capacidadeCarga ?? 0,
-      });    
-    }
-  }, [selectedRace]);
+  const hasInitializedRef = useRef(false);
+  const lastRaceIdRef = useRef<number | undefined>(undefined);
 
   useEffect(() => {
-    if (!searchItensTerm.trim()) {
-      setListItens(allItens);
-    } else {
-      const term = searchItensTerm.toLowerCase();
-      setListItens(
-        allItens.filter(i =>
-          i.nome.toLowerCase().includes(term) ||
-          i.tipo.toLowerCase().includes(term) ||
-          i.descricao?.toLowerCase().includes(term)
-        )
-      );
-    }
+    // Não resetar atributos se estamos editando um personagem existente
+    if (personagem || !selectedRace?.statusJson) return;
+    
+    // Evita re-executar se a raça não mudou
+    if (lastRaceIdRef.current === selectedRace.idraca && hasInitializedRef.current) return;
+    
+    lastRaceIdRef.current = selectedRace.idraca;
+    hasInitializedRef.current = true;
+
+    const basePrincipais: Principais = {
+      resistencia: 0,
+      agilidade: 0,
+      sabedoria: 0,
+      precisao: 0,
+      forca: 0,
+    };
+
+    const key = selectedRace.statusJson.atributoInicial
+      ?.trim()
+      ?.toLowerCase() as keyof Principais;
+
+    if (key && key in basePrincipais) basePrincipais[key] = 1;
+    setAtributosPrincipais(basePrincipais);
+
+    setAtributosSecundarios({
+      sanidade: 0,
+      coragem: 0,
+      inteligencia: 0,
+      percepcao: 0,
+      labia: 0,
+      intimidacao: 0,
+    });
+
+    setStatusBasico({
+      vida: selectedRace.statusJson.status.vida,
+      estamina: selectedRace.statusJson.status.estamina,
+      mana: selectedRace.statusJson.status.mana,
+      capacidadeCarga: selectedRace.statusJson.status.capacidadeCarga ?? 0,
+    });    
+  }, [selectedRace?.idraca, selectedRace?.statusJson, personagem]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!searchItensTerm.trim()) {
+        setListItens(allItens);
+      } else {
+        const term = searchItensTerm.toLowerCase();
+        setListItens(
+          allItens.filter(i =>
+            i.nome.toLowerCase().includes(term) ||
+            i.tipo.toLowerCase().includes(term) ||
+            i.descricao?.toLowerCase().includes(term)
+          )
+        );
+      }
+    }, 200);
+    
+    return () => clearTimeout(timer);
   }, [searchItensTerm, allItens]);
 
-  const handleSelectItem = (item: Item) => {
+  const handleSelectItem = useCallback((item: Item) => {
     setItens(prev => {
       if (prev.length === 0) return [item];
 
@@ -271,9 +284,11 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
       
       return updated;
     });
-  };
+  }, []);
 
-  const searchPersonagens = (query: string) => {
+  const searchTimeoutRef = useRef<NodeJS.Timeout>();
+
+  const searchPersonagens = useCallback((query: string) => {
     setSearchTerm(query);
 
     if (!query) {
@@ -281,15 +296,19 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
       return;
     }
 
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
     setLoadingPersonagens(true);
-    setTimeout(() => {
+    searchTimeoutRef.current = setTimeout(() => {
       const filtered = allPersonagens.filter(p =>
         p.Nome.toLowerCase().includes(query.toLowerCase())
       );
       setPersonagens(filtered);
       setLoadingPersonagens(false);
     }, 300);
-  };
+  }, [allPersonagens]);
 
   useEffect(() => {
     if (!personagem) return;
@@ -360,9 +379,9 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     setXp(status.xp ?? 0);
     setLevel(status.nivel ?? 1);
 
-  }, [personagem, selectedRace]);
+  }, [personagem]);
 
-  const validateCharacterForm = (data: CharacterFormData): CharacterFormErrors => {
+  const validateCharacterForm = useCallback((data: CharacterFormData): CharacterFormErrors => {
     const errors: CharacterFormErrors = {};
 
     if (!data.name || data.name.trim().length < 1) {
@@ -374,9 +393,9 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     }
 
     return errors;
-  };
+  }, []);
 
-  const validateStepOne = () => {
+  const validateStepOne = useCallback(() => {
     const validationErrors = validateCharacterForm({ name: userName, race });
 
     setErrors(validationErrors);
@@ -387,27 +406,27 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
 
     setStatusError(false);
     return true;
-  };
+  }, [userName, race, validateCharacterForm]);
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     if (step === 1 && !validateStepOne()) {
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
     if (step < TOTAL_STEPS) setStep(step + 1);
-  };
+  }, [step, validateStepOne]);
 
 
-  const handlePrev = () => {
+  const handlePrev = useCallback(() => {
     if (step > 1) setStep(step - 1);
-  };
+  }, [step]);
 
   const generateId = () =>
     (typeof crypto !== "undefined" && (crypto as any).randomUUID)
       ? (crypto as any).randomUUID()
       : Math.random().toString(36).slice(2, 10);
 
-  const handleUpdate = async (e?: React.FormEvent) => {
+  const handleUpdate = useCallback(async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
 
     try {
@@ -417,7 +436,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
       if (avatarFile) {
         const result = await saveAsset({
           imageFile: avatarFile,
-          type: "personagens",
+          type: "personagemjogador",
           entityName: userName,
         });
         avatarPath = result.path;
@@ -518,10 +537,10 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     } catch (err: any) {
       toast.error(err?.response?.data || "Erro ao salvar personagem");
     }
-  };
+  }, [avatarUrl, avatarFile, userName, statusBasico, itens, magias, skills, race, city, userId, selectedMesa, history, costumes, extraInformation, nanites, alignment, traits, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, defesas, personagem, onSave]);
 
   // --- submit ---
-  const handleSubmit = async (e?: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
 
     try {
@@ -530,7 +549,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
       if (avatarFile) {
         const result = await saveAsset({
           imageFile: avatarFile,
-          type: "personagens",
+          type: "personagemjogador",
           entityName: userName,
         });
         avatarPath = result.path;
@@ -623,51 +642,83 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     } catch (err: any) {
       toast.error(err?.response?.data || "Erro ao salvar personagem");
     }
-  };
+  }, [avatarUrl, avatarFile, userName, statusBasico, itens, magias, skills, race, city, userId, selectedMesa, history, costumes, extraInformation, nanites, alignment, traits, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, defesas, onSave]);
 
   return {
-    step, setStep,
-    userName, setUserName,
-    race, setRace,
-    city, setCity,
-    avatarUrl, setAvatarUrl,
-    avatarFile, setAvatarFile,
-    history, setHistory,
-    costumes, setCostumes,
-    extraInformation, setExtraInformation,
-    nanites, setNanites,
-    alignment, setAlignment,
-    traits, setTraits,
-    itens, setItens,
-    skills, setSkills,
-    magias, setMagias,
-    listPersonagemRelacionado, setListPersonagemRelacionado,
-    statusBasico, setStatusBasico,
+    step,
+    setStep,
     isFirstStep,
     isLastStep,
-    xp, setXp,
-    level, setLevel,
-    atributosPrincipais, setAtributosPrincipais,
-    atributosSecundarios, setAtributosSecundarios,
-    defesas, setDefesas,
-
+    userName,
+    setUserName,
+    race,
+    setRace,
+    city,
+    setCity,
+    avatarUrl,
+    setAvatarUrl,
+    avatarFile,
+    setAvatarFile,
+    history,
+    setHistory,
+    costumes,
+    setCostumes,
+    extraInformation,
+    setExtraInformation,
+    nanites,
+    setNanites,
+    alignment,
+    setAlignment,
+    traits,
+    setTraits,
+    itens,
+    setItens,
+    skills,
+    setSkills,
+    magias,
+    setMagias,
+    listPersonagemRelacionado,
+    setListPersonagemRelacionado,
+    statusBasico,
+    setStatusBasico,
+    xp,
+    setXp,
+    level,
+    setLevel,
+    atributosPrincipais,
+    setAtributosPrincipais,
+    atributosSecundarios,
+    setAtributosSecundarios,
+    defesas,
+    setDefesas,
     errors,
-    userError, setUserError,
-    raceError, setRaceError,
+    userError,
+    setUserError,
+    raceError,
+    setRaceError,
     statusError,
-
-    listCities, loadingCities,
-    listRaces, loadingRaces, selectedRace,
-    personagens, allPersonagens, searchTerm, loadingPersonagens,
-    listItens, loadingItens, searchItensTerm, setSearchItensTerm,
-
-    selectedMesa, listMesas, setSelectedMesa, loadingMesas,
-
+    listCities,
+    loadingCities,
+    listRaces,
+    loadingRaces,
+    selectedRace,
+    personagens,
+    allPersonagens,
+    searchTerm,
+    loadingPersonagens,
+    listItens,
+    loadingItens,
+    searchItensTerm,
+    setSearchItensTerm,
+    selectedMesa,
+    setSelectedMesa,
+    listMesas,
+    loadingMesas,
     searchPersonagens,
     handleNext,
     handleSubmit,
     handlePrev,
     handleSelectItem,
-    handleUpdate
+    handleUpdate,
   };
 };

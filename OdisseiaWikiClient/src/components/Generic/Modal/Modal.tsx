@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { memo, useCallback } from 'react'
 import { ModalContainer, ModalContentContainer, ModalFooterContainer, ModalHeaderContainer, ModalOverlay } from './Modal.style';
 
 interface ModalProps {
@@ -12,7 +12,7 @@ interface ModalProps {
   onSubmit?: () => void;
 }
 
-export const Modal = ({
+const ModalComponent = ({
     title,
     theme = 'light',
     neon = 'off',
@@ -22,13 +22,13 @@ export const Modal = ({
     onClose,
     onSubmit
 }: ModalProps) => {
-    const handleDefaultClose = () => {
-        if (onClose) onClose();
-    };
+    const handleDefaultClose = useCallback(() => {
+        onClose?.();
+    }, [onClose]);
 
-    const handleDefaultSubmit = () => {
-        if (onSubmit) onSubmit();
-    };
+    const handleDefaultSubmit = useCallback(() => {
+        onSubmit?.();
+    }, [onSubmit]);
 
     return (
         <ModalOverlay>
@@ -58,3 +58,5 @@ export const Modal = ({
         </ModalOverlay>
     )
 }
+
+export const Modal = memo(ModalComponent);

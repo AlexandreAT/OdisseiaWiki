@@ -1,4 +1,4 @@
-import { useState, forwardRef } from 'react';
+import { useState, forwardRef, memo, useCallback } from 'react';
 import { ContentController, LoginLabel, LoginInput, LoginLabelSpan, SpanError } from './InputText.style';
 
 interface Props {
@@ -35,17 +35,23 @@ export const InputText = forwardRef<HTMLInputElement, Props>(
   }, ref) => {
     const [focus, setFocus] = useState(false);
 
+    const handleFocus = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
+      setFocus(true);
+      onFocus?.(e);
+    }, [onFocus]);
+
+    const handleBlur = useCallback(() => {
+      setFocus(false);
+    }, []);
+
     return (
       <ContentController width={width}>
         <LoginLabel width={width} height={height}>
           <LoginInput
               theme={theme}
               neon={neon}
-              onFocus={e => {
-                  setFocus(true);
-                  if (onFocus) onFocus(e);
-              }}
-              onBlur={() => setFocus(false)}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
               value={value}
               onChange={onChange}
               type={type}
@@ -63,3 +69,5 @@ export const InputText = forwardRef<HTMLInputElement, Props>(
     );
   }
 );
+
+InputText.displayName = 'InputText';

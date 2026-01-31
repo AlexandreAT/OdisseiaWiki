@@ -43,11 +43,17 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserC
         listItens, handleSelectItem,
     } = useFormUserCharacter(userId, onSave, personagem);
 
-    const characterRace = listRaces?.find(r => r.idraca === personagem.idraca);
-    const raceImageUrl = characterRace?.imagem 
-        ?? '/assets_dynamic/default.png';
+    const characterRace = React.useMemo(() => 
+        listRaces?.find(r => r.idraca === personagem.idraca),
+        [listRaces, personagem.idraca]
+    );
 
-    const itemColumns = [
+    const raceImageUrl = React.useMemo(() => 
+        characterRace?.imagem ?? '/assets_dynamic/default.png',
+        [characterRace]
+    );
+
+    const itemColumns = React.useMemo(() => [
         { key: "nome", label: "Nome", inputType: "text", width: 200 } as any,
         { key: "descricao", label: "Descrição", inputType: "text", width: 300 } as any,
         { key: "quantidade", label: "Qtd", inputType: "number", width: 80 } as any,
@@ -95,9 +101,9 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserC
             );
           }
         } as any,
-      ];
+      ], [theme, neon]);
     
-      const skillsColumns = [
+      const skillsColumns = React.useMemo(() => [
         { key: "nome", label: "Nome", inputType: "text", width: 200 } as any,
         { key: "efeito", label: "Efeito", inputType: "text", width: 300 } as any,
         { key: "custo", label: "Custo", inputType: "string", width: 100 } as any,
@@ -161,9 +167,9 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserC
             );
           }
         } as any,
-      ];
+      ], [theme, neon]);
     
-      const magiasColumns = [
+      const magiasColumns = React.useMemo(() => [
         { key: "nome", label: "Nome", inputType: "text", width: 200 } as any,
         { key: "efeito", label: "Efeito", inputType: "text", width: 300 } as any,
         { key: "custo", label: "Custo", inputType: "string", width: 100 } as any,
@@ -225,7 +231,9 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserC
             );
           }
         } as any,
-      ];
+      ], [theme, neon]);
+
+      console.log("🔵 [CharacterEdit] RENDER:");
 
     return (
         <FormController onSubmit={handleSubmit}> 

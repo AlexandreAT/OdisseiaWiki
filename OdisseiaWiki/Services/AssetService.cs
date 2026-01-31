@@ -1,54 +1,57 @@
-﻿using OdisseiaWiki.Dtos;
+﻿using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using OdisseiaWiki.Dtos;
+using OdisseiaWiki.Enums;
 using OdisseiaWiki.Services.Interfaces;
+using System;
+using System.Threading.Tasks;
 
 namespace OdisseiaWiki.Services
 {
     public class AssetService : IAssetService
     {
-        private readonly IWebHostEnvironment _env;
+        private readonly ILocalStorageProvider _local;
+        private readonly IImgBBStorageProvider _imgbb;
 
-        public AssetService(IWebHostEnvironment env)
+        public AssetService(ILocalStorageProvider local, IImgBBStorageProvider imgbb)
         {
-            _env = env;
+            _local = local;
+            _imgbb = imgbb;
         }
 
         public async Task<ResultSaveImage> SaveImageAsync(IFormFile file, string type, string entityName, string? folderName = null)
         {
-            try
+            if (file == null || file.Length == 0)
+                return ResultSaveImage.Fail("Arquivo inválido.");
+
+            // Normaliza nome da entidade (sem espaços, minúsculo)
+            string safeEntity = (entityName ?? string.Empty).ToLower().Replace(" ", "-");
+            string subFolder = string.IsNullOrEmpty(folderName)
+                ? $"{type}/{safeEntity}"
+                : $"{type}/{safeEntity}/{folderName}";
+
+            var assetType = MapType(type);
+
+            return assetType == AssetType.Player || assetType == AssetType.Profile
+                ? await _imgbb.SaveAsync(file, subFolder)
+                : await _local.SaveAsync(file, subFolder);
+        }
+
+        private static AssetType MapType(string type)
+        {
+            if (string.IsNullOrWhiteSpace(type)) return AssetType.Wiki;
+
+            var t = type.Trim().ToLowerInvariant();
+            return t switch
             {
-                // Normaliza nome da entidade (sem espaços, minúsculo)
-                string safeEntity = entityName.ToLower().Replace(" ", "-");
-
-                // Cria a base do caminho físico
-                string basePath = Path.Combine(_env.WebRootPath, "assets_dynamic", type, safeEntity);
-
-                if (!string.IsNullOrEmpty(folderName))
-                    basePath = Path.Combine(basePath, folderName);
-
-                // Se não existir, cria as pastas
-                if (!Directory.Exists(basePath))
-                    Directory.CreateDirectory(basePath);
-
-                // Gera nome único
-                string fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
-                string fullPath = Path.Combine(basePath, fileName);
-
-                // Salva no disco
-                using (var stream = new FileStream(fullPath, FileMode.Create))
-                {
-                    await file.CopyToAsync(stream);
-                }
-
-                // Caminho relativo que será salvo no banco
-                string relativePath = Path.Combine("assets_dynamic", type, safeEntity, folderName ?? "", fileName)
-                    .Replace("\\", "/");
-
-                return ResultSaveImage.Ok(relativePath);
-            }
-            catch (Exception ex)
-            {
-                return ResultSaveImage.Fail($"Erro ao salvar imagem: {ex.Message}");
-            }
+                "player" => AssetType.Player,
+                "perfil" => AssetType.Profile,
+                "personagemjogador" => AssetType.Player,
+                "personagem" => AssetType.Wiki,
+                _ when t.Contains("player") => AssetType.Player,
+                _ when t.Contains("perfil") => AssetType.Profile,
+                _ => AssetType.Wiki
+            };
         }
     }
 }

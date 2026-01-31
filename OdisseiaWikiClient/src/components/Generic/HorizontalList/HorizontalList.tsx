@@ -1,4 +1,4 @@
-import { forwardRef } from "react";
+import { forwardRef, memo } from "react";
 import {
   ListController,
   ListItem,
@@ -43,3 +43,5 @@ export const HorizontalList = forwardRef<HTMLDivElement, Props>(
     );
   }
 );
+
+HorizontalList.displayName = 'HorizontalList';

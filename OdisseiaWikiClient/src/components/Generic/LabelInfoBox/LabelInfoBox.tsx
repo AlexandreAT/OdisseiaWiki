@@ -1,4 +1,4 @@
-import { ReactElement } from 'react'
+import { ReactElement, memo } from 'react'
 import { BoxContainer } from './LabelInfoBox.style';
 
 interface Props {
@@ -7,10 +7,12 @@ interface Props {
     neon?: 'on' | 'off';
 }
 
-export const LabelInfoBox = ({children, theme, neon}: Props) => {
+const LabelInfoBoxComponent = ({children, theme, neon}: Props) => {
   return (
     <BoxContainer theme={theme} neon={neon}>
         {children}
     </BoxContainer>
   )
 }
+
+export const LabelInfoBox = memo(LabelInfoBoxComponent);

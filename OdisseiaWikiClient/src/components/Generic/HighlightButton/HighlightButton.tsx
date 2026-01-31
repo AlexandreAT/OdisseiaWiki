@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { ButtonClipController, ButtonBoxShadow, ButtonClipBorder, ButtonContentContainer } from './HighlightButton.styles';
 
 interface CyberButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -16,7 +16,7 @@ interface CyberButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement>
     type?: "button" | "submit" | "reset";
 }
 
-export const CyberButton = ({
+const CyberButtonComponent = ({
   backgroundColor,
   textColor,
   borderColor,
@@ -64,3 +64,5 @@ export const CyberButton = ({
     </ButtonClipController>
   );
 };
+
+export const CyberButton = memo(CyberButtonComponent);

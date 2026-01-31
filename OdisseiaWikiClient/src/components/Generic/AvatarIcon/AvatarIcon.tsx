@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, memo, useCallback, useEffect } from 'react';
 import { VscAccount } from 'react-icons/vsc';
 import { isNullOrEmpty } from '../../../utils/isNullOrEmpty';
 import { AvatarButton } from './AvatarIcon.style';
@@ -12,7 +12,7 @@ interface Props {
   clickable?: boolean;
 }
 
-export const AvatarIcon = ({
+const AvatarIconComponent = ({
   theme,
   neon,
   onFileSelect,
@@ -23,19 +23,24 @@ export const AvatarIcon = ({
   const fileAvatar = useRef<HTMLInputElement>(null);
   const [avatarUrl, setAvatarUrl] = useState<string>(initialImage);
 
-  const handleAvatarClick = () => {
+  // Sincronizar com initialImage quando mudar
+  useEffect(() => {
+    setAvatarUrl(initialImage);
+  }, [initialImage]);
+
+  const handleAvatarClick = useCallback(() => {
     if (!clickable) return;
     fileAvatar.current?.click();
-  };
+  }, [clickable]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
     if (file) {
       const url = URL.createObjectURL(file);
       setAvatarUrl(url);
       onFileSelect?.(file);
     }
-  };
+  }, [onFileSelect]);
 
   return (
     <AvatarButton
@@ -71,3 +76,5 @@ export const AvatarIcon = ({
     </AvatarButton>
   );
 };
+
+export const AvatarIcon = memo(AvatarIconComponent);

@@ -1,23 +1,26 @@
 /**
- * Aqui eu monto a URL padrão
- * @param type tipo da entidade ('racas', 'personagens', etc)
- * @param entityName nome da entidade ('orc', 'elf', etc)
- * @param folderName opcional, ex: 'galeria'
+ * Retorna caminho base (quando backend retornou apenas pasta)
  */
 export function getFirstImageUrl(type: string, entityName: string, folderName?: string): string {
   const safeEntity = entityName.toLowerCase().replace(/\s+/g, '-');
   if (folderName) {
-    return `/assets_dynamic/${type}/${safeEntity}/${folderName}/`; 
+    return `/assets_dynamic/${type}/${safeEntity}/${folderName}/`;
   }
-  return `/assets_dynamic/${type}/${safeEntity}/`; 
+  return `/assets_dynamic/${type}/${safeEntity}/`;
 }
 
 /**
- * Aqui eu monto a URL completa de uma imagem específica
+ * Recebe um path vindo do backend ou monta local.
+ * Se `imagePath` for absoluta (http...), retorna direto.
+ * Caso contrário, monta conforme padrão local.
  */
-export function getImageUrl(type: string, entityName: string, imageName: string, folderName?: string): string {
+export function getImageUrl(type: string, entityName: string, imagePathOrName: string, folderName?: string): string {
+  if (!imagePathOrName) return '';
+  const isAbsolute = /^https?:\/\//i.test(imagePathOrName);
+  if (isAbsolute) return imagePathOrName;
+
   const safeEntity = entityName.toLowerCase().replace(/\s+/g, '-');
   return folderName
-    ? `/assets_dynamic/${type}/${safeEntity}/${folderName}/${imageName}`
-    : `/assets_dynamic/${type}/${safeEntity}/${imageName}`;
+    ? `/assets_dynamic/${type}/${safeEntity}/${folderName}/${imagePathOrName}`
+    : `/assets_dynamic/${type}/${safeEntity}/${imagePathOrName}`;
 }

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, ReactNode } from 'react';
+import { useState, useRef, useEffect, ReactNode, memo, useCallback } from 'react';
 import {
   ContentController,
   SearchLabel,
@@ -30,7 +30,7 @@ interface Props {
   loading?: boolean;
 }
 
-export const Search = ({
+const SearchComponent = ({
   theme,
   neon,
   label,
@@ -65,18 +65,29 @@ export const Search = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const handleFocus = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
+    setFocus(true);
+    setShowSuggestions(true);
+    onFocus?.(e);
+  }, [onFocus]);
+
+  const handleBlur = useCallback(() => {
+    setFocus(false);
+  }, []);
+
+  const handleSelectSuggestion = useCallback((s: string) => {
+    onSelectSuggestion?.(s);
+    setShowSuggestions(false);
+  }, [onSelectSuggestion]);
+
   return (
     <ContentController ref={containerRef} width={width} height={height}>
       <SearchLabel width={width} height={height}>
         <SearchField
           theme={theme}
           neon={neon}
-          onFocus={(e) => {
-            setFocus(true);
-            setShowSuggestions(true);
-            if (onFocus) onFocus(e);
-          }}
-          onBlur={() => setFocus(false)}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
           value={value}
           onChange={onChange}
           error={error}
@@ -102,10 +113,7 @@ export const Search = ({
           {!loading && suggestions.length > 0 && suggestions.map((s, i) => (
             <li
               key={i}
-              onClick={() => {
-                if (onSelectSuggestion) onSelectSuggestion(s);
-                setShowSuggestions(false);
-              }}
+              onClick={() => handleSelectSuggestion(s)}
             >
               {s}
             </li>
@@ -120,3 +128,5 @@ export const Search = ({
     </ContentController>
   );
 };
+
+export const Search = memo(SearchComponent);

@@ -5,7 +5,7 @@ import { RacaPayload } from './../../../../../../services/racasService';
 import { CidadePayload, getCidades } from './../../../../../../services/cidadesService';
 import { PersonagemPayload } from './../../../../../../services/personagensService';
 import { saveAsset } from './../../../../../../services/assetsService';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { personagensMock } from '../../../../../../Mock/characters.mock';
 import { cidadesMock } from '../../../../../../Mock/cities.mock';
 import { racasMock } from '../../../../../../Mock/races.mock';
@@ -116,7 +116,10 @@ export const useFormCharacter = () => {
   const isFirstStep = step === 1;
   const isLastStep = step === TOTAL_STEPS;
 
-  const selectedRace = listRaces.find(r => r.idraca === race);
+  const selectedRace = useMemo(() => 
+    listRaces.find(r => r.idraca === race),
+    [listRaces, race]
+  );
 
   useEffect(() => {
     const fetchCities = async () => {
@@ -231,7 +234,7 @@ export const useFormCharacter = () => {
     }
   }, [searchItensTerm, allItens]);
 
-  const handleSelectItem = (item: Item) => {
+  const handleSelectItem = useCallback((item: Item) => {
     console.log("🚀 ~ handleSelectItem ~ item:", item)
     setItens(prev => {
       if (prev.length === 0) return [item];
@@ -247,9 +250,9 @@ export const useFormCharacter = () => {
       console.log("🚀 ~ handleSelectItem ~ updated:", updated)
       return updated;
     });
-  };
+  }, []);
 
-  const searchPersonagens = (query: string) => {
+  const searchPersonagens = useCallback((query: string) => {
     setSearchTerm(query);
 
     if (!query) {
@@ -265,10 +268,10 @@ export const useFormCharacter = () => {
       setPersonagens(filtered);
       setLoadingPersonagens(false);
     }, 300);
-  };
+  }, [allPersonagens]);
 
   // --- validação ---
-  const validateCharacterForm = (data: CharacterFormData): CharacterFormErrors => {
+  const validateCharacterForm = useCallback((data: CharacterFormData): CharacterFormErrors => {
     const errors: CharacterFormErrors = {};
 
     if (!data.name || data.name.trim().length < 1) {
@@ -280,9 +283,9 @@ export const useFormCharacter = () => {
     }
 
     return errors;
-  };
+  }, []);
 
-  const validateStepOne = () => {
+  const validateStepOne = useCallback(() => {
     const validationErrors = validateCharacterForm({ name: userName, race });
 
     setErrors(validationErrors);
@@ -293,21 +296,21 @@ export const useFormCharacter = () => {
 
     setStatusError(false);
     return true;
-  };
+  }, [userName, race, validateCharacterForm]);
 
   // --- navegação ---
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     if (step === 1 && !validateStepOne()) {
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
     if (step < TOTAL_STEPS) setStep(step + 1);
-  };
+  }, [step, validateStepOne]);
 
 
-  const handlePrev = () => {
+  const handlePrev = useCallback(() => {
     if (step > 1) setStep(step - 1);
-  };
+  }, [step]);
 
   // helper (pode ficar no topo do hook)
   const generateId = () =>
@@ -316,7 +319,7 @@ export const useFormCharacter = () => {
       : Math.random().toString(36).slice(2, 10);
 
   // --- submit ---
-  const handleSubmit = async (e?: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
 
     try {
@@ -417,7 +420,7 @@ export const useFormCharacter = () => {
     } catch (err: any) {
       toast.error(err?.response?.data || "Erro ao salvar personagem");
     }
-  };
+  }, [avatarUrl, avatarFile, userName, statusBasico, itens, magias, skills, race, city, history, costumes, nanites, alignment, traits, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, defesas]);
 
   return {
     // estados

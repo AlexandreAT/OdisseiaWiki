@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { memo } from 'react'
 import { CyberButton } from '../../../../components/Generic/HighlightButton/HighlightButton';
 import { Item, ItemTipo } from '../../../../models/Itens';
 import { atributosFormMap, atributosMagiaFormMap, atributosSkillFormMap } from '../../../Management/ManagementWiki/WikiForms/FormCriarConteúdo/FormCharacter/MapItensForm';
@@ -50,7 +50,7 @@ const ALIGNMENT_OPTIONS = [
   { value: 'caotico_mal', label: 'Caótico e Maligno' },
 ];
 
-export const CharacterCreate = ({ theme, neon, userId, onSave }: UserCharactersProps) => {
+const CharacterCreateComponent = ({ theme, neon, userId, onSave }: UserCharactersProps) => {
   const {
     step, handleNext, handleSubmit,
     handlePrev, isFirstStep, isLastStep,
@@ -84,11 +84,12 @@ export const CharacterCreate = ({ theme, neon, userId, onSave }: UserCharactersP
     selectedMesa, listMesas, setSelectedMesa, loadingMesas,
   } = useFormUserCharacter(userId, onSave);
 
-  const raceImageUrl = selectedRace?.imagem
-    ? selectedRace.imagem
-    : '/assets_dynamic/default.png';
+  const raceImageUrl = React.useMemo(() => 
+    selectedRace?.imagem ? selectedRace.imagem : '/assets_dynamic/default.png',
+    [selectedRace]
+  );
   
-  const itemColumns = [
+  const itemColumns = React.useMemo(() => [
     { key: "nome", label: "Nome", inputType: "text", width: 200 } as any,
     { key: "descricao", label: "Descrição", inputType: "text", width: 300 } as any,
     { key: "quantidade", label: "Qtd", inputType: "number", width: 80 } as any,
@@ -136,9 +137,9 @@ export const CharacterCreate = ({ theme, neon, userId, onSave }: UserCharactersP
         );
       }
     } as any,
-  ];
+  ], [theme, neon]);
 
-  const skillsColumns = [
+  const skillsColumns = React.useMemo(() => [
     { key: "nome", label: "Nome", inputType: "text", width: 200 } as any,
     { key: "efeito", label: "Efeito", inputType: "text", width: 300 } as any,
     { key: "custo", label: "Custo", inputType: "string", width: 100 } as any,
@@ -202,9 +203,9 @@ export const CharacterCreate = ({ theme, neon, userId, onSave }: UserCharactersP
         );
       }
     } as any,
-  ];
+  ], [theme, neon]);
 
-  const magiasColumns = [
+  const magiasColumns = React.useMemo(() => [
     { key: "nome", label: "Nome", inputType: "text", width: 200 } as any,
     { key: "efeito", label: "Efeito", inputType: "text", width: 300 } as any,
     { key: "custo", label: "Custo", inputType: "string", width: 100 } as any,
@@ -266,7 +267,8 @@ export const CharacterCreate = ({ theme, neon, userId, onSave }: UserCharactersP
         );
       }
     } as any,
-  ];
+  ], [theme, neon]);
+  console.log("🟠 [CharacterCreate] RENDER:");
   
   return (
     <FormController onSubmit={handleSubmit}>
@@ -700,3 +702,5 @@ export const CharacterCreate = ({ theme, neon, userId, onSave }: UserCharactersP
     </FormController>
   );
 }
+
+export const CharacterCreate = memo(CharacterCreateComponent);

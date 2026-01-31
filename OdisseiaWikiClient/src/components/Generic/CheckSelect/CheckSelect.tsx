@@ -1,5 +1,5 @@
 // CheckSelect.tsx
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, memo, useCallback } from 'react';
 import { createPortal } from "react-dom";
 import {
   ContentController,
@@ -34,7 +34,7 @@ interface CheckSelectProps {
   options: Option[];
 }
 
-export const CheckSelect = ({
+const CheckSelectComponent = ({
   theme,
   neon,
   label,
@@ -66,17 +66,17 @@ export const CheckSelect = ({
   }, [value]);
 
   // compute bounding rect of trigger
-  const computeRect = () => {
+  const computeRect = useCallback(() => {
     const el = containerRef.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
     setRect({ top: r.top, bottom: r.bottom, left: r.left, width: r.width });
     // default finalTop to bottom (below)
     setFinalTop(r.bottom);
-  };
+  }, []);
 
   // open toggle: compute rect and focus
-  const toggleOpen = (e?: React.MouseEvent) => {
+  const toggleOpen = useCallback((e?: React.MouseEvent) => {
     e?.stopPropagation();
     if (!open) {
       computeRect();
@@ -87,16 +87,16 @@ export const CheckSelect = ({
       if (selectedValues.length === 0) setFocus(false);
     }
     setFocus(true);
-  };
+  }, [open, selectedValues.length, computeRect]);
 
   // toggle one value
-  const toggleCheck = (val: string) => {
+  const toggleCheck = useCallback((val: string) => {
     const updated = selectedValues.includes(val)
       ? selectedValues.filter(v => v !== val)
       : [...selectedValues, val];
     setSelectedValues(updated);
     onChange?.(updated);
-  };
+  }, [selectedValues, onChange]);
 
   // close on outside click or escape; also recompute rect on scroll/resize
   useEffect(() => {
@@ -223,3 +223,5 @@ export const CheckSelect = ({
     </ContentController>
   );
 };
+
+export const CheckSelect = memo(CheckSelectComponent);

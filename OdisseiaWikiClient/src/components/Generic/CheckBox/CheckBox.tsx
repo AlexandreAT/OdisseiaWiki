@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, memo, useCallback } from "react";
 import { CheckboxLabel, ContainerController, InputCheckbox } from "./CheckBox.style";
 
 interface Props {
@@ -12,7 +12,7 @@ interface Props {
     onChange?: (checked: boolean) => void;
 }
 
-export const CheckBox = ({
+const CheckBoxComponent = ({
     neon,
     label,
     typeStyle = "primary",
@@ -25,10 +25,10 @@ export const CheckBox = ({
     const [internalChecked, setInternalChecked] = useState(false);
     const isChecked = checked !== undefined ? checked : internalChecked;
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         if (onChange) onChange(e.target.checked);
         else setInternalChecked(e.target.checked);
-    };
+    }, [onChange]);
 
     return (
         <ContainerController width={width} height={height}>
@@ -49,3 +49,5 @@ export const CheckBox = ({
         </ContainerController>
     );
 };
+
+export const CheckBox = memo(CheckBoxComponent);
