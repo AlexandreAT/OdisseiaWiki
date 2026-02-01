@@ -1,0 +1,181 @@
+import React from 'react';
+import { Item, ItemTipo } from '../../../../models/Itens';
+import { Skills, SkillTipoString } from '../../../../models/Skills';
+import { Magia, MagiaTipoString } from '../../../../models/Magias';
+import { CyberButton } from '../../../../components/Generic/HighlightButton/HighlightButton';
+import { Modal } from '../../../../components/Generic/Modal/Modal';
+import { atributosFormMap, atributosMagiaFormMap, atributosSkillFormMap } from '../../../Management/ManagementWiki/WikiForms/FormCriarConteúdo/FormCharacter/MapItensForm';
+
+export const createItemColumns = (theme: 'dark' | 'light', neon: 'on' | 'off') => [
+  { key: "nome", label: "Nome", inputType: "text", width: 200 } as any,
+  { key: "descricao", label: "Descrição", inputType: "text", width: 300 } as any,
+  { key: "quantidade", label: "Qtd", inputType: "number", width: 80 } as any,
+  { key: "peso", label: "Peso", inputType: "number", width: 80 } as any,
+  {
+    key: "tipo",
+    label: "Tipo",
+    inputType: "select",
+    options: [
+      { label: "Arma", value: "arma" },
+      { label: "Traje", value: "traje" },
+      { label: "Consumiveis", value: "consumiveis" },
+      { label: "Acessório", value: "acessorio" },
+      { label: "Outro", value: "outro" },
+    ],
+  } as any,
+  {
+    key: "atributos",
+    label: "Atributos",
+    customRender: (value: any, row: Item, onChange: (v: any) => void) => {
+      const [open, setOpen] = React.useState(false);
+      const FormComponent = atributosFormMap[row.tipo as ItemTipo];
+
+      if (!FormComponent) return <label>Selecione o tipo</label>;
+
+      return (
+        <>
+          <CyberButton type="button" width="90%" height="30px" onClick={() => setOpen(true)}>
+            Editar
+          </CyberButton>
+          {open && (
+            <Modal
+              title={`Editar atributos de ${row.nome}`}
+              onClose={() => setOpen(false)}
+              onSubmit={() => setOpen(false)}
+              theme={theme}
+              neon={neon}
+            >
+              <FormComponent value={value} onChange={onChange} theme={theme} neon={neon} />
+            </Modal>
+          )}
+        </>
+      );
+    }
+  } as any,
+];
+
+export const createSkillsColumns = (theme: 'dark' | 'light', neon: 'on' | 'off') => [
+  { key: "nome", label: "Nome", inputType: "text", width: 200 } as any,
+  { key: "efeito", label: "Efeito", inputType: "text", width: 300 } as any,
+  { key: "custo", label: "Custo", inputType: "string", width: 100 } as any,
+  { key: "nivel", label: "Nível", inputType: "number", width: 80 } as any,
+  {
+    key: "elemento",
+    label: "Elemento",
+    inputType: "checkselect",
+    options: [
+      { label: "Normal", value: "normal" },
+      { label: "Fogo", value: "fogo" },
+      { label: "Água", value: "agua" },
+      { label: "Ar", value: "ar" },
+      { label: "Terra", value: "terra" },
+      { label: "Luz", value: "luz" },
+      { label: "Escuridão", value: "escuridao" },
+      { label: "Espacial", value: "espacial" },
+      { label: "Transfiguração", value: "transfiguracao" },
+      { label: "Invocação", value: "invocacao" },
+    ],
+  } as any,
+  {
+    key: "tipo",
+    label: "Tipo",
+    inputType: "select",
+    options: [
+      { label: "Ataque", value: "ataque" },
+      { label: "Suporte", value: "suporte" },
+      { label: "Buff", value: "buff" },
+      { label: "Debuff", value: "debuff" },
+    ],
+  } as any,
+  {
+    key: "atributos",
+    label: "Atributos",
+    customRender: (value: any, row: Skills, onChange: (v: any) => void) => {
+      const [open, setOpen] = React.useState(false);
+      const FormComponent = atributosSkillFormMap[row.tipo as SkillTipoString];
+
+      if (!FormComponent) return <label>Selecione o tipo</label>;
+
+      return (
+        <>
+          <CyberButton type="button" width="90%" height="30px" onClick={() => setOpen(true)}>
+            Editar
+          </CyberButton>
+          {open && (
+            <Modal
+              title={`Editar atributos de ${row.nome}`}
+              onClose={() => setOpen(false)}
+              onSubmit={() => setOpen(false)}
+              theme={theme}
+              neon={neon}
+            >
+              <FormComponent value={value} onChange={onChange} theme={theme} neon={neon} />
+            </Modal>
+          )}
+        </>
+      );
+    }
+  } as any,
+];
+
+export const createMagiasColumns = (theme: 'dark' | 'light', neon: 'on' | 'off') => [
+  { key: "nome", label: "Nome", inputType: "text", width: 200 } as any,
+  { key: "efeito", label: "Efeito", inputType: "text", width: 300 } as any,
+  { key: "custo", label: "Custo", inputType: "string", width: 100 } as any,
+  {
+    key: "elemento",
+    label: "Elemento",
+    inputType: "checkselect",
+    options: [
+      { label: "Fogo", value: "fogo" },
+      { label: "Água", value: "agua" },
+      { label: "Ar", value: "ar" },
+      { label: "Terra", value: "terra" },
+      { label: "Luz", value: "luz" },
+      { label: "Escuridão", value: "escuridao" },
+      { label: "Espacial", value: "espacial" },
+      { label: "Transfiguração", value: "transfiguracao" },
+      { label: "Invocação", value: "invocacao" },
+    ],
+  } as any,
+  {
+    key: "tipo",
+    label: "Tipo",
+    inputType: "select",
+    options: [
+      { label: "Ataque", value: "ataque" },
+      { label: "Suporte", value: "suporte" },
+      { label: "Buff", value: "buff" },
+      { label: "Debuff", value: "debuff" },
+    ],
+  } as any,
+  {
+    key: "atributos",
+    label: "Atributos",
+    customRender: (value: any, row: Magia, onChange: (v: any) => void) => {
+      const [open, setOpen] = React.useState(false);
+      const FormComponent = atributosMagiaFormMap[row.tipo as MagiaTipoString];
+
+      if (!FormComponent) return <label>Selecione o tipo</label>;
+
+      return (
+        <>
+          <CyberButton type="button" width="90%" height="30px" onClick={() => setOpen(true)}>
+            Editar
+          </CyberButton>
+          {open && (
+            <Modal
+              title={`Editar atributos de ${row.nome}`}
+              onClose={() => setOpen(false)}
+              onSubmit={() => setOpen(false)}
+              theme={theme}
+              neon={neon}
+            >
+              <FormComponent value={value} onChange={onChange} theme={theme} neon={neon} />
+            </Modal>
+          )}
+        </>
+      );
+    }
+  } as any,
+];

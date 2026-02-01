@@ -7,14 +7,16 @@ import { personagensMock } from '../../../../Mock/characters.mock';
 import { CharacterFormData, CharacterFormErrors } from './FormUserCharacter/FormUserCharacter.type';
 import toast from 'react-hot-toast';
 import { Principais, Secundarios } from '../../../../models/Characters';
-import { SkillElemento, Skills, SkillTipoString } from '../../../../models/Skills';
-import { Item, ItemTipo } from '../../../../models/Itens';
-import { Magia, MagiaElemento, MagiaTipoString } from '../../../../models/Magias';
+import { Skills } from '../../../../models/Skills';
+import { Item } from '../../../../models/Itens';
+import { Magia } from '../../../../models/Magias';
 import { getItens } from '../../../../services/itensService';
 import { Mesa } from '../../../../models/Mesa';
 import { getMesas } from '../../../../services/mesaService';
 import { atualizarPersonagemJogador, criarPersonagemJogador, PersonagemJogadorPayload } from '../../../../services/personagemJogadorService';
 import { PersonagemJogador } from '../../../../models/PersonagemJogador';
+import { TOTAL_STEPS } from './constants';
+import { mapInventoryForPayload, mapMagiasForPayload, mapSkillsForPayload } from './helpers';
 
 export const useFormUserCharacter = (userId: number, onSave?: () => void, personagem?: PersonagemJogador) => {
   // --- step ---
@@ -36,7 +38,6 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
   const [traits, setTraits] = useState<string[]>([]);
   const [xp, setXp] = useState(0);
   const [level, setLevel] = useState(1);
-  const [capacidadeCarga, setCapacidadeCarga] = useState(0);
   const [skills, setSkills] = useState<Skills[]>([
     { nome: "", tipo: "suporte", elemento: ["normal"], nivel: 1,  }
   ])
@@ -115,9 +116,6 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
   const [listMesas, setListMesas] = useState<Mesa[]>([]);
   const [selectedMesa, setSelectedMesa] = useState<number | undefined>(undefined);
   const [loadingMesas, setLoadingMesas] = useState(true);
-
-
-  const TOTAL_STEPS = 2;
 
   const isFirstStep = step === 1;
   const isLastStep = step === TOTAL_STEPS;
@@ -421,11 +419,6 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     if (step > 1) setStep(step - 1);
   }, [step]);
 
-  const generateId = () =>
-    (typeof crypto !== "undefined" && (crypto as any).randomUUID)
-      ? (crypto as any).randomUUID()
-      : Math.random().toString(36).slice(2, 10);
-
   const handleUpdate = useCallback(async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
 
@@ -449,42 +442,9 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
         capacidadeCarga: statusBasico.capacidadeCarga,
       };
 
-      const inventarioMapped: Item[] = itens.map((it) => ({
-        id: it.id ?? generateId(),
-        idItemBase: it.idItemBase ?? undefined,
-        nome: it.nome ?? "Item",
-        tipo: (it.tipo as ItemTipo) ?? "outro",
-        quantidade: Number(it.quantidade) || 1,
-        peso:
-          it.peso !== undefined && it.peso !== 0
-            ? Number(it.peso)
-            : undefined,
-        descricao: it.descricao ?? "",
-        efeito: it.efeito ?? undefined,
-        imagem: it.imagem ?? undefined,
-        atributos: it.atributos ?? {},
-      }));
-
-      const magiaMapped: Magia[] = magias.map((magia) => ({
-        id: magia.id ?? generateId(),
-        nome: magia.nome ?? "Magia",
-        efeito: magia.efeito ?? undefined,
-        tipo: (magia.tipo as MagiaTipoString) ?? "suporte",
-        elemento: (magia.elemento as MagiaElemento[]) ?? ["normal"],
-        custo: magia.custo ?? "",
-        atributos: magia.atributos ?? {},
-      }));
-
-      const skillMapped: Skills[] = skills.map((skill) => ({
-        id: skill.id ?? generateId(),
-        nome: skill.nome ?? "Skill",
-        efeito: skill.efeito ?? undefined,
-        tipo: (skill.tipo as SkillTipoString) ?? "suporte",
-        elemento: (skill.elemento as SkillElemento[]) ?? ["normal"],
-        custo: skill.custo ?? "",
-        nivel: skill.nivel ?? 1,
-        atributos: skill.atributos ?? {},
-      }));
+      const inventarioMapped = mapInventoryForPayload(itens);
+      const magiaMapped = mapMagiasForPayload(magias);
+      const skillMapped = mapSkillsForPayload(skills);
 
       const payload: PersonagemJogadorPayload = {
         nome: userName,
@@ -562,42 +522,9 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
         capacidadeCarga: statusBasico.capacidadeCarga,
       };
 
-      const inventarioMapped: Item[] = itens.map((it) => ({
-        id: it.id ?? generateId(),
-        idItemBase: it.idItemBase ?? undefined,
-        nome: it.nome ?? "Item",
-        tipo: (it.tipo as ItemTipo) ?? "outro",
-        quantidade: Number(it.quantidade) || 1,
-        peso:
-          it.peso !== undefined && it.peso !== 0
-            ? Number(it.peso)
-            : undefined,
-        descricao: it.descricao ?? "",
-        efeito: it.efeito ?? undefined,
-        imagem: it.imagem ?? undefined,
-        atributos: it.atributos ?? {},
-      }));
-
-      const magiaMapped: Magia[] = magias.map((magia) => ({
-        id: magia.id ?? generateId(),
-        nome: magia.nome ?? "Magia",
-        efeito: magia.efeito ?? undefined,
-        tipo: (magia.tipo as MagiaTipoString) ?? "suporte",
-        elemento: (magia.elemento as MagiaElemento[]) ?? ["normal"],
-        custo: magia.custo ?? "",
-        atributos: magia.atributos ?? {},
-      }));
-
-      const skillMapped: Skills[] = skills.map((skill) => ({
-        id: skill.id ?? generateId(),
-        nome: skill.nome ?? "Skill",
-        efeito: skill.efeito ?? undefined,
-        tipo: (skill.tipo as SkillTipoString) ?? "suporte",
-        elemento: (skill.elemento as SkillElemento[]) ?? ["normal"],
-        custo: skill.custo ?? "",
-        nivel: skill.nivel ?? 1,
-        atributos: skill.atributos ?? {},
-      }));
+      const inventarioMapped = mapInventoryForPayload(itens);
+      const magiaMapped = mapMagiasForPayload(magias);
+      const skillMapped = mapSkillsForPayload(skills);
 
       const payload: PersonagemJogadorPayload = {
         nome: userName,
