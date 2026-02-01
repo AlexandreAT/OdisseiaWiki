@@ -1,4 +1,4 @@
-import React, { useEffect, useState, memo, useCallback, useMemo } from "react";
+import React, { useState, memo, useCallback, useMemo, useRef } from "react";
 import MUIDataTable from "mui-datatables";
 import { TextField, IconButton } from "@mui/material";
 import { Add, Delete } from "@mui/icons-material";
@@ -13,22 +13,95 @@ interface DataTableProps<T> {
   neon: 'on' | 'off';
   data: T[];
   onChange: (newData: T[]) => void;
-  columns: ColumnConfig<T>[]; // 🔹 agora usado de verdade
+  columns: ColumnConfig<T>[];
   searchable?: boolean;
   searchPlaceholder?: string;
-  searchData?: T[]; // lista de dados para buscar
-  onSelectSearch?: (item: T) => void; // callback quando selecionar
-  searchKeys?: (keyof T)[]; // campos do objeto que serão pesquisados
+  searchData?: T[];
+  onSelectSearch?: (item: T) => void;
+  searchKeys?: (keyof T)[];
 }
 
 interface ColumnConfig<T> {
   key: keyof T;
   label: string;
   width?: string | number;
-  inputType?: "text" | "number" | "select" | "checkselect"; // 🔹 novo tipo
-  options?: { label: string; value: string }[]; // para select e checkselect
+  inputType?: "text" | "number" | "select" | "checkselect";
+  options?: { label: string; value: string }[];
   customRender?: (value: any, row: T, onChange: (val: any) => void) => React.ReactNode;
 }
+
+// Componente de célula otimizado que só re-renderiza quando SEU valor muda
+const TableCell = memo(({ 
+  value, 
+  rowIndex,
+  columnKey,
+  column,
+  theme,
+  neon,
+  onUpdate,
+  onEnter
+}: any) => {
+  const handleChange = useCallback((newValue: any) => {
+    onUpdate(rowIndex, columnKey, newValue);
+  }, [rowIndex, columnKey, onUpdate]);
+
+  if (column.inputType === "number") {
+    return (
+      <TextField
+        type="number"
+        fullWidth
+        variant="standard"
+        value={value || ""}
+        onChange={(e) => handleChange(e.target.value === "" ? "" : Number(e.target.value))}
+      />
+    );
+  }
+
+  if (column.inputType === "select") {
+    return (
+      <Select
+        theme={theme}
+        neon={neon}
+        label={column.label}
+        value={value || ""}
+        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleChange(e.target.value)}
+        options={column.options || []}
+        width="100%"
+      />
+    );
+  }
+
+  if (column.inputType === "checkselect") {
+    return (
+      <CheckSelect
+        theme={theme}
+        neon={neon}
+        label={column.label}
+        options={column.options || []}
+        value={Array.isArray(value) ? value : []}
+        onChange={(newValues: string[]) => handleChange(newValues)}
+        width="100%"
+      />
+    );
+  }
+
+  // text (default)
+  return (
+    <TextField
+      fullWidth
+      variant="standard"
+      value={value || ""}
+      onChange={(e) => handleChange(e.target.value)}
+      onKeyDown={onEnter}
+    />
+  );
+}, (prev, next) => {
+  // Só re-renderiza se o valor específico desta célula mudou
+  return prev.value === next.value && 
+         prev.rowIndex === next.rowIndex &&
+         prev.theme === next.theme &&
+         prev.neon === next.neon;
+});
 
 function DataTableComponent<T extends { [key: string]: any }>({
   data,
@@ -42,104 +115,67 @@ function DataTableComponent<T extends { [key: string]: any }>({
   onSelectSearch,
   searchKeys
 }: DataTableProps<T>) {
-  const [rows, setRows] = useState<T[]>(data);
   const [search, setSearch] = useState("");
+  
+  // Usar useRef para evitar re-criação de callbacks
+  const dataRef = useRef(data);
+  dataRef.current = data;
 
-  // Sincroniza quando a prop `data` mudar (útil)
-  useEffect(() => {
-    setRows(data);
-  }, [data]);
-
-  // 🔹 Atualiza célula
+  // Atualiza célula - agora trabalha diretamente com a prop data
   const updateValue = useCallback((rowIndex: number, key: keyof T, value: any) => {
-    setRows(prev => {
-      const updated = [...prev];
-      updated[rowIndex] = { ...updated[rowIndex], [key]: value };
-      onChange(updated);
-      return updated;
-    });
+    const updated = [...dataRef.current];
+    updated[rowIndex] = { ...updated[rowIndex], [key]: value };
+    onChange(updated);
   }, [onChange]);
 
-  // 🔹 Renderiza célula baseado no tipo
-  const renderCell = useCallback((col: ColumnConfig<T>, row: T, rowIndex: number) => {
+  // Handler para Enter
+  const handleEnter = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const inputs = document.querySelectorAll<HTMLInputElement>("input.MuiInputBase-input");
+      const currentIndex = Array.from(inputs).indexOf(e.target as HTMLInputElement);
+      if (currentIndex + 1 < inputs.length) {
+        inputs[currentIndex + 1].focus();
+      } else {
+        // Adiciona nova linha ao apertar Enter no último input
+        const emptyRow = columns.reduce((acc, col) => {
+          (acc as any)[col.key] = col.inputType === "number" ? 0 : "";
+          return acc;
+        }, {} as T);
+        onChange([...dataRef.current, emptyRow]);
+      }
+    }
+  }, [columns, onChange]);
+
+  // Renderiza célula - memoizado por coluna
+  const renderCell = useCallback((col: ColumnConfig<T>, rowIndex: number) => {
+    const row = data[rowIndex];
     const value = row[col.key];
 
     if (col.customRender) {
       return col.customRender(value, row, (val) => updateValue(rowIndex, col.key, val));
     }
 
-    switch (col.inputType) {
-      case "number":
-        return (
-          <TextField
-            type="number"
-            fullWidth
-            variant="standard"
-            value={value || ""}
-            onChange={(e) => updateValue(rowIndex, col.key, e.target.value === "" ? "" : Number(e.target.value))}
-            //onChange={(e) => updateValue(rowIndex, col.key, e.target.value)}
-          />
-        );
+    return (
+      <TableCell
+        value={value}
+        rowIndex={rowIndex}
+        columnKey={col.key}
+        column={col}
+        theme={theme}
+        neon={neon}
+        onUpdate={updateValue}
+        onEnter={handleEnter}
+      />
+    );
+  }, [data, theme, neon, updateValue, handleEnter]);
 
-      case "select":
-        return (
-          <Select
-            theme={theme}
-            neon={neon}
-            label={col.label}
-            value={value || ""}
-            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => updateValue(rowIndex, col.key, e.target.value)}
-            //onChange={(e) => updateValue(rowIndex, col.key, e.target.value)}
-            options={col.options || []}
-            width="100%"
-          />
-        );
-
-      case "checkselect": // 🔹 novo tipo
-        return (
-          <CheckSelect
-            theme={theme}
-            neon={neon}
-            label={col.label}
-            options={col.options || []}
-            value={Array.isArray(value) ? value : []} // garante que seja array
-            onChange={(newValues: string[]) => updateValue(rowIndex, col.key, newValues)}
-            width="100%"
-          />
-        );
-
-      case "text":
-      default:
-        return (
-          <TextField
-            fullWidth
-            variant="standard"
-            value={value || ""}
-            onChange={(e) => updateValue(rowIndex, col.key, e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                const inputs = document.querySelectorAll<HTMLInputElement>("input.MuiInputBase-input");
-                const currentIndex = Array.from(inputs).indexOf(e.target as HTMLInputElement);
-                if (currentIndex + 1 < inputs.length) {
-                  inputs[currentIndex + 1].focus();
-                } else {
-                  handleAddRow();
-                }
-              }
-            }}
-          />
-        );
-    }
-  }, [theme, neon, updateValue]);
-
-  // 🔹 Colunas formatadas para MUIDataTable
+  // Colunas formatadas - memoizadas com dependências corretas
   const muiColumns = useMemo(() => columns.map((col) => ({
     name: String(col.key),
     label: col.label,
     options: {
-      customBodyRenderLite: (dataIndex: number) =>
-        renderCell(col, rows[dataIndex], dataIndex),
+      customBodyRenderLite: (dataIndex: number) => renderCell(col, dataIndex),
       setCellProps: () => ({
         style: col.width ? { width: col.width, maxWidth: col.width } : {},
       }),
@@ -150,24 +186,20 @@ function DataTableComponent<T extends { [key: string]: any }>({
         },
       }),
     },
-  })), [columns, rows, renderCell]);
+  })), [columns, renderCell]);
 
   const handleAddRow = useCallback(() => {
     const emptyRow = columns.reduce((acc, col) => {
-      // preencha tipos base: number -> 0, text/select -> ""
       (acc as any)[col.key] = col.inputType === "number" ? 0 : "";
       return acc;
     }, {} as T);
-    const updated = [...rows, emptyRow];
-    setRows(updated);
-    onChange(updated);
-  }, [columns, rows, onChange]);
+    onChange([...dataRef.current, emptyRow]);
+  }, [columns, onChange]);
 
   const handleRemoveRow = useCallback((index: number) => {
-    const updated = rows.filter((_, i) => i !== index);
-    setRows(updated);
+    const updated = dataRef.current.filter((_, i) => i !== index);
     onChange(updated);
-  }, [rows, onChange]);
+  }, [onChange]);
 
   const searchSuggestions = useMemo(() => {
     if (!searchData || !searchKeys) return [];
@@ -188,6 +220,25 @@ function DataTableComponent<T extends { [key: string]: any }>({
     setSearch("");
   }, [searchData, onSelectSearch]);
 
+  // Coluna de ações memoizada
+  const actionsColumn = useMemo(() => ({
+    name: "Ações",
+    options: {
+      filter: false,
+      sort: false,
+      customBodyRenderLite: (dataIndex: number) => {
+        const isLastRow = dataIndex === data.length - 1;
+        return (
+          <IconButton
+            onClick={() => isLastRow ? handleAddRow() : handleRemoveRow(dataIndex)}
+          >
+            {isLastRow ? <Add className="icon" /> : <Delete className="iconDelete" />}
+          </IconButton>
+        );
+      },
+    },
+  }), [data.length, handleAddRow, handleRemoveRow]);
+
   return (
     <DataTableContainer theme={theme} neon={neon}>
       {searchable && searchData && onSelectSearch && (
@@ -205,33 +256,8 @@ function DataTableComponent<T extends { [key: string]: any }>({
       )}
       <MUIDataTable
         title=""
-        data={rows}
-        columns={[
-          ...muiColumns,
-          {
-            name: "Ações",
-            options: {
-              filter: false,
-              sort: false,
-              customBodyRenderLite: (dataIndex: number) => {
-                const isLastRow = dataIndex === rows.length - 1;
-                return (
-                  <IconButton
-                    onClick={() =>
-                      isLastRow ? handleAddRow() : handleRemoveRow(dataIndex)
-                    }
-                  >
-                    {isLastRow ? (
-                      <Add className="icon" />
-                    ) : (
-                      <Delete className="iconDelete" />
-                    )}
-                  </IconButton>
-                );
-              },
-            },
-          },
-        ]}
+        data={data}
+        columns={[...muiColumns, actionsColumn]}
         options={{
           search: false,
           filter: false,

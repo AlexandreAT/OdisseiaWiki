@@ -1,4 +1,4 @@
-import { useState, forwardRef, memo, useCallback } from 'react';
+import { useState, forwardRef, useCallback } from 'react';
 import { ContentController, LoginLabel, LoginInput, LoginLabelSpan, SpanError } from './InputText.style';
 
 interface Props {
