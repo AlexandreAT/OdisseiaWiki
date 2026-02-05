@@ -16,6 +16,8 @@ export interface Personagem {
     InventarioJson?: Item[];
     PersonagemsVinculados?: number[];
     Nanites?: number;
+    Tags?: string[];
+    Visivel: boolean;
     DataCriacao: string;
     Skills?: Skills[];
     Magia?: Magia[];

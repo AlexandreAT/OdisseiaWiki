@@ -33,6 +33,10 @@ public partial class Item
     [MaxLength(50)]
     public string? IditemBase { get; set; }
 
+    public string? Tags { get; set; }
+
+    public bool Visivel { get; set; } = true;
+
     public DateTime DataCriacao { get; set; } = DateTime.UtcNow;
 
     public int? Idpersonagem { get; set; }

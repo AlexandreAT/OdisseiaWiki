@@ -12,6 +12,8 @@ export interface Item {
   efeito?: string;
   imagem?: string;
   atributos?: ItemAtributos | Record<string, any>;
+  tags?: string[];
+  visivel?: boolean;
   dataCriacao?: string;
   idPersonagem?: number;
 }

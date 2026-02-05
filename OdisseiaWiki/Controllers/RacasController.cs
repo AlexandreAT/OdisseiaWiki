@@ -16,9 +16,9 @@ namespace OdisseiaWiki.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll([FromQuery] bool? visivel = null)
         {
-            ResultRaca resultado = await _service.GetAllAsync();
+            ResultRaca resultado = await _service.GetAllAsync(visivel);
 
             if (!resultado.Sucesso)
                 return BadRequest(resultado.MensagemErro);

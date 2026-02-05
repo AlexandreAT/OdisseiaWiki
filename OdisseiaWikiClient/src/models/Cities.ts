@@ -3,5 +3,8 @@ export interface Cidade {
   Nome: string;
   Descricao?: string;
   Imagem?: string;
+  GaleriaImagem?: string[];
+  Tags?: string[];
+  Visivel: boolean;
   DataCriacao: string;
 }

@@ -1,15 +1,14 @@
-// src/services/assetsService.ts
 import api from '../axios/api';
 
 export interface SaveAssetPayload {
-    imageFile: File; // arquivo da imagem
-    type: string; // 'racas', 'personagens', etc
-    entityName: string; // 'orc', 'elf', 'nome do personagem', etc
-    folderName?: string; // opcional, ex: 'galeria'
+    imageFile: File;
+    type: string;
+    entityName: string;
+    folderName?: string;
 }
 
 export interface SaveAssetResult {
-    path: string; // caminho relativo retornado pelo backend
+    path: string;
 }
 
 /**

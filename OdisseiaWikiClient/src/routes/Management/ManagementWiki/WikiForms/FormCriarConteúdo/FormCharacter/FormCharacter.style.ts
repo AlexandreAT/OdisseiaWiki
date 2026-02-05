@@ -74,11 +74,12 @@ export const TableTitle = styled.h2`
     letter-spacing: 3px;
 `
 
-export const RelatedCharactersSection = styled.div`
+export const RelatedCharactersSection = styled.div<{ fullWidth?: boolean }>`
   display: flex;
   flex-direction: column;
   width: 100%;
   gap: 10px;
+  grid-column: ${({ fullWidth }) => (fullWidth ? '1 / -1' : 'auto')};
 `;
 
 export const SectionTitle = styled.h2<Props>`
@@ -279,6 +280,85 @@ export const LabelStatus = styled.h2<{ width?: string }>`
     font-size: ${({ width }) => width || '18px'};
     cursor: default;
 `
+
+export const TagsSection = styled.div`
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+`;
+
+export const TagInputContainer = styled.div`
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  align-items: flex-start;
+  width: 100%;
+`;
+
+export const TagsList = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  width: 100%;
+  min-height: 40px;
+`;
+
+export const TagItem = styled.div<Props>`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 20px;
+  background: ${({ theme, neon }) =>
+    theme === 'dark'
+      ? neon === 'on'
+        ? 'var(--blackTransp)'
+        : 'var(--clearblack)'
+      : neon === 'on'
+        ? 'var(--whitesmoke)'
+        : 'var(--clearWhite)'};
+  border: 1px solid ${({ theme, neon }) =>
+    theme === 'dark'
+      ? neon === 'on'
+        ? 'var(--clearneonBlue)'
+        : 'var(--lightGrey)'
+      : neon === 'on'
+        ? 'var(--neonViolet)'
+        : 'var(--deepgrey)'};
+  font-size: 14px;
+  color: ${({ theme }) =>
+    theme === 'dark' ? 'var(--clearWhite)' : 'var(--deepgrey)'};
+  transition: all 0.2s ease;
+`;
+
+export const TagRemoveButton = styled.button`
+  background: none;
+  border: none;
+  color: var(--red);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+
+  &:hover {
+    opacity: 1;
+  }
+`;
+
+export const CheckboxSection = styled.div`
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
 
 export const MinimalInput = styled.input.attrs({ type: "number" })`
   width: 30px;

@@ -169,8 +169,8 @@ export const ClipButtonAnimated = styled(ClipButton)<SmallButtonProps>`
   ${({ collapsed, index }) =>
     collapsed &&
     (index === 0
-      ? `left: 20px;`    // Mesas vai pra esquerda
-      : `right: 20px;`)} // Personagens vai pra direita
+      ? `left: 20px;`   
+      : `right: 20px;`)}
 
   &::before {
     content: '';

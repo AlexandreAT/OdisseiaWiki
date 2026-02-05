@@ -1,18 +1,14 @@
 import { mapToItem } from './../../../../../../utils/mapItem';
 import { getRacas } from './../../../../../../services/racasService';
-import { ItemPayload } from './../../../../../../services/itensService';
 import { RacaPayload } from './../../../../../../services/racasService';
 import { CidadePayload, getCidades } from './../../../../../../services/cidadesService';
 import { PersonagemPayload } from './../../../../../../services/personagensService';
 import { saveAsset } from './../../../../../../services/assetsService';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { personagensMock } from '../../../../../../Mock/characters.mock';
-import { cidadesMock } from '../../../../../../Mock/cities.mock';
-import { racasMock } from '../../../../../../Mock/races.mock';
 import { CharacterFormData, CharacterFormErrors } from './FormCharacter.type';
 import toast from 'react-hot-toast';
-import { Personagem, Principais, Secundarios } from '../../../../../../models/Characters';
-import { itensMock } from '../../../../../../Mock/itens.mock';
+import { Principais, Secundarios } from '../../../../../../models/Characters';
 import { SkillElemento, Skills, SkillTipoString } from '../../../../../../models/Skills';
 import { Item, ItemTipo } from '../../../../../../models/Itens';
 import { Magia, MagiaElemento, MagiaTipoString } from '../../../../../../models/Magias';
@@ -37,6 +33,9 @@ export const useFormCharacter = () => {
   const [nanites, setNanites] = useState('');
   const [alignment, setAlignment] = useState('');
   const [traits, setTraits] = useState<string[]>([]);
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
+  const [visivel, setVisivel] = useState(true);
   const [xp, setXp] = useState(0);
   const [level, setLevel] = useState(1);
   const [capacidadeCarga, setCapacidadeCarga] = useState(0);
@@ -270,6 +269,18 @@ export const useFormCharacter = () => {
     }, 300);
   }, [allPersonagens]);
 
+  const handleAddTag = useCallback(() => {
+    const trimmedTag = tagInput.trim();
+    if (trimmedTag && !tags.includes(trimmedTag)) {
+      setTags(prev => [...prev, trimmedTag]);
+      setTagInput('');
+    }
+  }, [tagInput, tags]);
+
+  const handleRemoveTag = useCallback((tagToRemove: string) => {
+    setTags(prev => prev.filter(tag => tag !== tagToRemove));
+  }, []);
+
   // --- validação ---
   const validateCharacterForm = useCallback((data: CharacterFormData): CharacterFormErrors => {
     const errors: CharacterFormErrors = {};
@@ -390,6 +401,8 @@ export const useFormCharacter = () => {
         nanites: nanites ? Number(nanites) : undefined,
         alinhamento: alignment,
         tracos: traits,
+        tags: tags.length > 0 ? tags : undefined,
+        visivel: visivel,
         inventarioJson: inventarioMapped,
         skills: skillMapped,
         magia: magiaMapped,
@@ -423,7 +436,6 @@ export const useFormCharacter = () => {
   }, [avatarUrl, avatarFile, userName, statusBasico, itens, magias, skills, race, city, history, costumes, nanites, alignment, traits, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, defesas]);
 
   return {
-    // estados
     step, setStep,
     userName, setUserName,
     race, setRace,
@@ -435,6 +447,9 @@ export const useFormCharacter = () => {
     nanites, setNanites,
     alignment, setAlignment,
     traits, setTraits,
+    tags, setTags,
+    tagInput, setTagInput,
+    visivel, setVisivel,
     itens, setItens,
     skills, setSkills,
     magias, setMagias,
@@ -462,6 +477,8 @@ export const useFormCharacter = () => {
 
     // funções
     searchPersonagens,
+    handleAddTag,
+    handleRemoveTag,
     handleNext,
     handleSubmit,
     handlePrev,

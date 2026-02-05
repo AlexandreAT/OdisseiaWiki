@@ -6,7 +6,6 @@ import { CyberButton } from '../../../../components/Generic/HighlightButton/High
 import { Modal } from '../../../../components/Generic/Modal/Modal';
 import { atributosFormMap, atributosMagiaFormMap, atributosSkillFormMap } from '../../../Management/ManagementWiki/WikiForms/FormCriarConteúdo/FormCharacter/MapItensForm';
 
-// Componentes memoizados para evitar re-renders desnecessários
 const ItemAtributosEditor = memo(({ 
   row, 
   value, 
@@ -44,7 +43,7 @@ const ItemAtributosEditor = memo(({
     </>
   );
 }, (prevProps, nextProps) => {
-  // Custom comparison: apenas re-renderiza se os valores importantes mudarem
+
   return prevProps.value === nextProps.value && 
          prevProps.row.tipo === nextProps.row.tipo &&
          prevProps.row.nome === nextProps.row.nome;
@@ -134,7 +133,6 @@ const MagiaAtributosEditor = memo(({
          prevProps.row.nome === nextProps.row.nome;
 });
 
-// Definições de colunas base (sem customRender)
 const baseItemColumns = [
   { key: "nome", label: "Nome", inputType: "text", width: 200 },
   { key: "descricao", label: "Descrição", inputType: "text", width: 300 },

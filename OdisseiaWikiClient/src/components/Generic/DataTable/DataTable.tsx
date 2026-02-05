@@ -30,7 +30,6 @@ interface ColumnConfig<T> {
   customRender?: (value: any, row: T, onChange: (val: any) => void) => React.ReactNode;
 }
 
-// Componente de célula otimizado que só re-renderiza quando SEU valor muda
 const TableCell = memo(({ 
   value, 
   rowIndex,
@@ -85,7 +84,7 @@ const TableCell = memo(({
     );
   }
 
-  // text (default)
+
   return (
     <TextField
       fullWidth
@@ -96,7 +95,7 @@ const TableCell = memo(({
     />
   );
 }, (prev, next) => {
-  // Só re-renderiza se o valor específico desta célula mudou
+
   return prev.value === next.value && 
          prev.rowIndex === next.rowIndex &&
          prev.theme === next.theme &&
@@ -117,18 +116,18 @@ function DataTableComponent<T extends { [key: string]: any }>({
 }: DataTableProps<T>) {
   const [search, setSearch] = useState("");
   
-  // Usar useRef para evitar re-criação de callbacks
+
   const dataRef = useRef(data);
   dataRef.current = data;
 
-  // Atualiza célula - agora trabalha diretamente com a prop data
+
   const updateValue = useCallback((rowIndex: number, key: keyof T, value: any) => {
     const updated = [...dataRef.current];
     updated[rowIndex] = { ...updated[rowIndex], [key]: value };
     onChange(updated);
   }, [onChange]);
 
-  // Handler para Enter
+
   const handleEnter = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -137,7 +136,7 @@ function DataTableComponent<T extends { [key: string]: any }>({
       if (currentIndex + 1 < inputs.length) {
         inputs[currentIndex + 1].focus();
       } else {
-        // Adiciona nova linha ao apertar Enter no último input
+      
         const emptyRow = columns.reduce((acc, col) => {
           (acc as any)[col.key] = col.inputType === "number" ? 0 : "";
           return acc;
@@ -147,7 +146,7 @@ function DataTableComponent<T extends { [key: string]: any }>({
     }
   }, [columns, onChange]);
 
-  // Renderiza célula - memoizado por coluna
+
   const renderCell = useCallback((col: ColumnConfig<T>, rowIndex: number) => {
     const row = data[rowIndex];
     const value = row[col.key];
@@ -170,7 +169,7 @@ function DataTableComponent<T extends { [key: string]: any }>({
     );
   }, [data, theme, neon, updateValue, handleEnter]);
 
-  // Colunas formatadas - memoizadas com dependências corretas
+
   const muiColumns = useMemo(() => columns.map((col) => ({
     name: String(col.key),
     label: col.label,
@@ -220,7 +219,7 @@ function DataTableComponent<T extends { [key: string]: any }>({
     setSearch("");
   }, [searchData, onSelectSearch]);
 
-  // Coluna de ações memoizada
+
   const actionsColumn = useMemo(() => ({
     name: "Ações",
     options: {

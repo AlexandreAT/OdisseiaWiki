@@ -1,7 +1,10 @@
-﻿using OdisseiaWiki.Data;
+﻿using Microsoft.EntityFrameworkCore;
+using OdisseiaWiki.Data;
 using OdisseiaWiki.Models;
 using OdisseiaWiki.Repositories.Interfaces;
-using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace OdisseiaWiki.Repositories
 {
@@ -14,8 +17,15 @@ namespace OdisseiaWiki.Repositories
             _context = context;
         }
 
-        public async Task<List<Personagen>> GetAllAsync()
-            => await _context.Personagens.AsNoTracking().ToListAsync();
+        public async Task<List<Personagen>> GetAllAsync(bool? visivel = null)
+        {
+            var query = _context.Personagens.AsNoTracking();
+
+            if (visivel.HasValue)
+                query = query.Where(p => p.Visivel == visivel.Value);
+
+            return await query.ToListAsync();
+        }
 
         public async Task<Personagen?> GetByIdAsync(int id)
             => await _context.Personagens.FindAsync(id);

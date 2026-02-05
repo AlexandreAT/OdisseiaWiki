@@ -1,4 +1,3 @@
-// CheckSelect.tsx
 import { useState, useEffect, useRef, memo, useCallback } from 'react';
 import { createPortal } from "react-dom";
 import {
@@ -54,28 +53,28 @@ const CheckSelectComponent = ({
   const [focus, setFocus] = useState(false);
   const [open, setOpen] = useState(false);
   const [selectedValues, setSelectedValues] = useState<string[]>(value || []);
-  // rect: bounding values from trigger
+
   const [rect, setRect] = useState<{ top: number; bottom: number; left: number; width: number } | null>(null);
-  // finalTop is computed to possibly flip above
+
   const [finalTop, setFinalTop] = useState<number | null>(null);
 
-  // keep local selected in sync with external value
+
   useEffect(() => {
     setSelectedValues(value || []);
     if ((value || []).length > 0) setFocus(true);
   }, [value]);
 
-  // compute bounding rect of trigger
+
   const computeRect = useCallback(() => {
     const el = containerRef.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
     setRect({ top: r.top, bottom: r.bottom, left: r.left, width: r.width });
-    // default finalTop to bottom (below)
+  
     setFinalTop(r.bottom);
   }, []);
 
-  // open toggle: compute rect and focus
+
   const toggleOpen = useCallback((e?: React.MouseEvent) => {
     e?.stopPropagation();
     if (!open) {
@@ -83,13 +82,13 @@ const CheckSelectComponent = ({
       setOpen(true);
     } else {
       setOpen(false);
-      // keep focus state true if has selected values
+    
       if (selectedValues.length === 0) setFocus(false);
     }
     setFocus(true);
   }, [open, selectedValues.length, computeRect]);
 
-  // toggle one value
+
   const toggleCheck = useCallback((val: string) => {
     const updated = selectedValues.includes(val)
       ? selectedValues.filter(v => v !== val)
@@ -98,7 +97,7 @@ const CheckSelectComponent = ({
     onChange?.(updated);
   }, [selectedValues, onChange]);
 
-  // close on outside click or escape; also recompute rect on scroll/resize
+
   useEffect(() => {
     if (!open) return;
 
@@ -124,7 +123,7 @@ const CheckSelectComponent = ({
     window.addEventListener('mousedown', onDocClick);
     window.addEventListener('keydown', onEsc);
     window.addEventListener('resize', onScrollOrResize);
-    window.addEventListener('scroll', onScrollOrResize, true); // capture scroll from ancestors too
+    window.addEventListener('scroll', onScrollOrResize, true);
 
     return () => {
       window.removeEventListener('mousedown', onDocClick);
@@ -132,23 +131,23 @@ const CheckSelectComponent = ({
       window.removeEventListener('resize', onScrollOrResize);
       window.removeEventListener('scroll', onScrollOrResize, true);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  
   }, [open, selectedValues]);
 
-  // after dropdown rendered, maybe flip above if not enough space
+
   useEffect(() => {
     if (!open) return;
 
-    // measure dropdown height once mounted
+  
     const id = setTimeout(() => {
       const dd = dropdownRef.current;
       const r = rect;
       if (!dd || !r) return;
       const ddh = dd.offsetHeight;
       const spaceBelow = window.innerHeight - r.bottom;
-      // if not enough space below and more space above -> open above
+    
       if (spaceBelow < ddh && r.top > ddh) {
-        setFinalTop(Math.max(8, r.top - ddh)); // a little margin
+        setFinalTop(Math.max(8, r.top - ddh));
       } else {
         setFinalTop(r.bottom);
       }
@@ -157,8 +156,8 @@ const CheckSelectComponent = ({
     return () => clearTimeout(id);
   }, [open, rect]);
 
-  // click container to toggle also triggers toggleOpen via onClick on Label
-  // Render dropdown via portal when open
+
+
   const dropdownPortal = (() => {
     if (!open || !rect || typeof document === "undefined") return null;
 
@@ -166,8 +165,8 @@ const CheckSelectComponent = ({
       position: 'fixed',
       top: finalTop !== null ? finalTop : rect.bottom,
       left: rect.left,
-      minWidth: rect.width, // garante largura mínima igual ao trigger
-      width: 'auto',        // agora pode expandir conforme o conteúdo
+      minWidth: rect.width,
+      width: 'auto',       
       zIndex: 99999,
       display: 'inline-block',
     };

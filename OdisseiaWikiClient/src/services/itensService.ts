@@ -12,6 +12,8 @@ export interface ItemPayload {
   atributosJson?: string;
   iditemBase?: string;
   idpersonagem?: number;
+  tags?: string[];
+  visivel?: boolean;
   dataCriacao?: string;
 }
 

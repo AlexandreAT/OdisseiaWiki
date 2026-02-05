@@ -1,4 +1,3 @@
-// utils/itemMapping.ts
 import { ItemTipo, Item } from './../models/Itens';
 import { ItemPayload } from './../services/itensService';
 
@@ -37,7 +36,7 @@ export const mapToPayload = (item: Item): ItemPayload => ({
   iditem: item.id,
   iditemBase: item.idItemBase,
   nome: item.nome,
-  tipo: String(item.tipo), // garante string
+  tipo: String(item.tipo),
   quantidade: item.quantidade,
   peso: item.peso,
   descricao: item.descricao,

@@ -28,9 +28,9 @@ namespace OdisseiaWiki.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll([FromQuery] bool? visivel = null)
         {
-            List<Personagen> personagens = await _service.GetAllAsync();
+            List<Personagen> personagens = await _service.GetAllAsync(visivel);
             return Ok(personagens);
         }
 

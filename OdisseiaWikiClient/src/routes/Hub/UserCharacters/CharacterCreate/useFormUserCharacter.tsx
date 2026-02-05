@@ -11,6 +11,7 @@ import { Skills } from '../../../../models/Skills';
 import { Item } from '../../../../models/Itens';
 import { Magia } from '../../../../models/Magias';
 import { getItens } from '../../../../services/itensService';
+import { getPersonagens } from '../../../../services/personagensService';
 import { Mesa } from '../../../../models/Mesa';
 import { getMesas } from '../../../../services/mesaService';
 import { atualizarPersonagemJogador, criarPersonagemJogador, PersonagemJogadorPayload } from '../../../../services/personagemJogadorService';
@@ -129,7 +130,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     const fetchCities = async () => {
       setLoadingCities(true);
       try {
-        const result = await getCidades();
+        const result = await getCidades(true); // Personagem Jogador: apenas visíveis
         if (result.sucesso && result.cidades) {
           setListCities(result.cidades);
         } else {
@@ -181,8 +182,44 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
   }, []);
 
   useEffect(() => {
-    setAllPersonagens(personagensMock);
-    setPersonagens([]);
+    const fetchPersonagens = async () => {
+      try {
+        const personagensData = await getPersonagens(true); // Personagem Jogador: apenas visíveis
+        
+        if (personagensData && Array.isArray(personagensData)) {
+          const mappedPersonagens = personagensData.map(p => ({
+            Idpersonagem: parseInt(p.idpersonagem),
+            Nome: p.nome,
+            Idraca: p.idraca,
+            Idcidade: p.idcidade,
+            Historia: p.historia,
+            StatusJson: p.statusJson,
+            Alinhamento: p.alinhamento,
+            Tracos: p.tracos,
+            Costumes: p.costumes,
+            Imagem: p.imagem,
+            InventarioJson: p.inventarioJson,
+            PersonagemsVinculados: p.personagemsVinculados?.map(id => parseInt(id)) || [],
+            Nanites: p.nanites || 0,
+            Tags: p.tags,
+            Visivel: p.visivel,
+            DataCriacao: p.dataCriacao,
+            Skills: p.skills,
+            Magia: p.magia,
+          }));
+          
+          setAllPersonagens(mappedPersonagens as any);
+          setPersonagens([]);
+        } else {
+          setAllPersonagens(personagensMock);
+          setPersonagens([]);
+        }
+      } catch (err) {
+        setAllPersonagens(personagensMock);
+        setPersonagens([]);
+      }
+    };
+    fetchPersonagens();
   }, []);
 
   useEffect(() => {

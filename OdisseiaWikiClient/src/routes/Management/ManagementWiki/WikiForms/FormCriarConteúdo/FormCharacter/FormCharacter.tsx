@@ -1,5 +1,5 @@
-import React from 'react';
-import { FormController, FormHeader, HeaderInputs, HeaderAvatar, GridInputs, SectionTable, TableTitle, RelatedCharactersSection, SectionTitle, SectionStatus, NavegationButtons, StatusHeader, HeaderInfo, LabelStatus, MinimalInput, StatusContent, StatusAtributosDiv, StatusImageDiv, AtributoBox, AtributoDiv, InfoImage, AvatarController, AtributeController, StatusContentCenter, StatusDefesaDiv, StatusDefesaController, InfoController } from './FormCharacter.style';
+import React, { useRef, useEffect } from 'react';
+import { FormController, FormHeader, HeaderInputs, HeaderAvatar, GridInputs, SectionTable, TableTitle, RelatedCharactersSection, SectionTitle, SectionStatus, NavegationButtons, StatusHeader, HeaderInfo, LabelStatus, MinimalInput, StatusContent, StatusAtributosDiv, StatusImageDiv, AtributoBox, AtributoDiv, InfoImage, AvatarController, AtributeController, StatusContentCenter, StatusDefesaDiv, StatusDefesaController, InfoController, CheckboxSection } from './FormCharacter.style';
 import { InputText } from '../../../../../../components/Generic/InputText/InputText';
 import { Select } from '../../../../../../components/Generic/Select/Select';
 import { AvatarIcon } from '../../../../../../components/Generic/AvatarIcon/AvatarIcon';
@@ -8,6 +8,7 @@ import { TextArea } from '../../../../../../components/Generic/TextArea/TextArea
 import { Search } from '../../../../../../components/Generic/Search/Search';
 import { BiSearchAlt } from 'react-icons/bi';
 import { CheckSelect } from '../../../../../../components/Generic/CheckSelect/CheckSelect';
+import { CheckBox } from '../../../../../../components/Generic/CheckBox/CheckBox';
 import { DataTable } from '../../../../../../components/Generic/DataTable/DataTable';
 import { HorizontalList } from '../../../../../../components/Generic/HorizontalList/HorizontalList';
 import { StatusInput } from '../../../../../../components/Generic/StatusInput/StatusInput';
@@ -64,6 +65,9 @@ export const FormCharacter = ({ theme, neon }: FormProps) => {
     nanites, setNanites,
     alignment, setAlignment,
     traits, setTraits,
+    tags, setTags,
+    tagInput, setTagInput,
+    visivel, setVisivel,
     itens, setItens,
     skills, setSkills,
     magias, setMagias,
@@ -74,6 +78,8 @@ export const FormCharacter = ({ theme, neon }: FormProps) => {
     listRaces, loadingRaces, selectedRace,
     personagens, allPersonagens, searchTerm, loadingPersonagens,
     searchPersonagens,
+    handleAddTag,
+    handleRemoveTag,
     xp, setXp,
     level, setLevel,
     atributosPrincipais, setAtributosPrincipais,
@@ -81,6 +87,23 @@ export const FormCharacter = ({ theme, neon }: FormProps) => {
     defesas, setDefesas,
     listItens, handleSelectItem,
   } = useFormCharacter();
+
+  const tagInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const input = tagInputRef.current;
+    if (!input) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleAddTag();
+      }
+    };
+
+    input.addEventListener('keydown', handleKeyDown);
+    return () => input.removeEventListener('keydown', handleKeyDown);
+  }, [handleAddTag]);
 
   const raceImageUrl = React.useMemo(() => 
     selectedRace?.imagem ? selectedRace.imagem : '/assets_dynamic/default.png',
@@ -318,7 +341,7 @@ export const FormCharacter = ({ theme, neon }: FormProps) => {
                   if (file) {
                     const url = URL.createObjectURL(file);
                     setAvatarUrl(url);
-                    setAvatarFile(file); // para envio no submit
+                    setAvatarFile(file);
                   }
                 }}
                 initialImage={avatarUrl}
@@ -425,6 +448,23 @@ export const FormCharacter = ({ theme, neon }: FormProps) => {
               width="100%"
               type='number'
             />
+            {listPersonagemRelacionado.length > 0 && (
+              <RelatedCharactersSection fullWidth>
+                <SectionTitle theme={theme} neon={neon}>
+                  Personagens Relacionados
+                </SectionTitle>
+                <HorizontalList
+                  theme={theme}
+                  neon={neon}
+                  data={listPersonagemRelacionado}
+                  onDelete={(id) =>
+                    setListPersonagemRelacionado((prev) =>
+                      prev.filter((item) => item.id !== id)
+                    )
+                  }
+                />
+              </RelatedCharactersSection>
+            )}
             <TextArea
               theme={theme}
               neon={neon}
@@ -435,23 +475,33 @@ export const FormCharacter = ({ theme, neon }: FormProps) => {
             />
           </GridInputs>
 
-          {listPersonagemRelacionado.length > 0 && (
-            <RelatedCharactersSection>
-              <SectionTitle theme={theme} neon={neon}>
-                Personagens Relacionados
-              </SectionTitle>
+          <RelatedCharactersSection fullWidth>
+            <SectionTitle theme={theme} neon={neon}>
+              Tags (Opcional)
+            </SectionTitle>
+            <InputText
+              ref={tagInputRef}
+              theme={theme}
+              neon={neon}
+              label="Adicionar tag"
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              width="100%"
+            />
+            {tags.length > 0 && (
               <HorizontalList
                 theme={theme}
                 neon={neon}
-                data={listPersonagemRelacionado}
-                onDelete={(id) =>
-                  setListPersonagemRelacionado((prev) =>
-                    prev.filter((item) => item.id !== id)
-                  )
-                }
+                data={tags.map((tag, index) => ({ id: index, nome: tag }))}
+                onDelete={(id) => {
+                  const tagToRemove = tags[id as number];
+                  if (tagToRemove) {
+                    handleRemoveTag(tagToRemove);
+                  }
+                }}
               />
-            </RelatedCharactersSection>
-          )}
+            )}
+          </RelatedCharactersSection>
 
           <SectionTable>
             <TableTitle>Inventário</TableTitle>
@@ -490,6 +540,15 @@ export const FormCharacter = ({ theme, neon }: FormProps) => {
               neon={neon}
             />
           </SectionTable>
+
+          <CheckboxSection>
+            <CheckBox
+              neon={neon}
+              label="Personagem visível"
+              checked={visivel}
+              onChange={(checked) => setVisivel(checked)}
+            />
+          </CheckboxSection>
         </>
       )}
       {step === 2 && 

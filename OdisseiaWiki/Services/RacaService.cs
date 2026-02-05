@@ -1,5 +1,6 @@
 ﻿using OdisseiaWiki.Dtos;
 using OdisseiaWiki.Dtos.OdisseiaWiki.Dtos;
+using OdisseiaWiki.Models;
 using OdisseiaWiki.Repositories.Interfaces;
 using OdisseiaWiki.Services.Interfaces;
 using System.Text.Json;
@@ -15,11 +16,11 @@ namespace OdisseiaWiki.Services
             _repository = repository;
         }
 
-        public async Task<ResultRaca> GetAllAsync()
+        public async Task<ResultRaca> GetAllAsync(bool? visivel = null)
         {
-            var racas = await _repository.GetAllAsync();
+            List<Raca>? racas = await _repository.GetAllAsync(visivel);
 
-            var dtos = racas.Select(r => new RacaDto
+            List<RacaDto> dtos = racas.Select(r => new RacaDto
             {
                 Idraca = r.Idraca,
                 Nome = r.Nome,

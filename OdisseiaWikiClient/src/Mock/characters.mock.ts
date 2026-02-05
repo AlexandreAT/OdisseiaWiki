@@ -50,6 +50,8 @@ export const personagensMock: Personagem[] = [
     ],
     PersonagemsVinculados: [],
     Nanites: 0,
+    Tags: ["Aventureiro", "Jovem", "Herói"],
+    Visivel: true,
     DataCriacao: "2024-01-10"
   },
   {
@@ -101,6 +103,8 @@ export const personagensMock: Personagem[] = [
     ],
     PersonagemsVinculados: [],
     Nanites: 0,
+    Tags: ["Guerreiro", "Honorável", "Tank"],
+    Visivel: true,
     DataCriacao: "2024-01-11"
   },
   {
@@ -142,6 +146,8 @@ export const personagensMock: Personagem[] = [
     ],
     PersonagemsVinculados: [],
     Nanites: 0,
+    Tags: ["Bardo", "Viajante", "Suporte"],
+    Visivel: true,
     DataCriacao: "2024-01-12"
   },
   {
@@ -185,6 +191,8 @@ export const personagensMock: Personagem[] = [
     ],
     PersonagemsVinculados: [],
     Nanites: 0,
+    Tags: ["Tanque", "Líder", "Atirador"],
+    Visivel: true,
     DataCriacao: "2024-01-13"
   },
   {
@@ -235,6 +243,8 @@ export const personagensMock: Personagem[] = [
     ],
     PersonagemsVinculados: [],
     Nanites: 0,
+    Tags: ["Mago", "Experimental", "DPS"],
+    Visivel: true,
     DataCriacao: "2024-01-14"
   }
 ];

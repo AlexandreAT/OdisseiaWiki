@@ -1,4 +1,3 @@
-// AtributosForms.tsx
 import React from 'react';
 import { InputText } from '../../../../../../components/Generic/InputText/InputText';
 import { FormItemAtributos } from './FormCharacter.style';
@@ -169,7 +168,6 @@ export const atributosFormMap: Record<string, React.FC<BaseProps>> = {
 
 
 
-// Skills
 export const AtaqueAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon }) => {
   const [local, setLocal] = React.useState(
     value || { dano: null, especial: "", cooldown: "", bonus: "", acerto: "" }
@@ -366,7 +364,6 @@ export const atributosSkillFormMap: Record<string, React.FC<BaseProps>> = {
 };
 
 
-// Magias
 export const AtaqueMagiaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon }) => {
   const [local, setLocal] = React.useState(
     value || { dano: null, especial: "", bonus: "", acerto: "" }

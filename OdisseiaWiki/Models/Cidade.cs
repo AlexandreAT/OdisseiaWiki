@@ -21,6 +21,10 @@ public partial class Cidade
 
     public string? GaleriaImagem { get; set; }
 
+    public string? Tags { get; set; }
+
+    public bool Visivel { get; set; } = true;
+
     public DateTime DataCriacao { get; set; } = DateTime.UtcNow;
 
     public virtual ICollection<Personagen> Personagens { get; set; } = new List<Personagen>();

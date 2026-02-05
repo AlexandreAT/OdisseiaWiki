@@ -17,8 +17,8 @@ interface DisplayProps {
 export const CheckListDropdown = styled.div<DropdownProps>`
   position: absolute;
   top: calc(100% + 2px);
-  min-width: 100%;       // largura mínima do trigger
-  width: fit-content;    // expande com base no conteúdo
+  min-width: 100%;
+  width: fit-content;
   z-index: 9999;
   max-height: 200px;
   overflow-y: auto;

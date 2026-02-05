@@ -16,6 +16,8 @@ export interface PersonagemPayload {
   skills: any[];
   magia: any[];
   personagemsVinculados: string[];
+  tags?: string[];
+  visivel: boolean;
   dataCriacao: string;
   statusJson: {
     status: {
@@ -39,6 +41,18 @@ export interface ResultPersonagem {
   mensagemErro?: string;
   personagem?: PersonagemPayload;
 }
+
+export interface ResultPersonagens {
+  sucesso: boolean;
+  mensagemErro?: string;
+  personagens?: PersonagemPayload[];
+}
+
+export const getPersonagens = async (visivel?: boolean): Promise<PersonagemPayload[]> => {
+  const params = visivel !== undefined ? { visivel } : {};
+  const response = await api.get("/personagens", { params });
+  return response.data;
+};
 
 export const salvarPersonagem = async (
   payload: PersonagemPayload

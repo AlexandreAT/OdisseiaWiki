@@ -9,4 +9,8 @@ public partial class Personagen : PersonagemBase
 {
     [Key]
     public int Idpersonagem { get; set; }
+
+    public string? Tags { get; set; }
+    
+    public bool Visivel { get; set; } = true;
 }

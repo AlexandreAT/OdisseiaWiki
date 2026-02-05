@@ -12,6 +12,8 @@
         public string? Alinhamento { get; set; }
         public List<string>? Tracos { get; set; }
         public int? Nanites { get; set; }
+        public List<string>? Tags { get; set; }
+        public bool Visivel { get; set; } = true;
 
         public PersonagemStatus? StatusJson { get; set; }
         public List<Item>? InventarioJson { get; set; }

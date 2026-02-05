@@ -5,8 +5,19 @@ export interface CidadePayload {
   nome: string;
   descricao?: string;
   imagem?: string;
-  galeriaImagem?: string;
+  galeriaImagem?: string[];
+  tags?: string[];
+  visivel: boolean;
   dataCriacao?: string;
+}
+
+export interface CreateCidadeDto {
+  Nome: string;
+  Descricao?: string;
+  Imagem: string;
+  GaleriaImagem?: string[];
+  Tags?: string[];
+  Visivel: boolean;
 }
 
 export interface ResultCidades {
@@ -15,7 +26,19 @@ export interface ResultCidades {
   cidades?: CidadePayload[];
 }
 
-export const getCidades = async (): Promise<ResultCidades> => {
-  const response = await api.get("/cidades");
+export interface ResultCreateCidade {
+  sucesso: boolean;
+  mensagemErro?: string;
+  cidade?: CidadePayload;
+}
+
+export const getCidades = async (visivel?: boolean): Promise<ResultCidades> => {
+  const params = visivel !== undefined ? { visivel } : {};
+  const response = await api.get("/cidades", { params });
+  return response.data;
+};
+
+export const createCidade = async (dto: CreateCidadeDto): Promise<ResultCreateCidade> => {
+  const response = await api.post("/cidades", dto);
   return response.data;
 };

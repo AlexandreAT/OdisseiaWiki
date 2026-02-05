@@ -23,7 +23,6 @@ const AvatarIconComponent = ({
   const fileAvatar = useRef<HTMLInputElement>(null);
   const [avatarUrl, setAvatarUrl] = useState<string>(initialImage);
 
-  // Sincronizar com initialImage quando mudar
   useEffect(() => {
     setAvatarUrl(initialImage);
   }, [initialImage]);

@@ -24,6 +24,8 @@ export interface RacaPayload {
   statusJson?: StatusJson;
   imagem?: string;
   galeriaImagem?: string[];
+  tags?: string[];
+  visivel: boolean;
 }
 
 export interface ResultRacas {

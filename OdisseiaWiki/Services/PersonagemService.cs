@@ -20,7 +20,7 @@ namespace OdisseiaWiki.Services
             if (string.IsNullOrWhiteSpace(dto.Nome))
                 return ResultPersonagem.Fail("Nome é obrigatório.");
 
-            var personagem = new Personagen
+            Personagen? personagem = new Personagen
             {
                 Nome = dto.Nome,
                 Idraca = dto.Idraca,
@@ -37,22 +37,24 @@ namespace OdisseiaWiki.Services
                 Alinhamento = dto.Alinhamento,
                 Tracos = dto.Tracos != null ? JsonSerializer.Serialize(dto.Tracos) : null,
                 Nanites = dto.Nanites?.ToString(),
+                Tags = dto.Tags != null && dto.Tags.Any() ? JsonSerializer.Serialize(dto.Tags) : null,
+                Visivel = dto.Visivel,
                 DataCriacao = DateTime.UtcNow
             };
 
-            var criado = await _repository.CreateAsync(personagem);
+            Personagen? criado = await _repository.CreateAsync(personagem);
             return ResultPersonagem.Ok(criado);
         }
 
-        public async Task<List<Personagen>> GetAllAsync()
-            => await _repository.GetAllAsync();
+        public async Task<List<Personagen>> GetAllAsync(bool? visivel = null)
+            => await _repository.GetAllAsync(visivel);
 
         public async Task<Personagen?> GetByIdAsync(int id)
             => await _repository.GetByIdAsync(id);
 
         public async Task<ResultPersonagem> UpdateAsync(int id, PersonagemDto dto)
         {
-            var personagem = await _repository.GetByIdAsync(id);
+            Personagen? personagem = await _repository.GetByIdAsync(id);
             if (personagem == null)
                 return ResultPersonagem.Fail($"Personagem com id {id} não encontrado.");
 
@@ -69,10 +71,12 @@ namespace OdisseiaWiki.Services
             personagem.PersonagemsVinculados = dto.PersonagemsVinculados != null ? JsonSerializer.Serialize(dto.PersonagemsVinculados) : personagem.PersonagemsVinculados;
             personagem.Costumes = dto.Costumes != null ? JsonSerializer.Serialize(dto.Costumes) : personagem.Costumes;
             personagem.Alinhamento = dto.Alinhamento ?? personagem.Alinhamento;
-            personagem.Tracos = dto.Tracos != null ? string.Join(",", dto.Tracos) : personagem.Tracos;
+            personagem.Tracos = dto.Tracos != null ? JsonSerializer.Serialize(dto.Tracos) : personagem.Tracos;
             personagem.Nanites = dto.Nanites?.ToString() ?? personagem.Nanites;
+            personagem.Tags = dto.Tags != null && dto.Tags.Any() ? JsonSerializer.Serialize(dto.Tags) : personagem.Tags;
+            personagem.Visivel = dto.Visivel;
 
-            var atualizado = await _repository.UpdateAsync(personagem);
+            Personagen? atualizado = await _repository.UpdateAsync(personagem);
             return ResultPersonagem.Ok(atualizado);
         }
 
