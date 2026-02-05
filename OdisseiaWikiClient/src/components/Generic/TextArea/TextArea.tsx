@@ -45,7 +45,6 @@ const TextAreaComponent = ({
   const [focus, setFocus] = useState(false);
   const [atTop, setAtTop] = useState(true);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
-  console.log('🟠 [TextArea] RENDER - value length:', value?.length ?? 0);
   
   const handleFocus = useCallback((e: React.FocusEvent<HTMLTextAreaElement>) => {
     setFocus(true);

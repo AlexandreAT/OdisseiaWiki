@@ -424,9 +424,11 @@ export const FormCharacter = ({ theme, neon }: FormProps) => {
               icon={<BiSearchAlt className="icon" />}
               iconSize={20}
               disabled={!allPersonagens.length}
-              suggestions={personagens.map(p => p.Nome)}
-              onSelectSuggestion={(nome) => {
-                const personagem = allPersonagens.find(p => p.Nome === nome);
+              suggestions={personagens.map(p => `${p.Idpersonagem}|${p.Nome}`)}
+              onSelectSuggestion={(suggestion) => {
+                const [idStr, ...nameParts] = suggestion.split('|');
+                const id = parseInt(idStr);
+                const personagem = allPersonagens.find(p => p.Idpersonagem === id);
                 if (personagem) {
                   setListPersonagemRelacionado(prev => {
                     if (prev.some(item => item.id === personagem.Idpersonagem)) {

@@ -187,26 +187,37 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
         const personagensData = await getPersonagens(true); // Personagem Jogador: apenas visíveis
         
         if (personagensData && Array.isArray(personagensData)) {
-          const mappedPersonagens = personagensData.map(p => ({
-            Idpersonagem: parseInt(p.idpersonagem),
-            Nome: p.nome,
-            Idraca: p.idraca,
-            Idcidade: p.idcidade,
-            Historia: p.historia,
-            StatusJson: p.statusJson,
-            Alinhamento: p.alinhamento,
-            Tracos: p.tracos,
-            Costumes: p.costumes,
-            Imagem: p.imagem,
-            InventarioJson: p.inventarioJson,
-            PersonagemsVinculados: p.personagemsVinculados?.map(id => parseInt(id)) || [],
-            Nanites: p.nanites || 0,
-            Tags: p.tags,
-            Visivel: p.visivel,
-            DataCriacao: p.dataCriacao,
-            Skills: p.skills,
-            Magia: p.magia,
-          }));
+          const mappedPersonagens = personagensData.map(p => {
+            // Parse dos campos JSON que vêm como strings
+            const personagemsVinculados = p.personagemsVinculados 
+              ? (typeof p.personagemsVinculados === 'string' 
+                ? JSON.parse(p.personagemsVinculados) 
+                : p.personagemsVinculados)
+              : [];
+
+            return {
+              Idpersonagem: parseInt(p.idpersonagem),
+              Nome: p.nome,
+              Idraca: p.idraca,
+              Idcidade: p.idcidade,
+              Historia: p.historia,
+              StatusJson: p.statusJson,
+              Alinhamento: p.alinhamento,
+              Tracos: p.tracos,
+              Costumes: p.costumes,
+              Imagem: p.imagem,
+              InventarioJson: p.inventarioJson,
+              PersonagemsVinculados: personagemsVinculados.map((id: any) => 
+                typeof id === 'string' ? parseInt(id) : id
+              ),
+              Nanites: p.nanites || 0,
+              Tags: p.tags,
+              Visivel: p.visivel,
+              DataCriacao: p.dataCriacao,
+              Skills: p.skills,
+              Magia: p.magia,
+            };
+          });
           
           setAllPersonagens(mappedPersonagens as any);
           setPersonagens([]);
