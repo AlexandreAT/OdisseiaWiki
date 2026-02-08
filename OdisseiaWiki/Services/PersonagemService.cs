@@ -1,4 +1,5 @@
 ﻿using OdisseiaWiki.Dtos;
+using OdisseiaWiki.Helpers;
 using OdisseiaWiki.Models;
 using OdisseiaWiki.Repositories.Interfaces;
 using OdisseiaWiki.Services.Interfaces;
@@ -20,12 +21,12 @@ namespace OdisseiaWiki.Services
             if (string.IsNullOrWhiteSpace(dto.Nome))
                 return ResultPersonagem.Fail("Nome é obrigatório.");
 
-            Personagen? personagem = new Personagen
+            var personagem = new Personagen
             {
                 Nome = dto.Nome,
                 Idraca = dto.Idraca,
                 Idcidade = dto.Idcidade,
-                Historia = dto.Historia,
+                Historia = RichTextHelper.SerializeRichText(dto.Historia),
                 StatusJson = JsonSerializer.Serialize(dto.StatusJson),
                 Imagem = dto.Imagem,
                 GaleriaImagem = dto.GaleriaImagem != null ? JsonSerializer.Serialize(dto.GaleriaImagem) : null,
@@ -42,7 +43,7 @@ namespace OdisseiaWiki.Services
                 DataCriacao = DateTime.UtcNow
             };
 
-            Personagen? criado = await _repository.CreateAsync(personagem);
+            var criado = await _repository.CreateAsync(personagem);
             return ResultPersonagem.Ok(criado);
         }
 
@@ -54,14 +55,16 @@ namespace OdisseiaWiki.Services
 
         public async Task<ResultPersonagem> UpdateAsync(int id, PersonagemDto dto)
         {
-            Personagen? personagem = await _repository.GetByIdAsync(id);
+            var personagem = await _repository.GetByIdAsync(id);
             if (personagem == null)
                 return ResultPersonagem.Fail($"Personagem com id {id} não encontrado.");
 
             personagem.Nome = dto.Nome ?? personagem.Nome;
             personagem.Idraca = dto.Idraca;
             personagem.Idcidade = dto.Idcidade;
-            personagem.Historia = dto.Historia ?? personagem.Historia;
+            personagem.Historia = dto.Historia.HasValue 
+                ? RichTextHelper.SerializeRichText(dto.Historia) 
+                : personagem.Historia;
             personagem.StatusJson = dto.StatusJson != null ? JsonSerializer.Serialize(dto.StatusJson) : personagem.StatusJson;
             personagem.Imagem = dto.Imagem ?? personagem.Imagem;
             personagem.GaleriaImagem = dto.GaleriaImagem != null ? JsonSerializer.Serialize(dto.GaleriaImagem) : personagem.GaleriaImagem;
@@ -76,7 +79,7 @@ namespace OdisseiaWiki.Services
             personagem.Tags = dto.Tags != null && dto.Tags.Any() ? JsonSerializer.Serialize(dto.Tags) : personagem.Tags;
             personagem.Visivel = dto.Visivel;
 
-            Personagen? atualizado = await _repository.UpdateAsync(personagem);
+            var atualizado = await _repository.UpdateAsync(personagem);
             return ResultPersonagem.Ok(atualizado);
         }
 

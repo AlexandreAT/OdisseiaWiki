@@ -1,10 +1,11 @@
 import React, { useRef, useEffect } from 'react';
-import { FormController, FormHeader, HeaderInputs, HeaderAvatar, GridInputs, SectionTable, TableTitle, RelatedCharactersSection, SectionTitle, SectionStatus, NavegationButtons, StatusHeader, HeaderInfo, LabelStatus, MinimalInput, StatusContent, StatusAtributosDiv, StatusImageDiv, AtributoBox, AtributoDiv, InfoImage, AvatarController, AtributeController, StatusContentCenter, StatusDefesaDiv, StatusDefesaController, InfoController, CheckboxSection } from './FormCharacter.style';
+import { FormController, FormHeader, HeaderInputs, HeaderAvatar, GridInputs, SectionTable, TableTitle, RelatedCharactersSection, SectionTitle, SectionStatus, NavegationButtons, StatusHeader, HeaderInfo, LabelStatus, MinimalInput, StatusContent, StatusAtributosDiv, StatusImageDiv, AtributoBox, AtributoDiv, InfoImage, AvatarController, AtributeController, StatusContentCenter, StatusDefesaDiv, StatusDefesaController, CheckboxSection } from './FormCharacter.style';
 import { InputText } from '../../../../../../components/Generic/InputText/InputText';
 import { Select } from '../../../../../../components/Generic/Select/Select';
 import { AvatarIcon } from '../../../../../../components/Generic/AvatarIcon/AvatarIcon';
 import { CyberButton } from '../../../../../../components/Generic/HighlightButton/HighlightButton';
 import { TextArea } from '../../../../../../components/Generic/TextArea/TextArea';
+import { RichTextEditor } from '../../../../../../components/Generic/RichTextEditor/RichTextEditor';
 import { Search } from '../../../../../../components/Generic/Search/Search';
 import { BiSearchAlt } from 'react-icons/bi';
 import { CheckSelect } from '../../../../../../components/Generic/CheckSelect/CheckSelect';
@@ -20,7 +21,6 @@ import { atributosFormMap, atributosMagiaFormMap, atributosSkillFormMap } from '
 import { Skills, SkillTipoString } from '../../../../../../models/Skills';
 import { Item, ItemTipo } from '../../../../../../models/Itens';
 import { Magia, MagiaTipoString } from '../../../../../../models/Magias';
-import { getFirstImageUrl } from '../../../../../../utils/imagesController';
 //import OrcBack from '../../../../../../assets/racas/orc/OrcBackground.jpeg';
 
 interface FormProps {
@@ -59,13 +59,13 @@ export const FormCharacter = ({ theme, neon }: FormProps) => {
     race, setRace,
     city, setCity,
     avatarUrl, setAvatarUrl,
-    avatarFile, setAvatarFile,
+    setAvatarFile,
     history, setHistory,
     costumes, setCostumes,
     nanites, setNanites,
     alignment, setAlignment,
     traits, setTraits,
-    tags, setTags,
+    tags,
     tagInput, setTagInput,
     visivel, setVisivel,
     itens, setItens,
@@ -388,12 +388,15 @@ export const FormCharacter = ({ theme, neon }: FormProps) => {
             </SectionStatus>
           )}
 
-          <TextArea
+          {/* TODO: Substituir por editor de texto rico (TipTap) para suportar formatação */}
+          <RichTextEditor
             theme={theme}
             neon={neon}
             label="História"
             value={history}
-            onChange={(e) => setHistory(e.target.value)}
+            onChange={setHistory}
+            minHeight="150px"
+            placeholder="Escreva a história do personagem..."
           />
 
           <GridInputs>
@@ -426,7 +429,7 @@ export const FormCharacter = ({ theme, neon }: FormProps) => {
               disabled={!allPersonagens.length}
               suggestions={personagens.map(p => `${p.Idpersonagem}|${p.Nome}`)}
               onSelectSuggestion={(suggestion) => {
-                const [idStr, ...nameParts] = suggestion.split('|');
+                const [idStr] = suggestion.split('|');
                 const id = parseInt(idStr);
                 const personagem = allPersonagens.find(p => p.Idpersonagem === id);
                 if (personagem) {

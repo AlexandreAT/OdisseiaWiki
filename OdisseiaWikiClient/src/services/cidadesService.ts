@@ -1,4 +1,5 @@
 import api from "../axios/api";
+import { JSONContent } from "../models/Cities";
 
 export interface CidadePayload {
   idcidade: number;
@@ -13,7 +14,7 @@ export interface CidadePayload {
 
 export interface CreateCidadeDto {
   Nome: string;
-  Descricao?: string;
+  Descricao?: JSONContent | string;
   Imagem: string;
   GaleriaImagem?: string[];
   Tags?: string[];

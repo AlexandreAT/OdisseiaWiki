@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { personagensMock } from '../../../../Mock/characters.mock';
 import { CharacterFormData, CharacterFormErrors } from './FormUserCharacter/FormUserCharacter.type';
 import toast from 'react-hot-toast';
-import { Principais, Secundarios } from '../../../../models/Characters';
+import { Principais, Secundarios, JSONContent } from '../../../../models/Characters';
 import { Skills } from '../../../../models/Skills';
 import { Item } from '../../../../models/Itens';
 import { Magia } from '../../../../models/Magias';
@@ -18,6 +18,7 @@ import { atualizarPersonagemJogador, criarPersonagemJogador, PersonagemJogadorPa
 import { PersonagemJogador } from '../../../../models/PersonagemJogador';
 import { TOTAL_STEPS } from './constants';
 import { mapInventoryForPayload, mapMagiasForPayload, mapSkillsForPayload } from './helpers';
+import { normalizeToJSONContent, prepareForAPI } from '../../../../utils/richTextHelpers';
 
 export const useFormUserCharacter = (userId: number, onSave?: () => void, personagem?: PersonagemJogador) => {
   // --- step ---
@@ -31,7 +32,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
   const [city, setCity] = useState<number | undefined>(undefined);
   const [avatarUrl, setAvatarUrl] = useState('');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [history, setHistory] = useState('');
+  const [history, setHistory] = useState<JSONContent | string>('');
   const [costumes, setCostumes] = useState('');
   const [extraInformation, setExtraInformation] = useState('');
   const [nanites, setNanites] = useState('');
@@ -379,7 +380,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     setRace(personagem.idraca);
     setCity(personagem.idcidade || undefined);
     setAvatarUrl(personagem.imagem || '');
-    setHistory(personagem.historia || '');
+    setHistory(normalizeToJSONContent(personagem.historia || ''));
     setExtraInformation(personagem.infoSecundariasJson || '');
     setNanites(personagem.nanites?.toString() || '');
     setAlignment(personagem.alinhamento || '');
@@ -500,7 +501,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
         idcidade: city!,
         idusuario: userId,
         idmesa: selectedMesa!,
-        historia: history,
+        historia: prepareForAPI(history),
         imagem: avatarPath,
         costumes: costumes 
           ? (Array.isArray(costumes) ? costumes : [costumes]) 
@@ -580,7 +581,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
         idcidade: city!,
         idusuario: userId,
         idmesa: selectedMesa!,
-        historia: history,
+        historia: prepareForAPI(history),
         imagem: avatarPath,
         costumes: costumes 
           ? (Array.isArray(costumes) ? costumes : [costumes]) 

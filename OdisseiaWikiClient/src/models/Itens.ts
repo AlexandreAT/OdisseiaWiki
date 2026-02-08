@@ -1,5 +1,18 @@
 export type ItemTipo = "arma" | "traje" | "consumiveis" | "acessorio" | "outro";
 
+export type JSONContent = {
+  type?: string;
+  attrs?: Record<string, any>;
+  content?: JSONContent[];
+  marks?: Array<{
+    type: string;
+    attrs?: Record<string, any>;
+    [key: string]: any;
+  }>;
+  text?: string;
+  [key: string]: any;
+};
+
 // ---- Model de Item ----
 export interface Item {
   id?: string;
@@ -8,7 +21,7 @@ export interface Item {
   tipo: ItemTipo;
   quantidade: number;
   peso?: number;
-  descricao?: string;
+  descricao?: JSONContent | string;
   efeito?: string;
   imagem?: string;
   atributos?: ItemAtributos | Record<string, any>;

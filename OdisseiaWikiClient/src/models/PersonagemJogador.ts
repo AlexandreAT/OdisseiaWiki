@@ -1,3 +1,16 @@
+export type JSONContent = {
+  type?: string;
+  attrs?: Record<string, any>;
+  content?: JSONContent[];
+  marks?: Array<{
+    type: string;
+    attrs?: Record<string, any>;
+    [key: string]: any;
+  }>;
+  text?: string;
+  [key: string]: any;
+};
+
 export interface PersonagemJogador {
   idpersonagemJogador: number;
   idusuario: number;
@@ -5,7 +18,7 @@ export interface PersonagemJogador {
   nome: string;
   idraca: number;
   idcidade?: number;
-  historia?: string;
+  historia?: JSONContent | string;
   statusJson: string;
   alinhamento?: string;
   tracos?: string;

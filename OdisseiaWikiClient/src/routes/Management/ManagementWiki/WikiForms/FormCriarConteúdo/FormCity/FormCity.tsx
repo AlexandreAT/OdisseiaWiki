@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { useFormCity } from './useFormCity';
 import { InputText } from '../../../../../../components/Generic/InputText/InputText';
-import { TextArea } from '../../../../../../components/Generic/TextArea/TextArea';
+import { RichTextEditor } from '../../../../../../components/Generic/RichTextEditor/RichTextEditor';
 import { CyberButton } from '../../../../../../components/Generic/HighlightButton/HighlightButton';
 import { CheckBox } from '../../../../../../components/Generic/CheckBox/CheckBox';
 import {
@@ -167,14 +167,15 @@ export const FormCity = ({ theme, neon }: FormCityProps) => {
       </FormHeader>
 
       <DescriptionSection>
-        <TextArea
+        <RichTextEditor
           theme={theme}
           neon={neon}
           label="Descrição"
           value={descricao}
-          onChange={(e) => setDescricao(e.target.value)}
+          onChange={setDescricao}
           width="100%"
-          height="150px"
+          minHeight="150px"
+          placeholder="Descreva a cidade..."
         />
       </DescriptionSection>
 

@@ -13,8 +13,15 @@ namespace OdisseiaWiki.Repositories
             _context = context;
         }
 
-        public async Task<IEnumerable<Item>> GetAllAsync() =>
-            await _context.Itens.AsNoTracking().ToListAsync();
+        public async Task<List<Item>> GetAllAsync(bool? visivel = null)
+        {
+            var query = _context.Itens.AsNoTracking();
+
+            if (visivel.HasValue)
+                query = query.Where(i => i.Visivel == visivel.Value);
+
+            return await query.ToListAsync();
+        }
 
         public async Task<Item?> GetByIdAsync(string id) =>
             await _context.Itens.FirstOrDefaultAsync(i => i.Iditem == id);

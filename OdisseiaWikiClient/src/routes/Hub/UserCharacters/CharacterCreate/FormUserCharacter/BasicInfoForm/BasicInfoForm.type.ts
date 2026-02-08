@@ -4,6 +4,7 @@ import { Magia } from '../../../../../../models/Magias';
 import { RacaPayload } from '../../../../../../services/racasService';
 import { CidadePayload } from '../../../../../../services/cidadesService';
 import { personagensMock } from '../../../../../../Mock/characters.mock';
+import { JSONContent } from '../../../../../../models/Characters';
 
 export interface BasicInfoFormProps {
   theme: 'dark' | 'light';
@@ -17,8 +18,8 @@ export interface BasicInfoFormProps {
   avatarUrl: string;
   setAvatarUrl: (value: string) => void;
   setAvatarFile: (file: File | null) => void;
-  history: string;
-  setHistory: (value: string) => void;
+  history: JSONContent | string;
+  setHistory: (value: JSONContent | string) => void;
   costumes: string;
   setCostumes: (value: string) => void;
   extraInformation: string;

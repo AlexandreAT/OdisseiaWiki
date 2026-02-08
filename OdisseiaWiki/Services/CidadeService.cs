@@ -1,4 +1,5 @@
 ﻿using OdisseiaWiki.Dtos;
+using OdisseiaWiki.Helpers;
 using OdisseiaWiki.Models;
 using OdisseiaWiki.Repositories.Interfaces;
 using OdisseiaWiki.Services.Interfaces;
@@ -23,10 +24,10 @@ namespace OdisseiaWiki.Services
             if (string.IsNullOrWhiteSpace(dto.Imagem))
                 return ResultCidade.Fail("A imagem padrão é obrigatória.");
 
-            Cidade? cidade = new Cidade
+            var cidade = new Cidade
             {
                 Nome = dto.Nome,
-                Descricao = dto.Descricao,
+                Descricao = RichTextHelper.SerializeRichText(dto.Descricao),
                 Imagem = dto.Imagem,
                 GaleriaImagem = dto.GaleriaImagem != null && dto.GaleriaImagem.Any()
                     ? JsonSerializer.Serialize(dto.GaleriaImagem)
@@ -38,18 +39,20 @@ namespace OdisseiaWiki.Services
                 DataCriacao = DateTime.UtcNow
             };
 
-            Cidade? criada = await _repository.CreateAsync(cidade);
+            var criada = await _repository.CreateAsync(cidade);
             return ResultCidade.Ok(criada);
         }
 
         public async Task<ResultCidade> UpdateAsync(int id, CidadeDto dto)
         {
-            Cidade? cidade = await _repository.GetByIdAsync(id);
+            var cidade = await _repository.GetByIdAsync(id);
             if (cidade == null)
                 return ResultCidade.Fail($"Cidade com id {id} não encontrada.");
 
             cidade.Nome = dto.Nome ?? cidade.Nome;
-            cidade.Descricao = dto.Descricao ?? cidade.Descricao;
+            cidade.Descricao = dto.Descricao.HasValue 
+                ? RichTextHelper.SerializeRichText(dto.Descricao) 
+                : cidade.Descricao;
             cidade.Imagem = dto.Imagem ?? cidade.Imagem;
             cidade.GaleriaImagem = dto.GaleriaImagem != null && dto.GaleriaImagem.Any()
                 ? JsonSerializer.Serialize(dto.GaleriaImagem)
@@ -59,19 +62,19 @@ namespace OdisseiaWiki.Services
                 : cidade.Tags;
             cidade.Visivel = dto.Visivel;
 
-            Cidade? atualizada = await _repository.UpdateAsync(cidade);
+            var atualizada = await _repository.UpdateAsync(cidade);
             return ResultCidade.Ok(atualizada);
         }
 
         public async Task<ResultCidade> GetAllAsync(bool? visivel = null)
         {
-            List<Cidade>? cidades = await _repository.GetAllAsync(visivel);
+            var cidades = await _repository.GetAllAsync(visivel);
 
-            List<CidadeDto>? dtos = cidades.Select(c => new CidadeDto
+            var dtos = cidades.Select(c => new CidadeDto
             {
                 Idcidade = c.Idcidade,
                 Nome = c.Nome,
-                Descricao = c.Descricao,
+                Descricao = RichTextHelper.DeserializeRichText(c.Descricao),
                 Imagem = c.Imagem,
                 GaleriaImagem = !string.IsNullOrWhiteSpace(c.GaleriaImagem)
                     ? JsonSerializer.Deserialize<List<string>>(c.GaleriaImagem)

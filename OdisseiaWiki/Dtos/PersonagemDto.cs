@@ -1,11 +1,15 @@
-﻿namespace OdisseiaWiki.Dtos
+﻿using System;
+using System.Collections.Generic;
+using System.Text.Json;
+
+namespace OdisseiaWiki.Dtos
 {
     public class PersonagemDto
     {
         public string Nome { get; set; } = null!;
         public int Idraca { get; set; }
         public int? Idcidade { get; set; }
-        public string? Historia { get; set; }
+        public JsonElement? Historia { get; set; }
         public string? Imagem { get; set; }
         public List<string>? GaleriaImagem { get; set; }
         public List<string>? Costumes { get; set; }
@@ -22,7 +26,7 @@
         public List<int>? PersonagemsVinculados { get; set; }
     }
 
-    // ---- Subtipos ----
+    // ---- Subtipos (mantidos iguais) ----
 
     public class PersonagemStatus
     {

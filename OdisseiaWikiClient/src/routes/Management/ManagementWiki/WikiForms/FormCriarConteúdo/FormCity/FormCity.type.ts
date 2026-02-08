@@ -1,3 +1,5 @@
+import { JSONContent } from '../../../../../../models/Cities';
+
 export interface CityFormData {
   nome: string;
   descricao: string;
@@ -15,7 +17,7 @@ export interface CityFormErrors {
 export interface CidadeDto {
   Idcidade?: number;
   Nome: string;
-  Descricao?: string;
+  Descricao?: JSONContent | string;
   Imagem: string;
   GaleriaImagem?: string[];
   Tags?: string[];

@@ -1,6 +1,8 @@
 ﻿using OdisseiaWiki.Dtos;
+using OdisseiaWiki.Helpers;
 using OdisseiaWiki.Repositories.Interfaces;
 using OdisseiaWiki.Services.Interfaces;
+using System.Text.Json;
 
 namespace OdisseiaWiki.Services
 {
@@ -10,41 +12,57 @@ namespace OdisseiaWiki.Services
 
         public ItemService(IItemRepository repository) => _repository = repository;
 
-        public async Task<IEnumerable<ItemDto>> GetAllAsync() =>
-        (await _repository.GetAllAsync())
-        .Select(i => new ItemDto
+        public async Task<IEnumerable<ItemDto>> GetAllAsync(bool? visivel = null)
         {
-            Iditem = i.Iditem,
-            Nome = i.Nome,
-            Tipo = i.Tipo.ToString().ToLowerInvariant(),
-            Quantidade = i.Quantidade,
-            Peso = i.Peso,
-            Descricao = i.Descricao,
-            Efeito = i.Efeito,
-            Imagem = i.Imagem,
-            AtributosJson = i.AtributosJson,
-            IditemBase = i.IditemBase,
-            DataCriacao = i.DataCriacao.ToString("yyyy-MM-dd"),
-            Idpersonagem = i.Idpersonagem
-        });
+            var items = await _repository.GetAllAsync(visivel);
+            
+            return items.Select(i => new ItemDto
+            {
+                Iditem = i.Iditem,
+                Nome = i.Nome,
+                Tipo = i.Tipo,
+                Quantidade = i.Quantidade,
+                Peso = i.Peso,
+                Descricao = RichTextHelper.DeserializeRichText(i.Descricao),
+                Efeito = i.Efeito,
+                Imagem = i.Imagem,
+                AtributosJson = !string.IsNullOrWhiteSpace(i.AtributosJson)
+                    ? JsonSerializer.Deserialize<object>(i.AtributosJson)
+                    : null,
+                IditemBase = i.IditemBase,
+                Tags = !string.IsNullOrWhiteSpace(i.Tags)
+                    ? JsonSerializer.Deserialize<List<string>>(i.Tags)
+                    : null,
+                Visivel = i.Visivel,
+                DataCriacao = i.DataCriacao,
+                Idpersonagem = i.Idpersonagem
+            });
+        }
 
         public async Task<ItemDto?> GetByIdAsync(string id)
         {
             var item = await _repository.GetByIdAsync(id);
             if (item is null) return null;
+            
             return new ItemDto
             {
                 Iditem = item.Iditem,
                 Nome = item.Nome,
-                Tipo = item.Tipo.ToString().ToLowerInvariant(),
+                Tipo = item.Tipo,
                 Quantidade = item.Quantidade,
                 Peso = item.Peso,
-                Descricao = item.Descricao,
+                Descricao = RichTextHelper.DeserializeRichText(item.Descricao),
                 Efeito = item.Efeito,
                 Imagem = item.Imagem,
-                AtributosJson = item.AtributosJson,
+                AtributosJson = !string.IsNullOrWhiteSpace(item.AtributosJson)
+                    ? JsonSerializer.Deserialize<object>(item.AtributosJson)
+                    : null,
                 IditemBase = item.IditemBase,
-                DataCriacao = item.DataCriacao.ToString("yyyy-MM-dd"),
+                Tags = !string.IsNullOrWhiteSpace(item.Tags)
+                    ? JsonSerializer.Deserialize<List<string>>(item.Tags)
+                    : null,
+                Visivel = item.Visivel,
+                DataCriacao = item.DataCriacao,
                 Idpersonagem = item.Idpersonagem
             };
         }
@@ -56,13 +74,19 @@ namespace OdisseiaWiki.Services
                 Iditem = Guid.NewGuid().ToString(),
                 Nome = dto.Nome,
                 Tipo = dto.Tipo,
-                Descricao = dto.Descricao,
+                Descricao = RichTextHelper.SerializeRichText(dto.Descricao),
                 Peso = dto.Peso,
                 Quantidade = dto.Quantidade,
                 Efeito = dto.Efeito,
                 Imagem = dto.Imagem,
-                AtributosJson = dto.AtributosJson,
+                AtributosJson = dto.AtributosJson != null 
+                    ? JsonSerializer.Serialize(dto.AtributosJson) 
+                    : null,
                 IditemBase = dto.IditemBase,
+                Tags = dto.Tags != null && dto.Tags.Any()
+                    ? JsonSerializer.Serialize(dto.Tags)
+                    : null,
+                Visivel = dto.Visivel,
                 Idpersonagem = dto.Idpersonagem,
                 DataCriacao = DateTime.UtcNow
             };
@@ -78,13 +102,21 @@ namespace OdisseiaWiki.Services
 
             item.Nome = dto.Nome;
             item.Tipo = dto.Tipo;
-            item.Descricao = dto.Descricao;
+            item.Descricao = dto.Descricao.HasValue
+                ? RichTextHelper.SerializeRichText(dto.Descricao)
+                : item.Descricao;
             item.Peso = dto.Peso;
             item.Quantidade = dto.Quantidade;
             item.Efeito = dto.Efeito;
             item.Imagem = dto.Imagem;
-            item.AtributosJson = dto.AtributosJson;
+            item.AtributosJson = dto.AtributosJson != null
+                ? JsonSerializer.Serialize(dto.AtributosJson)
+                : item.AtributosJson;
             item.IditemBase = dto.IditemBase;
+            item.Tags = dto.Tags != null && dto.Tags.Any()
+                ? JsonSerializer.Serialize(dto.Tags)
+                : item.Tags;
+            item.Visivel = dto.Visivel;
             item.Idpersonagem = dto.Idpersonagem;
 
             await _repository.UpdateAsync(item);

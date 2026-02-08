@@ -8,12 +8,13 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { personagensMock } from '../../../../../../Mock/characters.mock';
 import { CharacterFormData, CharacterFormErrors } from './FormCharacter.type';
 import toast from 'react-hot-toast';
-import { Principais, Secundarios } from '../../../../../../models/Characters';
+import { Principais, Secundarios, JSONContent } from '../../../../../../models/Characters';
 import { SkillElemento, Skills, SkillTipoString } from '../../../../../../models/Skills';
 import { Item, ItemTipo } from '../../../../../../models/Itens';
 import { Magia, MagiaElemento, MagiaTipoString } from '../../../../../../models/Magias';
 import { salvarPersonagem } from '../../../../../../services/personagensService';
 import { getItens } from '../../../../../../services/itensService';
+import { prepareForAPI } from '../../../../../../utils/richTextHelpers';
 
 
 export const useFormCharacter = () => {
@@ -28,7 +29,7 @@ export const useFormCharacter = () => {
   const [city, setCity] = useState<number | undefined>(undefined);
   const [avatarUrl, setAvatarUrl] = useState('');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [history, setHistory] = useState('');
+  const [history, setHistory] = useState<JSONContent | string>('');
   const [costumes, setCostumes] = useState('');
   const [nanites, setNanites] = useState('');
   const [alignment, setAlignment] = useState('');
@@ -38,7 +39,7 @@ export const useFormCharacter = () => {
   const [visivel, setVisivel] = useState(true);
   const [xp, setXp] = useState(0);
   const [level, setLevel] = useState(1);
-  const [capacidadeCarga, setCapacidadeCarga] = useState(0);
+  // const [capacidadeCarga, setCapacidadeCarga] = useState(0); // TODO: Implementar se necessário
   const [skills, setSkills] = useState<Skills[]>([
     { nome: "", tipo: "suporte", elemento: ["normal"], nivel: 1,  }
   ])
@@ -395,7 +396,7 @@ export const useFormCharacter = () => {
         nome: userName,
         idraca: race!,
         idcidade: city!,
-        historia: history,
+        historia: prepareForAPI(history),
         imagem: avatarPath,
         costumes: costumes ? [costumes] : [],
         nanites: nanites ? Number(nanites) : undefined,

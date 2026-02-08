@@ -2,12 +2,25 @@ import { Magia } from './Magias';
 import { Item } from "./Itens";
 import { Skills } from "./Skills";
 
+export type JSONContent = {
+  type?: string;
+  attrs?: Record<string, any>;
+  content?: JSONContent[];
+  marks?: Array<{
+    type: string;
+    attrs?: Record<string, any>;
+    [key: string]: any;
+  }>;
+  text?: string;
+  [key: string]: any;
+};
+
 export interface Personagem {
     Idpersonagem: number;
     Nome: string;
     Idraca?: number;
     Idcidade?: number;
-    Historia?: string;
+    Historia?: JSONContent;
     StatusJson: PersonagemStatus;
     Alinhamento?: string;
     Tracos?: string[];

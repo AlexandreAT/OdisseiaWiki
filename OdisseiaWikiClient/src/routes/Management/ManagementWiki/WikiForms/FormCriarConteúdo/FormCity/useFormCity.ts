@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { CityFormErrors, CidadeDto } from './FormCity.type';
 import { createCidade } from '../../../../../../services/cidadesService';
 import { saveAsset } from '../../../../../../services/assetsService';
+import { JSONContent } from '../../../../../../models/Cities';
+import { prepareForAPI } from '../../../../../../utils/richTextHelpers';
 
 export const useFormCity = () => {
   const [nome, setNome] = useState('');
-  const [descricao, setDescricao] = useState('');
+  const [descricao, setDescricao] = useState<JSONContent | string>('');
   const [imagemUrl, setImagemUrl] = useState('');
   const [imagemFile, setImagemFile] = useState<File | null>(null);
   const [galeriaUrls, setGaleriaUrls] = useState<string[]>([]);
@@ -154,7 +156,7 @@ export const useFormCity = () => {
 
     const dto: CidadeDto = {
       Nome: nome.trim(),
-      Descricao: descricao.trim() || undefined,
+      Descricao: prepareForAPI(descricao),
       Imagem: imagemPath,
       GaleriaImagem: galeriaPaths,
       Tags: tags.length > 0 ? tags : undefined,

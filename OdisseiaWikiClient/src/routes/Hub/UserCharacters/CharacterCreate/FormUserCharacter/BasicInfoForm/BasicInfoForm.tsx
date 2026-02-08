@@ -8,6 +8,7 @@ import { Select } from '../../../../../../components/Generic/Select/Select';
 import { AvatarIcon } from '../../../../../../components/Generic/AvatarIcon/AvatarIcon';
 import { StatusInput } from '../../../../../../components/Generic/StatusInput/StatusInput';
 import { TextArea } from '../../../../../../components/Generic/TextArea/TextArea';
+import { RichTextEditor } from '../../../../../../components/Generic/RichTextEditor/RichTextEditor';
 import { CheckSelect } from '../../../../../../components/Generic/CheckSelect/CheckSelect';
 import { Search } from '../../../../../../components/Generic/Search/Search';
 import { BiSearchAlt } from 'react-icons/bi';
@@ -168,12 +169,15 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
         </SectionStatus>
       )}
 
-      <TextArea
+      {/* TODO: Substituir por editor de texto rico (TipTap) para suportar formatação */}
+      <RichTextEditor
         theme={theme}
         neon={neon}
         label="História"
         value={history}
-        onChange={(e) => setHistory(e.target.value)}
+        onChange={setHistory}
+        minHeight="150px"
+        placeholder="Escreva a história do personagem..."
       />
 
       <GridInputs>
@@ -206,7 +210,7 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
           disabled={!allPersonagens.length}
           suggestions={personagens.map(p => `${p.Idpersonagem}|${p.Nome}`)}
           onSelectSuggestion={(suggestion) => {
-            const [idStr, ...nameParts] = suggestion.split('|');
+            const [idStr] = suggestion.split('|');
             const id = parseInt(idStr);
             const personagem = allPersonagens.find(p => p.Idpersonagem === id);
             if (personagem) {

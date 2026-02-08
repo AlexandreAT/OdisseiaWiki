@@ -1,6 +1,7 @@
 import api from "../axios/api";
 import { PersonagemJogador } from "../models/PersonagemJogador";
 import { Principais, Secundarios } from "../models/PersonagemJogador";
+import { JSONContent } from "../models/Characters";
 
 export interface PersonagemJogadorPayload {
   idpersonagemJogador?: number;
@@ -9,7 +10,7 @@ export interface PersonagemJogadorPayload {
   idcidade?: number;
   idusuario: number;
   idmesa: number;
-  historia?: string;
+  historia?: JSONContent | string;
   imagem?: string;
   costumes: string[];
   infoSecundariasJson?: any;

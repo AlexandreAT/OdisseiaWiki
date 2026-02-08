@@ -1,4 +1,5 @@
 ﻿using OdisseiaWiki.Dtos;
+using OdisseiaWiki.Helpers;
 using OdisseiaWiki.Models;
 using OdisseiaWiki.Repositories.Interfaces;
 using OdisseiaWiki.Services.Interfaces;
@@ -66,7 +67,9 @@ namespace OdisseiaWiki.Services
             personagem.Idusuario = personagemDto.Idusuario;
 
             personagem.Alinhamento = personagemDto.Alinhamento ?? personagem.Alinhamento;
-            personagem.Historia = personagemDto.Historia ?? personagem.Historia;
+            personagem.Historia = personagemDto.Historia.HasValue 
+                ? RichTextHelper.SerializeRichText(personagemDto.Historia) 
+                : personagem.Historia;
             personagem.Imagem = personagemDto.Imagem ?? personagem.Imagem;
             personagem.Nanites = personagemDto.Nanites?.ToString() ?? personagem.Nanites;
             personagem.InfoSecundariasJson = personagemDto.InfoSecundariasJson ?? personagem.InfoSecundariasJson;

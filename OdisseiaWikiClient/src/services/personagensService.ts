@@ -1,4 +1,4 @@
-import { Principais, Secundarios } from './../models/Characters';
+import { Principais, Secundarios, JSONContent } from './../models/Characters';
 import api from "../axios/api";
 
 export interface PersonagemPayload {
@@ -6,7 +6,7 @@ export interface PersonagemPayload {
   nome: string;
   idraca: number;
   idcidade: number;
-  historia: string;
+  historia?: JSONContent | string;
   imagem?: string;
   costumes: string[];
   nanites?: number;
