@@ -241,74 +241,77 @@ export const TagsSection = styled.div`
   gap: 15px;
 `;
 
-export const TagInputContainer = styled.div`
-  display: flex;
-  flex-direction: row;
-  gap: 10px;
-  align-items: flex-start;
-  width: 100%;
-`;
-
-export const TagsList = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  width: 100%;
-  min-height: 40px;
-`;
-
-export const TagItem = styled.div<Props>`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-radius: 20px;
-  background: ${({ theme, neon }) =>
-    theme === 'dark'
-      ? neon === 'on'
-        ? 'var(--blackTransp)'
-        : 'var(--clearblack)'
-      : neon === 'on'
-        ? 'var(--whitesmoke)'
-        : 'var(--clearWhite)'};
-  border: 1px solid ${({ theme, neon }) =>
-    theme === 'dark'
-      ? neon === 'on'
-        ? 'var(--clearneonBlue)'
-        : 'var(--lightGrey)'
-      : neon === 'on'
-        ? 'var(--neonViolet)'
-        : 'var(--deepgrey)'};
-  font-size: 14px;
-  color: ${({ theme }) =>
-    theme === 'dark' ? 'var(--clearWhite)' : 'var(--deepgrey)'};
-  transition: all 0.2s ease;
-`;
-
-export const TagRemoveButton = styled.button`
-  background: none;
-  border: none;
-  color: var(--red);
-  cursor: pointer;
-  font-size: 18px;
-  line-height: 1;
-  padding: 0;
-  width: 18px;
-  height: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0.7;
-  transition: opacity 0.2s ease;
-
-  &:hover {
-    opacity: 1;
-  }
-`;
-
 export const CheckboxSection = styled.div`
   width: 100%;
   display: flex;
   align-items: center;
   gap: 10px;
+`;
+
+export const PontosInteresseSection = styled.div`
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+`;
+
+export const PontosInteresseInputContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+`;
+
+export const InfoLoresList = styled.div`
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid var(--mediumgrey);
+  border-radius: 8px;
+  background: var(--lightBlack);
+  
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: var(--lightBlack);
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: var(--mediumgrey);
+    border-radius: 4px;
+  }
+`;
+
+export const InfoLoreItem = styled.button<Props>`
+  width: 100%;
+  padding: 12px 16px;
+  text-align: left;
+  border: none;
+  background: transparent;
+  color: ${({ theme }) => theme === 'dark' ? 'var(--clearWhite)' : 'var(--deepgrey)'};
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-bottom: 1px solid var(--mediumgrey);
+  font-size: 14px;
+
+  &:hover:not(:disabled) {
+    background: ${({ theme, neon }) =>
+      theme === 'dark'
+        ? neon === 'on'
+          ? 'rgba(0, 200, 255, 0.1)'
+          : 'var(--mediumgrey)'
+        : neon === 'on'
+          ? 'rgba(138, 43, 226, 0.1)'
+          : 'var(--whitesmoke)'};
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &:last-child {
+    border-bottom: none;
+  }
 `;

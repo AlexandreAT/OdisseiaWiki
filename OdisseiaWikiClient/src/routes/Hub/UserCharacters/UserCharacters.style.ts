@@ -7,11 +7,12 @@ interface Props {
 }
 
 export const Main = styled.div`
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    max-width: 1300px;
+    max-width: 1100px;
     height: 100%;
     gap: 30px;
     margin-bottom: 20px;
@@ -24,7 +25,6 @@ export const Title = styled.h2<Props>`
     font-weight: 100;
     letter-spacing: 3px;
     font-size: 24px;
-    margin-bottom: 20px;
 
     ${props => props.theme === 'light'
         ? props.neon === 'on'
@@ -63,6 +63,23 @@ export const ButtonDiv = styled.div<Props>`
     flex-direction: row;
     justify-content: center;
     align-items: center;
+
+    .icon{
+        fill: ${({ theme, neon }) => theme === "dark" 
+            ? neon === "on" 
+                ? "var(--clearneonBlue)"
+                : "var(--neonBlue)"
+            : neon === "on" 
+                ? "var(--clearneonViolet)"
+                : "var(--neonViolet)"};
+    }
+`
+
+export const BackButtonDiv = styled.div<Props>`
+    position: absolute;
+    top: 55px;
+    left: 0px;
+    z-index: 10;
 
     .icon{
         fill: ${({ theme, neon }) => theme === "dark" 

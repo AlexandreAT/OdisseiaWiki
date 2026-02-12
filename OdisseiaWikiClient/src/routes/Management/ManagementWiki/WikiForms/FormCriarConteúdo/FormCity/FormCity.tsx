@@ -4,29 +4,24 @@ import { InputText } from '../../../../../../components/Generic/InputText/InputT
 import { RichTextEditor } from '../../../../../../components/Generic/RichTextEditor/RichTextEditor';
 import { CyberButton } from '../../../../../../components/Generic/HighlightButton/HighlightButton';
 import { CheckBox } from '../../../../../../components/Generic/CheckBox/CheckBox';
+import { ImageUpload } from '../../../../../../components/Generic/ImageUpload/ImageUpload';
+import { ImageGallery } from '../../../../../../components/Generic/ImageGallery/ImageGallery';
+import { HorizontalList } from '../../../../../../components/Generic/HorizontalList/HorizontalList';
 import {
   FormController,
   FormHeader,
   HeaderInfo,
   ImageSection,
-  MainImageContainer,
-  ImagePlaceholder,
-  GallerySection,
   SectionTitle,
-  GalleryGrid,
-  GalleryImageContainer,
-  RemoveImageButton,
-  AddGalleryImageButton,
   DescriptionSection,
   ButtonsContainer,
-  HiddenInput,
   ErrorText,
   TagsSection,
-  TagInputContainer,
-  TagsList,
-  TagItem,
-  TagRemoveButton,
   CheckboxSection,
+  PontosInteresseSection,
+  PontosInteresseInputContainer,
+  InfoLoresList,
+  InfoLoreItem,
 } from './FormCity.style';
 
 interface FormCityProps {
@@ -42,6 +37,8 @@ export const FormCity = ({ theme, neon }: FormCityProps) => {
     galeriaUrls,
     tags,
     tagInput,
+    pontosDeInteresse,
+    pontoInteresseSearch,
     visivel,
     isSubmitting,
     nomeError,
@@ -49,18 +46,20 @@ export const FormCity = ({ theme, neon }: FormCityProps) => {
     setNome,
     setDescricao,
     setTagInput,
+    setPontoInteresseSearch,
     setVisivel,
     handleImagemUpload,
     handleGaleriaUpload,
     handleRemoveGaleriaImage,
     handleAddTag,
     handleRemoveTag,
+    handleAddPontoInteresse,
+    handleRemovePontoInteresse,
+    getFilteredInfoLores,
     handleSubmit,
     resetForm,
   } = useFormCity();
 
-  const mainImageInputRef = useRef<HTMLInputElement>(null);
-  const galleryInputRef = useRef<HTMLInputElement>(null);
   const tagInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -77,28 +76,6 @@ export const FormCity = ({ theme, neon }: FormCityProps) => {
     input.addEventListener('keydown', handleKeyDown);
     return () => input.removeEventListener('keydown', handleKeyDown);
   }, [handleAddTag]);
-
-  const handleMainImageClick = () => {
-    mainImageInputRef.current?.click();
-  };
-
-  const handleGalleryClick = () => {
-    galleryInputRef.current?.click();
-  };
-
-  const handleMainImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      handleImagemUpload(file);
-    }
-  };
-
-  const handleGalleryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length > 0) {
-      handleGaleriaUpload(files);
-    }
-  };
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,43 +102,89 @@ export const FormCity = ({ theme, neon }: FormCityProps) => {
             error={!!nomeError}
           />
           {nomeError && <ErrorText>{nomeError}</ErrorText>}
+
+          <TagsSection>
+        <SectionTitle theme={theme} neon={neon}>
+          Tags (Opcional)
+        </SectionTitle>
+        <InputText
+          ref={tagInputRef}
+          theme={theme}
+          neon={neon}
+          label="Adicionar tag"
+          value={tagInput}
+          onChange={(e) => setTagInput(e.target.value)}
+          width="100%"
+        />
+        {tags.length > 0 && (
+          <HorizontalList
+            theme={theme}
+            neon={neon}
+            data={tags.map((tag, index) => ({ id: index, nome: tag }))}
+            onDelete={(id) => {
+              const tagToRemove = tags[id as number];
+              if (tagToRemove) {
+                handleRemoveTag(tagToRemove);
+              }
+            }}
+          />
+        )}
+      </TagsSection>
+
+      <PontosInteresseSection>
+        <SectionTitle theme={theme} neon={neon}>
+          Pontos de Interesse (Opcional)
+        </SectionTitle>
+        <PontosInteresseInputContainer>
+          <InputText
+            theme={theme}
+            neon={neon}
+            label="Buscar InfoLore"
+            value={pontoInteresseSearch}
+            onChange={(e) => setPontoInteresseSearch(e.target.value)}
+            width="100%"
+          />
+          {pontoInteresseSearch && getFilteredInfoLores().length > 0 && (
+            <InfoLoresList>
+              {getFilteredInfoLores().map((infoLore) => (
+                <InfoLoreItem
+                  key={infoLore.IdinfoLore}
+                  theme={theme}
+                  neon={neon}
+                  type="button"
+                  onClick={() => handleAddPontoInteresse(infoLore.IdinfoLore)}
+                  disabled={pontosDeInteresse.some(p => p.id === infoLore.IdinfoLore)}
+                >
+                  {infoLore.Titulo}
+                </InfoLoreItem>
+              ))}
+            </InfoLoresList>
+          )}
+        </PontosInteresseInputContainer>
+        {pontosDeInteresse.length > 0 && (
+          <HorizontalList
+            theme={theme}
+            neon={neon}
+            data={pontosDeInteresse.map((ponto) => ({ id: ponto.id, nome: ponto.titulo }))}
+            onDelete={(id) => handleRemovePontoInteresse(id as number)}
+          />
+        )}
+      </PontosInteresseSection>
         </HeaderInfo>
 
         <ImageSection>
-          <SectionTitle theme={theme} neon={neon}>
-            Imagem Principal *
-          </SectionTitle>
-          <MainImageContainer 
-            hasImage={!!imagemUrl} 
-            onClick={handleMainImageClick}
-          >
-            {imagemUrl ? (
-              <img src={imagemUrl} alt="Imagem principal da cidade" />
-            ) : (
-              <ImagePlaceholder theme={theme} neon={neon}>
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  fill="none" 
-                  viewBox="0 0 24 24" 
-                  stroke="currentColor"
-                >
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth={2} 
-                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" 
-                  />
-                </svg>
-                <p>Clique para adicionar imagem</p>
-              </ImagePlaceholder>
-            )}
-          </MainImageContainer>
-          {imagemError && <ErrorText>{imagemError}</ErrorText>}
-          <HiddenInput
-            ref={mainImageInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleMainImageChange}
+          <ImageUpload
+            theme={theme}
+            neon={neon}
+            label="Imagem Principal"
+            imageUrl={imagemUrl}
+            onChange={(file) => file && handleImagemUpload(file)}
+            error={!!imagemError}
+            errorMessage={imagemError}
+            width="300px"
+            height="300px"
+            required
+            showRemoveButton
           />
         </ImageSection>
       </FormHeader>
@@ -179,39 +202,6 @@ export const FormCity = ({ theme, neon }: FormCityProps) => {
         />
       </DescriptionSection>
 
-      <TagsSection>
-        <SectionTitle theme={theme} neon={neon}>
-          Tags (Opcional)
-        </SectionTitle>
-        <TagInputContainer>
-          <InputText
-            ref={tagInputRef}
-            theme={theme}
-            neon={neon}
-            label=""
-            value={tagInput}
-            onChange={(e) => setTagInput(e.target.value)}
-            width="100%"
-          />
-        </TagInputContainer>
-        {tags.length > 0 && (
-          <TagsList>
-            {tags.map((tag, index) => (
-              <TagItem key={index} theme={theme} neon={neon}>
-                {tag}
-                <TagRemoveButton
-                  type="button"
-                  onClick={() => handleRemoveTag(tag)}
-                  title="Remover tag"
-                >
-                  ×
-                </TagRemoveButton>
-              </TagItem>
-            ))}
-          </TagsList>
-        )}
-      </TagsSection>
-
       <CheckboxSection>
         <CheckBox
           neon={neon}
@@ -221,55 +211,14 @@ export const FormCity = ({ theme, neon }: FormCityProps) => {
         />
       </CheckboxSection>
 
-      <GallerySection>
-        <SectionTitle theme={theme} neon={neon}>
-          Galeria de Imagens (Opcional)
-        </SectionTitle>
-        <GalleryGrid>
-          {galeriaUrls.map((url, index) => (
-            <GalleryImageContainer key={index}>
-              <img src={url} alt={`Galeria ${index + 1}`} />
-              <RemoveImageButton
-                theme={theme}
-                neon={neon}
-                type="button"
-                onClick={() => handleRemoveGaleriaImage(index)}
-                title="Remover imagem"
-              >
-                ×
-              </RemoveImageButton>
-            </GalleryImageContainer>
-          ))}
-          <AddGalleryImageButton
-            theme={theme}
-            neon={neon}
-            type="button"
-            onClick={handleGalleryClick}
-          >
-            <svg 
-              xmlns="http://www.w3.org/2000/svg" 
-              fill="none" 
-              viewBox="0 0 24 24" 
-              stroke="currentColor"
-            >
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                strokeWidth={2} 
-                d="M12 4v16m8-8H4" 
-              />
-            </svg>
-            Adicionar
-          </AddGalleryImageButton>
-        </GalleryGrid>
-        <HiddenInput
-          ref={galleryInputRef}
-          type="file"
-          accept="image/*"
-          multiple
-          onChange={handleGalleryChange}
-        />
-      </GallerySection>
+      <ImageGallery
+        theme={theme}
+        neon={neon}
+        label="Galeria de Imagens (Opcional)"
+        imageUrls={galeriaUrls}
+        onAdd={handleGaleriaUpload}
+        onRemove={handleRemoveGaleriaImage}
+      />
 
       <ButtonsContainer>
         <CyberButton

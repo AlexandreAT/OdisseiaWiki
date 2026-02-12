@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { getPersonagensPorUsuario } from '../../../services/personagemJogadorService';
 import { PersonagemJogador } from '../../../models/PersonagemJogador';
 import { 
@@ -9,6 +9,7 @@ import {
   CharacterName, 
   Title, 
   ButtonDiv, 
+  BackButtonDiv,
   StyledIconButton, 
   CardRight,
   CardLeft,
@@ -25,6 +26,9 @@ interface UserCharactersProps {
   theme: 'dark' | 'light';
   neon: 'on' | 'off';
   userId: number;
+  onViewModeChange?: (mode: ViewMode) => void;
+  onPersonagensChange?: (hasPersonagens: boolean) => void;
+  onLoadingChange?: (isLoading: boolean) => void;
 }
 
 interface PersonagemComStatus extends PersonagemJogador {
@@ -36,9 +40,9 @@ interface PersonagemComStatus extends PersonagemJogador {
   };
 }
 
-type ViewMode = 'list' | 'create' | 'edit';
+export type ViewMode = 'list' | 'create' | 'edit';
 
-export const UserCharacters = ({ theme, neon, userId }: UserCharactersProps) => {
+export const UserCharacters = ({ theme, neon, userId, onViewModeChange, onPersonagensChange, onLoadingChange }: UserCharactersProps) => {
   const [personagens, setPersonagens] = useState<PersonagemComStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,9 +52,25 @@ export const UserCharacters = ({ theme, neon, userId }: UserCharactersProps) => 
   const [selectedCharacter, setSelectedCharacter] = useState<PersonagemJogador | null>(null);
 
   useEffect(() => {
+    onViewModeChange?.(viewMode);
+  }, [viewMode, onViewModeChange]);
+
+  useEffect(() => {
+    onLoadingChange?.(loading);
+  }, [loading, onLoadingChange]);
+
+  useEffect(() => {
+    if (!loading) {
+      onPersonagensChange?.(personagens.length > 0);
+    }
+  }, [personagens, loading, onPersonagensChange]);
+
+  useEffect(() => {
     const fetchPersonagens = async () => {
       try {
         const data = await getPersonagensPorUsuario(userId);
+        console.log("🚀 ~ fetchPersonagens ~ data:", data)
+        console.log("🚀 ~ fetchPersonagens ~ userId:", userId)
 
         const parsed: PersonagemComStatus[] = data.map((p) => {
           let status = { vida: 0, estamina: 0, mana: 0, capacidadeCarga: 0 };
@@ -114,6 +134,11 @@ export const UserCharacters = ({ theme, neon, userId }: UserCharactersProps) => 
       case 'create':
         return (
           <>
+            <BackButtonDiv theme={theme} neon={neon}>
+              <StyledIconButton theme={theme} neon={neon} onClick={() => setViewMode('list')}>
+                <ArrowBack className="icon" />
+              </StyledIconButton>
+            </BackButtonDiv>
             <Title theme={theme} neon={neon}>Criar Personagem</Title>
             <CharacterCreate 
               theme={theme} 
@@ -121,17 +146,17 @@ export const UserCharacters = ({ theme, neon, userId }: UserCharactersProps) => 
               userId={userId} 
               onSave={onSaveBackGetAll} 
             />
-            <ButtonDiv theme={theme} neon={neon}>
-              <StyledIconButton theme={theme} neon={neon} onClick={() => setViewMode('list')}>
-                <ArrowBack className="icon" />
-              </StyledIconButton>
-            </ButtonDiv>
           </>
         );
 
       case 'edit':
         return (
           <>
+            <BackButtonDiv theme={theme} neon={neon}>
+              <StyledIconButton theme={theme} neon={neon} onClick={() => setViewMode('list')}>
+                <ArrowBack className="icon" />
+              </StyledIconButton>
+            </BackButtonDiv>
             <Title theme={theme} neon={neon}>Editar Personagem</Title>
             {selectedCharacter && (
               <CharacterEdit 
@@ -142,11 +167,6 @@ export const UserCharacters = ({ theme, neon, userId }: UserCharactersProps) => 
                 onSave={onSaveGetAll}
               />
             )}
-            <ButtonDiv theme={theme} neon={neon}>
-              <StyledIconButton theme={theme} neon={neon} onClick={() => setViewMode('list')}>
-                <ArrowBack className="icon" />
-              </StyledIconButton>
-            </ButtonDiv>
           </>
         );
 
@@ -154,6 +174,11 @@ export const UserCharacters = ({ theme, neon, userId }: UserCharactersProps) => 
         return (
           <>
             <Title theme={theme} neon={neon}>Seus Personagens</Title>
+            <ButtonDiv theme={theme} neon={neon}>
+              <StyledIconButton theme={theme} neon={neon} onClick={() => setViewMode('create')}>
+                <Add className="icon" />
+              </StyledIconButton>
+            </ButtonDiv>
             {error ? (
               <>{error}</>
             ) : (
@@ -208,11 +233,6 @@ export const UserCharacters = ({ theme, neon, userId }: UserCharactersProps) => 
                 ))}
               </ListController>
             )}
-            <ButtonDiv theme={theme} neon={neon}>
-              <StyledIconButton theme={theme} neon={neon} onClick={() => setViewMode('create')}>
-                <Add className="icon" />
-              </StyledIconButton>
-            </ButtonDiv>
           </>
         );
     }

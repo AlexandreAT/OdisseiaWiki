@@ -23,6 +23,8 @@ public partial class Cidade
 
     public string? Tags { get; set; }
 
+    public string? PontosDeInteresse { get; set; }
+
     public bool Visivel { get; set; } = true;
 
     public DateTime DataCriacao { get; set; } = DateTime.UtcNow;

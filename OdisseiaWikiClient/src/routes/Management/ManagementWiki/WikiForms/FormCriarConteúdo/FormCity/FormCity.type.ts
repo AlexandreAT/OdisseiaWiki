@@ -1,4 +1,5 @@
 import { JSONContent } from '../../../../../../models/Cities';
+import { PontoDeInteresse } from '../../../../../../models/InfoLore';
 
 export interface CityFormData {
   nome: string;
@@ -21,6 +22,7 @@ export interface CidadeDto {
   Imagem: string;
   GaleriaImagem?: string[];
   Tags?: string[];
+  PontosDeInteresse?: PontoDeInteresse[];
   Visivel: boolean;
   DataCriacao?: string;
 }

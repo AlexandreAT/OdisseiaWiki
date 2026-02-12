@@ -1,32 +1,57 @@
-import React, { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useSelector } from 'react-redux';
-import { useState } from 'react';
-import { ContentController, MainContainer, Content, ClipButton, ButtonSpan, Header, Title, ClipButtonAnimated } from './Hub.style';
+import { useNavigate } from 'react-router-dom';
+import { ContentController, MainContainer, Content, ButtonSpan, Header, ClipButtonAnimated } from './Hub.style';
 import { ClipBox } from '../../components/Generic/ClipBox/ClipBox';
 import BannerMesa from '../../assets/Banner Mesa.jpeg';
 import BannerPersonagens from '../../assets/Banner Personagens.jpeg';
 import TitleGlitch from '../../components/Generic/TitleGlitch/TitleGlitch';
-import { UserCharacters } from './UserCharacters/UserCharacters';
+import { UserCharacters, ViewMode } from './UserCharacters/UserCharacters';
+import { AnimatedBackground, BackgroundType } from '../../components/Generic/AnimatedBackground/AnimatedBackground';
 
 export const Hub = () => {
     const { theme, neon } = useSelector((state: any) => state.themesReducer);
     const [selected, setSelected] = useState<'mesas' | 'personagens' | ''>('');
     const [isCollapsed, setIsCollapsed] = useState(false);
+    const [characterViewMode, setCharacterViewMode] = useState<ViewMode>('list');
+    const [hasPersonagens, setHasPersonagens] = useState(false);
+    const [hasPlayedIntro, setHasPlayedIntro] = useState(false);
+    const [isLoadingPersonagens, setIsLoadingPersonagens] = useState(true);
+    const navigate = useNavigate();
+
+    const usuarioLogadoStr = localStorage.getItem('usuario');
+    const usuarioLogado = usuarioLogadoStr ? JSON.parse(usuarioLogadoStr) : null;
 
     useEffect(() => {
+        if (!usuarioLogado) {
+            navigate('/login');
+        }
+    }, [usuarioLogado, navigate])
 
-    }, [])
-
-    const usuarioLogado = {
-        id: 1,
-        email: "alexandre.arribamar@gmail.com",
-        nickname: "alexandre",
-        imagemUrl: "https://lh3.googleusercontent.com/a/ACg8ocIbvXfeCB5VHE3QM2vu6vVBJ1GQky5X3W7qLg3mdL3jC6SWYDk4Nw=s96-c"
-    };
+    if (!usuarioLogado) {
+        return null;
+    }
 
     const handleClick = (type: 'mesas' | 'personagens') => {
         setSelected(type);
         setIsCollapsed(true);
+    };
+
+    const getBackgroundType = (): BackgroundType | null => {
+        if (selected === 'personagens') {
+            if (isLoadingPersonagens) {
+                return null;
+            }
+            if (!hasPersonagens || characterViewMode !== 'list') {
+                return 'distant';
+            }
+            
+            return 'pov';
+        }
+        if (selected === 'mesas') {
+            return 'distant';
+        }
+        return null;
     };
 
     const renderContent = () => {
@@ -38,14 +63,26 @@ export const Hub = () => {
                     theme={theme} 
                     neon={neon} 
                     userId={usuarioLogado.id}
+                    onViewModeChange={setCharacterViewMode}
+                    onPersonagensChange={setHasPersonagens}
+                    onLoadingChange={setIsLoadingPersonagens}
                 />;
             default:
                 return null;
         }
     };
+
+    const backgroundType = getBackgroundType();
     
     return (
         <MainContainer>
+            {backgroundType && (
+                <AnimatedBackground 
+                    type={backgroundType} 
+                    skipIntro={hasPlayedIntro}
+                    onIntroComplete={() => setHasPlayedIntro(true)}
+                />
+            )}
             <ClipBox autoSize zIndex={1} theme={theme} neon={neon} width='1200px' height='100vh' >
                 <Header><TitleGlitch theme={theme} neon={neon} text='Gerenciar Mesas e Personagens' /></Header>
                 <ContentController collapsed={isCollapsed}>

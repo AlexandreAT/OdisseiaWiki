@@ -3,7 +3,9 @@ import { CityFormErrors, CidadeDto } from './FormCity.type';
 import { createCidade } from '../../../../../../services/cidadesService';
 import { saveAsset } from '../../../../../../services/assetsService';
 import { JSONContent } from '../../../../../../models/Cities';
+import { PontoDeInteresse } from '../../../../../../models/InfoLore';
 import { prepareForAPI } from '../../../../../../utils/richTextHelpers';
+import { infoLoresMock } from '../../../../../../Mock/infolore.mock';
 
 export const useFormCity = () => {
   const [nome, setNome] = useState('');
@@ -14,6 +16,8 @@ export const useFormCity = () => {
   const [galeriaFiles, setGaleriaFiles] = useState<File[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
+  const [pontosDeInteresse, setPontosDeInteresse] = useState<PontoDeInteresse[]>([]);
+  const [pontoInteresseSearch, setPontoInteresseSearch] = useState('');
   const [visivel, setVisivel] = useState(true);
 
   const [errors, setErrors] = useState<CityFormErrors>({});
@@ -102,6 +106,35 @@ export const useFormCity = () => {
     }
   };
 
+  const getFilteredInfoLores = () => {
+    if (!pontoInteresseSearch.trim()) {
+      return infoLoresMock;
+    }
+    return infoLoresMock.filter(info => 
+      info.Titulo.toLowerCase().includes(pontoInteresseSearch.toLowerCase())
+    );
+  };
+
+  const handleAddPontoInteresse = (infoLoreId: number) => {
+    const infoLore = infoLoresMock.find(info => info.IdinfoLore === infoLoreId);
+    if (!infoLore) return;
+
+    const alreadyAdded = pontosDeInteresse.some(p => p.id === infoLoreId);
+    if (alreadyAdded) return;
+
+    const novoPonto: PontoDeInteresse = {
+      id: infoLore.IdinfoLore,
+      titulo: infoLore.Titulo
+    };
+
+    setPontosDeInteresse(prev => [...prev, novoPonto]);
+    setPontoInteresseSearch('');
+  };
+
+  const handleRemovePontoInteresse = (pontoId: number) => {
+    setPontosDeInteresse(prev => prev.filter(p => p.id !== pontoId));
+  };
+
   const resetForm = () => {
     setNome('');
     setDescricao('');
@@ -111,6 +144,8 @@ export const useFormCity = () => {
     setGaleriaFiles([]);
     setTags([]);
     setTagInput('');
+    setPontosDeInteresse([]);
+    setPontoInteresseSearch('');
     setVisivel(true);
     setErrors({});
     setNomeError('');
@@ -160,6 +195,7 @@ export const useFormCity = () => {
       Imagem: imagemPath,
       GaleriaImagem: galeriaPaths,
       Tags: tags.length > 0 ? tags : undefined,
+      PontosDeInteresse: pontosDeInteresse.length > 0 ? pontosDeInteresse : undefined,
       Visivel: visivel,
     };
 
@@ -223,6 +259,8 @@ export const useFormCity = () => {
     galeriaFiles,
     tags,
     tagInput,
+    pontosDeInteresse,
+    pontoInteresseSearch,
     visivel,
     
     isSubmitting,
@@ -233,6 +271,7 @@ export const useFormCity = () => {
     setNome: handleNomeChange,
     setDescricao,
     setTagInput,
+    setPontoInteresseSearch,
     setVisivel,
     handleImagemUpload,
     handleGaleriaUpload,
@@ -240,6 +279,9 @@ export const useFormCity = () => {
     handleAddTag,
     handleRemoveTag,
     handleTagInputKeyDown,
+    handleAddPontoInteresse,
+    handleRemovePontoInteresse,
+    getFilteredInfoLores,
     handleSubmit,
     resetForm,
     validateForm,

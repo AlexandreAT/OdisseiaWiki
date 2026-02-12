@@ -35,6 +35,9 @@ namespace OdisseiaWiki.Services
                 Tags = dto.Tags != null && dto.Tags.Any()
                     ? JsonSerializer.Serialize(dto.Tags)
                     : null,
+                PontosDeInteresse = dto.PontosDeInteresse != null && dto.PontosDeInteresse.Any()
+                    ? JsonSerializer.Serialize(dto.PontosDeInteresse)
+                    : null,
                 Visivel = dto.Visivel,
                 DataCriacao = DateTime.UtcNow
             };
@@ -60,6 +63,9 @@ namespace OdisseiaWiki.Services
             cidade.Tags = dto.Tags != null && dto.Tags.Any()
                 ? JsonSerializer.Serialize(dto.Tags)
                 : cidade.Tags;
+            cidade.PontosDeInteresse = dto.PontosDeInteresse != null && dto.PontosDeInteresse.Any()
+                ? JsonSerializer.Serialize(dto.PontosDeInteresse)
+                : cidade.PontosDeInteresse;
             cidade.Visivel = dto.Visivel;
 
             var atualizada = await _repository.UpdateAsync(cidade);
@@ -81,6 +87,9 @@ namespace OdisseiaWiki.Services
                     : null,
                 Tags = !string.IsNullOrWhiteSpace(c.Tags)
                     ? JsonSerializer.Deserialize<List<string>>(c.Tags)
+                    : null,
+                PontosDeInteresse = !string.IsNullOrWhiteSpace(c.PontosDeInteresse)
+                    ? JsonSerializer.Deserialize<List<PontoDeInteresseDto>>(c.PontosDeInteresse)
                     : null,
                 Visivel = c.Visivel
             }).ToList();

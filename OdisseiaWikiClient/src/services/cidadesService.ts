@@ -1,5 +1,6 @@
 import api from "../axios/api";
 import { JSONContent } from "../models/Cities";
+import { PontoDeInteresse } from "../models/InfoLore";
 
 export interface CidadePayload {
   idcidade: number;
@@ -8,6 +9,7 @@ export interface CidadePayload {
   imagem?: string;
   galeriaImagem?: string[];
   tags?: string[];
+  pontosDeInteresse?: PontoDeInteresse[];
   visivel: boolean;
   dataCriacao?: string;
 }
@@ -18,6 +20,7 @@ export interface CreateCidadeDto {
   Imagem: string;
   GaleriaImagem?: string[];
   Tags?: string[];
+  PontosDeInteresse?: PontoDeInteresse[];
   Visivel: boolean;
 }
 

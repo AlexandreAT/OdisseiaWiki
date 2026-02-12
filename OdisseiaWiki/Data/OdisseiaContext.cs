@@ -58,6 +58,10 @@ public partial class OdisseiaContext : DbContext
             entity.Property(e => e.Descricao).HasColumnType("text");
             entity.Property(e => e.Imagem).HasMaxLength(255);
             entity.Property(e => e.Nome).HasMaxLength(100);
+            entity.Property(e => e.GaleriaImagem).HasColumnType("longtext");
+            entity.Property(e => e.Tags).HasColumnType("longtext");
+            entity.Property(e => e.PontosDeInteresse).HasColumnType("longtext");
+            entity.Property(e => e.Visivel).HasColumnType("tinyint(1)");
         });
 
         modelBuilder.Entity<Infolore>(entity =>
@@ -74,6 +78,8 @@ public partial class OdisseiaContext : DbContext
             entity.Property(e => e.Imagem).HasMaxLength(255);
             entity.Property(e => e.Ordem).HasColumnType("int(11)");
             entity.Property(e => e.Titulo).HasMaxLength(150);
+            entity.Property(e => e.Tags).HasColumnType("longtext");
+            entity.Property(e => e.Visivel).HasColumnType("tinyint(1)");
         });
 
         modelBuilder.Entity<Mesa>(entity =>
@@ -202,6 +208,8 @@ public partial class OdisseiaContext : DbContext
             entity.Property(e => e.Nanites).HasMaxLength(50);
             entity.Property(e => e.Nome).HasMaxLength(100);
             entity.Property(e => e.Tracos).HasColumnType("text");
+            entity.Property(e => e.Tags).HasColumnType("longtext");
+            entity.Property(e => e.Visivel).HasColumnType("tinyint(1)");
 
             entity.HasOne(d => d.IdcidadeNavigation).WithMany(p => p.Personagens)
                 .HasForeignKey(d => d.Idcidade)
@@ -225,6 +233,8 @@ public partial class OdisseiaContext : DbContext
             entity.Property(e => e.DataCriacao).HasColumnType("datetime");
             entity.Property(e => e.Imagem).HasMaxLength(255);
             entity.Property(e => e.Nome).HasMaxLength(100);
+            entity.Property(e => e.Tags).HasColumnType("longtext");
+            entity.Property(e => e.Visivel).HasColumnType("tinyint(1)");
         });
 
         modelBuilder.Entity<Usuario>(entity =>
@@ -264,6 +274,9 @@ public partial class OdisseiaContext : DbContext
 
             entity.Property(e => e.DataCriacao)
                 .HasColumnType("datetime");
+            
+            entity.Property(e => e.Tags).HasColumnType("longtext");
+            entity.Property(e => e.Visivel).HasColumnType("tinyint(1)");
         });
 
         modelBuilder.Entity<PersonagemJogador>(entity =>

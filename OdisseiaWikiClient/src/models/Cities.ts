@@ -11,6 +11,11 @@ export type JSONContent = {
   [key: string]: any;
 };
 
+export interface PontoDeInteresseRef {
+  id: number;
+  titulo: string;
+}
+
 export interface Cidade {
   Idcidade: number;
   Nome: string;
@@ -18,6 +23,7 @@ export interface Cidade {
   Imagem?: string;
   GaleriaImagem?: string[];
   Tags?: string[];
+  PontosDeInteresse?: PontoDeInteresseRef[];
   Visivel: boolean;
   DataCriacao: string;
 }
