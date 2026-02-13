@@ -60,8 +60,8 @@ export const RemoveImageButton = styled.button<Props>`
   position: absolute;
   top: 5px;
   right: 5px;
-  width: 28px;
-  height: 28px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.8);
   border: 1px solid ${({ neon }) => neon === 'on' ? 'var(--neonPink)' : 'var(--lightGrey)'};
@@ -88,6 +88,11 @@ export const RemoveImageButton = styled.button<Props>`
 
   &:active {
     transform: scale(0.95);
+  }
+
+  .icon {
+    width: 100%;
+    height: 100%;
   }
 `;
 

@@ -1,6 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using OdisseiaWiki.Data;
 using OdisseiaWiki.Repositories.Interfaces;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace OdisseiaWiki.Repositories
 {
@@ -23,12 +26,12 @@ namespace OdisseiaWiki.Repositories
             return await query.ToListAsync();
         }
 
-        public async Task<Item?> GetByIdAsync(string id) =>
-            await _context.Itens.FirstOrDefaultAsync(i => i.Iditem == id);
+        public async Task<Item?> GetByIdAsync(string id)
+            => await _context.Itens.FindAsync(id);
 
         public async Task AddAsync(Item item)
         {
-            await _context.Itens.AddAsync(item);
+            _context.Itens.Add(item);
             await _context.SaveChangesAsync();
         }
 
@@ -41,9 +44,23 @@ namespace OdisseiaWiki.Repositories
         public async Task DeleteAsync(string id)
         {
             var item = await GetByIdAsync(id);
-            if (item is null) return;
-            _context.Itens.Remove(item);
-            await _context.SaveChangesAsync();
+            if (item != null)
+            {
+                _context.Itens.Remove(item);
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        public async Task<List<Item>> SearchAsync(string termo)
+        {
+            var termoLower = termo.ToLower();
+
+            return await _context.Itens
+                .AsNoTracking()
+                .Where(i =>
+                    i.Nome.ToLower().Contains(termoLower) ||
+                    (i.Tags != null && i.Tags.ToLower().Contains(termoLower)))
+                .ToListAsync();
         }
     }
 }

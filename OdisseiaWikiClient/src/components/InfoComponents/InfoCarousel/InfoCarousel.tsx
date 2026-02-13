@@ -1,21 +1,24 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useSelector } from 'react-redux';
 import { ContainerWiki, Title, DivInfos, Subtitle, InfoControl, InfoCard, CardHeader, CardImage, CardName, CardDescription, CardLink, CarouselOptions, CarouselButton } from './InfoCarousel.style';
 import { Link } from 'react-router-dom';
 import { colorCardsSchemes } from '../../../Global Styles/ColorCardsSchemes';
 import { IoIosArrowDropright, IoIosArrowDropleft } from "react-icons/io";
+import { RichTextDisplay } from '../../Generic/RichTextDisplay/RichTextDisplay';
+
+import { JSONContent } from '../../../models/Characters';
 
 interface CardsTop {
     name: string;
     imageSrc?: string;
-    description: string;
+    description: string | JSONContent;
     link?: string;
 }
 
 interface CardsBottom {
     name: string;
     imageSrc?: string;
-    description: string;
+    description: string | JSONContent;
     link?: string;
 }
 
@@ -80,7 +83,11 @@ export const InfoCarousel = ({ typeBottom, typeTop, title, subtitleTop, subtitle
                                 <CardImage className='imageTop' type={typeTop} src={item.imageSrc} alt={item.name} imageStyleTop={imageStyleTop} theme={theme} neon={neon} colorScheme={scheme} />
                                 <CardName className='nameTop' type={typeTop} theme={theme} neon={neon} colorScheme={scheme}>{item.name}</CardName>
                             </CardHeader>
-                            <CardDescription>{item.description}</CardDescription>
+                            <CardDescription>
+                                {typeof item.description === 'string' 
+                                    ? item.description 
+                                    : <RichTextDisplay content={item.description} />}
+                            </CardDescription>
                             {item.link && <CardLink theme={theme} neon={neon} colorScheme={scheme}><Link to={item.link} className='linkTop link'>Ler mais</Link></CardLink>}
                         </InfoCard>
                     ))}
@@ -101,7 +108,11 @@ export const InfoCarousel = ({ typeBottom, typeTop, title, subtitleTop, subtitle
                                 <CardImage className='imageBottom' type={typeBottom} src={item.imageSrc} alt={item.name} imageStyleBottom={imageStyleBottom} theme={theme} neon={neon} colorScheme={scheme} />
                                 <CardName className='nameBottom' type={typeBottom} theme={theme} neon={neon} colorScheme={scheme}>{item.name}</CardName>
                             </CardHeader>
-                            <CardDescription>{item.description}</CardDescription>
+                            <CardDescription>
+                                {typeof item.description === 'string' 
+                                    ? item.description 
+                                    : <RichTextDisplay content={item.description} />}
+                            </CardDescription>
                             {item.link && <CardLink theme={theme} neon={neon} colorScheme={scheme}><Link to={item.link} className='linkBottom link'>Ler mais</Link></CardLink>}
                         </InfoCard>
                     ))}

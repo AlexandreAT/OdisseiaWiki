@@ -11,5 +11,6 @@ namespace OdisseiaWiki.Repositories.Interfaces
         Task<Cidade> CreateAsync(Cidade cidade);
         Task<Cidade> UpdateAsync(Cidade cidade);
         Task<bool> DeleteAsync(int id);
+        Task<List<Cidade>> SearchAsync(string termo);
     }
 }

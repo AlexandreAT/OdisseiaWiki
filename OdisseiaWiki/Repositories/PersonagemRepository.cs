@@ -53,5 +53,17 @@ namespace OdisseiaWiki.Repositories
             await _context.SaveChangesAsync();
             return true;
         }
+
+        public async Task<List<Personagen>> SearchAsync(string termo)
+        {
+            var termoLower = termo.ToLower();
+            
+            return await _context.Personagens
+                .AsNoTracking()
+                .Where(p => 
+                    p.Nome.ToLower().Contains(termoLower) ||
+                    (p.Tags != null && p.Tags.ToLower().Contains(termoLower)))
+                .ToListAsync();
+        }
     }
 }

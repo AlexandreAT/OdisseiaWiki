@@ -26,5 +26,17 @@ namespace OdisseiaWiki.Repositories
 
             return await query.ToListAsync();
         }
+
+        public async Task<List<Raca>> SearchAsync(string termo)
+        {
+            var termoLower = termo.ToLower();
+            
+            return await _context.Racas
+                .AsNoTracking()
+                .Where(r => 
+                    r.Nome.ToLower().Contains(termoLower) ||
+                    (r.Tags != null && r.Tags.ToLower().Contains(termoLower)))
+                .ToListAsync();
+        }
     }
 }

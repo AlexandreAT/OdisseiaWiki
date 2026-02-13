@@ -102,11 +102,7 @@ export const FormCity = ({ theme, neon }: FormCityProps) => {
             error={!!nomeError}
           />
           {nomeError && <ErrorText>{nomeError}</ErrorText>}
-
           <TagsSection>
-        <SectionTitle theme={theme} neon={neon}>
-          Tags (Opcional)
-        </SectionTitle>
         <InputText
           ref={tagInputRef}
           theme={theme}
@@ -132,9 +128,6 @@ export const FormCity = ({ theme, neon }: FormCityProps) => {
       </TagsSection>
 
       <PontosInteresseSection>
-        <SectionTitle theme={theme} neon={neon}>
-          Pontos de Interesse (Opcional)
-        </SectionTitle>
         <PontosInteresseInputContainer>
           <InputText
             theme={theme}
@@ -178,7 +171,7 @@ export const FormCity = ({ theme, neon }: FormCityProps) => {
             neon={neon}
             label="Imagem Principal"
             imageUrl={imagemUrl}
-            onChange={(file) => file && handleImagemUpload(file)}
+            onChange={handleImagemUpload}
             error={!!imagemError}
             errorMessage={imagemError}
             width="300px"

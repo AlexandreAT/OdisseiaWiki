@@ -36,6 +36,8 @@ export const HeaderInfo = styled.div`
   flex-direction: column;
   gap: 15px;
   width: 100%;
+  min-width: 0;
+  overflow: hidden;
 `;
 
 export const ImageSection = styled.div`

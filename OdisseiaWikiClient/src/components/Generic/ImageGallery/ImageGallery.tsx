@@ -8,6 +8,7 @@ import {
   AddGalleryImageButton,
   HiddenInput,
 } from './ImageGallery.style';
+import CloseIcon from '@mui/icons-material/Close';
 
 interface ImageGalleryProps {
   theme: 'dark' | 'light';
@@ -72,7 +73,7 @@ export const ImageGallery = ({
               onClick={(e) => handleRemoveImage(index, e)}
               title="Remover imagem"
             >
-              ×
+              <CloseIcon className='icon' />
             </RemoveImageButton>
           </GalleryImageContainer>
         ))}

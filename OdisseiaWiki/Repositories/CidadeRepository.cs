@@ -53,5 +53,17 @@ namespace OdisseiaWiki.Repositories
             await _context.SaveChangesAsync();
             return true;
         }
+
+        public async Task<List<Cidade>> SearchAsync(string termo)
+        {
+            var termoLower = termo.ToLower();
+            
+            return await _context.Cidades
+                .AsNoTracking()
+                .Where(c => 
+                    c.Nome.ToLower().Contains(termoLower) ||
+                    (c.Tags != null && c.Tags.ToLower().Contains(termoLower)))
+                .ToListAsync();
+        }
     }
 }

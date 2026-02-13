@@ -67,12 +67,23 @@ export const useFormCity = () => {
     }
   };
 
-  const handleImagemUpload = (file: File) => {
-    setImagemFile(file);
-    const url = URL.createObjectURL(file);
-    setImagemUrl(url);
-    if (imagemError) {
-      validateImagem(url, file);
+  const handleImagemUpload = (file: File | null) => {
+    if (file === null) {
+      if (imagemUrl && imagemUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(imagemUrl);
+      }
+      setImagemFile(null);
+      setImagemUrl('');
+      if (imagemError) {
+        validateImagem('', null);
+      }
+    } else {
+      setImagemFile(file);
+      const url = URL.createObjectURL(file);
+      setImagemUrl(url);
+      if (imagemError) {
+        validateImagem(url, file);
+      }
     }
   };
 

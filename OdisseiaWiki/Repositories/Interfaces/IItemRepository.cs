@@ -10,5 +10,6 @@ namespace OdisseiaWiki.Repositories.Interfaces
         Task AddAsync(Item item);
         Task UpdateAsync(Item item);
         Task DeleteAsync(string id);
+        Task<List<Item>> SearchAsync(string termo);
     }
 }

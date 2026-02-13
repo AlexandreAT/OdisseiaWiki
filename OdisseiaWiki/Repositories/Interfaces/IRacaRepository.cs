@@ -7,5 +7,6 @@ namespace OdisseiaWiki.Repositories.Interfaces
     public interface IRacaRepository
     {
         Task<List<Raca>> GetAllAsync(bool? visivel = null);
+        Task<List<Raca>> SearchAsync(string termo);
     }
 }

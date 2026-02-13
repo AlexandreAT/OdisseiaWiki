@@ -8,6 +8,7 @@ import {
   ErrorText,
   RemoveImageButton,
 } from './ImageUpload.style';
+import CloseIcon from '@mui/icons-material/Close';
 
 interface ImageUploadProps {
   theme: 'dark' | 'light';
@@ -90,7 +91,7 @@ export const ImageUpload = ({
                 onClick={handleRemoveImage}
                 title="Remover imagem"
               >
-                ×
+                <CloseIcon className='icon' />
               </RemoveImageButton>
             )}
           </>

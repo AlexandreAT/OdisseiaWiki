@@ -62,7 +62,7 @@ export const EditorWrapper = styled.div<Props>`
   padding: 25px 10px 10px;
   transition: background-color 0.2s, border 0.2s;
   box-shadow: 0 0 1px 1px rgba(50, 50, 50, 0.8);
-  overflow-y: auto;
+  ${({ height }) => height ? 'overflow-y: auto;' : 'overflow-y: visible;'}
   resize: vertical;
 
   ${({ focus, theme, neon, typeStyle }) =>

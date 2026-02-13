@@ -1,6 +1,6 @@
 import React from 'react';
-import { JSONContent } from '../../models/Characters';
-import { jsonContentToString } from '../../utils/richTextHelpers';
+import { JSONContent } from '../../../models/Characters';
+import { jsonContentToString } from '../../../utils/richTextHelpers';
 
 interface RichTextDisplayProps {
   content: JSONContent | string | undefined;

@@ -39,6 +39,7 @@ namespace OdisseiaWiki
             builder.Services.AddScoped<ICidadeRepository, CidadeRepository>();
             builder.Services.AddScoped<IItemRepository, ItemRepository>();
             builder.Services.AddScoped<IMesaRepository, MesaRepository>();
+            builder.Services.AddScoped<IInfoLoreRepository, InfoLoreRepository>();
 
             // Registrando os serviços de domínio
             builder.Services.AddScoped<IUsuarioService, UsuarioService>();
@@ -48,6 +49,7 @@ namespace OdisseiaWiki
             builder.Services.AddScoped<ICidadeService, CidadeService>();
             builder.Services.AddScoped<IItemService, ItemService>();
             builder.Services.AddScoped<IMesaService, MesaService>();
+            builder.Services.AddScoped<IInfoLoreService, InfoLoreService>();
 
             // --- Configuração ImgBB: carregar seção ImgBB do appsettings para IOptions<ImgBBSettings>
             builder.Services.Configure<ImgBBSettings>(builder.Configuration.GetSection("ImgBB"));
