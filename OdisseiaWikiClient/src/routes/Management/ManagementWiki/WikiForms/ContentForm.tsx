@@ -1,4 +1,5 @@
 import { FormCriarConteúdo } from "./FormCriarConteúdo/FormCriarConteúdo";
+import { FormBuscarConteúdo } from "./FormBuscarConteúdo/FormBuscarConteúdo";
 import { FormContainer } from "./ContentForm.style";
 
 interface ContentFormProps {
@@ -13,7 +14,7 @@ export const ContentForm = ({ mode, theme, neon }: ContentFormProps) => {
             case 'create':
                 return <FormCriarConteúdo theme={theme} neon={neon} />;
             case 'search':
-                return <p>Pesquisar conteúdo</p>;
+                return <FormBuscarConteúdo theme={theme} neon={neon} />;
             default:
                 return null;
         }

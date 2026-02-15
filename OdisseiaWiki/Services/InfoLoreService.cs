@@ -6,6 +6,8 @@ using OdisseiaWiki.Services.Interfaces;
 using System.Text.Json;
 using System.Linq;
 using System.Threading.Tasks;
+using System;
+using System.Collections.Generic;
 
 namespace OdisseiaWiki.Services
 {
@@ -99,74 +101,106 @@ namespace OdisseiaWiki.Services
 
             var result = new GlobalSearchResultDto();
 
-            // Busca em paralelo para performance
-            var cidadesTask = _cidadeRepo.SearchAsync(termo);
-            var personagensTask = _personagemRepo.SearchAsync(termo);
-            var itensTask = _itemRepo.SearchAsync(termo);
-            var infoLoresTask = _infoLoreRepo.SearchAsync(termo);
-            var racasTask = _racaRepo.SearchAsync(termo);
-
-            await Task.WhenAll(cidadesTask, personagensTask, itensTask, infoLoresTask, racasTask);
-
-            result.Cidades = cidadesTask.Result.Select(c => new SearchItemDto
+            // Busca sequencial com tratamento de erro individual
+            try
             {
-                Id = c.Idcidade,
-                Nome = c.Nome,
-                Imagem = c.Imagem,
-                Tags = !string.IsNullOrWhiteSpace(c.Tags)
-                    ? JsonSerializer.Deserialize<List<string>>(c.Tags)
-                    : null,
-                Visivel = c.Visivel,
-                TipoEntidade = "Cidade"
-            }).ToList();
-
-            result.Personagens = personagensTask.Result.Select(p => new SearchItemDto
+                var cidades = await _cidadeRepo.SearchAsync(termo);
+                result.Cidades = cidades.Select(c => new SearchItemDto
+                {
+                    Id = c.Idcidade,
+                    Nome = c.Nome,
+                    Imagem = c.Imagem,
+                    Tags = !string.IsNullOrWhiteSpace(c.Tags)
+                        ? JsonSerializer.Deserialize<List<string>>(c.Tags)
+                        : null,
+                    Visivel = c.Visivel,
+                    TipoEntidade = "Cidade"
+                }).ToList();
+            }
+            catch
             {
-                Id = p.Idpersonagem,
-                Nome = p.Nome,
-                Imagem = p.Imagem,
-                Tags = !string.IsNullOrWhiteSpace(p.Tags)
-                    ? JsonSerializer.Deserialize<List<string>>(p.Tags)
-                    : null,
-                Visivel = p.Visivel,
-                TipoEntidade = "Personagem"
-            }).ToList();
+                result.Cidades = new List<SearchItemDto>();
+            }
 
-            result.Itens = itensTask.Result.Select(i => new SearchItemDto
+            try
             {
-                IdString = i.Iditem,
-                Nome = i.Nome,
-                Imagem = i.Imagem,
-                Tags = !string.IsNullOrWhiteSpace(i.Tags)
-                    ? JsonSerializer.Deserialize<List<string>>(i.Tags)
-                    : null,
-                Visivel = i.Visivel,
-                TipoEntidade = "Item"
-            }).ToList();
+                var personagens = await _personagemRepo.SearchAsync(termo);
+                result.Personagens = personagens.Select(p => new SearchItemDto
+                {
+                    Id = p.Idpersonagem,
+                    Nome = p.Nome,
+                    Imagem = p.Imagem,
+                    Tags = !string.IsNullOrWhiteSpace(p.Tags)
+                        ? JsonSerializer.Deserialize<List<string>>(p.Tags)
+                        : null,
+                    Visivel = p.Visivel,
+                    TipoEntidade = "Personagem"
+                }).ToList();
+            }
+            catch
+            {
+                result.Personagens = new List<SearchItemDto>();
+            }
 
-            result.InfoLores = infoLoresTask.Result.Select(il => new SearchItemDto
+            try
             {
-                Id = il.IdinfoLore,
-                Nome = il.Titulo,
-                Imagem = il.Imagem,
-                Tags = !string.IsNullOrWhiteSpace(il.Tags)
-                    ? JsonSerializer.Deserialize<List<string>>(il.Tags)
-                    : null,
-                Visivel = il.Visivel,
-                TipoEntidade = "InfoLore"
-            }).ToList();
+                var itens = await _itemRepo.SearchAsync(termo);
+                result.Itens = itens.Select(i => new SearchItemDto
+                {
+                    IdString = i.Iditem,
+                    Nome = i.Nome,
+                    Imagem = i.Imagem,
+                    Tags = !string.IsNullOrWhiteSpace(i.Tags)
+                        ? JsonSerializer.Deserialize<List<string>>(i.Tags)
+                        : null,
+                    Visivel = i.Visivel,
+                    TipoEntidade = "Item"
+                }).ToList();
+            }
+            catch
+            {
+                result.Itens = new List<SearchItemDto>();
+            }
 
-            result.Racas = racasTask.Result.Select(r => new SearchItemDto
+            try
             {
-                Id = r.Idraca,
-                Nome = r.Nome,
-                Imagem = r.Imagem,
-                Tags = !string.IsNullOrWhiteSpace(r.Tags)
-                    ? JsonSerializer.Deserialize<List<string>>(r.Tags)
-                    : null,
-                Visivel = r.Visivel,
-                TipoEntidade = "Raca"
-            }).ToList();
+                var infoLores = await _infoLoreRepo.SearchAsync(termo);
+                result.InfoLores = infoLores.Select(il => new SearchItemDto
+                {
+                    Id = il.IdinfoLore,
+                    Nome = il.Titulo,
+                    Imagem = il.Imagem,
+                    Tags = !string.IsNullOrWhiteSpace(il.Tags)
+                        ? JsonSerializer.Deserialize<List<string>>(il.Tags)
+                        : null,
+                    Visivel = il.Visivel,
+                    TipoEntidade = "InfoLore"
+                }).ToList();
+            }
+            catch
+            {
+                result.InfoLores = new List<SearchItemDto>();
+            }
+
+            try
+            {
+                var racas = await _racaRepo.SearchAsync(termo);
+                result.Racas = racas.Select(r => new SearchItemDto
+                {
+                    Id = r.Idraca,
+                    Nome = r.Nome,
+                    Imagem = r.Imagem,
+                    Tags = !string.IsNullOrWhiteSpace(r.Tags)
+                        ? JsonSerializer.Deserialize<List<string>>(r.Tags)
+                        : null,
+                    Visivel = r.Visivel,
+                    TipoEntidade = "Raca"
+                }).ToList();
+            }
+            catch
+            {
+                result.Racas = new List<SearchItemDto>();
+            }
 
             return result;
         }
