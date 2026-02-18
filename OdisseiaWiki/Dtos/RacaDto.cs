@@ -1,4 +1,5 @@
-﻿using OdisseiaWiki.Dtos.OdisseiaWiki.Dtos;
+﻿using System;
+using System.Collections.Generic;
 
 namespace OdisseiaWiki.Dtos
 {
@@ -9,5 +10,8 @@ namespace OdisseiaWiki.Dtos
         public RacaStatusDto? StatusJson { get; set; }
         public string? Imagem { get; set; }
         public List<string>? GaleriaImagem { get; set; }
+        public List<string>? Tags { get; set; }
+        public bool Visivel { get; set; } = true;
+        public DateTime DataCriacao { get; set; }
     }
 }

@@ -1,22 +1,17 @@
-﻿namespace OdisseiaWiki.Dtos
+﻿using OdisseiaWiki.Models;
+using System.Collections.Generic;
+
+namespace OdisseiaWiki.Dtos
 {
     public class ResultRaca
     {
-        public bool Sucesso { get; private set; }
-        public string? MensagemErro { get; private set; }
-        public RacaDto? Raca { get; private set; }
-        public List<RacaDto>? Racas { get; private set; }
+        public bool Sucesso { get; set; }
+        public string? MensagemErro { get; set; }
+        public RacaDto? Raca { get; set; }
+        public List<RacaDto>? Racas { get; set; }
 
-        private ResultRaca(bool sucesso, string? mensagemErro = null, RacaDto? raca = null, List<RacaDto>? racas = null)
-        {
-            Sucesso = sucesso;
-            MensagemErro = mensagemErro;
-            Raca = raca;
-            Racas = racas;
-        }
-
-        public static ResultRaca Ok(List<RacaDto> racas) => new(true, racas: racas);
-        public static ResultRaca Ok(RacaDto raca) => new(true, raca: raca);
-        public static ResultRaca Fail(string mensagemErro) => new(false, mensagemErro);
+        public static ResultRaca Ok(RacaDto raca) => new() { Sucesso = true, Raca = raca };
+        public static ResultRaca Ok(List<RacaDto> racas) => new() { Sucesso = true, Racas = racas };
+        public static ResultRaca Fail(string mensagemErro) => new() { Sucesso = false, MensagemErro = mensagemErro };
     }
 }

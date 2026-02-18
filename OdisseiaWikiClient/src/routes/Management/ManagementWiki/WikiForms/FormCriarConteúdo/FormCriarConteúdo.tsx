@@ -3,6 +3,7 @@ import { Select } from '../../../../../components/Generic/Select/Select';
 import { useState } from 'react';
 import { FormCharacter } from './FormCharacter/FormCharacter';
 import { FormCity } from './FormCity/FormCity';
+import { FormRace } from './FormRace/FormRace';
 
 interface FormProps {
   theme: 'dark' | 'light';
@@ -12,6 +13,7 @@ interface FormProps {
 const OPTIONS = [
     { value: 'character', label: 'Personagem' },
     { value: 'city', label: 'Cidade' },
+    { value: 'race', label: 'Raça' },
     { value: 'item', label: 'Item' }
 ];
 
@@ -24,6 +26,8 @@ export const FormCriarConteúdo = ({ theme, neon }: FormProps) => {
                 return <FormCharacter theme={theme} neon={neon} />;
             case 'city':
                 return <FormCity theme={theme} neon={neon} />;
+            case 'race':
+                return <FormRace theme={theme} neon={neon} />;
             case 'item':
                 return <p>Form item</p>;
             default:

@@ -27,6 +27,33 @@ namespace OdisseiaWiki.Repositories
             return await query.ToListAsync();
         }
 
+        public async Task<Raca?> GetByIdAsync(int id)
+            => await _context.Racas.FindAsync(id);
+
+        public async Task<Raca> CreateAsync(Raca raca)
+        {
+            _context.Racas.Add(raca);
+            await _context.SaveChangesAsync();
+            return raca;
+        }
+
+        public async Task<Raca> UpdateAsync(Raca raca)
+        {
+            _context.Racas.Update(raca);
+            await _context.SaveChangesAsync();
+            return raca;
+        }
+
+        public async Task<bool> DeleteAsync(int id)
+        {
+            var raca = await _context.Racas.FindAsync(id);
+            if (raca == null) return false;
+
+            _context.Racas.Remove(raca);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
         public async Task<List<Raca>> SearchAsync(string termo)
         {
             var termoLower = termo.ToLower();
