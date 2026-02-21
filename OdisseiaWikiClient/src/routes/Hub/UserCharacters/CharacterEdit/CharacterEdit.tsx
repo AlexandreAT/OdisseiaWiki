@@ -1,16 +1,17 @@
 import React from 'react'
+import CloudDoneIcon from '@mui/icons-material/CloudDone';
+import CloudOffIcon from '@mui/icons-material/CloudOff';
+import SaveIcon from '@mui/icons-material/Save';
+import toast from 'react-hot-toast';
 import { PersonagemJogador } from '../../../../models/PersonagemJogador';
 import { useFormUserCharacter } from '../CharacterCreate/useFormUserCharacter';
-import { AtributeController, AtributoBox, AtributoDiv, AvatarController, BottomContentController, FormController, FormEditController, HeaderInfo, InfoImage, LabelStatus, MinimalInput, NavegationButtons, SectionStatus, SectionTable, StatusAtributosDiv, StatusContent, StatusContentCenter, StatusDefesaController, StatusDefesaDiv, StatusHeader, StatusImageDiv, TableTitle } from '../CharacterCreate/FormUserCharacter/FormUserCharacter.style';
-import { LabelInfoBox } from '../../../../components/Generic/LabelInfoBox/LabelInfoBox';
-import { StatusInput } from '../../../../components/Generic/StatusInput/StatusInput';
-import { AvatarIcon } from '../../../../components/Generic/AvatarIcon/AvatarIcon';
+import { FormController, FormEditController, NavegationButtons } from '../CharacterCreate/FormUserCharacter/FormUserCharacter.style';
 import { CyberButton } from '../../../../components/Generic/HighlightButton/HighlightButton';
-import { Item } from '../../../../models/Itens';
-import { Skills } from '../../../../models/Skills';
-import { Magia } from '../../../../models/Magias';
-import { DataTable } from '../../../../components/Generic/DataTable/DataTable';
 import { createItemColumns, createSkillsColumns, createMagiasColumns } from '../CharacterCreate/tableColumnsConfig';
+import { CharacterSystemForm } from '../../../Shared/CharacterForms/CharacterSystemForm';
+import { CharacterRoleplayForm } from '../../../Shared/CharacterForms/CharacterRoleplayForm';
+import { CharacterStepDots } from '../../../Shared/CharacterForms/CharacterStepDots';
+import { FloatingActions, FloatingSaveButton, SyncIconBadge } from './CharacterEdit.style';
 
 interface UserCharactersProps {
   theme: 'dark' | 'light';
@@ -21,15 +22,52 @@ interface UserCharactersProps {
 }
 
 export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserCharactersProps) => {
+  const [editStep, setEditStep] = React.useState<1 | 2>(1);
+  const [lastSavedSnapshot, setLastSavedSnapshot] = React.useState('');
+  const hasSnapshotInitializedRef = React.useRef(false);
+
     const {
-        handleSubmit,
         handleUpdate,
         userName,
+    setUserName,
+    race,
+    setRace,
+    city,
+    setCity,
+    avatarUrl,
+    setAvatarUrl,
+    setAvatarFile,
+    galeriaUrls,
+    handleGaleriaUpload,
+    handleRemoveGaleriaImage,
+    history,
+    setHistory,
+    costumes,
+    setCostumes,
+    extraInformation,
+    setExtraInformation,
+    nanites,
+    setNanites,
+    alignment,
+    setAlignment,
+    traits,
+    setTraits,
+    listPersonagemRelacionado,
+    setListPersonagemRelacionado,
         itens, setItens,
         skills, setSkills,
         magias, setMagias,
         statusBasico, setStatusBasico,
         listRaces,
+    listCities,
+    loadingRaces,
+    loadingCities,
+    selectedRace,
+    personagens,
+    allPersonagens,
+    searchTerm,
+    loadingPersonagens,
+    searchPersonagens,
         xp, setXp,
         level, setLevel,
         atributosPrincipais, setAtributosPrincipais,
@@ -38,227 +76,256 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserC
         listItens, handleSelectItem,
     } = useFormUserCharacter(userId, onSave, personagem);
 
-    const characterRace = React.useMemo(() => 
-        listRaces?.find(r => r.idraca === personagem.idraca),
-        [listRaces, personagem.idraca]
-    );
-
     const raceImageUrl = React.useMemo(() => 
-        characterRace?.imagem ?? '/assets_dynamic/default.png',
-        [characterRace]
+        selectedRace?.imagem ?? '/assets_dynamic/default.png',
+        [selectedRace]
     );
 
     const itemColumns = React.useMemo(() => createItemColumns(theme, neon), [theme, neon]);
     const skillsColumns = React.useMemo(() => createSkillsColumns(theme, neon), [theme, neon]);
     const magiasColumns = React.useMemo(() => createMagiasColumns(theme, neon), [theme, neon]);
 
+    const snapshot = React.useMemo(() => JSON.stringify({
+      userName,
+      race,
+      city,
+      avatarUrl,
+      galeriaUrls,
+      history,
+      costumes,
+      extraInformation,
+      nanites,
+      alignment,
+      traits,
+      listPersonagemRelacionado,
+      statusBasico,
+      xp,
+      level,
+      atributosPrincipais,
+      atributosSecundarios,
+      defesas,
+      itens,
+      skills,
+      magias,
+    }), [
+      userName,
+      race,
+      city,
+      avatarUrl,
+      galeriaUrls,
+      history,
+      costumes,
+      extraInformation,
+      nanites,
+      alignment,
+      traits,
+      listPersonagemRelacionado,
+      statusBasico,
+      xp,
+      level,
+      atributosPrincipais,
+      atributosSecundarios,
+      defesas,
+      itens,
+      skills,
+      magias,
+    ]);
+
+    React.useEffect(() => {
+      hasSnapshotInitializedRef.current = false;
+      setLastSavedSnapshot('');
+    }, [personagem.idpersonagemJogador]);
+
+    React.useEffect(() => {
+      if (hasSnapshotInitializedRef.current) return;
+      if (!userName || race === undefined) return;
+
+      hasSnapshotInitializedRef.current = true;
+      setLastSavedSnapshot(snapshot);
+    }, [snapshot, userName, race]);
+
+    const isSynced = lastSavedSnapshot !== '' && snapshot === lastSavedSnapshot;
+
+    const isFirstStep = editStep === 1;
+    const isLastStep = editStep === 2;
+
+    const validateEdit = React.useCallback(() => {
+      if (!userName.trim()) {
+        toast.error('Nome é obrigatório.');
+        return false;
+      }
+
+      if (!race || race === 0) {
+        toast.error('Selecione uma raça válida.');
+        return false;
+      }
+
+      if (!city || city === 0) {
+        toast.error('Selecione uma cidade válida.');
+        return false;
+      }
+
+      return true;
+    }, [userName, race, city]);
+
+    const handleSave = React.useCallback(async () => {
+      if (!validateEdit()) return;
+
+      const success = await handleUpdate();
+      if (success) {
+        setLastSavedSnapshot(snapshot);
+      }
+    }, [handleUpdate, snapshot, validateEdit]);
+
+    const handleStepDotClick = React.useCallback((targetStep: 1 | 2) => {
+      if (targetStep === editStep) return;
+      setEditStep(targetStep);
+    }, [editStep]);
+
     return (
-        <FormController onSubmit={handleSubmit}> 
+        <FormController onSubmit={(e) => e.preventDefault()}> 
+            <CharacterStepDots
+              theme={theme}
+              neon={neon}
+              activeStep={editStep}
+              onStepClick={handleStepDotClick}
+            />
+
             <FormEditController>
-              <StatusHeader>
-                <HeaderInfo>
-                  <LabelInfoBox theme={theme} neon={neon}>
-                    <LabelStatus>Nome: {userName}</LabelStatus>
-                  </LabelInfoBox>
-                  <LabelInfoBox theme={theme} neon={neon}>
-                    <LabelStatus>Raça: {characterRace?.nome}</LabelStatus>
-                  </LabelInfoBox>
-                  <LabelInfoBox theme={theme} neon={neon}>
-                    <>
-                      <LabelStatus>Xp: </LabelStatus>
-                      <MinimalInput value={xp} onChange={(e) => setXp(Number(e.target.value))} />
-                    </>
-                  </LabelInfoBox>
-                  <LabelInfoBox theme={theme} neon={neon}>
-                    <>
-                      <LabelStatus>Nível: </LabelStatus>
-                      <MinimalInput value={level} onChange={(e) => setLevel(Number(e.target.value))} />
-                    </>
-                  </LabelInfoBox>
-                  <LabelInfoBox theme={theme} neon={neon}>
-                    <>
-                      <LabelStatus>Carga: </LabelStatus>
-                      <MinimalInput
-                        value={statusBasico.capacidadeCarga}
-                        onChange={(e) =>
-                          setStatusBasico((prev) => ({ ...prev, capacidadeCarga: Number(e.target.value) }))
-                        } 
-                      />
-                    </>
-                  </LabelInfoBox>
-                </HeaderInfo>
-                <SectionStatus theme={theme} neon={neon}>
-                    <StatusInput
-                        theme={theme}
-                        neon={neon}
-                        type="vida"
-                        label="Vida"
-                        value={statusBasico.vida}
-                        editable
-                        onChange={(e) =>
-                            setStatusBasico((prev) => ({ ...prev, vida: Number(e.target.value) }))
-                        }
-                    />
-                    <StatusInput
-                        theme={theme}
-                        neon={neon}
-                        type="estamina"
-                        label="Estamina"
-                        value={statusBasico.estamina}
-                        editable
-                        onChange={(e) =>
-                            setStatusBasico((prev) => ({ ...prev, estamina: Number(e.target.value) }))
-                        }
-                    />
-                    <StatusInput
-                        theme={theme}
-                        neon={neon}
-                        type="mana"
-                        label="Mana"
-                        value={statusBasico.mana}
-                        editable
-                        onChange={(e) =>
-                            setStatusBasico((prev) => ({ ...prev, mana: Number(e.target.value) }))
-                        }
-                    />
-                </SectionStatus>
-              </StatusHeader>
-              <StatusContent>  
-                <AtributeController>
-                      <StatusAtributosDiv theme={theme} neon={neon}>
-                        <LabelStatus width='16px'>Principais</LabelStatus>
-                        {Object.entries(atributosPrincipais).map(([key, value]) => (
-                          <AtributoDiv key={key}>
-                            <LabelStatus width='13px'>{key}</LabelStatus>
-                            <AtributoBox theme={theme} neon={neon}>
-                              <MinimalInput
-                                type="number"
-                                value={value}
-                                onChange={(e) =>
-                                  setAtributosPrincipais({
-                                    ...atributosPrincipais,
-                                    [key]: Number(e.target.value),
-                                  })
-                                }
-                              />
-                            </AtributoBox>
-                          </AtributoDiv>
-                        ))}
-                      </StatusAtributosDiv>
-                </AtributeController>
-    
-                <StatusContentCenter>
-                  <StatusDefesaController theme={theme} neon={neon}>
-                    <LabelStatus>Defesas</LabelStatus>
-                    <StatusDefesaDiv>
-                          {Object.entries(defesas).map(([key, value]) => (
-                            <AtributoDiv key={key}>
-                              <LabelStatus width='13px'>{key}</LabelStatus>
-                              <AtributoBox theme={theme} neon={neon}>
-                                <MinimalInput
-                                  type="number"
-                                  value={value}
-                                  onChange={(e) =>
-                                    setDefesas({
-                                      ...defesas,
-                                      [key]: Number(e.target.value),
-                                    })
-                                  }
-                                />
-                              </AtributoBox>
-                            </AtributoDiv>
-                          ))}
-                    </StatusDefesaDiv>
-                  </StatusDefesaController>
-                  <StatusImageDiv>
-                      <InfoImage
-                        src={raceImageUrl}
-                        alt={characterRace?.nome || 'Background'}
-                      />
-                      <AvatarController hasImage={personagem.imagem ? true : false} imageSize={170}>
-                        <AvatarIcon
-                            theme={theme}
-                            neon={neon}
-                            initialImage={personagem.imagem}
-                            size={170}
-                            clickable={false}
-                        />
-                      </AvatarController>
-                  </StatusImageDiv>
-                </StatusContentCenter>
-                
-                <StatusAtributosDiv theme={theme} neon={neon}>
-                      <LabelStatus width='16px'>Secundários</LabelStatus>
-                      {Object.entries(atributosSecundarios).map(([key, value]) => (
-                        <AtributoDiv key={key}>
-                          <LabelStatus width='13px'>{key}</LabelStatus>
-                          <AtributoBox theme={theme} neon={neon}>
-                            <MinimalInput
-                              type="number"
-                              value={value}
-                              onChange={(e) =>
-                                setAtributosSecundarios({
-                                  ...atributosSecundarios,
-                                  [key]: Number(e.target.value),
-                                })
-                              }
-                            />
-                          </AtributoBox>
-                        </AtributoDiv>
-                      ))}
-                </StatusAtributosDiv>
-              </StatusContent>
-                  <BottomContentController>
-              <SectionTable>
-                  <TableTitle>Inventário</TableTitle>
-                  <DataTable<Item>
-                    data={itens}
-                    onChange={setItens}
-                    columns={itemColumns}
-                    searchable
-                    searchPlaceholder="Pesquisar item..."
-                    searchData={listItens}
-                    searchKeys={['nome', 'tipo', 'descricao']}
-                    onSelectSearch={handleSelectItem}
-                    theme={theme}
-                    neon={neon}
-                  />
-                </SectionTable>
-        
-                <SectionTable>
-                  <TableTitle>Magias</TableTitle>
-                  <DataTable<Magia>
-                    data={magias}
-                    onChange={setMagias}
-                    columns={magiasColumns}
-                    theme={theme}
-                    neon={neon}
-                  />
-                </SectionTable>
-        
-                <SectionTable>
-                  <TableTitle>Skills</TableTitle>
-                  <DataTable<Skills>
-                    data={skills}
-                    onChange={setSkills}
-                    columns={skillsColumns}
-                    theme={theme}
-                    neon={neon}
-                  />
-                </SectionTable>
-                </BottomContentController>
+              {editStep === 1 && (
+                <CharacterSystemForm
+                  theme={theme}
+                  neon={neon}
+                  userName={userName}
+                  selectedRace={selectedRace}
+                  raceImageUrl={raceImageUrl}
+                  avatarUrl={avatarUrl}
+                  xp={xp}
+                  setXp={setXp}
+                  level={level}
+                  setLevel={setLevel}
+                  statusBasico={statusBasico}
+                  setStatusBasico={setStatusBasico}
+                  atributosPrincipais={atributosPrincipais}
+                  setAtributosPrincipais={setAtributosPrincipais}
+                  atributosSecundarios={atributosSecundarios}
+                  setAtributosSecundarios={setAtributosSecundarios}
+                  defesas={defesas}
+                  setDefesas={setDefesas}
+                  itens={itens}
+                  setItens={setItens}
+                  skills={skills}
+                  setSkills={setSkills}
+                  magias={magias}
+                  setMagias={setMagias}
+                  listItens={listItens}
+                  handleSelectItem={handleSelectItem}
+                  itemColumns={itemColumns}
+                  skillsColumns={skillsColumns}
+                  magiasColumns={magiasColumns}
+                />
+              )}
+
+              {editStep === 2 && (
+                <CharacterRoleplayForm
+                  theme={theme}
+                  neon={neon}
+                  userName={userName}
+                  setUserName={setUserName}
+                  race={race}
+                  setRace={setRace}
+                  city={city}
+                  setCity={setCity}
+                  selectedRace={selectedRace}
+                  listRaces={listRaces}
+                  listCities={listCities}
+                  loadingRaces={loadingRaces}
+                  loadingCities={loadingCities}
+                  avatarUrl={avatarUrl}
+                  setAvatarUrl={setAvatarUrl}
+                  setAvatarFile={setAvatarFile}
+                  galeriaUrls={galeriaUrls}
+                  onAddGaleria={handleGaleriaUpload}
+                  onRemoveGaleria={handleRemoveGaleriaImage}
+                  history={history}
+                  setHistory={setHistory}
+                  alignment={alignment}
+                  setAlignment={setAlignment}
+                  traits={traits}
+                  setTraits={setTraits}
+                  nanites={nanites}
+                  setNanites={setNanites}
+                  costumes={costumes}
+                  setCostumes={setCostumes}
+                  extraInformation={extraInformation}
+                  setExtraInformation={setExtraInformation}
+                  listPersonagemRelacionado={listPersonagemRelacionado}
+                  setListPersonagemRelacionado={setListPersonagemRelacionado}
+                  personagens={personagens}
+                  allPersonagens={allPersonagens}
+                  searchTerm={searchTerm}
+                  loadingPersonagens={loadingPersonagens}
+                  searchPersonagens={searchPersonagens}
+                />
+              )}
             </FormEditController>
         
             <NavegationButtons>
               <CyberButton
+                colorType="secondary"
                 theme={theme}
                 neon={neon}
-                text={"Atualizar"}
+                text={'Anterior'}
                 width="200px"
                 type="button"
-                onClick={handleUpdate}
+                onClick={() => setEditStep((prev) => (prev === 1 ? 1 : ((prev - 1) as 1 | 2)))}
+                disabled={isFirstStep}
+              />
+
+              <CyberButton
+                theme={theme}
+                neon={neon}
+                text={'Salvar'}
+                width="200px"
+                type="button"
+                onClick={handleSave}
+              />
+
+              <CyberButton
+                theme={theme}
+                neon={neon}
+                text={isLastStep ? 'Atualizar' : 'Próximo'}
+                width="200px"
+                type="button"
+                onClick={() => {
+                  if (isLastStep) {
+                    handleSave();
+                    return;
+                  }
+                  setEditStep(2);
+                }}
               />
             </NavegationButtons>
+
+            <FloatingActions>
+              <SyncIconBadge
+                theme={theme}
+                neon={neon}
+                synced={isSynced}
+                title={isSynced ? 'Tudo salvo na ficha' : 'Existem alterações não salvas'}
+              >
+                {isSynced ? <CloudDoneIcon className="icon" /> : <CloudOffIcon className="icon" />}
+              </SyncIconBadge>
+              <FloatingSaveButton
+                type="button"
+                theme={theme}
+                neon={neon}
+                onClick={handleSave}
+                title="Salvar alterações"
+              >
+                <SaveIcon className="icon" />
+              </FloatingSaveButton>
+            </FloatingActions>
         </FormController>
     )
 }

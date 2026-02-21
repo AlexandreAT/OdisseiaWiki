@@ -6,6 +6,7 @@ import { useFormUserCharacter } from './useFormUserCharacter';
 import { createItemColumns, createSkillsColumns, createMagiasColumns } from './tableColumnsConfig';
 import { BasicInfoForm } from './FormUserCharacter/BasicInfoForm/BasicInfoForm';
 import { StatusForm } from './FormUserCharacter/StatusForm/StatusForm';
+import { CharacterStepDots } from '../../../Shared/CharacterForms/CharacterStepDots';
 
 interface UserCharactersProps {
   theme: 'dark' | 'light';
@@ -18,6 +19,7 @@ const CharacterCreateComponent = ({ theme, neon, userId, onSave }: UserCharacter
   const {
     step, handleNext, handleSubmit,
     handlePrev, isFirstStep, isLastStep,
+    setStep,
     userName, setUserName,
     race, setRace,
     city, setCity,
@@ -56,9 +58,27 @@ const CharacterCreateComponent = ({ theme, neon, userId, onSave }: UserCharacter
   const itemColumns = React.useMemo(() => createItemColumns(theme, neon), [theme, neon]);
   const skillsColumns = React.useMemo(() => createSkillsColumns(theme, neon), [theme, neon]);
   const magiasColumns = React.useMemo(() => createMagiasColumns(theme, neon), [theme, neon]);
+
+  const handleStepDotClick = React.useCallback((targetStep: 1 | 2) => {
+    if (targetStep === step) return;
+
+    if (targetStep === 2 && step === 1) {
+      handleNext();
+      return;
+    }
+
+    setStep(targetStep);
+  }, [handleNext, setStep, step]);
   
   return (
     <FormController onSubmit={handleSubmit}>
+      <CharacterStepDots
+        theme={theme}
+        neon={neon}
+        activeStep={step as 1 | 2}
+        onStepClick={handleStepDotClick}
+      />
+
       <Select
         theme={theme}
         neon={neon}

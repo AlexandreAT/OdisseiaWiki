@@ -15,6 +15,7 @@ namespace OdisseiaWiki.Dtos
         public string? Alinhamento { get; set; }
         public JsonElement? Historia { get; set; }
         public string? Imagem { get; set; }
+        public List<string>? GaleriaImagem { get; set; }
         public int? Nanites { get; set; }
         public string? InfoSecundariasJson { get; set; }
         public List<string>? Costumes { get; set; }

@@ -13,17 +13,28 @@ interface ClipBoxProps {
   doubleCut?: boolean;
   zIndex?: number;
   autoSize?: boolean;
+  useClip?: boolean;
 }
 
-export const ClipBox = ({ theme, neon, children, width, height, borderRadius, type, innerOffset, doubleCut, zIndex, autoSize }: ClipBoxProps) => {
+export const ClipBox = ({ theme, neon, children, width, height, borderRadius, type, innerOffset, doubleCut, zIndex, autoSize, useClip = true }: ClipBoxProps) => {
+  if (!useClip) {
+    return (
+      <ClipController autoSize={autoSize} zIndex={zIndex} theme={theme} neon={neon} width={width} height={height} borderRadius={borderRadius} type={type} doubleCut={doubleCut} enableClip={false}>
+        <ContentContainer autoSize={autoSize} theme={theme} neon={neon} width={width} height={height} borderRadius={borderRadius} type={type} innerOffset={innerOffset} doubleCut={doubleCut} enableClip={false}>
+          {children}
+        </ContentContainer>
+      </ClipController>
+    );
+  }
+
   return (
-    <ClipController autoSize={autoSize} zIndex={zIndex} theme={theme} neon={neon} width={width} height={height} borderRadius={borderRadius} type={type} doubleCut={doubleCut}>
+    <ClipController autoSize={autoSize} zIndex={zIndex} theme={theme} neon={neon} width={width} height={height} borderRadius={borderRadius} type={type} doubleCut={doubleCut} enableClip>
       <BoxShadow autoSize={autoSize} theme={theme} neon={neon} width={width} height={height} borderRadius={borderRadius} type={type} innerOffset={innerOffset} doubleCut={doubleCut}/>
       <ClipBorder autoSize={autoSize} theme={theme} neon={neon} width={width} height={height} borderRadius={borderRadius} type={type} innerOffset={innerOffset} doubleCut={doubleCut}/>
       {doubleCut && (
         <ClipBorderTop autoSize={autoSize} theme={theme} neon={neon} width={width} height={height} borderRadius={borderRadius} type={type} innerOffset={innerOffset} />
       )}
-      <ContentContainer autoSize={autoSize} theme={theme} neon={neon} width={width} height={height} borderRadius={borderRadius} type={type} innerOffset={innerOffset} doubleCut={doubleCut}>
+      <ContentContainer autoSize={autoSize} theme={theme} neon={neon} width={width} height={height} borderRadius={borderRadius} type={type} innerOffset={innerOffset} doubleCut={doubleCut} enableClip>
         {children}
       </ContentContainer>
     </ClipController>

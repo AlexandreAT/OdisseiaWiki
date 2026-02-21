@@ -113,3 +113,21 @@ export const createEmptyJSONContent = (): JSONContent => ({
     }
   ]
 });
+
+/**
+ * Extrai um preview curto do JSONContent para exibição em tabelas
+ * @param content - O JSONContent ou string
+ * @param maxLength - Tamanho máximo do preview (padrão: 50)
+ * @returns String com o preview truncado
+ */
+export const getTextPreview = (content: JSONContent | string | undefined, maxLength: number = 50): string => {
+  if (!content) return '';
+  
+  const fullText = jsonContentToString(content);
+  
+  if (fullText.length <= maxLength) {
+    return fullText;
+  }
+  
+  return fullText.substring(0, maxLength) + '...';
+};

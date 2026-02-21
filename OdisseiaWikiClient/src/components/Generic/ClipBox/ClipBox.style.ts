@@ -10,6 +10,7 @@ interface Props {
     innerOffset?: string;
     doubleCut?: boolean;
     zIndex?: number;
+    enableClip?: boolean;
 }
 
 const getBlue = (type?: 'primary' | 'secondary') => type === 'secondary' ? 'var(--clearneonPink)' : 'var(--clearneonBlue)';
@@ -26,10 +27,12 @@ export const ClipController = styled.div<Props & { autoSize?: boolean }>`
     position: relative;
     background-color: transparent;
     border-radius: ${({ borderRadius }) => borderRadius || '8px'};
-    clip-path: ${({ doubleCut }) =>
-        doubleCut
-            ? 'polygon(0 0, 83.5% 0, 100% 29%, 100% 100%, 18.5% 100%, 0% 68.5%, 0 100%)'
-            : 'polygon(0 0, 100% 0, 100% 100%, 16% 100%, 0% 73.5%, 0 100%)'
+    clip-path: ${({ enableClip, doubleCut }) =>
+      enableClip === false
+        ? 'none'
+        : doubleCut
+          ? 'polygon(0 0, 83.5% 0, 100% 29%, 100% 100%, 18.5% 100%, 0% 68.5%, 0 100%)'
+          : 'polygon(0 0, 100% 0, 100% 100%, 16% 100%, 0% 73.5%, 0 100%)'
     };
     display: flex;
     align-items: center;
@@ -114,7 +117,8 @@ export const ContentContainer = styled.div<Props & { autoSize?: boolean }>`
 
   border-radius: ${({ borderRadius }) => borderRadius || '8px'};
   background-color: rgba(0, 0, 10, 0.3);
-  clip-path: polygon(0 0, 100% 0, 100% 100%, 15% 100%, 0% 75%, 0 100%);
+  clip-path: ${({ enableClip }) =>
+    enableClip === false ? 'none' : 'polygon(0 0, 100% 0, 100% 100%, 15% 100%, 0% 75%, 0 100%)'};
   z-index: 1;
   padding: 20px;
 
@@ -123,7 +127,8 @@ export const ContentContainer = styled.div<Props & { autoSize?: boolean }>`
     position: absolute;
     inset: 0;
     border-radius: ${({ borderRadius }) => borderRadius || '8px'};
-    clip-path: polygon(0 0, 100% 0, 100% 100%, 15% 100%, 0% 75%, 0 100%);
+    clip-path: ${({ enableClip }) =>
+      enableClip === false ? 'none' : 'polygon(0 0, 100% 0, 100% 100%, 15% 100%, 0% 75%, 0 100%)'};
     background: ${({ theme, neon, type }) =>
       neon === 'on'
         ? theme === 'light'

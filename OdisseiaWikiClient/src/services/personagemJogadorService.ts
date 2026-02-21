@@ -12,6 +12,7 @@ export interface PersonagemJogadorPayload {
   idmesa: number;
   historia?: JSONContent | string;
   imagem?: string;
+  galeriaImagem?: string[];
   costumes: string[];
   infoSecundariasJson?: any;
   nanites?: number;

@@ -1,5 +1,8 @@
-import React, { memo, useCallback } from 'react'
+import React, { memo, useCallback, useEffect, useState } from 'react'
+import { createPortal } from 'react-dom';
+import CloseIcon from '@mui/icons-material/Close';
 import { ModalContainer, ModalContentContainer, ModalFooterContainer, ModalHeaderContainer, ModalOverlay } from './Modal.style';
+import { CyberButton } from '../HighlightButton/HighlightButton';
 
 interface ModalProps {
   title: string;
@@ -22,6 +25,19 @@ const ModalComponent = ({
     onClose,
     onSubmit
 }: ModalProps) => {
+    const [modalRoot, setModalRoot] = useState<HTMLElement | null>(null);
+
+    useEffect(() => {
+        // Busca ou cria o elemento modal-root
+        let root = document.getElementById('modal-root');
+        if (!root) {
+            root = document.createElement('div');
+            root.id = 'modal-root';
+            document.body.appendChild(root);
+        }
+        setModalRoot(root);
+    }, []);
+
     const handleDefaultClose = useCallback(() => {
         onClose?.();
     }, [onClose]);
@@ -30,12 +46,14 @@ const ModalComponent = ({
         onSubmit?.();
     }, [onSubmit]);
 
-    return (
+    if (!modalRoot) return null;
+
+    const modalContent = (
         <ModalOverlay>
             <ModalContainer theme={theme} neon={neon}>
-                <ModalHeaderContainer>
+                <ModalHeaderContainer theme={theme} neon={neon}>
                     <span>{title}</span>
-                    <button onClick={handleDefaultClose}>X</button>
+                    <button onClick={handleDefaultClose} title="Fechar"><CloseIcon /></button>
                 </ModalHeaderContainer>
 
                 <ModalContentContainer>
@@ -43,20 +61,38 @@ const ModalComponent = ({
                 </ModalContentContainer>
 
                 {showFooter && (
-                    <ModalFooterContainer>
+                    <ModalFooterContainer theme={theme} neon={neon}>
                         {footer ? (
                             footer
                         ) : (
                             <>
-                                <button onClick={handleDefaultClose}>Cancelar</button>
-                                {onSubmit && <button onClick={handleDefaultSubmit}>Enviar</button>}
+                                <CyberButton
+                                    theme={theme}
+                                    neon={neon}
+                                    colorType="secondary"
+                                    text="Cancelar"
+                                    onClick={handleDefaultClose}
+                                    width="120px"
+                                />
+                                {onSubmit && (
+                                    <CyberButton
+                                        theme={theme}
+                                        neon={neon}
+                                        colorType="primary"
+                                        text="Enviar"
+                                        onClick={handleDefaultSubmit}
+                                        width="120px"
+                                    />
+                                )}
                             </>
                         )}
                     </ModalFooterContainer>
                 )}
             </ModalContainer>
         </ModalOverlay>
-    )
+    );
+
+    return createPortal(modalContent, modalRoot);
 }
 
 export const Modal = memo(ModalComponent);

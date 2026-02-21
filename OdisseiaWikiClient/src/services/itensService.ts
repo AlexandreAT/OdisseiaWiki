@@ -1,15 +1,16 @@
 import api from "../axios/api";
+import { JSONContent } from "../models/Itens";
 
 export interface ItemPayload {
   iditem?: string;
   nome: string;
   tipo: string;
-  descricao?: string;
+  descricao?: string | JSONContent;
   peso?: number;
   quantidade: number;
   efeito?: string;
   imagem?: string;
-  atributosJson?: string;
+  atributosJson?: string | Record<string, any>;
   iditemBase?: string;
   idpersonagem?: number;
   tags?: string[];

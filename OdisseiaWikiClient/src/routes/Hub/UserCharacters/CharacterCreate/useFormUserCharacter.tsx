@@ -32,6 +32,8 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
   const [city, setCity] = useState<number | undefined>(undefined);
   const [avatarUrl, setAvatarUrl] = useState('');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [galeriaUrls, setGaleriaUrls] = useState<string[]>([]);
+  const [galeriaPreviewFileMap, setGaleriaPreviewFileMap] = useState<Record<string, File>>({});
   const [history, setHistory] = useState<JSONContent | string>('');
   const [costumes, setCostumes] = useState('');
   const [extraInformation, setExtraInformation] = useState('');
@@ -304,11 +306,24 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
       } else {
         const term = searchItensTerm.toLowerCase();
         setListItens(
-          allItens.filter(i =>
-            i.nome.toLowerCase().includes(term) ||
-            i.tipo.toLowerCase().includes(term) ||
-            i.descricao?.toLowerCase().includes(term)
-          )
+          allItens.filter(i => {
+            const nomeMatch = i.nome.toLowerCase().includes(term);
+            const tipoMatch = i.tipo.toLowerCase().includes(term);
+            
+            // Extrai texto do JSONContent se for objeto, ou usa string diretamente
+            let descricaoText = '';
+            if (i.descricao) {
+              if (typeof i.descricao === 'string') {
+                descricaoText = i.descricao;
+              } else if (typeof i.descricao === 'object' && i.descricao.content) {
+                // Extrai texto de JSONContent
+                descricaoText = JSON.stringify(i.descricao);
+              }
+            }
+            const descricaoMatch = descricaoText.toLowerCase().includes(term);
+            
+            return nomeMatch || tipoMatch || descricaoMatch;
+          })
         );
       }
     }, 200);
@@ -375,11 +390,33 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
         ? JSON.parse(personagem.personagemsVinculados) 
         : [];
 
+    let galeria: string[] = [];
+    if (personagem.galeriaImagem) {
+      try {
+        const parsed = typeof personagem.galeriaImagem === 'string'
+          ? JSON.parse(personagem.galeriaImagem)
+          : personagem.galeriaImagem;
+
+        if (Array.isArray(parsed)) {
+          galeria = parsed.filter((url) => typeof url === 'string');
+        } else if (typeof parsed === 'string' && parsed.trim()) {
+          galeria = [parsed];
+        }
+      } catch {
+        if (typeof personagem.galeriaImagem === 'string' && personagem.galeriaImagem.trim()) {
+          galeria = [personagem.galeriaImagem];
+        }
+      }
+    }
+
     // --- setando os states ---
     setUserName(personagem.nome || '');
     setRace(personagem.idraca);
     setCity(personagem.idcidade || undefined);
     setAvatarUrl(personagem.imagem || '');
+    setAvatarFile(null);
+    setGaleriaUrls(galeria);
+    setGaleriaPreviewFileMap({});
     setHistory(normalizeToJSONContent(personagem.historia || ''));
     setExtraInformation(personagem.infoSecundariasJson || '');
     setNanites(personagem.nanites?.toString() || '');
@@ -427,6 +464,40 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     setLevel(status.nivel ?? 1);
 
   }, [personagem]);
+
+  const handleGaleriaUpload = useCallback((files: File[]) => {
+    const nextUrls = files.map((file) => URL.createObjectURL(file));
+
+    setGaleriaUrls((prev) => [...prev, ...nextUrls]);
+    setGaleriaPreviewFileMap((prev) => {
+      const next = { ...prev };
+      nextUrls.forEach((url, index) => {
+        next[url] = files[index];
+      });
+      return next;
+    });
+  }, []);
+
+  const handleRemoveGaleriaImage = useCallback((index: number) => {
+    setGaleriaUrls((prev) => {
+      const targetUrl = prev[index];
+      if (!targetUrl) return prev;
+
+      setGaleriaPreviewFileMap((mapPrev) => {
+        const next = { ...mapPrev };
+        if (next[targetUrl]) {
+          delete next[targetUrl];
+        }
+        return next;
+      });
+
+      if (targetUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(targetUrl);
+      }
+
+      return prev.filter((_, i) => i !== index);
+    });
+  }, []);
 
   const validateCharacterForm = useCallback((data: CharacterFormData): CharacterFormErrors => {
     const errors: CharacterFormErrors = {};
@@ -484,6 +555,22 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
         avatarPath = result.path;
       }
 
+      const galeriaPersistida = galeriaUrls.filter((url) => !url.startsWith('blob:'));
+      const novosArquivosGaleria = Object.values(galeriaPreviewFileMap);
+      const galeriaNovasPaths: string[] = [];
+
+      for (const file of novosArquivosGaleria) {
+        const result = await saveAsset({
+          imageFile: file,
+          type: 'personagemjogador',
+          entityName: userName,
+          folderName: 'galeria',
+        });
+        galeriaNovasPaths.push(result.path);
+      }
+
+      const galeriaFinal = [...galeriaPersistida, ...galeriaNovasPaths];
+
       const statusForPayload = {
         vida: statusBasico.vida,
         estamina: statusBasico.estamina,
@@ -503,6 +590,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
         idmesa: selectedMesa!,
         historia: prepareForAPI(history),
         imagem: avatarPath,
+        galeriaImagem: galeriaFinal,
         costumes: costumes 
           ? (Array.isArray(costumes) ? costumes : [costumes]) 
           : [],
@@ -531,22 +619,24 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
 
       if (!idPersonagem) {
         toast.error("ID do personagem não encontrado para atualização.");
-        return;
+        return false;
       }
 
       const result = await atualizarPersonagemJogador(idPersonagem, payload);
 
       if (!result.sucesso) {
         toast.error(result.mensagemErro || "Erro ao salvar personagem");
-        return;
+        return false;
       }
 
       toast.success("Personagem salvo com sucesso!");
       if (onSave) onSave();
+      return true;
     } catch (err: any) {
       toast.error(err?.response?.data || "Erro ao salvar personagem");
+      return false;
     }
-  }, [avatarUrl, avatarFile, userName, statusBasico, itens, magias, skills, race, city, userId, selectedMesa, history, costumes, extraInformation, nanites, alignment, traits, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, defesas, personagem, onSave]);
+  }, [avatarUrl, avatarFile, galeriaUrls, galeriaPreviewFileMap, userName, statusBasico, itens, magias, skills, race, city, userId, selectedMesa, history, costumes, extraInformation, nanites, alignment, traits, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, defesas, personagem, onSave]);
 
   // --- submit ---
   const handleSubmit = useCallback(async (e?: React.FormEvent) => {
@@ -563,6 +653,22 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
         });
         avatarPath = result.path;
       }
+
+      const galeriaPersistida = galeriaUrls.filter((url) => !url.startsWith('blob:'));
+      const novosArquivosGaleria = Object.values(galeriaPreviewFileMap);
+      const galeriaNovasPaths: string[] = [];
+
+      for (const file of novosArquivosGaleria) {
+        const result = await saveAsset({
+          imageFile: file,
+          type: 'personagemjogador',
+          entityName: userName,
+          folderName: 'galeria',
+        });
+        galeriaNovasPaths.push(result.path);
+      }
+
+      const galeriaFinal = [...galeriaPersistida, ...galeriaNovasPaths];
 
       const statusForPayload = {
         vida: statusBasico.vida,
@@ -583,6 +689,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
         idmesa: selectedMesa!,
         historia: prepareForAPI(history),
         imagem: avatarPath,
+        galeriaImagem: galeriaFinal,
         costumes: costumes 
           ? (Array.isArray(costumes) ? costumes : [costumes]) 
           : [],
@@ -618,7 +725,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     } catch (err: any) {
       toast.error(err?.response?.data || "Erro ao salvar personagem");
     }
-  }, [avatarUrl, avatarFile, userName, statusBasico, itens, magias, skills, race, city, userId, selectedMesa, history, costumes, extraInformation, nanites, alignment, traits, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, defesas, onSave]);
+  }, [avatarUrl, avatarFile, galeriaUrls, galeriaPreviewFileMap, userName, statusBasico, itens, magias, skills, race, city, userId, selectedMesa, history, costumes, extraInformation, nanites, alignment, traits, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, defesas, onSave]);
 
   return {
     step,
@@ -635,6 +742,9 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     setAvatarUrl,
     avatarFile,
     setAvatarFile,
+    galeriaUrls,
+    handleGaleriaUpload,
+    handleRemoveGaleriaImage,
     history,
     setHistory,
     costumes,

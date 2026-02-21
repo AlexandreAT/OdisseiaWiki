@@ -153,11 +153,11 @@ export const NavigationButton = styled.button<Props & { position?: 'left' | 'rig
     }
 
     &:hover:not(:disabled) {
-        background: ${({ theme, neon }) =>
+        background: ${({ theme }) =>
             theme === "dark"
                 ? "var(--clearneonBlue)"
                 : "var(--clearneonPink)"};
-        border-color: ${({ theme, neon }) =>
+        border-color: ${({ theme }) =>
             theme === "dark"
                 ? "var(--clearneonBlue)"
                 : "var(--clearneonPink)"};

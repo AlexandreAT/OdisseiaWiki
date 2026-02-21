@@ -6,6 +6,7 @@ import { AvatarIcon } from '../../../../../../components/Generic/AvatarIcon/Avat
 import { CyberButton } from '../../../../../../components/Generic/HighlightButton/HighlightButton';
 import { TextArea } from '../../../../../../components/Generic/TextArea/TextArea';
 import { RichTextEditor } from '../../../../../../components/Generic/RichTextEditor/RichTextEditor';
+import RichTextModal from '../../../../../../components/Generic/RichTextModal';
 import { Search } from '../../../../../../components/Generic/Search/Search';
 import { BiSearchAlt } from 'react-icons/bi';
 import { CheckSelect } from '../../../../../../components/Generic/CheckSelect/CheckSelect';
@@ -21,6 +22,8 @@ import { atributosFormMap, atributosMagiaFormMap, atributosSkillFormMap } from '
 import { Skills, SkillTipoString } from '../../../../../../models/Skills';
 import { Item, ItemTipo } from '../../../../../../models/Itens';
 import { Magia, MagiaTipoString } from '../../../../../../models/Magias';
+import { JSONContent } from '../../../../../../models/Characters';
+import { getTextPreview } from '../../../../../../utils/richTextHelpers';
 //import OrcBack from '../../../../../../assets/racas/orc/OrcBackground.jpeg';
 
 interface FormProps {
@@ -87,6 +90,11 @@ export const FormCharacter = ({ theme, neon }: FormProps) => {
     defesas, setDefesas,
     listItens, handleSelectItem,
   } = useFormCharacter();
+    console.log("🚀 ~ FormCharacter ~ listItens:", listItens)
+
+  const [richTextModalOpen, setRichTextModalOpen] = React.useState(false);
+  const [editingItemIndex, setEditingItemIndex] = React.useState<number | null>(null);
+  const [editingDescricao, setEditingDescricao] = React.useState<JSONContent | string>('');
 
   const tagInputRef = useRef<HTMLInputElement>(null);
 
@@ -109,10 +117,91 @@ export const FormCharacter = ({ theme, neon }: FormProps) => {
     selectedRace?.imagem ? selectedRace.imagem : '/assets_dynamic/default.png',
     [selectedRace]
   );
+
+  const handleSaveDescricao = (content: JSONContent | string) => {
+    console.log("🚀 ~ handleSaveDescricao ~ content:", content)
+    if (editingItemIndex !== null) {
+      const updated = [...itens];
+      updated[editingItemIndex] = {
+        ...updated[editingItemIndex],
+        descricao: content,
+      };
+      setItens(updated);
+    }
+  };
   
   const itemColumns = React.useMemo(() => [
     { key: "nome", label: "Nome", inputType: "text", width: 200 } as any,
-    { key: "descricao", label: "Descrição", inputType: "text", width: 300 } as any,
+    {
+      key: "descricao",
+      label: "Descrição",
+      width: 300,
+      customRender: (value: any, _row: Item, _onChange: (v: any) => void, rowIndex: number) => {
+        const preview = getTextPreview(value, 40);
+        
+        const handleOpenModal = () => {
+          setEditingDescricao(value || '');
+          setEditingItemIndex(rowIndex);
+          setRichTextModalOpen(true);
+        };
+
+        return (
+          <div
+            onClick={handleOpenModal}
+            style={{
+              cursor: 'pointer',
+              padding: '8px',
+              borderRadius: '4px',
+              border: `1px solid ${theme === 'dark' ? '#444' : '#ccc'}`,
+              background: theme === 'dark' ? '#2a2a2a' : '#f5f5f5',
+              minHeight: '36px',
+              display: 'flex',
+              alignItems: 'center',
+              width: '100%',
+              minWidth: 0,
+              color: theme === 'dark' ? '#ccc' : '#333',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = neon === 'on' ? '#00ff00' : '#666';
+              e.currentTarget.style.background = theme === 'dark' ? '#333' : '#e8e8e8';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = theme === 'dark' ? '#444' : '#ccc';
+              e.currentTarget.style.background = theme === 'dark' ? '#2a2a2a' : '#f5f5f5';
+            }}
+          >
+            {preview ? (
+              <span
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+                title={preview}
+              >
+                {preview}
+              </span>
+            ) : (
+              <span
+                style={{
+                  opacity: 0.5,
+                  display: 'block',
+                  width: '100%',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Clique para adicionar descrição...
+              </span>
+            )}
+          </div>
+        );
+      },
+    } as any,
     { key: "quantidade", label: "Qtd", inputType: "number", width: 80 } as any,
     { key: "peso", label: "Peso", inputType: "number", width: 80 } as any,
     {
@@ -743,6 +832,17 @@ export const FormCharacter = ({ theme, neon }: FormProps) => {
           onClick={isLastStep ? handleSubmit : handleNext}
         />
       </NavegationButtons>
+
+      <RichTextModal
+        isOpen={richTextModalOpen}
+        onClose={() => setRichTextModalOpen(false)}
+        onSave={handleSaveDescricao}
+        initialContent={editingDescricao}
+        title="Editar Descrição do Item"
+        placeholder="Digite a descrição do item..."
+        theme={theme}
+        neon={neon}
+      />
     </FormController>
   );
 };

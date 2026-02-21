@@ -1,0 +1,45 @@
+import { JSONContent } from '../../../../models/Characters';
+import { RacaPayload } from '../../../../services/racasService';
+import { CidadePayload } from '../../../../services/cidadesService';
+import { personagensMock } from '../../../../Mock/characters.mock';
+
+export interface CharacterRoleplayFormProps {
+  theme: 'dark' | 'light';
+  neon: 'on' | 'off';
+  userName: string;
+  setUserName: (value: string) => void;
+  race: number | undefined;
+  setRace: (value: number) => void;
+  city: number | undefined;
+  setCity: (value: number) => void;
+  selectedRace?: RacaPayload;
+  listRaces: RacaPayload[];
+  listCities: CidadePayload[];
+  loadingRaces: boolean;
+  loadingCities: boolean;
+  avatarUrl: string;
+  setAvatarUrl: (value: string) => void;
+  setAvatarFile: (file: File | null) => void;
+  galeriaUrls: string[];
+  onAddGaleria: (files: File[]) => void;
+  onRemoveGaleria: (index: number) => void;
+  history: JSONContent | string;
+  setHistory: (value: JSONContent | string) => void;
+  alignment: string;
+  setAlignment: (value: string) => void;
+  traits: string[];
+  setTraits: (value: string[]) => void;
+  nanites: string;
+  setNanites: (value: string) => void;
+  costumes: string;
+  setCostumes: (value: string) => void;
+  extraInformation: string;
+  setExtraInformation: (value: string) => void;
+  listPersonagemRelacionado: { id: number; nome: string }[];
+  setListPersonagemRelacionado: React.Dispatch<React.SetStateAction<{ id: number; nome: string }[]>>;
+  personagens: typeof personagensMock;
+  allPersonagens: typeof personagensMock;
+  searchTerm: string;
+  loadingPersonagens: boolean;
+  searchPersonagens: (query: string) => void;
+}

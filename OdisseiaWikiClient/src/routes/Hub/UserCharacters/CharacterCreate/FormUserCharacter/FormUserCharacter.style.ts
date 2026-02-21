@@ -10,6 +10,7 @@ export const FormController = styled.form`
     flex-direction: column;
     width: 100%;
     height: 100%;
+    position: relative;
     gap: 20px;
     align-items: center;
     justify-content: center;

@@ -1,10 +1,12 @@
+import { JSONContent } from './Characters';
+
 export type SkillTipoString = "ataque" | "suporte" | "buff" | "debuff";
 export type SkillElemento = "normal" | "fogo" | "agua" | "ar" | "terra" | "luz" | "escuridao" | "espacial" | "transfiguracao" | "invocacao";
 
 export interface Skills {
   id?: string;
   nome: string;
-  efeito?: string;
+  efeito?: JSONContent | string;
   tipo: SkillTipoString;
   elemento?: SkillElemento[];
   custo?: string;

@@ -19,7 +19,7 @@ export const CheckListDropdown = styled.div<DropdownProps>`
   top: calc(100% + 2px);
   min-width: 100%;
   width: fit-content;
-  z-index: 9999;
+  z-index: 1000;
   max-height: 200px;
   overflow-y: auto;
   background-color: rgba(0, 0, 0, 0.9);

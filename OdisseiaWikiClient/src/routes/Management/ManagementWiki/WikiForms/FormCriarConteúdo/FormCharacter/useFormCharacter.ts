@@ -225,11 +225,24 @@ export const useFormCharacter = () => {
     } else {
       const term = searchItensTerm.toLowerCase();
       setListItens(
-        allItens.filter(i =>
-          i.nome.toLowerCase().includes(term) ||
-          i.tipo.toLowerCase().includes(term) ||
-          i.descricao?.toLowerCase().includes(term)
-        )
+        allItens.filter(i => {
+          const nomeMatch = i.nome.toLowerCase().includes(term);
+          const tipoMatch = i.tipo.toLowerCase().includes(term);
+          
+          // Extrai texto do JSONContent se for objeto, ou usa string diretamente
+          let descricaoText = '';
+          if (i.descricao) {
+            if (typeof i.descricao === 'string') {
+              descricaoText = i.descricao;
+            } else if (typeof i.descricao === 'object' && i.descricao.content) {
+              // Extrai texto de JSONContent
+              descricaoText = JSON.stringify(i.descricao);
+            }
+          }
+          const descricaoMatch = descricaoText.toLowerCase().includes(term);
+          
+          return nomeMatch || tipoMatch || descricaoMatch;
+        })
       );
     }
   }, [searchItensTerm, allItens]);

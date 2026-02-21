@@ -1,10 +1,12 @@
+import { JSONContent } from './Characters';
+
 export type MagiaTipoString = "ataque" | "suporte" | "buff" | "debuff";
 export type MagiaElemento = "fogo" | "agua" | "ar" | "terra" | "luz" | "escuridao" | "espacial" | "transfiguracao" | "invocacao";
 
 export interface Magia {
   id?: string;
   nome: string;
-  efeito?: string;
+  efeito?: JSONContent | string;
   tipo: MagiaTipoString;
   elemento?: MagiaElemento[];
   custo?: string;

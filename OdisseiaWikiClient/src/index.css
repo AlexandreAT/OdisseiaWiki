@@ -51,3 +51,9 @@
   font-family: 'Lato', sans-serif;
   color: var(--whitesmoke);
 }
+
+/* Container para React Portals - Modais sempre no topo */
+#modal-root {
+  position: relative;
+  z-index: 10000;
+}
