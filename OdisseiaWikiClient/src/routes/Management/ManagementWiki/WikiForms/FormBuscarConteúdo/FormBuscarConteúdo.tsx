@@ -1,7 +1,10 @@
 import React from 'react';
+import toast from 'react-hot-toast';
 import { InputText } from '../../../../../components/Generic/InputText/InputText';
+import { SearchResultItem } from '../../../../../services/infoLoreService';
 import { ResultCard } from './ResultCard/ResultCard';
 import { useFormBuscarConteúdo } from './useFormBuscarConteúdo';
+import { NpcCharacterEdit } from './NpcCharacterEdit';
 import { EntityType } from './types';
 import {
   Main,
@@ -35,6 +38,8 @@ const FILTER_OPTIONS: Array<{ key: EntityType | 'Todos'; label: string }> = [
 ];
 
 export const FormBuscarConteúdo: React.FC<FormBuscarConteúdoProps> = ({ theme, neon }) => {
+  const [editingCharacterId, setEditingCharacterId] = React.useState<string | null>(null);
+
   const {
     termo,
     setTermo,
@@ -44,9 +49,9 @@ export const FormBuscarConteúdo: React.FC<FormBuscarConteúdoProps> = ({ theme,
     errors,
     selectedFilter,
     setSelectedFilter,
+    handleSearch,
     getFilteredResults,
     getResultCountByType,
-    handleEdit,
     handleDelete,
   } = useFormBuscarConteúdo();
 
@@ -115,6 +120,33 @@ export const FormBuscarConteúdo: React.FC<FormBuscarConteúdoProps> = ({ theme,
       </ResultsGrid>
     );
   };
+
+  const handleEdit = React.useCallback((item: SearchResultItem) => {
+    if (item.tipoEntidade !== 'Personagem') {
+      toast('Edição disponível apenas para personagens NPC neste fluxo.');
+      return;
+    }
+
+    const identifier = String(item.idString ?? item.id ?? '');
+    if (!identifier) {
+      toast.error('Não foi possível identificar o personagem para edição.');
+      return;
+    }
+
+    setEditingCharacterId(identifier);
+  }, []);
+
+  if (editingCharacterId) {
+    return (
+      <NpcCharacterEdit
+        theme={theme}
+        neon={neon}
+        characterId={editingCharacterId}
+        onBack={() => setEditingCharacterId(null)}
+        onSave={handleSearch}
+      />
+    );
+  }
 
   return (
     <Main>

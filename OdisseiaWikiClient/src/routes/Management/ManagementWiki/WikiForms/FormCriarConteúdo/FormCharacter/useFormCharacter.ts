@@ -2,7 +2,7 @@ import { mapToItem } from './../../../../../../utils/mapItem';
 import { getRacas } from './../../../../../../services/racasService';
 import { RacaPayload } from './../../../../../../services/racasService';
 import { CidadePayload, getCidades } from './../../../../../../services/cidadesService';
-import { PersonagemPayload } from './../../../../../../services/personagensService';
+import { PersonagemCreatePayload } from './../../../../../../services/personagensService';
 import { saveAsset } from './../../../../../../services/assetsService';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { personagensMock } from '../../../../../../Mock/characters.mock';
@@ -15,6 +15,46 @@ import { Magia, MagiaElemento, MagiaTipoString } from '../../../../../../models/
 import { salvarPersonagem } from '../../../../../../services/personagensService';
 import { getItens } from '../../../../../../services/itensService';
 import { prepareForAPI } from '../../../../../../utils/richTextHelpers';
+
+const serializeRichText = (value: any): string => {
+  if (value === undefined || value === null) return '';
+  if (typeof value === 'string') return value;
+
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return '';
+  }
+};
+
+const extractErrorMessage = (error: any): string => {
+  const responseData = error?.response?.data;
+
+  if (!responseData) return 'Erro ao salvar personagem';
+  if (typeof responseData === 'string') return responseData;
+
+  if (typeof responseData === 'object') {
+    if (typeof responseData.title === 'string' && responseData.title.trim()) {
+      return responseData.title;
+    }
+
+    if (typeof responseData.mensagemErro === 'string' && responseData.mensagemErro.trim()) {
+      return responseData.mensagemErro;
+    }
+
+    if (responseData.errors && typeof responseData.errors === 'object') {
+      const firstErrorArray = Object.values(responseData.errors).find(
+        (value) => Array.isArray(value) && value.length > 0
+      ) as string[] | undefined;
+
+      if (firstErrorArray?.[0]) {
+        return firstErrorArray[0];
+      }
+    }
+  }
+
+  return 'Erro ao salvar personagem';
+};
 
 
 export const useFormCharacter = () => {
@@ -376,7 +416,7 @@ export const useFormCharacter = () => {
           it.peso !== undefined && it.peso !== 0
             ? Number(it.peso)
             : undefined,
-        descricao: it.descricao ?? "",
+        descricao: serializeRichText(it.descricao),
         efeito: it.efeito ?? undefined,
         imagem: it.imagem ?? undefined,
         atributos: it.atributos ?? {},
@@ -404,11 +444,10 @@ export const useFormCharacter = () => {
         atributos: skill.atributos ?? {},
       }));
 
-      const payload: PersonagemPayload = {
-        idpersonagem: generateId(),
+      const payload: PersonagemCreatePayload = {
         nome: userName,
         idraca: race!,
-        idcidade: city!,
+        idcidade: city,
         historia: prepareForAPI(history),
         imagem: avatarPath,
         costumes: costumes ? [costumes] : [],
@@ -420,8 +459,7 @@ export const useFormCharacter = () => {
         inventarioJson: inventarioMapped,
         skills: skillMapped,
         magia: magiaMapped,
-        personagemsVinculados: listPersonagemRelacionado.map((p) => String(p.id)),
-        dataCriacao: new Date().toISOString(),
+        personagemsVinculados: listPersonagemRelacionado.map((p) => Number(p.id)).filter((id) => Number.isFinite(id)),
         statusJson: {
           status: statusForPayload,
           atributos: {
@@ -439,13 +477,16 @@ export const useFormCharacter = () => {
       console.log("🚀 ~ handleSubmit ~ result:", result)
 
       if (!result.sucesso) {
-        toast.error(result.mensagemErro || "Erro ao salvar personagem");
+        const message = typeof result.mensagemErro === 'string' && result.mensagemErro.trim()
+          ? result.mensagemErro
+          : 'Erro ao salvar personagem';
+        toast.error(message);
         return;
       }
 
       toast.success("Personagem salvo com sucesso!");
     } catch (err: any) {
-      toast.error(err?.response?.data || "Erro ao salvar personagem");
+      toast.error(extractErrorMessage(err));
     }
   }, [avatarUrl, avatarFile, userName, statusBasico, itens, magias, skills, race, city, history, costumes, nanites, alignment, traits, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, defesas]);
 

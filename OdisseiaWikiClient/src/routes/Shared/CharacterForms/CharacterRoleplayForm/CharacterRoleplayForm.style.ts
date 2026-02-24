@@ -60,9 +60,10 @@ export const ExpandHistoryButton = styled.button<Props>`
 
 export const HistoryEditorWrapper = styled.div<Props>`
   width: 100%;
-  max-height: 230px;
+  height: 220px;
   overflow: hidden;
   position: relative;
+  border-radius: 7px;
 
   &::after {
     content: '';

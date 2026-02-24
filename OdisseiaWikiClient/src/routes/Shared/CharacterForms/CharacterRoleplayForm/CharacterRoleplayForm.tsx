@@ -12,7 +12,6 @@ import { RichTextEditor } from '../../../../components/Generic/RichTextEditor/Ri
 import { Search } from '../../../../components/Generic/Search/Search';
 import { Select } from '../../../../components/Generic/Select/Select';
 import { TextArea } from '../../../../components/Generic/TextArea/TextArea';
-import { jsonContentToString } from '../../../../utils/richTextHelpers';
 import { ALIGNMENT_OPTIONS, TRAITS_OPTIONS } from '../../../Hub/UserCharacters/CharacterCreate/constants';
 import {
   FormHeader,
@@ -31,8 +30,6 @@ import {
   RoleplayContainer,
 } from './CharacterRoleplayForm.style';
 import { CharacterRoleplayFormProps } from './CharacterRoleplayForm.type';
-
-const HISTORY_COLLAPSE_THRESHOLD = 450;
 
 export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
   theme,
@@ -73,16 +70,35 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
   searchTerm,
   loadingPersonagens,
   searchPersonagens,
+  raceChangeMode = 'default',
 }) => {
   const [historyModalOpen, setHistoryModalOpen] = React.useState(false);
 
-  const historyText = React.useMemo(() => jsonContentToString(history), [history]);
-  const shouldShowExpandHistory = historyText.length >= HISTORY_COLLAPSE_THRESHOLD;
-
   const canChangeRace = React.useMemo(
-    () => selectedRace?.nome?.toLowerCase().includes('android') ?? false,
-    [selectedRace?.nome]
+    () => {
+      if (raceChangeMode === 'current-or-android') return true;
+      return selectedRace?.nome?.toLowerCase().includes('android') ?? false;
+    },
+    [raceChangeMode, selectedRace?.nome]
   );
+
+  const raceOptions = React.useMemo(() => {
+    if (raceChangeMode !== 'current-or-android') {
+      return listRaces.map((r) => ({ value: r.idraca, label: r.nome }));
+    }
+
+    const currentRace = listRaces.find((r) => r.idraca === race);
+    const androidRace = listRaces.find((r) => r.nome?.toLowerCase().includes('android'));
+
+    const options = [currentRace, androidRace]
+      .filter((r): r is NonNullable<typeof r> => !!r)
+      .filter((r, index, arr) => arr.findIndex((x) => x.idraca === r.idraca) === index)
+      .map((r) => ({ value: r.idraca, label: r.nome }));
+
+    if (options.length > 0) return options;
+
+    return listRaces.map((r) => ({ value: r.idraca, label: r.nome }));
+  }, [listRaces, race, raceChangeMode]);
 
   return (
     <RoleplayContainer>
@@ -101,7 +117,7 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
             theme={theme}
             neon={neon}
             label="Raça"
-            options={listRaces.map(r => ({ value: r.idraca, label: r.nome }))}
+            options={raceOptions}
             value={race}
             onChange={(e) => setRace(Number(e.target.value))}
             width="100%"
@@ -110,6 +126,11 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
           {!canChangeRace && (
             <RaceChangeInfo theme={theme} neon={neon}>
               Alteração de raça liberada somente para personagens android no momento.
+            </RaceChangeInfo>
+          )}
+          {raceChangeMode === 'current-or-android' && (
+            <RaceChangeInfo theme={theme} neon={neon}>
+              Você pode manter a raça atual ou alterar para Android.
             </RaceChangeInfo>
           )}
 
@@ -153,19 +174,17 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
 
       <HistoryHeader>
         <HistoryHint theme={theme} neon={neon}>
-          História com visual compacto. Use expandir para editar em modal quando necessário.
+          História com visual compacto e rolagem vertical. Use expandir para editar em modal.
         </HistoryHint>
-        {shouldShowExpandHistory && (
-          <ExpandHistoryButton
-            type="button"
-            theme={theme}
-            neon={neon}
-            onClick={() => setHistoryModalOpen(true)}
-            title="Expandir história"
-          >
-            <OpenInFullIcon className="icon" />
-          </ExpandHistoryButton>
-        )}
+        <ExpandHistoryButton
+          type="button"
+          theme={theme}
+          neon={neon}
+          onClick={() => setHistoryModalOpen(true)}
+          title="Expandir história"
+        >
+          <OpenInFullIcon className="icon" />
+        </ExpandHistoryButton>
       </HistoryHeader>
 
       <HistoryEditorWrapper theme={theme} neon={neon}>
@@ -175,6 +194,7 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
           label="História"
           value={history}
           onChange={setHistory}
+          height="220px"
           minHeight="220px"
           placeholder="Escreva a história do personagem..."
         />
