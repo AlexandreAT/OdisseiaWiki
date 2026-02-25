@@ -22,8 +22,11 @@ export interface PersonagemPayload {
   statusJson: {
     status: {
       vida: number;
+      vidaMaxima: number;
       estamina: number;
+      estaminaMaxima: number;
       mana: number;
+      manaMaxima: number;
       capacidadeCarga: number;
     };
     atributos: {
@@ -68,8 +71,11 @@ export interface PersonagemCreatePayload {
   statusJson?: {
     status: {
       vida: number;
+      vidaMaxima?: number;
       estamina: number;
+      estaminaMaxima?: number;
       mana: number;
+      manaMaxima?: number;
       capacidadeCarga: number;
     };
     atributos: {
@@ -98,8 +104,11 @@ export interface PersonagemUpdatePayload {
   statusJson?: {
     status: {
       vida: number;
+      vidaMaxima?: number;
       estamina: number;
+      estaminaMaxima?: number;
       mana: number;
+      manaMaxima?: number;
       capacidadeCarga: number;
     };
     atributos: {

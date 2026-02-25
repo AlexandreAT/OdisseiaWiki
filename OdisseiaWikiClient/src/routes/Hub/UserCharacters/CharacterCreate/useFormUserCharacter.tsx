@@ -64,8 +64,11 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
   // --- status básico ---
   const [statusBasico, setStatusBasico] = useState({
     vida: 0,
+    vidaMaxima: 0,
     estamina: 0,
+    estaminaMaxima: 0,
     mana: 0,
+    manaMaxima: 0,
     capacidadeCarga: 0,
   });
   
@@ -123,6 +126,16 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
 
   const isFirstStep = step === 1;
   const isLastStep = step === TOTAL_STEPS;
+
+  const buildStatusForPayload = useCallback(() => ({
+    vida: statusBasico.vida,
+    vidaMaxima: statusBasico.vidaMaxima,
+    estamina: statusBasico.estamina,
+    estaminaMaxima: statusBasico.estaminaMaxima,
+    mana: statusBasico.mana,
+    manaMaxima: statusBasico.manaMaxima,
+    capacidadeCarga: statusBasico.capacidadeCarga,
+  }), [statusBasico]);
 
   const selectedRace = useMemo(() => 
     listRaces.find(r => r.idraca === race), 
@@ -293,8 +306,11 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
 
     setStatusBasico({
       vida: selectedRace.statusJson.status.vida,
+      vidaMaxima: selectedRace.statusJson.status.vidaMaxima ?? selectedRace.statusJson.status.vida,
       estamina: selectedRace.statusJson.status.estamina,
+      estaminaMaxima: selectedRace.statusJson.status.estaminaMaxima ?? selectedRace.statusJson.status.estamina,
       mana: selectedRace.statusJson.status.mana,
+      manaMaxima: selectedRace.statusJson.status.manaMaxima ?? selectedRace.statusJson.status.mana,
       capacidadeCarga: selectedRace.statusJson.status.capacidadeCarga ?? 0,
     });    
   }, [selectedRace?.idraca, selectedRace?.statusJson, personagem]);
@@ -375,8 +391,10 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
   useEffect(() => {
     if (!personagem) return;
 
-    const status = personagem.statusJson 
-        ? JSON.parse(personagem.statusJson) 
+    const status = personagem.statusJson
+        ? (typeof personagem.statusJson === 'string'
+          ? JSON.parse(personagem.statusJson)
+          : personagem.statusJson)
         : { status: {}, atributos: {}, nivel: 1, xp: 0, defesas: {} };
 
     const tracos = personagem.tracos ? JSON.parse(personagem.tracos) : [];
@@ -426,8 +444,11 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
 
     setStatusBasico({
         vida: status.status?.vida ?? 0,
+      vidaMaxima: status.status?.vidaMaxima ?? status.status?.vida ?? 0,
         estamina: status.status?.estamina ?? 0,
+      estaminaMaxima: status.status?.estaminaMaxima ?? status.status?.estamina ?? 0,
         mana: status.status?.mana ?? 0,
+      manaMaxima: status.status?.manaMaxima ?? status.status?.mana ?? 0,
         capacidadeCarga: status.status?.capacidadeCarga ?? 0,
     });
 
@@ -571,12 +592,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
 
       const galeriaFinal = [...galeriaPersistida, ...galeriaNovasPaths];
 
-      const statusForPayload = {
-        vida: statusBasico.vida,
-        estamina: statusBasico.estamina,
-        mana: statusBasico.mana,
-        capacidadeCarga: statusBasico.capacidadeCarga,
-      };
+      const statusForPayload = buildStatusForPayload();
 
       const inventarioMapped = mapInventoryForPayload(itens);
       const magiaMapped = mapMagiasForPayload(magias);
@@ -670,12 +686,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
 
       const galeriaFinal = [...galeriaPersistida, ...galeriaNovasPaths];
 
-      const statusForPayload = {
-        vida: statusBasico.vida,
-        estamina: statusBasico.estamina,
-        mana: statusBasico.mana,
-        capacidadeCarga: statusBasico.capacidadeCarga,
-      };
+      const statusForPayload = buildStatusForPayload();
 
       const inventarioMapped = mapInventoryForPayload(itens);
       const magiaMapped = mapMagiasForPayload(magias);
@@ -725,7 +736,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     } catch (err: any) {
       toast.error(err?.response?.data || "Erro ao salvar personagem");
     }
-  }, [avatarUrl, avatarFile, galeriaUrls, galeriaPreviewFileMap, userName, statusBasico, itens, magias, skills, race, city, userId, selectedMesa, history, costumes, extraInformation, nanites, alignment, traits, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, defesas, onSave]);
+  }, [avatarUrl, avatarFile, galeriaUrls, galeriaPreviewFileMap, userName, itens, magias, skills, race, city, userId, selectedMesa, history, costumes, extraInformation, nanites, alignment, traits, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, defesas, buildStatusForPayload, onSave]);
 
   return {
     step,

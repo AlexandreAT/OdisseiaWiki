@@ -67,9 +67,13 @@ export const StatusForm: React.FC<StatusFormProps> = ({
             type="vida"
             label="Vida"
             value={statusBasico.vida}
+            maxValue={statusBasico.vidaMaxima}
             editable
             onChange={(e) =>
               setStatusBasico((prev) => ({ ...prev, vida: Number(e.target.value) }))
+            }
+            onMaxChange={(e) =>
+              setStatusBasico((prev) => ({ ...prev, vidaMaxima: Number(e.target.value) }))
             }
           />
           <StatusInput
@@ -78,9 +82,13 @@ export const StatusForm: React.FC<StatusFormProps> = ({
             type="estamina"
             label="Estamina"
             value={statusBasico.estamina}
+            maxValue={statusBasico.estaminaMaxima}
             editable
             onChange={(e) =>
               setStatusBasico((prev) => ({ ...prev, estamina: Number(e.target.value) }))
+            }
+            onMaxChange={(e) =>
+              setStatusBasico((prev) => ({ ...prev, estaminaMaxima: Number(e.target.value) }))
             }
           />
           <StatusInput
@@ -89,9 +97,13 @@ export const StatusForm: React.FC<StatusFormProps> = ({
             type="mana"
             label="Mana"
             value={statusBasico.mana}
+            maxValue={statusBasico.manaMaxima}
             editable
             onChange={(e) =>
               setStatusBasico((prev) => ({ ...prev, mana: Number(e.target.value) }))
+            }
+            onMaxChange={(e) =>
+              setStatusBasico((prev) => ({ ...prev, manaMaxima: Number(e.target.value) }))
             }
           />
         </SectionStatus>

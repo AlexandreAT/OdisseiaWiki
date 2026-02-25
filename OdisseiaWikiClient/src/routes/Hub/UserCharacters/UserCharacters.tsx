@@ -34,8 +34,11 @@ interface UserCharactersProps {
 interface PersonagemComStatus extends PersonagemJogador {
   status: {
     vida: number;
+    vidaMaxima: number;
     estamina: number;
+    estaminaMaxima: number;
     mana: number;
+    manaMaxima: number;
     capacidadeCarga: number;
   };
 }
@@ -73,10 +76,20 @@ export const UserCharacters = ({ theme, neon, userId, onViewModeChange, onPerson
         console.log("🚀 ~ fetchPersonagens ~ userId:", userId)
 
         const parsed: PersonagemComStatus[] = data.map((p) => {
-          let status = { vida: 0, estamina: 0, mana: 0, capacidadeCarga: 0 };
+          let status = { vida: 0, vidaMaxima: 0, estamina: 0, estaminaMaxima: 0, mana: 0, manaMaxima: 0, capacidadeCarga: 0 };
 
           try {
-            status = p.statusJson ? JSON.parse(p.statusJson).status : status;
+            const parsedStatusJson = typeof p.statusJson === 'string' ? JSON.parse(p.statusJson) : p.statusJson;
+            const rawStatus = parsedStatusJson?.status ?? status;
+            status = {
+              vida: rawStatus?.vida ?? 0,
+              vidaMaxima: rawStatus?.vidaMaxima ?? rawStatus?.vida ?? 0,
+              estamina: rawStatus?.estamina ?? 0,
+              estaminaMaxima: rawStatus?.estaminaMaxima ?? rawStatus?.estamina ?? 0,
+              mana: rawStatus?.mana ?? 0,
+              manaMaxima: rawStatus?.manaMaxima ?? rawStatus?.mana ?? 0,
+              capacidadeCarga: rawStatus?.capacidadeCarga ?? 0,
+            };
           } catch (err) {
             console.warn("Erro ao parsear statusJson:", err);
           }
@@ -101,10 +114,20 @@ export const UserCharacters = ({ theme, neon, userId, onViewModeChange, onPerson
 
   const parsePersonagens = (data: PersonagemJogador[]): PersonagemComStatus[] => {
     return data.map((p) => {
-      let status = { vida: 0, estamina: 0, mana: 0, capacidadeCarga: 0 };
+      let status = { vida: 0, vidaMaxima: 0, estamina: 0, estaminaMaxima: 0, mana: 0, manaMaxima: 0, capacidadeCarga: 0 };
 
       try {
-        status = p.statusJson ? JSON.parse(p.statusJson).status : status;
+        const parsedStatusJson = typeof p.statusJson === 'string' ? JSON.parse(p.statusJson) : p.statusJson;
+        const rawStatus = parsedStatusJson?.status ?? status;
+        status = {
+          vida: rawStatus?.vida ?? 0,
+          vidaMaxima: rawStatus?.vidaMaxima ?? rawStatus?.vida ?? 0,
+          estamina: rawStatus?.estamina ?? 0,
+          estaminaMaxima: rawStatus?.estaminaMaxima ?? rawStatus?.estamina ?? 0,
+          mana: rawStatus?.mana ?? 0,
+          manaMaxima: rawStatus?.manaMaxima ?? rawStatus?.mana ?? 0,
+          capacidadeCarga: rawStatus?.capacidadeCarga ?? 0,
+        };
       } catch (err) {
         console.warn("Erro ao parsear statusJson:", err);
       }
@@ -209,6 +232,7 @@ export const UserCharacters = ({ theme, neon, userId, onViewModeChange, onPerson
                         neon={neon}
                         type="vida"
                         value={p.status.vida}
+                        maxValue={p.status.vidaMaxima || undefined}
                         height="20px"
                         width="100%"
                       />
@@ -217,6 +241,7 @@ export const UserCharacters = ({ theme, neon, userId, onViewModeChange, onPerson
                         neon={neon}
                         type="mana"
                         value={p.status.mana}
+                        maxValue={p.status.manaMaxima || undefined}
                         height="20px"
                         width="100%"
                       />
@@ -225,6 +250,7 @@ export const UserCharacters = ({ theme, neon, userId, onViewModeChange, onPerson
                         neon={neon}
                         type="estamina"
                         value={p.status.estamina}
+                        maxValue={p.status.estaminaMaxima || undefined}
                         height="20px"
                         width="100%"
                       />

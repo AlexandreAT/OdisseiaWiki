@@ -26,8 +26,6 @@ namespace OdisseiaWiki.Dtos
         public List<int>? PersonagemsVinculados { get; set; }
     }
 
-    // ---- Subtipos (mantidos iguais) ----
-
     public class PersonagemStatus
     {
         public StatusBase status { get; set; } = null!;
@@ -40,8 +38,11 @@ namespace OdisseiaWiki.Dtos
     public class StatusBase
     {
         public int vida { get; set; }
+        public int vidaMaxima { get; set; }
         public int estamina { get; set; }
+        public int estaminaMaxima { get; set; }
         public int mana { get; set; }
+        public int manaMaxima { get; set; }
         public int capacidadeCarga { get; set; }
     }
 
@@ -77,8 +78,6 @@ namespace OdisseiaWiki.Dtos
         public int escudo { get; set; }
         public int outras { get; set; }
     }
-
-    // ---- Inventário, Skills e Magia ----
 
     public class Item
     {

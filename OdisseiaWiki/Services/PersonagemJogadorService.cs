@@ -21,8 +21,47 @@ namespace OdisseiaWiki.Services
             if (string.IsNullOrWhiteSpace(personagemDto.Nome))
                 return ResultFail("O nome é obrigatório.");
 
-            PersonagemJogador personagem = MapDtoToModel(personagemDto);
+            if (personagemDto.StatusJson != null)
+            {
+                var statusString = JsonSerializer.Serialize(personagemDto.StatusJson);
+                var statusElement = JsonSerializer.Deserialize<JsonElement>(statusString);
+                
+                if (statusElement.TryGetProperty("status", out var statusProp))
+                {
+                    var vida = statusProp.TryGetProperty("vida", out var v) ? v.GetInt32() : 0;
+                    var vidaMaxima = statusProp.TryGetProperty("vidaMaxima", out var vm) ? vm.GetInt32() : 0;
+                    var estamina = statusProp.TryGetProperty("estamina", out var e) ? e.GetInt32() : 0;
+                    var estaminaMaxima = statusProp.TryGetProperty("estaminaMaxima", out var em) ? em.GetInt32() : 0;
+                    var mana = statusProp.TryGetProperty("mana", out var m) ? m.GetInt32() : 0;
+                    var manaMaxima = statusProp.TryGetProperty("manaMaxima", out var mm) ? mm.GetInt32() : 0;
 
+                    if (vidaMaxima == 0) vidaMaxima = vida;
+                    if (estaminaMaxima == 0) estaminaMaxima = estamina;
+                    if (manaMaxima == 0) manaMaxima = mana;
+
+                    var statusNormalizado = new
+                    {
+                        status = new
+                        {
+                            vida,
+                            vidaMaxima,
+                            estamina,
+                            estaminaMaxima,
+                            mana,
+                            manaMaxima,
+                            capacidadeCarga = statusProp.GetProperty("capacidadeCarga").GetInt32()
+                        },
+                        atributos = statusElement.GetProperty("atributos"),
+                        nivel = statusElement.GetProperty("nivel").GetInt32(),
+                        xp = statusElement.GetProperty("xp").GetInt32(),
+                        defesas = statusElement.GetProperty("defesas")
+                    };
+
+                    personagemDto.StatusJson = statusNormalizado;
+                }
+            }
+
+            PersonagemJogador personagem = MapDtoToModel(personagemDto);
             personagem.Idcidade = personagem.Idcidade == 0 ? null : personagem.Idcidade;
 
             PersonagemJogador criado = await _repository.CreateAsync(personagem);
@@ -36,7 +75,6 @@ namespace OdisseiaWiki.Services
                 return ResultFail($"PersonagemJogador com id {id} não encontrado.");
 
             personagem = MapDtoToModel(personagemDto, personagem);
-
             personagem.Idcidade = personagem.Idcidade == 0 ? null : personagem.Idcidade;
 
             PersonagemJogador atualizado = await _repository.UpdateAsync(personagem);

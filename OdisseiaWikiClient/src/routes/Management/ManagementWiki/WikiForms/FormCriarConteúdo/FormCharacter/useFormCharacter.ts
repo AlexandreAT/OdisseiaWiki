@@ -57,7 +57,7 @@ const extractErrorMessage = (error: any): string => {
 };
 
 
-export const useFormCharacter = () => {
+export const useFormCharacter = ({ applyRaceDefaults = true }: { applyRaceDefaults?: boolean } = {}) => {
   // --- step ---
   const [step, setStep] = useState(1);
   // --- dados do formulário ---
@@ -102,8 +102,11 @@ export const useFormCharacter = () => {
   // --- status básico ---
   const [statusBasico, setStatusBasico] = useState({
     vida: 0,
+    vidaMaxima: 0,
     estamina: 0,
+    estaminaMaxima: 0,
     mana: 0,
+    manaMaxima: 0,
     capacidadeCarga: 0,
   });
   // --- defesas ---
@@ -225,6 +228,8 @@ export const useFormCharacter = () => {
   }, []);
 
   useEffect(() => {
+    if (!applyRaceDefaults) return;
+
     if (selectedRace?.statusJson) {
       const basePrincipais: Principais = {
         resistencia: 0,
@@ -252,12 +257,15 @@ export const useFormCharacter = () => {
 
       setStatusBasico({
         vida: selectedRace.statusJson.status.vida,
+        vidaMaxima: selectedRace.statusJson.status.vidaMaxima ?? selectedRace.statusJson.status.vida,
         estamina: selectedRace.statusJson.status.estamina,
+        estaminaMaxima: selectedRace.statusJson.status.estaminaMaxima ?? selectedRace.statusJson.status.estamina,
         mana: selectedRace.statusJson.status.mana,
+        manaMaxima: selectedRace.statusJson.status.manaMaxima ?? selectedRace.statusJson.status.mana,
         capacidadeCarga: selectedRace.statusJson.status.capacidadeCarga ?? 0,
       });    
     }
-  }, [selectedRace]);
+  }, [selectedRace, applyRaceDefaults]);
 
   useEffect(() => {
     if (!searchItensTerm.trim()) {
@@ -401,8 +409,11 @@ export const useFormCharacter = () => {
 
       const statusForPayload = {
         vida: statusBasico.vida,
+        vidaMaxima: statusBasico.vidaMaxima,
         estamina: statusBasico.estamina,
+        estaminaMaxima: statusBasico.estaminaMaxima,
         mana: statusBasico.mana,
+        manaMaxima: statusBasico.manaMaxima,
         capacidadeCarga: statusBasico.capacidadeCarga,
       };
 

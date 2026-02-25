@@ -8,7 +8,7 @@ export const personagensMock: Personagem[] = [
     Idcidade: 1,
     Historia: "Um jovem aventureiro curioso e leal, sempre ajuda os necessitados.",
     StatusJson: {
-      status: { vida: 1200, estamina: 50, mana: 35, capacidadeCarga: 30 },
+      status: { vida: 1200, vidaMaxima: 1200, estamina: 50, estaminaMaxima: 50, mana: 35, manaMaxima: 35, capacidadeCarga: 30 },
       atributos: {
         principais: { resistencia: 3, agilidade: 4, sabedoria: 3, precisao: 4, forca: 3 },
         secundarios: { sanidade: 4, coragem: 3, inteligencia: 4, percepcao: 3, labia: 2, intimidacao: 2 }
@@ -61,7 +61,7 @@ export const personagensMock: Personagem[] = [
     Idcidade: 2,
     Historia: "Guerreiro orgulhoso e bravo, segue o código de honra dos guerreiros.",
     StatusJson: {
-      status: { vida: 2000, estamina: 80, mana: 20, capacidadeCarga: 40 },
+      status: { vida: 2000, vidaMaxima: 2000, estamina: 80, estaminaMaxima: 80, mana: 20, manaMaxima: 20, capacidadeCarga: 40 },
       atributos: {
         principais: { resistencia: 5, agilidade: 3, sabedoria: 2, precisao: 3, forca: 5 },
         secundarios: { sanidade: 4, coragem: 5, inteligencia: 3, percepcao: 4, labia: 2, intimidacao: 5 }
@@ -114,7 +114,7 @@ export const personagensMock: Personagem[] = [
     Idcidade: undefined,
     Historia: "Impulsivo e bondoso, canta histórias antigas em tavernas.",
     StatusJson: {
-      status: { vida: 1500, estamina: 40, mana: 50, capacidadeCarga: 20 },
+      status: { vida: 1500, vidaMaxima: 1500, estamina: 40, estaminaMaxima: 40, mana: 50, manaMaxima: 50, capacidadeCarga: 20 },
       atributos: {
         principais: { resistencia: 2, agilidade: 5, sabedoria: 4, precisao: 3, forca: 2 },
         secundarios: { sanidade: 5, coragem: 3, inteligencia: 4, percepcao: 4, labia: 5, intimidacao: 1 }
@@ -157,7 +157,7 @@ export const personagensMock: Personagem[] = [
     Idcidade: undefined,
     Historia: "Calculista e leal, sempre em vigília pela matilha.",
     StatusJson: {
-      status: { vida: 2500, estamina: 60, mana: 0, capacidadeCarga: 50 },
+      status: { vida: 2500, vidaMaxima: 2500, estamina: 60, estaminaMaxima: 60, mana: 0, manaMaxima: 0, capacidadeCarga: 50 },
       atributos: {
         principais: { resistencia: 5, agilidade: 5, sabedoria: 2, precisao: 3, forca: 5 },
         secundarios: { sanidade: 5, coragem: 5, inteligencia: 2, percepcao: 3, labia: 2, intimidacao: 5 }
@@ -202,7 +202,7 @@ export const personagensMock: Personagem[] = [
     Idcidade: 3,
     Historia: "Curioso e impulsivo, gosta de mexer com magias proibidas.",
     StatusJson: {
-      status: { vida: 1800, estamina: 55, mana: 80, capacidadeCarga: 25 },
+      status: { vida: 1800, vidaMaxima: 1800, estamina: 55, estaminaMaxima: 55, mana: 80, manaMaxima: 80, capacidadeCarga: 25 },
       atributos: {
         principais: { resistencia: 3, agilidade: 4, sabedoria: 4, precisao: 3, forca: 3 },
         secundarios: { sanidade: 4, coragem: 3, inteligencia: 4, percepcao: 4, labia: 3, intimidacao: 2 }

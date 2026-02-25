@@ -26,8 +26,11 @@ export interface PersonagemJogadorPayload {
   statusJson: {
     status: {
       vida: number;
+      vidaMaxima?: number;
       estamina: number;
+      estaminaMaxima?: number;
       mana: number;
+      manaMaxima?: number;
       capacidadeCarga: number;
     };
     atributos: {

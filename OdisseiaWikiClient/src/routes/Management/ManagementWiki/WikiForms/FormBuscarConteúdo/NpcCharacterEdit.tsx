@@ -194,7 +194,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
     listItens,
     handleSelectItem,
     avatarFile,
-  } = useFormCharacter();
+  } = useFormCharacter({ applyRaceDefaults: false });
 
   const [extraInformation, setExtraInformation] = React.useState('');
   const [galeriaUrls, setGaleriaUrls] = React.useState<string[]>([]);
@@ -243,7 +243,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
         if (!active) return;
 
         const status = parseJson(payload.statusJson, {
-          status: { vida: 0, estamina: 0, mana: 0, capacidadeCarga: 0 },
+          status: { vida: 0, vidaMaxima: 0, estamina: 0, estaminaMaxima: 0, mana: 0, manaMaxima: 0, capacidadeCarga: 0 },
           atributos: {
             principais: { resistencia: 0, agilidade: 0, sabedoria: 0, precisao: 0, forca: 0 },
             secundarios: { sanidade: 0, coragem: 0, inteligencia: 0, percepcao: 0, labia: 0, intimidacao: 0 },
@@ -320,8 +320,11 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
         setListPersonagemRelacionado(relatedList);
         setStatusBasico({
           vida: status.status?.vida ?? 0,
+          vidaMaxima: status.status?.vidaMaxima ?? status.status?.vida ?? 0,
           estamina: status.status?.estamina ?? 0,
+          estaminaMaxima: status.status?.estaminaMaxima ?? status.status?.estamina ?? 0,
           mana: status.status?.mana ?? 0,
+          manaMaxima: status.status?.manaMaxima ?? status.status?.mana ?? 0,
           capacidadeCarga: status.status?.capacidadeCarga ?? 0,
         });
         setAtributosPrincipais(status.atributos?.principais ?? {
@@ -510,8 +513,11 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
       const statusPayload = {
         status: {
           vida: Number(statusBasico.vida) || 0,
+          vidaMaxima: Number(statusBasico.vidaMaxima) || 0,
           estamina: Number(statusBasico.estamina) || 0,
+          estaminaMaxima: Number(statusBasico.estaminaMaxima) || 0,
           mana: Number(statusBasico.mana) || 0,
+          manaMaxima: Number(statusBasico.manaMaxima) || 0,
           capacidadeCarga: Number(statusBasico.capacidadeCarga) || 0,
         },
         atributos: {
@@ -698,6 +704,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
           <CharacterSystemForm
             theme={theme}
             neon={neon}
+            allowMaxStatusEditing
             userName={userName}
             selectedRace={selectedRace}
             raceImageUrl={raceImageUrl}

@@ -21,6 +21,18 @@ namespace OdisseiaWiki.Services
             if (string.IsNullOrWhiteSpace(dto.Nome))
                 return ResultPersonagem.Fail("Nome é obrigatório.");
 
+            if (dto.StatusJson?.status != null)
+            {
+                if (dto.StatusJson.status.vidaMaxima == 0)
+                    dto.StatusJson.status.vidaMaxima = dto.StatusJson.status.vida;
+                
+                if (dto.StatusJson.status.estaminaMaxima == 0)
+                    dto.StatusJson.status.estaminaMaxima = dto.StatusJson.status.estamina;
+                
+                if (dto.StatusJson.status.manaMaxima == 0)
+                    dto.StatusJson.status.manaMaxima = dto.StatusJson.status.mana;
+            }
+
             var personagem = new Personagen
             {
                 Nome = dto.Nome,

@@ -10,6 +10,7 @@ import { CharacterSystemFormProps } from './CharacterSystemForm.type';
 export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
   theme,
   neon,
+  allowMaxStatusEditing = false,
   userName,
   selectedRace,
   raceImageUrl,
@@ -43,6 +44,7 @@ export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
       <StatusForm
         theme={theme}
         neon={neon}
+        allowMaxStatusEditing={allowMaxStatusEditing}
         userName={userName}
         selectedRace={selectedRace}
         xp={xp}

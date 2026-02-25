@@ -196,6 +196,7 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserC
                 <CharacterSystemForm
                   theme={theme}
                   neon={neon}
+                  allowMaxStatusEditing
                   userName={userName}
                   selectedRace={selectedRace}
                   raceImageUrl={raceImageUrl}

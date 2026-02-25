@@ -19,7 +19,7 @@ export interface PersonagemJogador {
   idraca: number;
   idcidade?: number;
   historia?: JSONContent | string;
-  statusJson: string;
+  statusJson: string | PersonagemStatus;
   alinhamento?: string;
   tracos?: string;
   costumes?: string;
@@ -46,8 +46,11 @@ export interface PersonagemStatus {
 
 export interface StatusBase {
   vida: number;
+  vidaMaxima: number;
   estamina: number;
+  estaminaMaxima: number;
   mana: number;
+  manaMaxima: number;
   capacidadeCarga: number;
 }
 

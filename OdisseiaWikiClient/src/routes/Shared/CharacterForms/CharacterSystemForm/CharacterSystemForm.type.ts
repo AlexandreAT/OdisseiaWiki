@@ -7,6 +7,7 @@ import { RacaPayload } from '../../../../services/racasService';
 export interface CharacterSystemFormProps {
   theme: 'dark' | 'light';
   neon: 'on' | 'off';
+  allowMaxStatusEditing?: boolean;
   userName: string;
   selectedRace?: RacaPayload;
   raceImageUrl: string;
@@ -17,14 +18,20 @@ export interface CharacterSystemFormProps {
   setLevel: (value: number) => void;
   statusBasico: {
     vida: number;
+    vidaMaxima: number;
     estamina: number;
+    estaminaMaxima: number;
     mana: number;
+    manaMaxima: number;
     capacidadeCarga: number;
   };
   setStatusBasico: React.Dispatch<React.SetStateAction<{
     vida: number;
+    vidaMaxima: number;
     estamina: number;
+    estaminaMaxima: number;
     mana: number;
+    manaMaxima: number;
     capacidadeCarga: number;
   }>>;
   atributosPrincipais: Principais;

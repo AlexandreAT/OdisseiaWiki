@@ -49,7 +49,7 @@ export interface RawPersonagemApi {
 
 // ----- default status para fallback -----
 const defaultStatus: PersonagemStatus = {
-  status: { vida: 0, estamina: 0, mana: 0, capacidadeCarga: 0 },
+  status: { vida: 0, vidaMaxima: 0, estamina: 0, estaminaMaxima: 0, mana: 0, manaMaxima: 0, capacidadeCarga: 0 },
   atributos: {
     principais: { resistencia: 0, agilidade: 0, sabedoria: 0, precisao: 0, forca: 0 },
     secundarios: { sanidade: 0, coragem: 0, inteligencia: 0, percepcao: 0, labia: 0, intimidacao: 0 },
@@ -74,7 +74,19 @@ function parseJsonOr<T>(value: any, fallback: T): T {
 
 // ----- mapper: transforma o raw (API) num objeto normalizado pra UI -----
 export function normalizePersonagem(raw: RawPersonagemApi) {
-  const status = parseJsonOr<PersonagemStatus>(raw.statusJson, defaultStatus);
+  const parsedStatus = parseJsonOr<PersonagemStatus>(raw.statusJson, defaultStatus);
+  const status: PersonagemStatus = {
+    ...parsedStatus,
+    status: {
+      vida: parsedStatus.status?.vida ?? 0,
+      vidaMaxima: parsedStatus.status?.vidaMaxima ?? parsedStatus.status?.vida ?? 0,
+      estamina: parsedStatus.status?.estamina ?? 0,
+      estaminaMaxima: parsedStatus.status?.estaminaMaxima ?? parsedStatus.status?.estamina ?? 0,
+      mana: parsedStatus.status?.mana ?? 0,
+      manaMaxima: parsedStatus.status?.manaMaxima ?? parsedStatus.status?.mana ?? 0,
+      capacidadeCarga: parsedStatus.status?.capacidadeCarga ?? 0,
+    },
+  };
   const tracos = parseJsonOr<string[]>(raw.tracos, []);
   const costumes = parseJsonOr<string[]>(raw.costumes, []);
   const inventario = parseJsonOr<Item[]>(raw.inventarioJson, []);

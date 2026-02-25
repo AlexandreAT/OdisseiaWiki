@@ -40,14 +40,20 @@ export interface BasicInfoFormProps {
   setListPersonagemRelacionado: React.Dispatch<React.SetStateAction<{ id: number; nome: string }[]>>;
   statusBasico: {
     vida: number;
+    vidaMaxima: number;
     estamina: number;
+    estaminaMaxima: number;
     mana: number;
+    manaMaxima: number;
     capacidadeCarga: number;
   };
   setStatusBasico: React.Dispatch<React.SetStateAction<{
     vida: number;
+    vidaMaxima: number;
     estamina: number;
+    estaminaMaxima: number;
     mana: number;
+    manaMaxima: number;
     capacidadeCarga: number;
   }>>;
   errors: { name?: string; race?: string };
