@@ -15,10 +15,53 @@ import { getPersonagens } from '../../../../services/personagensService';
 import { Mesa } from '../../../../models/Mesa';
 import { getMesas } from '../../../../services/mesaService';
 import { atualizarPersonagemJogador, criarPersonagemJogador, PersonagemJogadorPayload } from '../../../../services/personagemJogadorService';
-import { PersonagemJogador } from '../../../../models/PersonagemJogador';
+import { PersonagemJogador, PersonagemStatus } from '../../../../models/PersonagemJogador';
 import { TOTAL_STEPS } from './constants';
 import { mapInventoryForPayload, mapMagiasForPayload, mapSkillsForPayload } from './helpers';
 import { normalizeToJSONContent, prepareForAPI } from '../../../../utils/richTextHelpers';
+
+const parseJson = <T,>(value: unknown, fallback: T): T => {
+  if (value === undefined || value === null) return fallback;
+
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value) as T;
+    } catch {
+      return fallback;
+    }
+  }
+
+  return value as T;
+};
+
+const tryParseRichText = (value: any) => {
+  let current = value;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if (typeof current !== 'string') return current;
+
+    const trimmed = current.trim();
+    if (!trimmed) return current;
+
+    const looksLikeJsonObjectOrArray =
+      (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+      (trimmed.startsWith('[') && trimmed.endsWith(']'));
+
+    const looksLikeQuotedJsonString = trimmed.startsWith('"') && trimmed.endsWith('"');
+
+    if (!looksLikeJsonObjectOrArray && !looksLikeQuotedJsonString) {
+      return current;
+    }
+
+    try {
+      current = JSON.parse(trimmed);
+    } catch {
+      return current;
+    }
+  }
+
+  return current;
+};
 
 export const useFormUserCharacter = (userId: number, onSave?: () => void, personagem?: PersonagemJogador) => {
   // --- step ---
@@ -391,22 +434,57 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
   useEffect(() => {
     if (!personagem) return;
 
-    const status = personagem.statusJson
-        ? (typeof personagem.statusJson === 'string'
-          ? JSON.parse(personagem.statusJson)
-          : personagem.statusJson)
-        : { status: {}, atributos: {}, nivel: 1, xp: 0, defesas: {} };
+    const status = parseJson<PersonagemStatus>(personagem.statusJson, {
+      status: { vida: 0, vidaMaxima: 0, estamina: 0, estaminaMaxima: 0, mana: 0, manaMaxima: 0, capacidadeCarga: 0 },
+      atributos: {
+        principais: { resistencia: 0, agilidade: 0, sabedoria: 0, precisao: 0, forca: 0 },
+        secundarios: { sanidade: 0, coragem: 0, inteligencia: 0, percepcao: 0, labia: 0, intimidacao: 0 },
+      },
+      nivel: 1,
+      xp: 0,
+      defesas: { armadura: 0, protecao: 0, escudo: 0, outras: 0 },
+    });
 
-    const tracos = personagem.tracos ? JSON.parse(personagem.tracos) : [];
-    const costumes = personagem.costumes ? JSON.parse(personagem.costumes) : [];
-    const inventario = personagem.inventarioJson ? JSON.parse(personagem.inventarioJson) : [];
-    console.log("🚀 ~ useFormUserCharacter ~ personagem.inventarioJson:", personagem.inventarioJson)
-    console.log("🚀 ~ useFormUserCharacter ~ inventario:", inventario)
-    const skills = personagem.skills ? JSON.parse(personagem.skills) : [];
-    const magias = personagem.magia ? JSON.parse(personagem.magia) : [];
-    const relacionados = personagem.personagemsVinculados 
-        ? JSON.parse(personagem.personagemsVinculados) 
-        : [];
+    const tracosRaw = parseJson<string[] | string>(personagem.tracos, []);
+    const costumesRaw = parseJson<string[] | string>(personagem.costumes, []);
+    const inventario = parseJson<any[]>(personagem.inventarioJson, []).map((item) => ({
+      ...item,
+      descricao: tryParseRichText(item?.descricao),
+    }));
+    const skills = parseJson<any[]>(personagem.skills, []).map((skill) => {
+      const effectSource =
+        skill?.efeito ??
+        skill?.atributos?.__efeitoRichText ??
+        skill?.atributos?.efeitoRichText;
+
+      return {
+        ...skill,
+        efeito: tryParseRichText(effectSource),
+      };
+    });
+    const magias = parseJson<any[]>(personagem.magia, []).map((magia) => {
+      const effectSource =
+        magia?.efeito ??
+        magia?.atributos?.__efeitoRichText ??
+        magia?.atributos?.efeitoRichText;
+
+      return {
+        ...magia,
+        efeito: tryParseRichText(effectSource),
+      };
+    });
+    const relacionados = parseJson(personagem.personagemsVinculados, []);
+
+    const tracos = Array.isArray(tracosRaw)
+      ? tracosRaw
+      : tracosRaw
+      ? [String(tracosRaw)]
+      : [];
+    const costumes = Array.isArray(costumesRaw)
+      ? costumesRaw
+      : costumesRaw
+      ? [String(costumesRaw)]
+      : [];
 
     let galeria: string[] = [];
     if (personagem.galeriaImagem) {
@@ -435,12 +513,12 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     setAvatarFile(null);
     setGaleriaUrls(galeria);
     setGaleriaPreviewFileMap({});
-    setHistory(normalizeToJSONContent(personagem.historia || ''));
+    setHistory(normalizeToJSONContent(tryParseRichText(personagem.historia) || ''));
     setExtraInformation(personagem.infoSecundariasJson || '');
     setNanites(personagem.nanites?.toString() || '');
     setAlignment(personagem.alinhamento || '');
     setTraits(tracos);
-    setCostumes(costumes);
+    setCostumes(Array.isArray(costumes) ? costumes[0] || '' : String(costumes || ''));
 
     setStatusBasico({
         vida: status.status?.vida ?? 0,

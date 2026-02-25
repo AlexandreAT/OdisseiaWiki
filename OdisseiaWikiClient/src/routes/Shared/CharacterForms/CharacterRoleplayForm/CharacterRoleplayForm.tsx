@@ -3,6 +3,7 @@ import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import { BiSearchAlt } from 'react-icons/bi';
 import toast from 'react-hot-toast';
 import { AvatarIcon } from '../../../../components/Generic/AvatarIcon/AvatarIcon';
+import { CheckBox } from '../../../../components/Generic/CheckBox/CheckBox';
 import { CheckSelect } from '../../../../components/Generic/CheckSelect/CheckSelect';
 import { HorizontalList } from '../../../../components/Generic/HorizontalList/HorizontalList';
 import { ImageGallery } from '../../../../components/Generic/ImageGallery/ImageGallery';
@@ -63,6 +64,8 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
   setCostumes,
   extraInformation,
   setExtraInformation,
+  visivel,
+  setVisivel,
   listPersonagemRelacionado,
   setListPersonagemRelacionado,
   personagens,
@@ -275,6 +278,15 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
           onChange={(e) => setExtraInformation(e.target.value)}
           fullWidth
         />
+
+        {typeof visivel === 'boolean' && setVisivel && (
+          <CheckBox
+            neon={neon}
+            label="Personagem visível"
+            checked={visivel}
+            onChange={(checked) => setVisivel(checked)}
+          />
+        )}
       </GridInputs>
 
       {listPersonagemRelacionado.length > 0 && (

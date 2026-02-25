@@ -434,26 +434,40 @@ export const useFormCharacter = ({ applyRaceDefaults = true }: { applyRaceDefaul
       }));
       console.log("🚀 ~ handleSubmit ~ inventarioMapped:", inventarioMapped)
 
-      const magiaMapped: Magia[] = magias.map((magia) => ({
+      const magiaMapped: Magia[] = magias.map((magia) => {
+        const serializedEffect = serializeRichText((magia as any).efeito);
+
+        return {
         id: magia.id ?? generateId(),
         nome: magia.nome ?? "Magia",
-        efeito: magia.efeito ?? undefined,
+        efeito: serializedEffect,
         tipo: (magia.tipo as MagiaTipoString) ?? "suporte",
         elemento: (magia.elemento as MagiaElemento[]) ?? ["normal"],
         custo: magia.custo ?? "",
-        atributos: magia.atributos ?? {},
-      }));
+        atributos: {
+          ...(magia.atributos ?? {}),
+          __efeitoRichText: serializedEffect,
+        },
+      };
+      });
 
-      const skillMapped: Skills[] = skills.map((skill) => ({
+      const skillMapped: Skills[] = skills.map((skill) => {
+        const serializedEffect = serializeRichText((skill as any).efeito);
+
+        return {
         id: skill.id ?? generateId(),
         nome: skill.nome ?? "Skill",
-        efeito: skill.efeito ?? undefined,
+        efeito: serializedEffect,
         tipo: (skill.tipo as SkillTipoString) ?? "suporte",
         elemento: (skill.elemento as SkillElemento[]) ?? ["normal"],
         custo: skill.custo ?? "",
         nivel: skill.nivel ?? 1,
-        atributos: skill.atributos ?? {},
-      }));
+        atributos: {
+          ...(skill.atributos ?? {}),
+          __efeitoRichText: serializedEffect,
+        },
+      };
+      });
 
       const payload: PersonagemCreatePayload = {
         nome: userName,

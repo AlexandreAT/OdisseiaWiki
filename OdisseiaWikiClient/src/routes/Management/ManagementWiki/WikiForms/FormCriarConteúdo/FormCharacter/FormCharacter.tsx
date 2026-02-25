@@ -6,7 +6,6 @@ import { AvatarIcon } from '../../../../../../components/Generic/AvatarIcon/Avat
 import { CyberButton } from '../../../../../../components/Generic/HighlightButton/HighlightButton';
 import { TextArea } from '../../../../../../components/Generic/TextArea/TextArea';
 import { RichTextEditor } from '../../../../../../components/Generic/RichTextEditor/RichTextEditor';
-import RichTextModal from '../../../../../../components/Generic/RichTextModal';
 import { Search } from '../../../../../../components/Generic/Search/Search';
 import { BiSearchAlt } from 'react-icons/bi';
 import { CheckSelect } from '../../../../../../components/Generic/CheckSelect/CheckSelect';
@@ -17,13 +16,10 @@ import { StatusInput } from '../../../../../../components/Generic/StatusInput/St
 import { useFormCharacter } from './useFormCharacter';
 import toast from 'react-hot-toast';
 import { LabelInfoBox } from '../../../../../../components/Generic/LabelInfoBox/LabelInfoBox';
-import { Modal } from '../../../../../../components/Generic/Modal/Modal';
-import { atributosFormMap, atributosMagiaFormMap, atributosSkillFormMap } from './MapItensForm';
-import { Skills, SkillTipoString } from '../../../../../../models/Skills';
-import { Item, ItemTipo } from '../../../../../../models/Itens';
-import { Magia, MagiaTipoString } from '../../../../../../models/Magias';
-import { JSONContent } from '../../../../../../models/Characters';
-import { getTextPreview } from '../../../../../../utils/richTextHelpers';
+import { createItemColumns, createMagiasColumns, createSkillsColumns } from '../../../../../Hub/UserCharacters/CharacterCreate/tableColumnsConfig';
+import { Skills } from '../../../../../../models/Skills';
+import { Item } from '../../../../../../models/Itens';
+import { Magia } from '../../../../../../models/Magias';
 //import OrcBack from '../../../../../../assets/racas/orc/OrcBackground.jpeg';
 
 interface FormProps {
@@ -92,10 +88,6 @@ export const FormCharacter = ({ theme, neon }: FormProps) => {
   } = useFormCharacter();
     console.log("🚀 ~ FormCharacter ~ listItens:", listItens)
 
-  const [richTextModalOpen, setRichTextModalOpen] = React.useState(false);
-  const [editingItemIndex, setEditingItemIndex] = React.useState<number | null>(null);
-  const [editingDescricao, setEditingDescricao] = React.useState<JSONContent | string>('');
-
   const tagInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -118,266 +110,9 @@ export const FormCharacter = ({ theme, neon }: FormProps) => {
     [selectedRace]
   );
 
-  const handleSaveDescricao = (content: JSONContent | string) => {
-    console.log("🚀 ~ handleSaveDescricao ~ content:", content)
-    if (editingItemIndex !== null) {
-      const updated = [...itens];
-      updated[editingItemIndex] = {
-        ...updated[editingItemIndex],
-        descricao: content,
-      };
-      setItens(updated);
-    }
-  };
-  
-  const itemColumns = React.useMemo(() => [
-    { key: "nome", label: "Nome", inputType: "text", width: 200 } as any,
-    {
-      key: "descricao",
-      label: "Descrição",
-      width: 300,
-      customRender: (value: any, _row: Item, _onChange: (v: any) => void, rowIndex: number) => {
-        const preview = getTextPreview(value, 40);
-        
-        const handleOpenModal = () => {
-          setEditingDescricao(value || '');
-          setEditingItemIndex(rowIndex);
-          setRichTextModalOpen(true);
-        };
-
-        return (
-          <div
-            onClick={handleOpenModal}
-            style={{
-              cursor: 'pointer',
-              padding: '8px',
-              borderRadius: '4px',
-              border: `1px solid ${theme === 'dark' ? '#444' : '#ccc'}`,
-              background: theme === 'dark' ? '#2a2a2a' : '#f5f5f5',
-              minHeight: '36px',
-              display: 'flex',
-              alignItems: 'center',
-              width: '100%',
-              minWidth: 0,
-              color: theme === 'dark' ? '#ccc' : '#333',
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = neon === 'on' ? '#00ff00' : '#666';
-              e.currentTarget.style.background = theme === 'dark' ? '#333' : '#e8e8e8';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = theme === 'dark' ? '#444' : '#ccc';
-              e.currentTarget.style.background = theme === 'dark' ? '#2a2a2a' : '#f5f5f5';
-            }}
-          >
-            {preview ? (
-              <span
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-                title={preview}
-              >
-                {preview}
-              </span>
-            ) : (
-              <span
-                style={{
-                  opacity: 0.5,
-                  display: 'block',
-                  width: '100%',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                Clique para adicionar descrição...
-              </span>
-            )}
-          </div>
-        );
-      },
-    } as any,
-    { key: "quantidade", label: "Qtd", inputType: "number", width: 80 } as any,
-    { key: "peso", label: "Peso", inputType: "number", width: 80 } as any,
-    {
-      key: "tipo",
-      label: "Tipo",
-      inputType: "select",
-      options: [
-        { label: "Arma", value: "arma" },
-        { label: "Traje", value: "traje" },
-        { label: "Consumiveis", value: "consumiveis" },
-        { label: "Acessório", value: "acessorio" },
-        { label: "Outro", value: "outro" },
-      ],
-    } as any,
-    {
-      key: "atributos",
-      label: "Atributos",
-      customRender: (value: any, row: Item, onChange: (v: any) => void) => {
-        const [open, setOpen] = React.useState(false);
-
-        const FormComponent = atributosFormMap[row.tipo as ItemTipo];
-
-        if (!FormComponent) return <label>Selecione o tipo</label>;
-
-        return (
-          <>
-            <CyberButton type="button" width="90%" height="30px" onClick={() => setOpen(true)}>
-              Editar
-            </CyberButton>
-
-            {open && (
-              <Modal
-                title={`Editar atributos de ${row.nome}`}
-                onClose={() => setOpen(false)}
-                onSubmit={() => setOpen(false)}
-                theme={theme}
-                neon={neon}
-              >
-                <FormComponent value={value} onChange={onChange} theme={theme} neon={neon} />
-              </Modal>
-            )}
-          </>
-        );
-      }
-    } as any,
-  ], [theme, neon]);
-
-  const skillsColumns = React.useMemo(() => [
-    { key: "nome", label: "Nome", inputType: "text", width: 200 } as any,
-    { key: "efeito", label: "Efeito", inputType: "text", width: 300 } as any,
-    { key: "custo", label: "Custo", inputType: "string", width: 100 } as any,
-    { key: "nivel", label: "Nível", inputType: "number", width: 80 } as any,
-    {
-      key: "elemento",
-      label: "Elemento",
-      inputType: "checkselect",
-      options: [
-        { label: "Normal", value: "normal" },
-        { label: "Fogo", value: "fogo" },
-        { label: "Água", value: "agua" },
-        { label: "Ar", value: "ar" },
-        { label: "Terra", value: "terra" },
-        { label: "Luz", value: "luz" },
-        { label: "Escuridão", value: "escuridao" },
-        { label: "Espacial", value: "espacial" },
-        { label: "Transfiguração", value: "transfiguracao" },
-        { label: "Invocação", value: "invocacao" },
-      ],
-    } as any,
-    {
-      key: "tipo",
-      label: "Tipo",
-      inputType: "select",
-      options: [
-        { label: "Ataque", value: "ataque" },
-        { label: "Suporte", value: "suporte" },
-        { label: "Buff", value: "buff" },
-        { label: "Debuff", value: "debuff" },
-      ],
-    } as any,
-    {
-      key: "atributos",
-      label: "Atributos",
-      customRender: (value: any, row: Skills, onChange: (v: any) => void) => {
-        const [open, setOpen] = React.useState(false);
-
-        const FormComponent = atributosSkillFormMap[row.tipo as SkillTipoString];
-
-        if (!FormComponent) return <label>Selecione o tipo</label>;
-
-        return (
-          <>
-            <CyberButton type="button" width="90%" height="30px" onClick={() => setOpen(true)}>
-              Editar
-            </CyberButton>
-
-            {open && (
-              <Modal
-                title={`Editar atributos de ${row.nome}`}
-                onClose={() => setOpen(false)}
-                onSubmit={() => setOpen(false)}
-                theme={theme}
-                neon={neon}
-              >
-                <FormComponent value={value} onChange={onChange} theme={theme} neon={neon} />
-              </Modal>
-            )}
-          </>
-        );
-      }
-    } as any,
-  ], [theme, neon]);
-
-  const magiasColumns = React.useMemo(() => [
-    { key: "nome", label: "Nome", inputType: "text", width: 200 } as any,
-    { key: "efeito", label: "Efeito", inputType: "text", width: 300 } as any,
-    { key: "custo", label: "Custo", inputType: "string", width: 100 } as any,
-    {
-      key: "elemento",
-      label: "Elemento",
-      inputType: "checkselect",
-      options: [
-        { label: "Fogo", value: "fogo" },
-        { label: "Água", value: "agua" },
-        { label: "Ar", value: "ar" },
-        { label: "Terra", value: "terra" },
-        { label: "Luz", value: "luz" },
-        { label: "Escuridão", value: "escuridao" },
-        { label: "Espacial", value: "espacial" },
-        { label: "Transfiguração", value: "transfiguracao" },
-        { label: "Invocação", value: "invocacao" },
-      ],
-    } as any,
-    {
-      key: "tipo",
-      label: "Tipo",
-      inputType: "select",
-      options: [
-        { label: "Ataque", value: "ataque" },
-        { label: "Suporte", value: "suporte" },
-        { label: "Buff", value: "buff" },
-        { label: "Debuff", value: "debuff" },
-      ],
-    } as any,
-    {
-      key: "atributos",
-      label: "Atributos",
-      customRender: (value: any, row: Magia, onChange: (v: any) => void) => {
-        const [open, setOpen] = React.useState(false);
-
-        const FormComponent = atributosMagiaFormMap[row.tipo as MagiaTipoString];
-
-        if (!FormComponent) return <label>Selecione o tipo</label>;
-
-        return (
-          <>
-            <CyberButton type="button" width="90%" height="30px" onClick={() => setOpen(true)}>
-              Editar
-            </CyberButton>
-
-            {open && (
-              <Modal
-                title={`Editar atributos de ${row.nome}`}
-                onClose={() => setOpen(false)}
-                onSubmit={() => setOpen(false)}
-                theme={theme}
-                neon={neon}
-              >
-                <FormComponent value={value} onChange={onChange} theme={theme} neon={neon} />
-              </Modal>
-            )}
-          </>
-        );
-      }
-    } as any,
-  ], [theme, neon]);
+  const itemColumns = React.useMemo(() => createItemColumns(theme, neon), [theme, neon]);
+  const skillsColumns = React.useMemo(() => createSkillsColumns(theme, neon), [theme, neon]);
+  const magiasColumns = React.useMemo(() => createMagiasColumns(theme, neon), [theme, neon]);
   
   return (
     <FormController onSubmit={handleSubmit}>
@@ -857,16 +592,6 @@ export const FormCharacter = ({ theme, neon }: FormProps) => {
         />
       </NavegationButtons>
 
-      <RichTextModal
-        isOpen={richTextModalOpen}
-        onClose={() => setRichTextModalOpen(false)}
-        onSave={handleSaveDescricao}
-        initialContent={editingDescricao}
-        title="Editar Descrição do Item"
-        placeholder="Digite a descrição do item..."
-        theme={theme}
-        neon={neon}
-      />
     </FormController>
   );
 };

@@ -35,6 +35,8 @@ export interface CharacterRoleplayFormProps {
   setCostumes: (value: string) => void;
   extraInformation: string;
   setExtraInformation: (value: string) => void;
+  visivel?: boolean;
+  setVisivel?: (value: boolean) => void;
   listPersonagemRelacionado: { id: number; nome: string }[];
   setListPersonagemRelacionado: React.Dispatch<React.SetStateAction<{ id: number; nome: string }[]>>;
   personagens: typeof personagensMock;
