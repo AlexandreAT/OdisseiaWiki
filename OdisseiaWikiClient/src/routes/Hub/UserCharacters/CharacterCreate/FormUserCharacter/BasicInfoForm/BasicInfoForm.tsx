@@ -140,6 +140,7 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
             label="Vida"
             value={statusBasico.vida}
             maxValue={statusBasico.vidaMaxima}
+            enableCalculator
             editable
             onChange={(e) =>
               setStatusBasico((prev) => ({ ...prev, vida: Number(e.target.value) }))
@@ -155,6 +156,7 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
             label="Estamina"
             value={statusBasico.estamina}
             maxValue={statusBasico.estaminaMaxima}
+            enableCalculator
             editable
             onChange={(e) =>
               setStatusBasico((prev) => ({ ...prev, estamina: Number(e.target.value) }))
@@ -170,6 +172,7 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
             label="Mana"
             value={statusBasico.mana}
             maxValue={statusBasico.manaMaxima}
+            enableCalculator
             editable
             onChange={(e) =>
               setStatusBasico((prev) => ({ ...prev, mana: Number(e.target.value) }))

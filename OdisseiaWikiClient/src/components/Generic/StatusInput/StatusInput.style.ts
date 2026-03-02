@@ -27,8 +27,81 @@ export const StatusLabel = styled.span`
   font-size: 0.8em;
   font-weight: 500;
   letter-spacing: 2px;
-  margin-bottom: 4px;
   color: var(--whitesmoke);
+`;
+
+export const StatusHeader = styled.div`
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 20px;
+  margin-bottom: 4px;
+`;
+
+export const CalculatorTrigger = styled.button<Props>`
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  color: ${({ theme, neon }) =>
+    theme === "dark"
+      ? neon === "on"
+        ? "var(--clearneonBlue)"
+        : "var(--clearWhite)"
+      : neon === "on"
+      ? "var(--neonViolet)"
+      : "var(--deepgrey)"};
+  transition: transform 0.15s ease, filter 0.15s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    filter: ${({ neon }) => (neon === "on" ? "drop-shadow(0 0 4px currentColor)" : "none")};
+  }
+
+  .icon {
+    font-size: 0.95rem;
+  }
+`;
+
+export const CalculatorDropdown = styled.div<Props>`
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 30;
+  min-width: 120px;
+  padding: 6px;
+  border-radius: 6px;
+  background: ${({ theme }) => (theme === "dark" ? "var(--deepgrey)" : "var(--whitesmoke)")};
+  border: none;
+  box-shadow: ${({ neon, theme }) =>
+    neon === "on"
+      ? `0 0 8px ${theme === "dark" ? "var(--neonBlue)" : "var(--neonViolet)"}, 0 4px 10px rgba(0,0,0,0.35)`
+      : "0 2px 6px rgba(0,0,0,0.2)"};
+`;
+
+export const CalculatorInput = styled.input<Props>`
+  width: 100%;
+  height: 28px;
+  border-radius: 4px;
+  border: 1px solid
+    ${({ theme, neon }) =>
+      theme === "dark"
+        ? neon === "on"
+          ? "var(--clearneonBlue)"
+          : "var(--clearWhite)"
+        : neon === "on"
+        ? "var(--neonViolet)"
+        : "var(--lightGrey)"};
+  outline: none;
+  padding: 0 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: ${({ theme }) => (theme === "dark" ? "var(--whitesmoke)" : "var(--deepgrey)")};
+  background: ${({ theme }) => (theme === "dark" ? "var(--lightBlack)" : "var(--clearWhite)")};
 `;
 
 export const StatusInputField = styled.input<Props>`
@@ -64,13 +137,6 @@ export const StatusInputField = styled.input<Props>`
       }
     `;
   }}
-`;
-
-const scanline = keyframes`
-  0% { transform: translateX(-140%); opacity: 0; }
-  25% { opacity: 0.22; }
-  75% { opacity: 0.22; }
-  100% { transform: translateX(140%); opacity: 0; }
 `;
 
 const neonPulse = keyframes`
@@ -136,7 +202,7 @@ export const StatusFill = styled.div<Props & { percentage: number }>`
   left: 0;
   height: 100%;
   width: ${({ percentage }) => `${Math.max(0, Math.min(percentage, 100))}%`};
-  transition: width 340ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: width 1.5s cubic-bezier(0.22, 1, 0.36, 1);
   pointer-events: none;
   ${({ neon, typeStatus }) => {
     if (neon !== "on") return "";
@@ -167,8 +233,35 @@ export const StatusInputsRow = styled.div`
   padding: 0 10px;
 `;
 
-export const StatusMiniInput = styled.input<{ align: "left" | "right"; emphasis: "current" | "max" }>`
+export const StatusValueGroup = styled.div<{ emphasis: "current" | "max" }>`
+  position: relative;
   width: ${({ emphasis }) => (emphasis === "current" ? "58%" : "40%")};
+  display: flex;
+  align-items: center;
+`;
+
+export const StatusMiniInputWrapper = styled.div`
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  position: relative;
+`;
+
+export const OverflowPlus = styled.div`
+  position: absolute;
+  font-size: 0.72rem;
+  line-height: 1;
+  font-weight: 800;
+  color: var(--whitesmoke);
+  pointer-events: none;
+  user-select: none;
+  margin-left: 2px;
+  top: -5px;
+  left: -10px;
+`;
+
+export const StatusMiniInput = styled.input<{ align: "left" | "right"; emphasis: "current" | "max" }>`
+  width: ${({ emphasis }) => (emphasis === "current" ? "auto" : "100%")};
   min-width: 0;
   border: none;
   outline: none;

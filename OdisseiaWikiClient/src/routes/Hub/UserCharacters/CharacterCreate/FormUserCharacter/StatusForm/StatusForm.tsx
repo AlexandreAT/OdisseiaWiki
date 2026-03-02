@@ -68,6 +68,7 @@ export const StatusForm: React.FC<StatusFormProps> = ({
             label="Vida"
             value={statusBasico.vida}
             maxValue={statusBasico.vidaMaxima}
+            enableCalculator
             editable
             onChange={(e) =>
               setStatusBasico((prev) => ({ ...prev, vida: Number(e.target.value) }))
@@ -83,6 +84,7 @@ export const StatusForm: React.FC<StatusFormProps> = ({
             label="Estamina"
             value={statusBasico.estamina}
             maxValue={statusBasico.estaminaMaxima}
+            enableCalculator
             editable
             onChange={(e) =>
               setStatusBasico((prev) => ({ ...prev, estamina: Number(e.target.value) }))
@@ -98,6 +100,7 @@ export const StatusForm: React.FC<StatusFormProps> = ({
             label="Mana"
             value={statusBasico.mana}
             maxValue={statusBasico.manaMaxima}
+            enableCalculator
             editable
             onChange={(e) =>
               setStatusBasico((prev) => ({ ...prev, mana: Number(e.target.value) }))
