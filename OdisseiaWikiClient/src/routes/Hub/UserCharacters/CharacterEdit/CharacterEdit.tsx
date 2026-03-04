@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import CloudDoneIcon from '@mui/icons-material/CloudDone';
 import CloudOffIcon from '@mui/icons-material/CloudOff';
 import SaveIcon from '@mui/icons-material/Save';
@@ -58,7 +58,7 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserC
         skills, setSkills,
         magias, setMagias,
         statusBasico, setStatusBasico,
-        listRaces,
+        listRaces, setListRaces,
     listCities,
     loadingRaces,
     loadingCities,
@@ -75,6 +75,13 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserC
         defesas, setDefesas,
         listItens, handleSelectItem,
     } = useFormUserCharacter(userId, onSave, personagem);
+
+    useEffect(() => {
+      console.log("========= TESTE ============")
+      setListRaces(listRaces.filter((r) => r.idraca === personagem.idraca || r.nome == "Android"));
+    }, [loadingPersonagens])
+        console.log("🚀 ~ CharacterEdit ~ listRaces:", listRaces)
+    console.log("🚀 ~ CharacterEdit ~ selectedRace:", selectedRace)
 
     const raceImageUrl = React.useMemo(() => 
         selectedRace?.imagem ?? '/assets_dynamic/default.png',
@@ -229,6 +236,7 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserC
 
               {editStep === 2 && (
                 <CharacterRoleplayForm
+                  raceChangeMode='current-or-android'
                   theme={theme}
                   neon={neon}
                   userName={userName}

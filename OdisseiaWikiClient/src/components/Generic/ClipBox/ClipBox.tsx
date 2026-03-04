@@ -12,15 +12,16 @@ interface ClipBoxProps {
   innerOffset?: string;
   doubleCut?: boolean;
   zIndex?: number;
+  backgroundColor?: string;
   autoSize?: boolean;
   useClip?: boolean;
 }
 
-export const ClipBox = ({ theme, neon, children, width, height, borderRadius, type, innerOffset, doubleCut, zIndex, autoSize, useClip = true }: ClipBoxProps) => {
+export const ClipBox = ({ theme, neon, children, width, height, borderRadius, type, innerOffset, doubleCut, zIndex, autoSize, backgroundColor, useClip = true }: ClipBoxProps) => {
   if (!useClip) {
     return (
       <ClipController autoSize={autoSize} zIndex={zIndex} theme={theme} neon={neon} width={width} height={height} borderRadius={borderRadius} type={type} doubleCut={doubleCut} enableClip={false}>
-        <ContentContainer autoSize={autoSize} theme={theme} neon={neon} width={width} height={height} borderRadius={borderRadius} type={type} innerOffset={innerOffset} doubleCut={doubleCut} enableClip={false}>
+        <ContentContainer autoSize={autoSize} theme={theme} neon={neon} width={width} height={height} borderRadius={borderRadius} type={type} innerOffset={innerOffset} doubleCut={doubleCut} enableClip={false} backgroundColor={backgroundColor}>
           {children}
         </ContentContainer>
       </ClipController>
@@ -34,7 +35,7 @@ export const ClipBox = ({ theme, neon, children, width, height, borderRadius, ty
       {doubleCut && (
         <ClipBorderTop autoSize={autoSize} theme={theme} neon={neon} width={width} height={height} borderRadius={borderRadius} type={type} innerOffset={innerOffset} />
       )}
-      <ContentContainer autoSize={autoSize} theme={theme} neon={neon} width={width} height={height} borderRadius={borderRadius} type={type} innerOffset={innerOffset} doubleCut={doubleCut} enableClip>
+      <ContentContainer autoSize={autoSize} theme={theme} neon={neon} width={width} height={height} borderRadius={borderRadius} type={type} innerOffset={innerOffset} doubleCut={doubleCut} enableClip backgroundColor={backgroundColor}>
         {children}
       </ContentContainer>
     </ClipController>

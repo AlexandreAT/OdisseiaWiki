@@ -10,7 +10,8 @@ interface Props {
     innerOffset?: string;
     doubleCut?: boolean;
     zIndex?: number;
-    enableClip?: boolean;
+  enableClip?: boolean;
+  backgroundColor?: string;
 }
 
 const getBlue = (type?: 'primary' | 'secondary') => type === 'secondary' ? 'var(--clearneonPink)' : 'var(--clearneonBlue)';
@@ -116,7 +117,7 @@ export const ContentContainer = styled.div<Props & { autoSize?: boolean }>`
     autoSize ? 'auto' : getInnerSize(height, innerOffset || '20px', '500px')};
 
   border-radius: ${({ borderRadius }) => borderRadius || '8px'};
-  background-color: rgba(0, 0, 10, 0.3);
+  background-color: ${({ backgroundColor }) => backgroundColor || 'rgba(0, 0, 10, 0.3)'};
   clip-path: ${({ enableClip }) =>
     enableClip === false ? 'none' : 'polygon(0 0, 100% 0, 100% 100%, 15% 100%, 0% 75%, 0 100%)'};
   z-index: 1;

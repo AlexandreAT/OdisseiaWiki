@@ -895,5 +895,6 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     handlePrev,
     handleSelectItem,
     handleUpdate,
+    setListRaces
   };
 };
