@@ -109,7 +109,7 @@ namespace OdisseiaWiki.Services
                 ? RichTextHelper.SerializeRichText(personagemDto.Historia) 
                 : personagem.Historia;
             personagem.Imagem = personagemDto.Imagem ?? personagem.Imagem;
-            personagem.GaleriaImagem = personagemDto.GaleriaImagem != null && personagemDto.GaleriaImagem.Any()
+            personagem.GaleriaImagem = personagemDto.GaleriaImagem != null
                 ? JsonSerializer.Serialize(personagemDto.GaleriaImagem)
                 : personagem.GaleriaImagem;
             personagem.Nanites = personagemDto.Nanites?.ToString() ?? personagem.Nanites;
