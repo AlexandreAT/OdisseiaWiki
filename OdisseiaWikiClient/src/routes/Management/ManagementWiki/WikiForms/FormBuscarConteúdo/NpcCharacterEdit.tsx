@@ -198,6 +198,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
 
   const [extraInformation, setExtraInformation] = React.useState('');
   const [galeriaUrls, setGaleriaUrls] = React.useState<string[]>([]);
+  const [galeriaPreviewFileMap, setGaleriaPreviewFileMap] = React.useState<Record<string, File>>({});
 
   const raceImageUrl = React.useMemo(
     () => selectedRace?.imagem ?? '/assets_dynamic/default.png',
@@ -283,6 +284,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
         });
         const loadedTags = parseJson<string[] | string>(payload.tags, []);
         const relacionados = parseJson<string[] | number[] | string | number>(payload.personagemsVinculados, []);
+        const loadedGaleria = parseJson<string[] | string>(payload.galeriaImagem, []);
 
         const relatedList = (Array.isArray(relacionados) ? relacionados : [relacionados])
           .map((item) => {
@@ -301,6 +303,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
         setRace(Number(payload.idraca));
         setCity(Number(payload.idcidade));
         setAvatarUrl(payload.imagem || '');
+        setGaleriaUrls(Array.isArray(loadedGaleria) ? loadedGaleria : []);
         setHistory(normalizeToJSONContent(tryParseRichText(payload.historia) || ''));
         setCostumes(Array.isArray(loadedCostumes) ? loadedCostumes[0] || '' : String(loadedCostumes || ''));
         setNanites(payload.nanites ? String(payload.nanites) : '');
@@ -461,17 +464,40 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
 
   const handleAddGaleria = React.useCallback((files: File[]) => {
     const urls = files.map((file) => URL.createObjectURL(file));
+
     setGaleriaUrls((prev) => [...prev, ...urls]);
-    toast('Imagens de galeria para NPC ficam apenas em pré-visualização por enquanto.');
+
+    setGaleriaPreviewFileMap((prev) => {
+      const next = { ...prev };
+
+      urls.forEach((url, index) => {
+        next[url] = files[index];
+      });
+
+      return next;
+    });
   }, []);
 
   const handleRemoveGaleria = React.useCallback((index: number) => {
     setGaleriaUrls((prev) => {
-      const imageUrl = prev[index];
-      if (imageUrl?.startsWith('blob:')) {
-        URL.revokeObjectURL(imageUrl);
+      const targetUrl = prev[index];
+      if (!targetUrl) return prev;
+
+      setGaleriaPreviewFileMap((mapPrev) => {
+        const next = { ...mapPrev };
+
+        if (next[targetUrl]) {
+          delete next[targetUrl];
+        }
+
+        return next;
+      });
+
+      if (targetUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(targetUrl);
       }
-      return prev.filter((_, currentIndex) => currentIndex !== index);
+
+      return prev.filter((_, i) => i !== index);
     });
   }, []);
 
@@ -509,6 +535,23 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
         });
         avatarPath = uploadResult.path;
       }
+
+      const galeriaPersistida = galeriaUrls.filter((url) => !url.startsWith("blob:"));
+      const novosArquivosGaleria = Object.values(galeriaPreviewFileMap);
+      const galeriaNovasPaths: string[] = [];
+
+      for (const file of novosArquivosGaleria) {
+        const result = await saveAsset({
+          imageFile: file,
+          type: "personagens",
+          entityName: userName,
+          folderName: "galeria",
+        });
+
+        galeriaNovasPaths.push(result.path);
+      }
+
+      const galeriaFinal = [...galeriaPersistida, ...galeriaNovasPaths];
 
       const statusPayload = {
         status: {
@@ -601,7 +644,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
         idcidade: city,
         historia: prepareForAPI(history),
         imagem: avatarPath,
-        galeriaImagem: galeriaUrls.filter((url) => !url.startsWith('blob:')),
+        galeriaImagem: galeriaFinal,
         costumes: costumes ? [costumes] : [],
         nanites: nanites ? Number(nanites) : undefined,
         alinhamento: alignment,

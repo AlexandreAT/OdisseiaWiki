@@ -8,6 +8,7 @@ export interface PersonagemPayload {
   idcidade: number;
   historia?: JSONContent | string;
   imagem?: string;
+  galeriaImagem?: string[];
   costumes: string[];
   nanites?: number;
   alinhamento?: string;
