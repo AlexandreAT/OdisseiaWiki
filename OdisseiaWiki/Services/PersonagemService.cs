@@ -2,6 +2,7 @@
 using OdisseiaWiki.Helpers;
 using OdisseiaWiki.Models;
 using OdisseiaWiki.Repositories.Interfaces;
+using OdisseiaWiki.Services.Helpers;
 using OdisseiaWiki.Services.Interfaces;
 using System.Text.Json;
 
@@ -71,6 +72,24 @@ namespace OdisseiaWiki.Services
             if (personagem == null)
                 return ResultPersonagem.Fail($"Personagem com id {id} não encontrado.");
 
+            if (!string.IsNullOrWhiteSpace(personagem.Imagem) &&
+                dto.Imagem != null &&
+                personagem.Imagem != dto.Imagem)
+            {
+                AssetFileHelper.DeleteIfExists(personagem.Imagem);
+            }
+
+            List<string>? oldGaleria = !string.IsNullOrWhiteSpace(personagem.GaleriaImagem)
+                ? JsonSerializer.Deserialize<List<string>>(personagem.GaleriaImagem)
+                : new List<string>();
+
+            List<string>? removedImages = AssetDiffHelper.GetRemovedFiles(oldGaleria, dto.GaleriaImagem);
+
+            foreach (string? img in removedImages)
+            {
+                AssetFileHelper.DeleteIfExists(img);
+            }
+
             personagem.Nome = dto.Nome ?? personagem.Nome;
             personagem.Idraca = dto.Idraca;
             personagem.Idcidade = dto.Idcidade;
@@ -79,7 +98,9 @@ namespace OdisseiaWiki.Services
                 : personagem.Historia;
             personagem.StatusJson = dto.StatusJson != null ? JsonSerializer.Serialize(dto.StatusJson) : personagem.StatusJson;
             personagem.Imagem = dto.Imagem ?? personagem.Imagem;
-            personagem.GaleriaImagem = dto.GaleriaImagem != null ? JsonSerializer.Serialize(dto.GaleriaImagem) : personagem.GaleriaImagem;
+            personagem.GaleriaImagem = dto.GaleriaImagem != null
+                ? JsonSerializer.Serialize(dto.GaleriaImagem)
+                : personagem.GaleriaImagem;
             personagem.InventarioJson = dto.InventarioJson != null ? JsonSerializer.Serialize(dto.InventarioJson) : personagem.InventarioJson;
             personagem.Skills = dto.Skills != null ? JsonSerializer.Serialize(dto.Skills) : personagem.Skills;
             personagem.Magia = dto.Magia != null ? JsonSerializer.Serialize(dto.Magia) : personagem.Magia;

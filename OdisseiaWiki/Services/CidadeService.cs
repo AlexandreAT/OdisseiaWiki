@@ -2,6 +2,7 @@
 using OdisseiaWiki.Helpers;
 using OdisseiaWiki.Models;
 using OdisseiaWiki.Repositories.Interfaces;
+using OdisseiaWiki.Services.Helpers;
 using OdisseiaWiki.Services.Interfaces;
 using System.Text.Json;
 
@@ -51,6 +52,24 @@ namespace OdisseiaWiki.Services
             var cidade = await _repository.GetByIdAsync(id);
             if (cidade == null)
                 return ResultCidade.Fail($"Cidade com id {id} não encontrada.");
+
+            if (!string.IsNullOrWhiteSpace(cidade.Imagem) &&
+                dto.Imagem != null &&
+                cidade.Imagem != dto.Imagem)
+            {
+                AssetFileHelper.DeleteIfExists(cidade.Imagem);
+            }
+
+            List<string>? oldGaleria = !string.IsNullOrWhiteSpace(cidade.GaleriaImagem)
+                ? JsonSerializer.Deserialize<List<string>>(cidade.GaleriaImagem)
+                : new List<string>();
+
+            List<string>? removedImages = AssetDiffHelper.GetRemovedFiles(oldGaleria, dto.GaleriaImagem);
+
+            foreach (string? img in removedImages)
+            {
+                AssetFileHelper.DeleteIfExists(img);
+            }
 
             cidade.Nome = dto.Nome ?? cidade.Nome;
             cidade.Descricao = dto.Descricao.HasValue 

@@ -1,6 +1,7 @@
 ﻿using OdisseiaWiki.Dtos;
 using OdisseiaWiki.Models;
 using OdisseiaWiki.Repositories.Interfaces;
+using OdisseiaWiki.Services.Helpers;
 using OdisseiaWiki.Services.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -50,6 +51,24 @@ namespace OdisseiaWiki.Services
             var raca = await _repository.GetByIdAsync(id);
             if (raca == null)
                 return ResultRaca.Fail($"Raça com id {id} não encontrada.");
+
+            if (!string.IsNullOrWhiteSpace(raca.Imagem) &&
+                dto.Imagem != null &&
+                raca.Imagem != dto.Imagem)
+            {
+                AssetFileHelper.DeleteIfExists(raca.Imagem);
+            }
+
+            List<string>? oldGaleria = !string.IsNullOrWhiteSpace(raca.GaleriaImagem)
+                ? JsonSerializer.Deserialize<List<string>>(raca.GaleriaImagem)
+                : new List<string>();
+
+            List<string>? removedImages = AssetDiffHelper.GetRemovedFiles(oldGaleria, dto.GaleriaImagem);
+
+            foreach (string? img in removedImages)
+            {
+                AssetFileHelper.DeleteIfExists(img);
+            }
 
             raca.Nome = dto.Nome ?? raca.Nome;
             raca.StatusJson = dto.StatusJson != null

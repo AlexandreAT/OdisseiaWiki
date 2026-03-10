@@ -1,6 +1,8 @@
 ﻿using OdisseiaWiki.Dtos;
 using OdisseiaWiki.Helpers;
+using OdisseiaWiki.Models;
 using OdisseiaWiki.Repositories.Interfaces;
+using OdisseiaWiki.Services.Helpers;
 using OdisseiaWiki.Services.Interfaces;
 using System.Text.Json;
 
@@ -99,6 +101,25 @@ namespace OdisseiaWiki.Services
         {
             var item = await _repository.GetByIdAsync(dto.Iditem);
             if (item is null) return false;
+
+            if (!string.IsNullOrWhiteSpace(item.Imagem) &&
+                dto.Imagem != null &&
+                item.Imagem != dto.Imagem)
+            {
+                AssetFileHelper.DeleteIfExists(item.Imagem);
+            }
+
+            // =============== QUANDO TIVER GALERIA DE IMAGENS ===============
+            //List<string>? oldGaleria = !string.IsNullOrWhiteSpace(item.GaleriaImagem)
+            //    ? JsonSerializer.Deserialize<List<string>>(item.GaleriaImagem)
+            //    : new List<string>();
+
+            //List<string>? removedImages = AssetDiffHelper.GetRemovedFiles(oldGaleria, dto.GaleriaImagem);
+
+            //foreach (string? img in removedImages)
+            //{
+            //    AssetFileHelper.DeleteIfExists(img);
+            //}
 
             item.Nome = dto.Nome;
             item.Tipo = dto.Tipo;

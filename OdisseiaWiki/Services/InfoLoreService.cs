@@ -2,12 +2,13 @@ using OdisseiaWiki.Dtos;
 using OdisseiaWiki.Helpers;
 using OdisseiaWiki.Models;
 using OdisseiaWiki.Repositories.Interfaces;
+using OdisseiaWiki.Services.Helpers;
 using OdisseiaWiki.Services.Interfaces;
-using System.Text.Json;
-using System.Linq;
-using System.Threading.Tasks;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace OdisseiaWiki.Services
 {
@@ -60,6 +61,25 @@ namespace OdisseiaWiki.Services
             var infoLore = await _infoLoreRepo.GetByIdAsync(id);
             if (infoLore == null)
                 return ResultInfoLore.Fail($"InfoLore com id {id} não encontrado.");
+
+            if (!string.IsNullOrWhiteSpace(infoLore.Imagem) &&
+                dto.Imagem != null &&
+                infoLore.Imagem != dto.Imagem)
+            {
+                AssetFileHelper.DeleteIfExists(infoLore.Imagem);
+            }
+
+            // =============== QUANDO TIVER GALERIA DE IMAGENS ===============
+            //List<string>? oldGaleria = !string.IsNullOrWhiteSpace(infoLore.GaleriaImagem)
+            //    ? JsonSerializer.Deserialize<List<string>>(infoLore.GaleriaImagem)
+            //    : new List<string>();
+
+            //List<string>? removedImages = AssetDiffHelper.GetRemovedFiles(oldGaleria, dto.GaleriaImagem);
+
+            //foreach (string? img in removedImages)
+            //{
+            //    AssetFileHelper.DeleteIfExists(img);
+            //}
 
             infoLore.Titulo = dto.Titulo ?? infoLore.Titulo;
             infoLore.Descricao = dto.Descricao.HasValue
