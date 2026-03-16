@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { FormCharacter } from './FormCharacter/FormCharacter';
 import { FormCity } from './FormCity/FormCity';
 import { FormRace } from './FormRace/FormRace';
+import { FormItem } from './FormItem/FormItem';
 
 interface FormProps {
   theme: 'dark' | 'light';
@@ -29,7 +30,7 @@ export const FormCriarConteúdo = ({ theme, neon }: FormProps) => {
             case 'race':
                 return <FormRace theme={theme} neon={neon} />;
             case 'item':
-                return <p>Form item</p>;
+                return <FormItem theme={theme} neon={neon} />;
             default:
                 return null;
         }

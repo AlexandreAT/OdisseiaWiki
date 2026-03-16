@@ -25,7 +25,7 @@ public partial class Item
     [MaxLength(100)]
     public string? Efeito { get; set; }
 
-    [MaxLength(50)]
+    [MaxLength(255)]
     public string? Imagem { get; set; }
 
     public string? AtributosJson { get; set; }

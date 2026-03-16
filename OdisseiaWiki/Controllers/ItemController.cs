@@ -24,10 +24,10 @@ namespace OdisseiaWiki.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create(ItemCreateDto dto)
+        public async Task<IActionResult> Create([FromBody] ItemCreateDto dto)
         {
             string id = await _service.CreateAsync(dto);
-            return CreatedAtAction(nameof(GetById), new { id }, null);
+            return Ok(new{ sucesso = true });
         }
 
         [HttpPut("{id:guid}")]
