@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { RaceFormErrors, UploadResult } from './FormRace.type';
-import { RacaStatus, CreateRacaDto, createRaca } from '../../../../../../services/racasService';
+import { RacaStatus, CreateRacaDto, createRaca, updateRaca, RacaPayload } from '../../../../../../services/racasService';
 import { saveAsset } from '../../../../../../services/assetsService';
 
 const ATRIBUTO_OPTIONS = [
@@ -12,23 +12,42 @@ const ATRIBUTO_OPTIONS = [
   { value: 'Inteligência', label: 'Inteligência' },
 ];
 
-export const useFormRace = () => {
-  const [nome, setNome] = useState('');
-  const [imagemUrl, setImagemUrl] = useState('');
+export const useFormRace = (initialRaca?: RacaPayload) => {
+  const [racaId] = useState<number | undefined>(initialRaca?.idraca);
+  const [nome, setNome] = useState(initialRaca?.nome || '');
+  const [imagemUrl, setImagemUrl] = useState(initialRaca?.imagem || '');
   const [imagemFile, setImagemFile] = useState<File | null>(null);
-  const [galeriaUrls, setGaleriaUrls] = useState<string[]>([]);
+  
+  // Garantir que galeriaImagem é sempre um array
+  const parseGaleriaImagem = (): string[] => {
+    if (!initialRaca?.galeriaImagem) return [];
+    if (typeof initialRaca.galeriaImagem === 'string') {
+      try {
+        return JSON.parse(initialRaca.galeriaImagem);
+      } catch (e) {
+        console.error('Erro ao parsear galeriaImagem:', e);
+        return [];
+      }
+    }
+    return Array.isArray(initialRaca.galeriaImagem) ? initialRaca.galeriaImagem : [];
+  };
+  
+  // URLs existentes (do servidor) - rastreadas separadamente para não enviar BLOBs
+  const [existingGaleriaUrls, setExistingGaleriaUrls] = useState<string[]>(parseGaleriaImagem());
+  // Inclui URLs existentes + BLOBs temporários (para preview)
+  const [galeriaUrls, setGaleriaUrls] = useState<string[]>(parseGaleriaImagem());
   const [galeriaFiles, setGaleriaFiles] = useState<File[]>([]);
-  const [tags, setTags] = useState<string[]>([]);
+  const [tags, setTags] = useState<string[]>(initialRaca?.tags || []);
   const [tagInput, setTagInput] = useState('');
-  const [visivel, setVisivel] = useState(true);
+  const [visivel, setVisivel] = useState(initialRaca?.visivel !== false);
 
   // Status
-  const [vida, setVida] = useState(100);
-  const [estamina, setEstamina] = useState(100);
-  const [mana, setMana] = useState(100);
-  const [capacidadeCarga, setCapacidadeCarga] = useState(50);
-  const [atributoInicial, setAtributoInicial] = useState('');
-  const [passivas, setPassivas] = useState<string[]>([]);
+  const [vida, setVida] = useState(initialRaca?.statusJson?.status?.vida || 100);
+  const [estamina, setEstamina] = useState(initialRaca?.statusJson?.status?.estamina || 100);
+  const [mana, setMana] = useState(initialRaca?.statusJson?.status?.mana || 100);
+  const [capacidadeCarga, setCapacidadeCarga] = useState(initialRaca?.statusJson?.status?.capacidadeCarga || 50);
+  const [atributoInicial, setAtributoInicial] = useState(initialRaca?.statusJson?.atributoInicial || '');
+  const [passivas, setPassivas] = useState<string[]>(initialRaca?.statusJson?.passivas || []);
   const [passivaInput, setPassivaInput] = useState('');
 
   const [errors, setErrors] = useState<RaceFormErrors>({});
@@ -50,6 +69,12 @@ export const useFormRace = () => {
   };
 
   const validateImagem = (url: string, file: File | null): boolean => {
+    // Em modo edição (racaId existe), imagem não é obrigatória pois já existe
+    if (racaId) {
+      setImagemError('');
+      return true;
+    }
+    // Em modo criação, imagem é obrigatória
     if (!url && !file) {
       setImagemError('Imagem principal é obrigatória');
       return false;
@@ -124,11 +149,22 @@ export const useFormRace = () => {
     setGaleriaUrls(prev => [...prev, ...urls]);
   };
 
-  const handleRemoveGaleriaImage = (index: number) => {
-    setGaleriaFiles(prev => prev.filter((_, i) => i !== index));
+  const handleRemoveGaleriaImage = (indexToRemove: number) => {
+    // Número de URLs existentes do servidor
+    const existingCount = existingGaleriaUrls.length;
+    
+    if (indexToRemove < existingCount) {
+      // Remover de URLs existentes
+      setExistingGaleriaUrls(prev => prev.filter((_, i) => i !== indexToRemove));
+    } else {
+      // Remover de arquivos novos (galeriaFiles)
+      const fileIndex = indexToRemove - existingCount;
+      setGaleriaFiles(prev => prev.filter((_, i) => i !== fileIndex));
+    }
+    
     setGaleriaUrls(prev => {
-      const newUrls = prev.filter((_, i) => i !== index);
-      URL.revokeObjectURL(prev[index]);
+      const newUrls = prev.filter((_, i) => i !== indexToRemove);
+      URL.revokeObjectURL(prev[indexToRemove]);
       return newUrls;
     });
   };
@@ -161,19 +197,28 @@ export const useFormRace = () => {
     const result: UploadResult = {};
 
     try {
-      // Upload imagem principal
+      // Upload imagem principal - preserva URL existente se não houver novo arquivo
+      let imagemPath = imagemUrl;
       if (imagemFile) {
         const response = await saveAsset({
           imageFile: imagemFile,
           type: 'raca',
           entityName: nome,
         });
-        result.imagemPath = response.path;
+        imagemPath = response.path;
+      }
+      if (imagemPath) {
+        result.imagemPath = imagemPath;
       }
 
-      // Upload galeria
+      // Upload galeria - começa apenas com URLs existentes (do servidor), sem BLOBs temporários
+      let galeriaPaths: string[] | undefined = existingGaleriaUrls.length > 0 ? [...existingGaleriaUrls] : undefined;
+      
+      // Adiciona novos uploads
       if (galeriaFiles.length > 0) {
-        const galeriaPaths: string[] = [];
+        if (!galeriaPaths) {
+          galeriaPaths = [];
+        }
         for (const file of galeriaFiles) {
           const response = await saveAsset({
             imageFile: file,
@@ -183,6 +228,8 @@ export const useFormRace = () => {
           });
           galeriaPaths.push(response.path);
         }
+      }
+      if (galeriaPaths) {
         result.galeriaPaths = galeriaPaths;
       }
 
@@ -243,17 +290,17 @@ export const useFormRace = () => {
         return { success: false, message: 'Erro ao preparar dados da raça' };
       }
 
-      const result = await createRaca(dto);
+      const result = racaId ? await updateRaca(racaId, dto) : await createRaca(dto);
 
       if (result.sucesso) {
         resetForm();
-        return { success: true, message: 'Raça criada com sucesso!' };
+        return { success: true, message: racaId ? 'Raça atualizada com sucesso!' : 'Raça criada com sucesso!' };
       } else {
-        return { success: false, message: result.mensagemErro || 'Erro ao criar raça' };
+        return { success: false, message: result.mensagemErro || (racaId ? 'Erro ao atualizar raça' : 'Erro ao criar raça') };
       }
     } catch (error) {
       console.error('Erro ao criar raça:', error);
-      return { success: false, message: 'Erro ao criar raça. Tente novamente.' };
+      return { success: false, message: racaId ? 'Erro ao atualizar raça. Tente novamente.' : 'Erro ao criar raça. Tente novamente.' };
     } finally {
       setIsSubmitting(false);
     }
@@ -281,6 +328,7 @@ export const useFormRace = () => {
   };
 
   return {
+    racaId,
     nome,
     imagemUrl,
     imagemFile,

@@ -12,7 +12,6 @@ import {
   FormHeader,
   HeaderInfo,
   ImageSection,
-  SectionTitle,
   DescriptionSection,
   ButtonsContainer,
   ErrorText,
@@ -27,10 +26,13 @@ import {
 interface FormCityProps {
   theme: 'dark' | 'light';
   neon: 'on' | 'off';
+  initialCity?: import('../../../../../../services/cidadesService').CidadePayload;
+  onSaveSuccess?: () => void;
 }
 
-export const FormCity = ({ theme, neon }: FormCityProps) => {
+export const FormCity = ({ theme, neon, initialCity, onSaveSuccess }: FormCityProps) => {
   const {
+    cidadeId,
     nome,
     descricao,
     imagemUrl,
@@ -58,7 +60,7 @@ export const FormCity = ({ theme, neon }: FormCityProps) => {
     getFilteredInfoLores,
     handleSubmit,
     resetForm,
-  } = useFormCity();
+  } = useFormCity(initialCity);
 
   const tagInputRef = useRef<HTMLInputElement>(null);
 
@@ -83,8 +85,11 @@ export const FormCity = ({ theme, neon }: FormCityProps) => {
     
     if (result?.success) {
       alert(result.message);
+      if (onSaveSuccess) {
+        onSaveSuccess();
+      }
     } else {
-      alert(result?.message || 'Erro ao criar cidade');
+      alert(result?.message || 'Erro ao salvar cidade');
     }
   };
 
@@ -229,7 +234,7 @@ export const FormCity = ({ theme, neon }: FormCityProps) => {
           type="submit"
           disabled={isSubmitting}
         >
-          {isSubmitting ? 'Criando...' : 'Criar Cidade'}
+          {isSubmitting ? 'Salvando...' : cidadeId ? 'Atualizar Cidade' : 'Criar Cidade'}
         </CyberButton>
       </ButtonsContainer>
     </FormController>

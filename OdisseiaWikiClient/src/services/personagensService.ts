@@ -151,3 +151,8 @@ export const atualizarPersonagem = async (
   const response = await api.put(`/personagens/${id}`, payload);
   return response.data;
 };
+
+export const deletePersonagem = async (id: string): Promise<boolean> => {
+  const response = await api.delete(`/personagens/${id}`);
+  return response.status === 204 || response.status === 200;
+};

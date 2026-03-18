@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ItemTipo, JSONContent } from "../../../../../../models/Itens";
 import { saveAsset } from "../../../../../../services/assetsService";
 import { prepareForAPI } from "../../../../../../utils/richTextHelpers";
-import { salvarItem } from "../../../../../../services/itensService";
+import { salvarItem, ItemPayload } from "../../../../../../services/itensService";
 
 // Atributos iniciais para cada tipo
 const getEmptyAtributos = (tipo: ItemTipo): any => {
@@ -44,26 +44,76 @@ const getEmptyAtributos = (tipo: ItemTipo): any => {
   }
 };
 
-export const useFormItem = () => {
+const parseJson = <T,>(value: unknown, fallback: T): T => {
+  if (value === undefined || value === null) return fallback;
 
-  const [nome, setNome] = useState("");
-  const [tipo, setTipo] = useState<ItemTipo>("outro");
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value) as T;
+    } catch {
+      return fallback;
+    }
+  }
 
-  const [descricao, setDescricao] = useState<JSONContent | string>("");
+  return value as T;
+};
 
-  const [peso, setPeso] = useState<number | undefined>();
-  const [quantidade, setQuantidade] = useState(1);
-  const [efeito, setEfeito] = useState("");
+const tryParseRichText = (value: any) => {
+  let current = value;
 
-  const [imagemUrl, setImagemUrl] = useState("");
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if (typeof current !== 'string') return current;
+
+    const trimmed = current.trim();
+    if (!trimmed) return current;
+
+    const looksLikeJsonObjectOrArray =
+      (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+      (trimmed.startsWith('[') && trimmed.endsWith(']'));
+
+    const looksLikeQuotedJsonString = trimmed.startsWith('"') && trimmed.endsWith('"');
+
+    if (!looksLikeJsonObjectOrArray && !looksLikeQuotedJsonString) {
+      return current;
+    }
+
+    try {
+      current = JSON.parse(trimmed);
+    } catch {
+      return current;
+    }
+  }
+
+  return current;
+};
+
+export const useFormItem = (initialItem?: ItemPayload) => {
+
+  const [itemId] = useState<string | undefined>(initialItem?.iditem);
+  const [nome, setNome] = useState(initialItem?.nome || "");
+  const [tipo, setTipo] = useState<ItemTipo>((initialItem?.tipo?.toLowerCase() as ItemTipo) || "outro");
+
+  const [descricao, setDescricao] = useState<JSONContent | string>(
+    initialItem?.descricao ? tryParseRichText(initialItem.descricao) : ""
+  );
+
+  const [peso, setPeso] = useState<number | undefined>(initialItem?.peso);
+  const [quantidade, setQuantidade] = useState(initialItem?.quantidade || 1);
+  const [efeito, setEfeito] = useState(initialItem?.efeito || "");
+
+  const [imagemUrl, setImagemUrl] = useState(initialItem?.imagem || "");
   const [imagemFile, setImagemFile] = useState<File | null>(null);
 
-  const [atributos, setAtributos] = useState<any>(getEmptyAtributos("outro"));
+  const [atributos, setAtributos] = useState<any>(
+    initialItem?.atributosJson 
+      ? parseJson(initialItem.atributosJson, getEmptyAtributos(tipo))
+      : getEmptyAtributos(tipo)
+  );
 
-  const [tags, setTags] = useState<string[]>([]);
+  const [tags, setTags] = useState<string[]>(initialItem?.tags || []);
   const [tagInput, setTagInput] = useState("");
 
-  const [visivel, setVisivel] = useState(true);
+  const [visivel, setVisivel] = useState(initialItem?.visivel !== false);
 
   const [nomeError, setNomeError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -195,9 +245,15 @@ export const useFormItem = () => {
 
     try {
 
-      const imagemPath = await uploadImage();
+      let imagemPath = imagemUrl;
+      
+      // Apenas faz upload se houver novo arquivo
+      if (imagemFile) {
+        imagemPath = await uploadImage() || imagemUrl;
+      }
 
       const dto = {
+        iditem: itemId,
         nome: nome.trim(),
         tipo: capitalizeFirst(tipo),
         descricao: prepareForAPI(descricao),
@@ -210,26 +266,48 @@ export const useFormItem = () => {
         visivel
       };
 
-      const response = await salvarItem(dto);
+      let response;
+      
+      if (itemId) {
+        // Modo edição
+        const { atualizarItem } = await import("../../../../../../services/itensService");
+        const updated = await atualizarItem(itemId, dto);
+        
+        if (!updated) {
+          setIsSubmitting(false);
+          return {
+            success: false,
+            message: "Erro ao atualizar item"
+          };
+        }
+        
+        resetForm();
+        setIsSubmitting(false);
+        
+        return {
+          success: true,
+          message: "Item atualizado com sucesso!"
+        };
+      } else {
+        // Modo criação
+        response = await salvarItem(dto);
 
-      if (!response.sucesso) {
+        if (!response.sucesso) {
+          setIsSubmitting(false);
+          return {
+            success: false,
+            message: response.mensagemErro || "Erro ao criar item"
+          };
+        }
 
+        resetForm();
         setIsSubmitting(false);
 
         return {
-          success: false,
-          message: response.mensagemErro || "Erro ao criar item"
+          success: true,
+          message: "Item criado com sucesso!"
         };
       }
-
-      resetForm();
-
-      setIsSubmitting(false);
-
-      return {
-        success: true,
-        message: "Item criado com sucesso!"
-      };
 
     }
     catch (error: any) {
@@ -245,6 +323,7 @@ export const useFormItem = () => {
   };
 
   return {
+    itemId,
     nome,
     setNome,
     tipo,

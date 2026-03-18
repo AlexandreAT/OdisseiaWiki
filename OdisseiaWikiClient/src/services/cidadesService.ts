@@ -46,3 +46,18 @@ export const createCidade = async (dto: CreateCidadeDto): Promise<ResultCreateCi
   const response = await api.post("/cidades", dto);
   return response.data;
 };
+
+export const getCidadeById = async (id: number): Promise<ResultCreateCidade> => {
+  const response = await api.get(`/cidades/${id}`);
+  return response.data;
+};
+
+export const updateCidade = async (id: number, dto: CreateCidadeDto): Promise<ResultCreateCidade> => {
+  const response = await api.put(`/cidades/${id}`, dto);
+  return response.data;
+};
+
+export const deleteCidade = async (id: number): Promise<boolean> => {
+  const response = await api.delete(`/cidades/${id}`);
+  return response.status === 204 || response.status === 200;
+};

@@ -1,10 +1,16 @@
-import { Select } from "../../../../../../components/Generic/Select/Select";
-import { CheckBox } from "../../../../../../components/Generic/CheckBox/CheckBox";
-import { RichTextEditor } from "../../../../../../components/Generic/RichTextEditor/RichTextEditor";
-import { ImageUpload } from "../../../../../../components/Generic/ImageUpload/ImageUpload";
-import { CyberButton } from "../../../../../../components/Generic/HighlightButton/HighlightButton";
-import { InputText } from "../../../../../../components/Generic/InputText/InputText";
-import { ItemTipo } from "../../../../../../models/Itens";
+import React, { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
+import { CyberButton } from '../../../../../components/Generic/HighlightButton/HighlightButton';
+import { Select } from '../../../../../components/Generic/Select/Select';
+import { CheckBox } from '../../../../../components/Generic/CheckBox/CheckBox';
+import { RichTextEditor } from '../../../../../components/Generic/RichTextEditor/RichTextEditor';
+import { ImageUpload } from '../../../../../components/Generic/ImageUpload/ImageUpload';
+import { InputText } from '../../../../../components/Generic/InputText/InputText';
+import { getItemById, excluirItem } from '../../../../../services/itensService';
+import { useFormItem } from '../FormCriarConteúdo/FormItem/useFormItem';
+import { ItemPayload } from '../../../../../services/itensService';
+import { ItemTipo } from '../../../../../models/Itens';
+import { atributosFormMap } from '../FormCriarConteúdo/FormCharacter/MapItensForm';
 import {
   FormController,
   FormHeader,
@@ -24,16 +30,9 @@ import {
   TagItem,
   TagRemoveButton,
   TagInput,
-} from "./FormItem.style";
-import { useFormItem } from "./useFormItem";
-import { atributosFormMap } from "../FormCharacter/MapItensForm";
-import toast from "react-hot-toast";
-import { MdClose } from "react-icons/md";
-
-interface FormItemProps {
-  theme: 'dark' | 'light';
-  neon: 'on' | 'off';
-}
+} from '../FormCriarConteúdo/FormItem/FormItem.style';
+import { MdClose } from 'react-icons/md';
+import styled from 'styled-components';
 
 const ITEM_TIPO_OPTIONS: { value: ItemTipo; label: string }[] = [
   { value: "arma", label: "Arma" },
@@ -43,9 +42,153 @@ const ITEM_TIPO_OPTIONS: { value: ItemTipo; label: string }[] = [
   { value: "outro", label: "Outro" },
 ];
 
-export const FormItem = ({ theme, neon }: FormItemProps) => {
+const EditHeader = styled.div<{ theme: 'dark' | 'light'; neon: 'on' | 'off' }>`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px;
+  background: ${props => props.theme === 'dark' ? '#1a1a1a' : '#f5f5f5'};
+  border: 1px solid ${props => props.neon === 'on' ? '#00ff00' : '#333'};
+  border-radius: 8px;
+  margin-bottom: 20px;
+
+  h2 {
+    margin: 0;
+    color: ${props => props.theme === 'dark' ? '#fff' : '#000'};
+    font-size: 20px;
+  }
+`;
+
+const LoadingContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  font-size: 18px;
+`;
+
+interface ItemEditProps {
+  theme: 'dark' | 'light';
+  neon: 'on' | 'off';
+  itemId: string;
+  onBack: () => void;
+  onSave?: () => void;
+}
+
+export const ItemEdit: React.FC<ItemEditProps> = ({ theme, neon, itemId, onBack, onSave }) => {
+  const [item, setItem] = useState<ItemPayload | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadItem = async () => {
+      try {
+        setIsLoading(true);
+        const loadedItem = await getItemById(itemId);
+        setItem(loadedItem);
+        setError(null);
+      } catch (err: any) {
+        console.error('Erro ao carregar item:', err);
+        setError('Erro ao carregar item para edição');
+        toast.error('Erro ao carregar item');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadItem();
+  }, [itemId]);
+
+  if (isLoading) {
+    return (
+      <LoadingContainer>
+        <span>Carregando item...</span>
+      </LoadingContainer>
+    );
+  }
+
+  if (error) {
+    return (
+      <div>
+        <EditHeader theme={theme} neon={neon}>
+          <h2>Erro ao editar item</h2>
+          <CyberButton
+            type="button"
+            onClick={onBack}
+            theme={theme}
+            neon={neon}
+            colorType="secondary"
+            text="Voltar"
+            width="120px"
+          />
+        </EditHeader>
+        <div style={{ padding: '20px' }}>
+          <p>{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!item) {
+    return (
+      <div>
+        <EditHeader theme={theme} neon={neon}>
+          <h2>Item não encontrado</h2>
+          <CyberButton
+            type="button"
+            onClick={onBack}
+            theme={theme}
+            neon={neon}
+            colorType="secondary"
+            text="Voltar"
+            width="120px"
+          />
+        </EditHeader>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <EditHeader theme={theme} neon={neon}>
+        <h2>Editando: {item.nome}</h2>
+        <CyberButton
+          type="button"
+          onClick={onBack}
+          theme={theme}
+          neon={neon}
+          colorType="secondary"
+          text="Voltar"
+          width="120px"
+        />
+      </EditHeader>
+      <ItemEditFormComponent
+        theme={theme}
+        neon={neon}
+        initialItem={item}
+        onBack={onBack}
+        onSave={onSave}
+      />
+    </div>
+  );
+};
+
+interface ItemEditFormComponentProps {
+  theme: 'dark' | 'light';
+  neon: 'on' | 'off';
+  initialItem: ItemPayload;
+  onBack: () => void;
+  onSave?: () => void;
+}
+
+const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
+  theme,
+  neon,
+  initialItem,
+  onBack,
+  onSave
+}) => {
   const {
-    itemId,
     nome,
     setNome,
     tipo,
@@ -70,10 +213,9 @@ export const FormItem = ({ theme, neon }: FormItemProps) => {
     visivel,
     setVisivel,
     handleSubmit,
-    resetForm,
     isSubmitting,
     nomeError,
-  } = useFormItem();
+  } = useFormItem(initialItem);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,8 +223,34 @@ export const FormItem = ({ theme, neon }: FormItemProps) => {
 
     if (result?.success) {
       toast.success(result.message);
+      if (onSave) {
+        onSave();
+      }
+      onBack();
     } else {
-      toast.error(result?.message || "Erro ao criar item");
+      toast.error(result?.message || 'Erro ao atualizar item');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!initialItem.iditem) return;
+
+    const confirmed = window.confirm(
+      `Tem certeza que deseja excluir o item "${initialItem.nome}"? Esta ação não pode ser desfeita.`
+    );
+
+    if (confirmed) {
+      try {
+        await excluirItem(initialItem.iditem);
+        toast.success('Item excluído com sucesso');
+        if (onSave) {
+          onSave();
+        }
+        onBack();
+      } catch (error: any) {
+        toast.error('Erro ao excluir item');
+        console.error('Erro ao excluir:', error);
+      }
     }
   };
 
@@ -97,7 +265,7 @@ export const FormItem = ({ theme, neon }: FormItemProps) => {
           <InputText
             label="Nome do Item*"
             value={nome}
-            onChange={(e) => setNome(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNome(e.target.value)}
             theme={theme}
             neon={neon}
             error={!!nomeError}
@@ -107,7 +275,7 @@ export const FormItem = ({ theme, neon }: FormItemProps) => {
           <Select
             label="Tipo*"
             value={tipo}
-            onChange={(e) => setTipo(e.target.value as ItemTipo)}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setTipo(e.target.value as ItemTipo)}
             theme={theme}
             neon={neon}
             options={ITEM_TIPO_OPTIONS}
@@ -136,7 +304,7 @@ export const FormItem = ({ theme, neon }: FormItemProps) => {
         <InputText
           label="Efeito"
           value={efeito}
-          onChange={(e) => setEfeito(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEfeito(e.target.value)}
           theme={theme}
           neon={neon}
         />
@@ -236,7 +404,7 @@ export const FormItem = ({ theme, neon }: FormItemProps) => {
         <CheckBox
           label="Item visível"
           checked={visivel}
-          onChange={(v) => setVisivel(v)}
+          onChange={(v: boolean) => setVisivel(v)}
           neon={neon}
         />
       </CheckboxContainer>
@@ -245,11 +413,11 @@ export const FormItem = ({ theme, neon }: FormItemProps) => {
       <ButtonsContainer theme={theme} neon={neon}>
         <CyberButton
           type="button"
-          onClick={resetForm}
+          onClick={handleDelete}
           theme={theme}
           neon={neon}
           colorType="secondary"
-          text="Limpar Formulário"
+          text="Excluir Item"
           width="160px"
         />
         <CyberButton
@@ -258,7 +426,7 @@ export const FormItem = ({ theme, neon }: FormItemProps) => {
           theme={theme}
           neon={neon}
           colorType="primary"
-          text={isSubmitting ? (itemId ? "Atualizando..." : "Criando...") : (itemId ? "Atualizar Item" : "Criar Item")}
+          text={isSubmitting ? "Atualizando..." : "Atualizar Item"}
           width="160px"
         />
       </ButtonsContainer>

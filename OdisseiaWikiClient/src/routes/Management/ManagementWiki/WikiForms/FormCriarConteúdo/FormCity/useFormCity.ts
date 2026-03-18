@@ -1,24 +1,43 @@
 import { useState } from 'react';
 import { CityFormErrors, CidadeDto } from './FormCity.type';
-import { createCidade } from '../../../../../../services/cidadesService';
+import { createCidade, updateCidade, CidadePayload } from '../../../../../../services/cidadesService';
 import { saveAsset } from '../../../../../../services/assetsService';
 import { JSONContent } from '../../../../../../models/Cities';
 import { PontoDeInteresse } from '../../../../../../models/InfoLore';
 import { prepareForAPI } from '../../../../../../utils/richTextHelpers';
 import { infoLoresMock } from '../../../../../../Mock/infolore.mock';
 
-export const useFormCity = () => {
-  const [nome, setNome] = useState('');
-  const [descricao, setDescricao] = useState<JSONContent | string>('');
-  const [imagemUrl, setImagemUrl] = useState('');
+export const useFormCity = (initialCity?: CidadePayload) => {
+  const [cidadeId] = useState<number | undefined>(initialCity?.idcidade);
+  const [nome, setNome] = useState(initialCity?.nome || '');
+  const [descricao, setDescricao] = useState<JSONContent | string>(initialCity?.descricao || '');
+  const [imagemUrl, setImagemUrl] = useState(initialCity?.imagem || '');
   const [imagemFile, setImagemFile] = useState<File | null>(null);
-  const [galeriaUrls, setGaleriaUrls] = useState<string[]>([]);
+  
+  // Garantir que galeriaImagem é sempre um array
+  const parseGaleriaImagem = (): string[] => {
+    if (!initialCity?.galeriaImagem) return [];
+    if (typeof initialCity.galeriaImagem === 'string') {
+      try {
+        return JSON.parse(initialCity.galeriaImagem);
+      } catch (e) {
+        console.error('Erro ao parsear galeriaImagem:', e);
+        return [];
+      }
+    }
+    return Array.isArray(initialCity.galeriaImagem) ? initialCity.galeriaImagem : [];
+  };
+  
+  // URLs existentes (do servidor) - rastreadas separadamente para não enviar BLOBs
+  const [existingGaleriaUrls, setExistingGaleriaUrls] = useState<string[]>(parseGaleriaImagem());
+  // Inclui URLs existentes + BLOBs temporários (para preview)
+  const [galeriaUrls, setGaleriaUrls] = useState<string[]>(parseGaleriaImagem());
   const [galeriaFiles, setGaleriaFiles] = useState<File[]>([]);
-  const [tags, setTags] = useState<string[]>([]);
+  const [tags, setTags] = useState<string[]>(initialCity?.tags || []);
   const [tagInput, setTagInput] = useState('');
-  const [pontosDeInteresse, setPontosDeInteresse] = useState<PontoDeInteresse[]>([]);
+  const [pontosDeInteresse, setPontosDeInteresse] = useState<PontoDeInteresse[]>(initialCity?.pontosDeInteresse || []);
   const [pontoInteresseSearch, setPontoInteresseSearch] = useState('');
-  const [visivel, setVisivel] = useState(true);
+  const [visivel, setVisivel] = useState(initialCity?.visivel !== false);
 
   const [errors, setErrors] = useState<CityFormErrors>({});
   const [nomeError, setNomeError] = useState('');
@@ -40,6 +59,12 @@ export const useFormCity = () => {
   };
 
   const validateImagem = (url: string, file: File | null): boolean => {
+    // Em modo edição (cidadeId existe), imagem não é obrigatória pois já existe
+    if (cidadeId) {
+      setImagemError('');
+      return true;
+    }
+    // Em modo criação, imagem é obrigatória
     if (!url && !file) {
       setImagemError('A imagem principal é obrigatória');
       return false;
@@ -93,9 +118,20 @@ export const useFormCity = () => {
     setGaleriaUrls(prev => [...prev, ...urls]);
   };
 
-  const handleRemoveGaleriaImage = (index: number) => {
-    setGaleriaFiles(prev => prev.filter((_, i) => i !== index));
-    setGaleriaUrls(prev => prev.filter((_, i) => i !== index));
+  const handleRemoveGaleriaImage = (indexToRemove: number) => {
+    // Número de URLs existentes do servidor
+    const existingCount = existingGaleriaUrls.length;
+    
+    if (indexToRemove < existingCount) {
+      // Remover de URLs existentes
+      setExistingGaleriaUrls(prev => prev.filter((_, i) => i !== indexToRemove));
+    } else {
+      // Remover de arquivos novos (galeriaFiles)
+      const fileIndex = indexToRemove - existingCount;
+      setGaleriaFiles(prev => prev.filter((_, i) => i !== fileIndex));
+    }
+    
+    setGaleriaUrls(prev => prev.filter((_, i) => i !== indexToRemove));
   };
 
   const handleAddTag = () => {
@@ -176,9 +212,14 @@ export const useFormCity = () => {
       imagemPath = result.path;
     }
 
-    let galeriaPaths: string[] | undefined = undefined;
+    // Começa apenas com as URLs existentes (do servidor), sem BLOBs temporários
+    let galeriaPaths: string[] | undefined = existingGaleriaUrls.length > 0 ? [...existingGaleriaUrls] : undefined;
+    
+    // Adiciona novos uploads
     if (galeriaFiles.length > 0) {
-      galeriaPaths = [];
+      if (!galeriaPaths) {
+        galeriaPaths = [];
+      }
       for (const file of galeriaFiles) {
         const result = await saveAsset({
           imageFile: file,
@@ -230,13 +271,18 @@ export const useFormCity = () => {
 
       console.log('DTO to be sent:', dto);
       
-      const response = await createCidade(dto);
+      let response;
+      if (cidadeId) {
+        response = await updateCidade(cidadeId, dto);
+      } else {
+        response = await createCidade(dto);
+      }
 
       if (!response.sucesso) {
         setIsSubmitting(false);
         return { 
           success: false, 
-          message: response.mensagemErro || 'Erro ao criar cidade.' 
+          message: response.mensagemErro || (cidadeId ? 'Erro ao atualizar cidade.' : 'Erro ao criar cidade.') 
         };
       }
 
@@ -245,7 +291,7 @@ export const useFormCity = () => {
       
       return { 
         success: true, 
-        message: 'Cidade criada com sucesso!',
+        message: cidadeId ? 'Cidade atualizada com sucesso!' : 'Cidade criada com sucesso!',
         data: response.cidade 
       };
     } catch (error: any) {
@@ -253,7 +299,7 @@ export const useFormCity = () => {
       setIsSubmitting(false);
       const errorMessage = error?.response?.data?.mensagemErro || 
                           error?.message || 
-                          'Erro ao criar cidade. Tente novamente.';
+                          (cidadeId ? 'Erro ao atualizar cidade. Tente novamente.' : 'Erro ao criar cidade. Tente novamente.');
       return { 
         success: false, 
         message: errorMessage 
@@ -262,6 +308,7 @@ export const useFormCity = () => {
   };
 
   return {
+    cidadeId,
     nome,
     descricao,
     imagemUrl,

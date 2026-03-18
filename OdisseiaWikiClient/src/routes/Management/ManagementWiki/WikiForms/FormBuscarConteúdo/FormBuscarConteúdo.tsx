@@ -5,6 +5,9 @@ import { SearchResultItem } from '../../../../../services/infoLoreService';
 import { ResultCard } from './ResultCard/ResultCard';
 import { useFormBuscarConteúdo } from './useFormBuscarConteúdo';
 import { NpcCharacterEdit } from './NpcCharacterEdit';
+import { ItemEdit } from './ItemEdit';
+import { CityEdit } from './CityEdit';
+import { RaceEdit } from './RaceEdit';
 import { EntityType } from './types';
 import {
   Main,
@@ -39,6 +42,9 @@ const FILTER_OPTIONS: Array<{ key: EntityType | 'Todos'; label: string }> = [
 
 export const FormBuscarConteúdo: React.FC<FormBuscarConteúdoProps> = ({ theme, neon }) => {
   const [editingCharacterId, setEditingCharacterId] = React.useState<string | null>(null);
+  const [editingItemId, setEditingItemId] = React.useState<string | null>(null);
+  const [editingCityId, setEditingCityId] = React.useState<number | null>(null);
+  const [editingRaceId, setEditingRaceId] = React.useState<number | null>(null);
 
   const {
     termo,
@@ -122,18 +128,37 @@ export const FormBuscarConteúdo: React.FC<FormBuscarConteúdoProps> = ({ theme,
   };
 
   const handleEdit = React.useCallback((item: SearchResultItem) => {
-    if (item.tipoEntidade !== 'Personagem') {
-      toast('Edição disponível apenas para personagens NPC neste fluxo.');
-      return;
+    if (item.tipoEntidade === 'Personagem') {
+      const identifier = String(item.idString ?? item.id ?? '');
+      if (!identifier) {
+        toast.error('Não foi possível identificar o personagem para edição.');
+        return;
+      }
+      setEditingCharacterId(identifier);
+    } else if (item.tipoEntidade === 'Item') {
+      const identifier = String(item.idString ?? item.id ?? '');
+      if (!identifier) {
+        toast.error('Não foi possível identificar o item para edição.');
+        return;
+      }
+      setEditingItemId(identifier);
+    } else if (item.tipoEntidade === 'Cidade') {
+      const cityId = Number(item.idString ?? item.id ?? 0);
+      if (!cityId || cityId === 0) {
+        toast.error('Não foi possível identificar a cidade para edição.');
+        return;
+      }
+      setEditingCityId(cityId);
+    } else if (item.tipoEntidade === 'Raca') {
+      const raceId = Number(item.idString ?? item.id ?? 0);
+      if (!raceId || raceId === 0) {
+        toast.error('Não foi possível identificar a raça para edição.');
+        return;
+      }
+      setEditingRaceId(raceId);
+    } else {
+      toast('Edição não disponível para este tipo de conteúdo.');
     }
-
-    const identifier = String(item.idString ?? item.id ?? '');
-    if (!identifier) {
-      toast.error('Não foi possível identificar o personagem para edição.');
-      return;
-    }
-
-    setEditingCharacterId(identifier);
   }, []);
 
   if (editingCharacterId) {
@@ -143,6 +168,42 @@ export const FormBuscarConteúdo: React.FC<FormBuscarConteúdoProps> = ({ theme,
         neon={neon}
         characterId={editingCharacterId}
         onBack={() => setEditingCharacterId(null)}
+        onSave={handleSearch}
+      />
+    );
+  }
+
+  if (editingItemId) {
+    return (
+      <ItemEdit
+        theme={theme}
+        neon={neon}
+        itemId={editingItemId}
+        onBack={() => setEditingItemId(null)}
+        onSave={handleSearch}
+      />
+    );
+  }
+
+  if (editingCityId !== null) {
+    return (
+      <CityEdit
+        theme={theme}
+        neon={neon}
+        cityId={editingCityId}
+        onBack={() => setEditingCityId(null)}
+        onSave={handleSearch}
+      />
+    );
+  }
+
+  if (editingRaceId !== null) {
+    return (
+      <RaceEdit
+        theme={theme}
+        neon={neon}
+        raceId={editingRaceId}
+        onBack={() => setEditingRaceId(null)}
         onSave={handleSearch}
       />
     );

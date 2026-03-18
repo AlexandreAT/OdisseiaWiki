@@ -15,7 +15,7 @@ public partial class Item
     [Required(ErrorMessage = "O tipo é obrigatório.")]
     public ItemTipo Tipo { get; set; }
 
-    [MaxLength(200)]
+    [Column(TypeName = "longtext")]
     public string? Descricao { get; set; }
 
     public decimal? Peso { get; set; }

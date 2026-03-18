@@ -30,10 +30,13 @@ import {
 interface FormRaceProps {
   theme: 'dark' | 'light';
   neon: 'on' | 'off';
+  initialRaca?: import('../../../../../../services/racasService').RacaPayload;
+  onSaveSuccess?: () => void;
 }
 
-export const FormRace: React.FC<FormRaceProps> = ({ theme, neon }) => {
+export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, onSaveSuccess }) => {
   const {
+    racaId,
     nome,
     imagemUrl,
     galeriaUrls,
@@ -70,7 +73,7 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon }) => {
     handleRemovePassiva,
     handleSubmit,
     resetForm,
-  } = useFormRace();
+  } = useFormRace(initialRaca);
 
   const tagInputRef = useRef<HTMLInputElement>(null);
   const passivaInputRef = useRef<HTMLInputElement>(null);
@@ -111,8 +114,11 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon }) => {
 
     if (result?.success) {
       alert(result.message);
+      if (onSaveSuccess) {
+        onSaveSuccess();
+      }
     } else {
-      alert(result?.message || 'Erro ao criar raça');
+      alert(result?.message || 'Erro ao salvar raça');
     }
   };
 
@@ -314,7 +320,7 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon }) => {
           type="submit"
           disabled={isSubmitting}
         >
-          {isSubmitting ? 'Criando...' : 'Criar Raça'}
+          {isSubmitting ? 'Salvando...' : racaId ? 'Atualizar Raça' : 'Criar Raça'}
         </CyberButton>
       </ButtonsContainer>
     </FormController>
