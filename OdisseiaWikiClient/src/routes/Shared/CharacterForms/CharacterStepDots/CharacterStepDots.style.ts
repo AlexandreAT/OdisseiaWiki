@@ -43,7 +43,7 @@ export const StepDot = styled.button<ThemeProps & { active: boolean }>`
           ? 'var(--neonViolet)'
           : 'var(--deepgray)'
       : theme === 'dark'
-        ? 'var(--black-blue)'
+        ? 'var(--mediumgrey)'
         : 'var(--whitesmoke)'};
 
   box-shadow: ${({ active, theme, neon }) =>

@@ -9,6 +9,18 @@ interface OptionButtonProps extends Props {
     selected: boolean;
 }
 
+interface OptionsControllerProps {
+    expanded: boolean;
+}
+
+interface MainContentProps {
+    sidebarExpanded: boolean;
+}
+
+interface ToggleSidebarButtonProps extends Props {
+    expanded: boolean;
+}
+
 export const MainContainer = styled.div`
     width: 100%;
     min-height: 100vh;
@@ -16,12 +28,14 @@ export const MainContainer = styled.div`
     flex-direction: row;
 `
 
-export const OptionsController = styled.div`
-    width: 150px;
+export const OptionsController = styled.div<OptionsControllerProps>`
+    width: ${props => props.expanded ? '150px' : '0px'};
     position: fixed;
-    top: 0;
+    top: 80px;
     left: 0;
-    height: 100vh;
+    height: calc(100vh - 80px);
+    transition: width 0.3s ease-in-out;
+    z-index: 0;
 `
 
 export const Options = styled.div<Props>`
@@ -53,14 +67,15 @@ export const Options = styled.div<Props>`
     transition: all 0.3s ease-in-out;
 `
 
-export const MainContent = styled.div`
+export const MainContent = styled.div<MainContentProps>`
     padding: 20px;
     width: 100%;
     min-height: 100vh;
     height: 100%;
-    margin-left: 150px;
+    margin-left: ${props => props.sidebarExpanded ? '150px' : '0px'};
     display: flex;
     flex-direction: column;
+    transition: margin-left 0.3s ease-in-out;
 `
 
 export const OptionButton = styled.button<OptionButtonProps>`
@@ -123,4 +138,60 @@ export const ContainerContent = styled.div`
     width: 100%;
     height: 100%;
     z-index: 0;
+`
+
+export const ToggleSidebarButton = styled.button<ToggleSidebarButtonProps>`
+    position: absolute;
+    top: 80px;
+    right: ${props => props.expanded ? '-40px' : '-40px'};
+    width: 40px;
+    height: 40px;
+    border: 1px solid ${({ theme, neon }) =>
+        neon === 'on'
+            ? theme === 'dark'
+                ? 'var(--clearneonBlue)'
+                : 'var(--clearneonViolet)'
+            : theme === 'dark'
+                ? 'var(--grey)'
+                : 'var(--lightGrey)'};
+    background-color: ${({ theme }) =>
+        theme === 'light' ? 'var(--black)' : 'var(--black-blue)'};
+    color: ${({ theme, neon }) =>
+        neon === 'on'
+            ? theme === 'dark'
+                ? 'var(--clearneonBlue)'
+                : 'var(--clearneonViolet)'
+            : theme === 'dark'
+                ? 'var(--whitesmoke)'
+                : 'var(--lightGrey)'};
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border-radius: 0 8px 8px 0;
+    transition: all 0.3s ease-in-out;
+    outline: none;
+    z-index: 15;
+
+    &:hover {
+        color: ${({ theme, neon }) =>
+            neon === 'on'
+                ? theme === 'dark'
+                    ? 'var(--neonBlue)'
+                    : 'var(--neonPink)'
+                : theme === 'dark'
+                    ? 'var(--neonPink)'
+                    : 'var(--neonViolet)'};
+        box-shadow: ${({ theme, neon }) =>
+            neon === 'on'
+                ? theme === 'dark'
+                    ? '0px 0px 10px var(--clearneonBlue)'
+                    : '0px 0px 10px var(--clearneonViolet)'
+                : 'none'};
+    }
+
+    svg {
+        width: 24px;
+        height: 24px;
+    }
 `

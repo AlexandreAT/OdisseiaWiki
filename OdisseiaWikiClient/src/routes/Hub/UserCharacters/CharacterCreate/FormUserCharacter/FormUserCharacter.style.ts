@@ -5,7 +5,7 @@ interface Props {
     neon?: 'on' | 'off';
 }
 
-export const FormController = styled.form`
+export const FormController = styled.form<{ marginTop?: string }>`
     display: flex;
     flex-direction: column;
     width: 100%;
@@ -15,12 +15,13 @@ export const FormController = styled.form`
     align-items: center;
     justify-content: center;
     z-index: 100;
+    margin-top: ${({ marginTop }) => marginTop || '20px'};
 `
 
 export const FormEditController = styled.div`
     display: flex;
     flex-direction: column;
-    width: 850px;
+    width: 1050px;
     height: 100%;
 `
 

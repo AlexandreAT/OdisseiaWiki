@@ -8,8 +8,8 @@ interface Props {
 export const FormContainer = styled.div<Props>`
     display: flex;
     flex-direction: column;
-    width: 70%;
-    max-width: 1000px;
+    width: 90%;
+    max-width: 1200px;
     min-height: 600px;
     border-radius: 8px;
     padding: 25px;

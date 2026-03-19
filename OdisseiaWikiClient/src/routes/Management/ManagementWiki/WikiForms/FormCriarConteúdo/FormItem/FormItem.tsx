@@ -33,6 +33,7 @@ import { MdClose } from "react-icons/md";
 interface FormItemProps {
   theme: 'dark' | 'light';
   neon: 'on' | 'off';
+  contentType?: string;
 }
 
 const ITEM_TIPO_OPTIONS: { value: ItemTipo; label: string }[] = [
@@ -43,7 +44,7 @@ const ITEM_TIPO_OPTIONS: { value: ItemTipo; label: string }[] = [
   { value: "outro", label: "Outro" },
 ];
 
-export const FormItem = ({ theme, neon }: FormItemProps) => {
+export const FormItem = ({ theme, neon, contentType }: FormItemProps) => {
   const {
     itemId,
     nome,
@@ -73,7 +74,7 @@ export const FormItem = ({ theme, neon }: FormItemProps) => {
     resetForm,
     isSubmitting,
     nomeError,
-  } = useFormItem();
+  } = useFormItem(undefined, contentType);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

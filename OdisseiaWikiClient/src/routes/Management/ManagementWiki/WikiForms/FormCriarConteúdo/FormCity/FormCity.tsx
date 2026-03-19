@@ -28,9 +28,10 @@ interface FormCityProps {
   neon: 'on' | 'off';
   initialCity?: import('../../../../../../services/cidadesService').CidadePayload;
   onSaveSuccess?: () => void;
+  contentType?: string;
 }
 
-export const FormCity = ({ theme, neon, initialCity, onSaveSuccess }: FormCityProps) => {
+export const FormCity = ({ theme, neon, initialCity, onSaveSuccess, contentType }: FormCityProps) => {
   const {
     cidadeId,
     nome,
@@ -60,7 +61,7 @@ export const FormCity = ({ theme, neon, initialCity, onSaveSuccess }: FormCityPr
     getFilteredInfoLores,
     handleSubmit,
     resetForm,
-  } = useFormCity(initialCity);
+  } = useFormCity(initialCity, contentType);
 
   const tagInputRef = useRef<HTMLInputElement>(null);
 

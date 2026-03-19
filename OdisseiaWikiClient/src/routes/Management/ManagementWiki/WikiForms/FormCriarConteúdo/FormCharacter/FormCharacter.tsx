@@ -25,6 +25,7 @@ import { Magia } from '../../../../../../models/Magias';
 interface FormProps {
   theme: 'dark' | 'light';
   neon: 'on' | 'off';
+  contentType?: string;
 }
 
 const TRAITS_OPTIONS = [
@@ -50,7 +51,7 @@ const ALIGNMENT_OPTIONS = [
   { value: 'caotico_mal', label: 'Caótico e Maligno' },
 ];
 
-export const FormCharacter = ({ theme, neon }: FormProps) => {
+export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
   const {
     step, handleNext, handleSubmit,
     handlePrev, isFirstStep, isLastStep,
@@ -85,7 +86,7 @@ export const FormCharacter = ({ theme, neon }: FormProps) => {
     atributosSecundarios, setAtributosSecundarios,
     defesas, setDefesas,
     listItens, handleSelectItem,
-  } = useFormCharacter();
+  } = useFormCharacter({ contentType });
     console.log("🚀 ~ FormCharacter ~ listItens:", listItens)
 
   const tagInputRef = useRef<HTMLInputElement>(null);

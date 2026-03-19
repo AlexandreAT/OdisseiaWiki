@@ -57,7 +57,7 @@ const extractErrorMessage = (error: any): string => {
 };
 
 
-export const useFormCharacter = ({ applyRaceDefaults = true }: { applyRaceDefaults?: boolean } = {}) => {
+export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { applyRaceDefaults?: boolean; contentType?: string } = {}) => {
   // --- step ---
   const [step, setStep] = useState(1);
   // --- dados do formulário ---
@@ -163,6 +163,14 @@ export const useFormCharacter = ({ applyRaceDefaults = true }: { applyRaceDefaul
     listRaces.find(r => r.idraca === race),
     [listRaces, race]
   );
+
+  // Auto-adiciona tag do tipo de conteúdo quando muda
+  useEffect(() => {
+    if (contentType) {
+      setTags([contentType]);
+      setTagInput('');
+    }
+  }, [contentType]);
 
   useEffect(() => {
     const fetchCities = async () => {

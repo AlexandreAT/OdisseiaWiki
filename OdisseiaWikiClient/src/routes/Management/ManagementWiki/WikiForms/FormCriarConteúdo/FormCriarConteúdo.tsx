@@ -24,13 +24,13 @@ export const FormCriarConteúdo = ({ theme, neon }: FormProps) => {
     const renderTypeForm = () => {
         switch (type) {
             case 'character':
-                return <FormCharacter theme={theme} neon={neon} />;
+                return <FormCharacter theme={theme} neon={neon} contentType="Personagem" />;
             case 'city':
-                return <FormCity theme={theme} neon={neon} />;
+                return <FormCity theme={theme} neon={neon} contentType="Cidade" />;
             case 'race':
-                return <FormRace theme={theme} neon={neon} />;
+                return <FormRace theme={theme} neon={neon} contentType="Raça" />;
             case 'item':
-                return <FormItem theme={theme} neon={neon} />;
+                return <FormItem theme={theme} neon={neon} contentType="Item" />;
             default:
                 return null;
         }

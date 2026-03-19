@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CityFormErrors, CidadeDto } from './FormCity.type';
 import { createCidade, updateCidade, CidadePayload } from '../../../../../../services/cidadesService';
 import { saveAsset } from '../../../../../../services/assetsService';
@@ -7,7 +7,7 @@ import { PontoDeInteresse } from '../../../../../../models/InfoLore';
 import { prepareForAPI } from '../../../../../../utils/richTextHelpers';
 import { infoLoresMock } from '../../../../../../Mock/infolore.mock';
 
-export const useFormCity = (initialCity?: CidadePayload) => {
+export const useFormCity = (initialCity?: CidadePayload, contentType?: string) => {
   const [cidadeId] = useState<number | undefined>(initialCity?.idcidade);
   const [nome, setNome] = useState(initialCity?.nome || '');
   const [descricao, setDescricao] = useState<JSONContent | string>(initialCity?.descricao || '');
@@ -44,6 +44,14 @@ export const useFormCity = (initialCity?: CidadePayload) => {
   const [imagemError, setImagemError] = useState('');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Auto-adiciona tag do tipo de conteúdo quando muda
+  useEffect(() => {
+    if (contentType && !initialCity) {
+      setTags([contentType]);
+      setTagInput('');
+    }
+  }, [contentType, initialCity]);
 
   const validateNome = (value: string): boolean => {
     if (!value || value.trim().length === 0) {

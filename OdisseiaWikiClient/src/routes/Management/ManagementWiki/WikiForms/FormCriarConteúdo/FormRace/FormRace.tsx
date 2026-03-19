@@ -32,9 +32,10 @@ interface FormRaceProps {
   neon: 'on' | 'off';
   initialRaca?: import('../../../../../../services/racasService').RacaPayload;
   onSaveSuccess?: () => void;
+  contentType?: string;
 }
 
-export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, onSaveSuccess }) => {
+export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, onSaveSuccess, contentType }) => {
   const {
     racaId,
     nome,
@@ -73,7 +74,7 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
     handleRemovePassiva,
     handleSubmit,
     resetForm,
-  } = useFormRace(initialRaca);
+  } = useFormRace(initialRaca, contentType);
 
   const tagInputRef = useRef<HTMLInputElement>(null);
   const passivaInputRef = useRef<HTMLInputElement>(null);

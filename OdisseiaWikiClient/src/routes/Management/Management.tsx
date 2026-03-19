@@ -1,6 +1,8 @@
 import { useSelector } from 'react-redux';
 import { useState } from 'react';
-import { MainContainer, MainContent, Options, OptionsController, OptionButton, ContainerContent } from './Management.style';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import { MainContainer, MainContent, Options, OptionsController, OptionButton, ContainerContent, ToggleSidebarButton } from './Management.style';
 import { ManagementWiki } from './ManagementWiki/ManagementWiki';
 
 const OPTIONS = [
@@ -13,6 +15,7 @@ const OPTIONS = [
 export const Management = () => {
     const { theme, neon } = useSelector((state: any) => state.themesReducer);
     const [selected, setSelected] = useState<string>('wiki');
+    const [sidebarExpanded, setSidebarExpanded] = useState<boolean>(true);
 
     const renderContent = () => {
         switch (selected) {
@@ -31,22 +34,34 @@ export const Management = () => {
 
     return (
         <MainContainer>
-            <OptionsController>
-                <Options theme={theme} neon={neon}>
-                    {OPTIONS.map(option => (
-                        <OptionButton
-                            key={option.key}
-                            selected={selected === option.key}
-                            onClick={() => setSelected(option.key)}
-                            theme={theme}
-                            neon={neon}
-                        >
-                            {option.label}
-                        </OptionButton>
-                    ))}
-                </Options>
+            <OptionsController expanded={sidebarExpanded}>
+                <ToggleSidebarButton
+                    theme={theme}
+                    neon={neon}
+                    expanded={sidebarExpanded}
+                    onClick={() => setSidebarExpanded(!sidebarExpanded)}
+                    title={sidebarExpanded ? 'Retrair sidebar' : 'Expandir sidebar'}
+                >
+                    {sidebarExpanded ? <ChevronLeftIcon /> : <ChevronRightIcon />}
+                </ToggleSidebarButton>
+                
+                {sidebarExpanded && (
+                    <Options theme={theme} neon={neon}>
+                        {OPTIONS.map(option => (
+                            <OptionButton
+                                key={option.key}
+                                selected={selected === option.key}
+                                onClick={() => setSelected(option.key)}
+                                theme={theme}
+                                neon={neon}
+                            >
+                                {option.label}
+                            </OptionButton>
+                        ))}
+                    </Options>
+                )}
             </OptionsController>
-            <MainContent>
+            <MainContent sidebarExpanded={sidebarExpanded}>
                 <ContainerContent>
                     {renderContent()}
                 </ContainerContent>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { RaceFormErrors, UploadResult } from './FormRace.type';
 import { RacaStatus, CreateRacaDto, createRaca, updateRaca, RacaPayload } from '../../../../../../services/racasService';
 import { saveAsset } from '../../../../../../services/assetsService';
@@ -12,7 +12,7 @@ const ATRIBUTO_OPTIONS = [
   { value: 'Inteligência', label: 'Inteligência' },
 ];
 
-export const useFormRace = (initialRaca?: RacaPayload) => {
+export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => {
   const [racaId] = useState<number | undefined>(initialRaca?.idraca);
   const [nome, setNome] = useState(initialRaca?.nome || '');
   const [imagemUrl, setImagemUrl] = useState(initialRaca?.imagem || '');
@@ -54,6 +54,14 @@ export const useFormRace = (initialRaca?: RacaPayload) => {
   const [nomeError, setNomeError] = useState('');
   const [imagemError, setImagemError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Auto-adiciona tag do tipo de conteúdo quando muda
+  useEffect(() => {
+    if (contentType && !initialRaca) {
+      setTags([contentType]);
+      setTagInput('');
+    }
+  }, [contentType, initialRaca]);
 
   const validateNome = (value: string): boolean => {
     if (!value || value.trim().length === 0) {

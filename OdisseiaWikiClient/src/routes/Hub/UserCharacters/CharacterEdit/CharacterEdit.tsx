@@ -190,7 +190,7 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserC
     }, [editStep]);
 
     return (
-        <FormController onSubmit={(e) => e.preventDefault()}> 
+        <FormController marginTop={editStep == 2 ? '80px' : undefined} onSubmit={(e) => e.preventDefault()}> 
             <CharacterStepDots
               theme={theme}
               neon={neon}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ItemTipo, JSONContent } from "../../../../../../models/Itens";
 import { saveAsset } from "../../../../../../services/assetsService";
 import { prepareForAPI } from "../../../../../../utils/richTextHelpers";
@@ -87,7 +87,7 @@ const tryParseRichText = (value: any) => {
   return current;
 };
 
-export const useFormItem = (initialItem?: ItemPayload) => {
+export const useFormItem = (initialItem?: ItemPayload, contentType?: string) => {
 
   const [itemId] = useState<string | undefined>(initialItem?.iditem);
   const [nome, setNome] = useState(initialItem?.nome || "");
@@ -117,6 +117,14 @@ export const useFormItem = (initialItem?: ItemPayload) => {
 
   const [nomeError, setNomeError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Auto-adiciona tag do tipo de conteúdo quando muda
+  useEffect(() => {
+    if (contentType && !initialItem) {
+      setTags([contentType]);
+      setTagInput('');
+    }
+  }, [contentType, initialItem]);
 
   // ------------------------
   // TIPO MUDANÇA
