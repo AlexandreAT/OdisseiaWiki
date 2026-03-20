@@ -13,7 +13,7 @@ export const FormContainer = styled.div<Props>`
     min-height: 600px;
     border-radius: 8px;
     padding: 25px;
-    ${({ theme }) => theme === 'light' && 'background-color: var(--clearWhite)'};
+    ${({ theme }) => theme === 'light' ? 'background-color: var(--clearWhite)' : 'background-color: rgba(0, 0, 0, 0.5)'};
     border: 2px solid ${({ theme, neon }) =>
         neon === 'on'
             ? theme === 'light'

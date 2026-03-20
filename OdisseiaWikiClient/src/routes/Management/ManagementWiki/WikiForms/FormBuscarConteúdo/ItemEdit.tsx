@@ -6,6 +6,7 @@ import { CheckBox } from '../../../../../components/Generic/CheckBox/CheckBox';
 import { RichTextEditor } from '../../../../../components/Generic/RichTextEditor/RichTextEditor';
 import { ImageUpload } from '../../../../../components/Generic/ImageUpload/ImageUpload';
 import { InputText } from '../../../../../components/Generic/InputText/InputText';
+import { HorizontalList } from '../../../../../components/Generic/HorizontalList/HorizontalList';
 import { getItemById, excluirItem } from '../../../../../services/itensService';
 import { useFormItem } from '../FormCriarConteúdo/FormItem/useFormItem';
 import { ItemPayload } from '../../../../../services/itensService';
@@ -26,12 +27,8 @@ import {
   RichTextSection,
   ImageSection,
   TagsInputContainer,
-  TagsList,
-  TagItem,
-  TagRemoveButton,
   TagInput,
 } from '../FormCriarConteúdo/FormItem/FormItem.style';
-import { MdClose } from 'react-icons/md';
 import styled from 'styled-components';
 
 const ITEM_TIPO_OPTIONS: { value: ItemTipo; label: string }[] = [
@@ -355,7 +352,7 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
 
       {/* Seção de Tags */}
       <div>
-        <SectionTitle theme={theme} neon={neon}>Tags</SectionTitle>
+        <SectionTitle theme={theme} neon={neon}>Tags (Opcional)</SectionTitle>
         <TagsInputContainer>
           <TagInput
             theme={theme}
@@ -371,31 +368,20 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
               }
             }}
           />
-          <CyberButton
-            type="button"
-            onClick={handleAddTag}
-            theme={theme}
-            neon={neon}
-            colorType="secondary"
-            text="Adicionar"
-            height="40px"
-          />
         </TagsInputContainer>
 
         {tags.length > 0 && (
-          <TagsList>
-            {tags.map((tag) => (
-              <TagItem key={tag} theme={theme} neon={neon}>
-                {tag}
-                <TagRemoveButton
-                  type="button"
-                  onClick={() => handleRemoveTag(tag)}
-                >
-                  <MdClose />
-                </TagRemoveButton>
-              </TagItem>
-            ))}
-          </TagsList>
+          <HorizontalList
+            theme={theme}
+            neon={neon}
+            data={tags.map((tag, index) => ({ id: index, nome: tag }))}
+            onDelete={(id) => {
+              const tagToRemove = tags[id as number];
+              if (tagToRemove) {
+                handleRemoveTag(tagToRemove);
+              }
+            }}
+          />
         )}
       </div>
 

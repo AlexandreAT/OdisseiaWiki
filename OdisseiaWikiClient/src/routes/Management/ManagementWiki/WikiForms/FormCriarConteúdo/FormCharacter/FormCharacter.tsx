@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { FormController, FormHeader, HeaderInputs, HeaderAvatar, GridInputs, SectionTable, TableTitle, RelatedCharactersSection, SectionTitle, SectionStatus, NavegationButtons, StatusHeader, HeaderInfo, LabelStatus, MinimalInput, StatusContent, StatusAtributosDiv, StatusImageDiv, AtributoBox, AtributoDiv, InfoImage, AvatarController, AtributeController, StatusContentCenter, StatusDefesaDiv, StatusDefesaController, CheckboxSection } from './FormCharacter.style';
 import { InputText } from '../../../../../../components/Generic/InputText/InputText';
 import { Select } from '../../../../../../components/Generic/Select/Select';
@@ -6,8 +6,10 @@ import { AvatarIcon } from '../../../../../../components/Generic/AvatarIcon/Avat
 import { CyberButton } from '../../../../../../components/Generic/HighlightButton/HighlightButton';
 import { TextArea } from '../../../../../../components/Generic/TextArea/TextArea';
 import { RichTextEditor } from '../../../../../../components/Generic/RichTextEditor/RichTextEditor';
+import RichTextModal from '../../../../../../components/Generic/RichTextModal';
 import { Search } from '../../../../../../components/Generic/Search/Search';
 import { BiSearchAlt } from 'react-icons/bi';
+import { MdOutlineOpenInFull } from 'react-icons/md';
 import { CheckSelect } from '../../../../../../components/Generic/CheckSelect/CheckSelect';
 import { CheckBox } from '../../../../../../components/Generic/CheckBox/CheckBox';
 import { DataTable } from '../../../../../../components/Generic/DataTable/DataTable';
@@ -87,7 +89,8 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
     defesas, setDefesas,
     listItens, handleSelectItem,
   } = useFormCharacter({ contentType });
-    console.log("🚀 ~ FormCharacter ~ listItens:", listItens)
+  
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
 
   const tagInputRef = useRef<HTMLInputElement>(null);
 
@@ -229,15 +232,47 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
           )}
 
           {/* TODO: Substituir por editor de texto rico (TipTap) para suportar formatação */}
-          <RichTextEditor
-            theme={theme}
-            neon={neon}
-            label="História"
-            value={history}
-            onChange={setHistory}
-            minHeight="150px"
-            placeholder="Escreva a história do personagem..."
-          />
+          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <label style={{ fontFamily: "'DO Futuristic', sans-serif", fontSize: '14px', fontWeight: 100, letterSpacing: '2px' }}>História</label>
+              <button
+                type="button"
+                onClick={() => setIsHistoryModalOpen(true)}
+                style={{
+                  background: theme === 'dark' ? 'var(--clearblack)' : 'var(--clearWhite)',
+                  border: `1px solid ${theme === 'dark' ? (neon === 'on' ? 'var(--clearneonBlue)' : 'var(--lightGrey)') : (neon === 'on' ? 'var(--neonViolet)' : 'var(--deepgrey)')}`,
+                  color: theme === 'dark' ? 'var(--clearWhite)' : 'var(--deepgrey)',
+                  padding: '6px 12px',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = '0.8';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = '1';
+                }}
+                title="Expandir editor de texto"
+              >
+                <MdOutlineOpenInFull size={14} />
+                Expandir
+              </button>
+            </div>
+            <RichTextEditor
+              theme={theme}
+              neon={neon}
+              label=""
+              value={history}
+              onChange={setHistory}
+              minHeight="150px"
+              placeholder="Escreva a história do personagem..."
+            />
+          </div>
 
           <GridInputs>
             <Select
@@ -599,6 +634,19 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
         />
       </NavegationButtons>
 
+      <RichTextModal
+        isOpen={isHistoryModalOpen}
+        onClose={() => setIsHistoryModalOpen(false)}
+        onSave={(content) => {
+          setHistory(content);
+          setIsHistoryModalOpen(false);
+        }}
+        initialContent={history}
+        title="Editar História"
+        placeholder="Escreva a história do personagem..."
+        theme={theme}
+        neon={neon}
+      />
     </FormController>
   );
 };

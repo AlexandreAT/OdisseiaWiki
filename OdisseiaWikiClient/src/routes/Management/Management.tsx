@@ -4,6 +4,7 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { MainContainer, MainContent, Options, OptionsController, OptionButton, ContainerContent, ToggleSidebarButton } from './Management.style';
 import { ManagementWiki } from './ManagementWiki/ManagementWiki';
+import { AnimatedBackground } from '../../components/Generic/AnimatedBackground/AnimatedBackground';
 
 const OPTIONS = [
     { key: 'wiki', label: 'Wiki' },
@@ -16,6 +17,7 @@ export const Management = () => {
     const { theme, neon } = useSelector((state: any) => state.themesReducer);
     const [selected, setSelected] = useState<string>('wiki');
     const [sidebarExpanded, setSidebarExpanded] = useState<boolean>(true);
+    const [hasPlayedIntro, setHasPlayedIntro] = useState(false);
 
     const renderContent = () => {
         switch (selected) {
@@ -34,6 +36,10 @@ export const Management = () => {
 
     return (
         <MainContainer>
+            <AnimatedBackground 
+                type='management' 
+                skipIntro={true}
+            />
             <OptionsController expanded={sidebarExpanded}>
                 <ToggleSidebarButton
                     theme={theme}

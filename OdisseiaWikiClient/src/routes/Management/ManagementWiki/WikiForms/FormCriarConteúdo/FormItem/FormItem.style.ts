@@ -199,6 +199,7 @@ export const TagsInputContainer = styled.div`
   gap: 10px;
   align-items: flex-start;
   width: 100%;
+  margin-bottom: 5px;
 `;
 
 export const TagsList = styled.div`

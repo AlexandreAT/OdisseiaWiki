@@ -5,8 +5,9 @@ import { TypedText } from './TypedText';
 import CityBackgroundDistantCharacter from '../../../assets/CityBackgroundDistantCharacter.jpeg';
 import CityBackgrounDistant from '../../../assets/CityBackgroundDistant.jpeg';
 import CharacterBackgroundDistant from '../../../assets/CharacterBackgroundDistant.jpeg';
+import ManagementBackground from '../../../assets/ManagementBakcground.jpg';
 
-export type BackgroundType = 'pov' | 'distant' | 'distantCharacter';
+export type BackgroundType = 'pov' | 'distant' | 'distantCharacter' | 'management';
 
 interface AnimatedBackgroundProps {
   type: BackgroundType;
@@ -18,13 +19,15 @@ interface AnimatedBackgroundProps {
 const BACKGROUND_IMAGES = {
   pov: CityBackgroundDistantCharacter,
   distant: CityBackgrounDistant,
-  distantCharacter: CharacterBackgroundDistant
+  distantCharacter: CharacterBackgroundDistant,
+  management: ManagementBackground
 };
 
 const INTRO_TEXTS = {
   pov: 'Seus personagens aguardam...',
   distant: 'Uma nova história começa...',
-  distantCharacter: 'Uma nova história começa...'
+  distantCharacter: 'Uma nova história começa...',
+  management: 'Gerenciando conteúdo...'
 };
 
 export const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ type, introText, skipIntro = false, onIntroComplete }) => {
