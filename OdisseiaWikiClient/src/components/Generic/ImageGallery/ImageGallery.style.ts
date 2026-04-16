@@ -23,25 +23,30 @@ export const GalleryLabel = styled.label<Props>`
 `;
 
 export const GalleryGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 15px;
   width: 100%;
-
+  align-items: flex-start;
+  justify-content: flex-start;
+  
   @media (max-width: 768px) {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 12px;
   }
 `;
 
-export const GalleryImageContainer = styled.div`
+export const GalleryImageContainer = styled.div<{ shape?: 'square' | 'circle' | 'rectangle' }>`
   position: relative;
   width: 100%;
-  aspect-ratio: 1;
-  border-radius: 8px;
+  height: 150px;
+  border-radius: ${({ shape }) => (shape === 'circle' ? '50%' : '8px')};
   overflow: hidden;
   background: var(--lightBlack);
   border: 1px solid var(--mediumgrey);
   transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   &:hover {
     border-color: var(--neonBlue);
@@ -51,7 +56,7 @@ export const GalleryImageContainer = styled.div`
   img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
     object-position: center;
   }
 `;

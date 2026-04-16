@@ -2,6 +2,7 @@
 using OdisseiaWiki.Data;
 using OdisseiaWiki.Models;
 using OdisseiaWiki.Repositories.Interfaces;
+using OdisseiaWiki.Services.Helpers;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -57,13 +58,16 @@ namespace OdisseiaWiki.Repositories
         public async Task<List<Cidade>> SearchAsync(string termo)
         {
             var termoLower = termo.ToLower();
-            
-            return await _context.Cidades
+
+            var cidades = await _context.Cidades
                 .AsNoTracking()
-                .Where(c => 
-                    c.Nome.ToLower().Contains(termoLower) ||
-                    (c.Tags != null && c.Tags.ToLower().Contains(termoLower)))
                 .ToListAsync();
+
+            return cidades.Where(i =>
+                i.Nome.ToLower().Contains(termoLower) ||
+                (JsonSafeHelper.DeserializeTags(i.Tags)?
+                    .Any(tag => tag.ToLower().Contains(termoLower)) ?? false)
+            ).ToList();
         }
     }
 }

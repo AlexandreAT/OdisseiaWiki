@@ -124,15 +124,14 @@ namespace OdisseiaWiki.Services
             // Busca sequencial com tratamento de erro individual
             try
             {
+                //Tags = JsonSafeHelper.DeserializeTags(i.Tags),
                 var cidades = await _cidadeRepo.SearchAsync(termo);
                 result.Cidades = cidades.Select(c => new SearchItemDto
                 {
                     Id = c.Idcidade,
                     Nome = c.Nome,
                     Imagem = c.Imagem,
-                    Tags = !string.IsNullOrWhiteSpace(c.Tags)
-                        ? JsonSerializer.Deserialize<List<string>>(c.Tags)
-                        : null,
+                    Tags = JsonSafeHelper.DeserializeTags(c.Tags),
                     Visivel = c.Visivel,
                     TipoEntidade = "Cidade"
                 }).ToList();
@@ -150,9 +149,7 @@ namespace OdisseiaWiki.Services
                     Id = p.Idpersonagem,
                     Nome = p.Nome,
                     Imagem = p.Imagem,
-                    Tags = !string.IsNullOrWhiteSpace(p.Tags)
-                        ? JsonSerializer.Deserialize<List<string>>(p.Tags)
-                        : null,
+                    Tags = JsonSafeHelper.DeserializeTags(p.Tags),
                     Visivel = p.Visivel,
                     TipoEntidade = "Personagem"
                 }).ToList();
@@ -170,9 +167,7 @@ namespace OdisseiaWiki.Services
                     IdString = i.Iditem,
                     Nome = i.Nome,
                     Imagem = i.Imagem,
-                    Tags = !string.IsNullOrWhiteSpace(i.Tags)
-                        ? JsonSerializer.Deserialize<List<string>>(i.Tags)
-                        : null,
+                    Tags = JsonSafeHelper.DeserializeTags(i.Tags),
                     Visivel = i.Visivel,
                     TipoEntidade = "Item"
                 }).ToList();
@@ -190,9 +185,7 @@ namespace OdisseiaWiki.Services
                     Id = il.IdinfoLore,
                     Nome = il.Titulo,
                     Imagem = il.Imagem,
-                    Tags = !string.IsNullOrWhiteSpace(il.Tags)
-                        ? JsonSerializer.Deserialize<List<string>>(il.Tags)
-                        : null,
+                    Tags = JsonSafeHelper.DeserializeTags(il.Tags),
                     Visivel = il.Visivel,
                     TipoEntidade = "InfoLore"
                 }).ToList();
@@ -210,9 +203,7 @@ namespace OdisseiaWiki.Services
                     Id = r.Idraca,
                     Nome = r.Nome,
                     Imagem = r.Imagem,
-                    Tags = !string.IsNullOrWhiteSpace(r.Tags)
-                        ? JsonSerializer.Deserialize<List<string>>(r.Tags)
-                        : null,
+                    Tags = JsonSafeHelper.DeserializeTags(r.Tags),
                     Visivel = r.Visivel,
                     TipoEntidade = "Raca"
                 }).ToList();

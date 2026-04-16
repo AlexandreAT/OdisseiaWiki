@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using OdisseiaWiki.Data;
 using OdisseiaWiki.Models;
 using OdisseiaWiki.Repositories.Interfaces;
+using OdisseiaWiki.Services.Helpers;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -57,13 +58,16 @@ namespace OdisseiaWiki.Repositories
         public async Task<List<Infolore>> SearchAsync(string termo)
         {
             var termoLower = termo.ToLower();
-            
-            return await _context.Infolores
+
+            var infoLores = await _context.Infolores
                 .AsNoTracking()
-                .Where(i => 
-                    i.Titulo.ToLower().Contains(termoLower) ||
-                    (i.Tags != null && i.Tags.ToLower().Contains(termoLower)))
                 .ToListAsync();
+
+            return infoLores.Where(i =>
+                i.Titulo.ToLower().Contains(termoLower) ||
+                (JsonSafeHelper.DeserializeTags(i.Tags)?
+                    .Any(tag => tag.ToLower().Contains(termoLower)) ?? false)
+            ).ToList();
         }
     }
 }

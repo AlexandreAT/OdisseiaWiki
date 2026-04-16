@@ -4,7 +4,8 @@ import { CyberButton } from '../../../../../components/Generic/HighlightButton/H
 import { Select } from '../../../../../components/Generic/Select/Select';
 import { CheckBox } from '../../../../../components/Generic/CheckBox/CheckBox';
 import { RichTextEditor } from '../../../../../components/Generic/RichTextEditor/RichTextEditor';
-import { ImageUpload } from '../../../../../components/Generic/ImageUpload/ImageUpload';
+import { ImageUploader } from '../../../../../components/Generic/ImageUploader/ImageUploader';
+import type { CropPreset } from '../../../../../components/Generic/ImageUploader/types';
 import { InputText } from '../../../../../components/Generic/InputText/InputText';
 import { HorizontalList } from '../../../../../components/Generic/HorizontalList/HorizontalList';
 import { getItemById, excluirItem } from '../../../../../services/itensService';
@@ -214,6 +215,18 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
     nomeError,
   } = useFormItem(initialItem);
 
+  const itemImageCropPreset: CropPreset = {
+    mode: 'single',
+    aspectRatio: 1,
+    shape: 'square',
+    displayShape: 'square',
+    label: 'Quadrado (1:1)',
+  };
+
+  const handleItemImageUpload = (result: any) => {
+    handleImagemUpload(result.file);
+  };
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const result = await handleSubmit();
@@ -340,13 +353,13 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
       {/* Seção de Imagem */}
       <ImageSection>
         <SectionTitle theme={theme} neon={neon}>Imagem</SectionTitle>
-        <ImageUpload
+        <ImageUploader
           theme={theme}
           neon={neon}
           label="Imagem do Item"
-          imageUrl={imagemUrl}
-          onChange={handleImagemUpload}
-          placeholder="Clique para adicionar uma imagem"
+          initialImage={imagemUrl}
+          onImageCropped={handleItemImageUpload}
+          cropPreset={itemImageCropPreset}
         />
       </ImageSection>
 

@@ -2,6 +2,7 @@
 using OdisseiaWiki.Data;
 using OdisseiaWiki.Models;
 using OdisseiaWiki.Repositories.Interfaces;
+using OdisseiaWiki.Services.Helpers;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -57,13 +58,16 @@ namespace OdisseiaWiki.Repositories
         public async Task<List<Personagen>> SearchAsync(string termo)
         {
             var termoLower = termo.ToLower();
-            
-            return await _context.Personagens
+
+            var personagens = await _context.Personagens
                 .AsNoTracking()
-                .Where(p => 
-                    p.Nome.ToLower().Contains(termoLower) ||
-                    (p.Tags != null && p.Tags.ToLower().Contains(termoLower)))
                 .ToListAsync();
+
+            return personagens.Where(i =>
+                i.Nome.ToLower().Contains(termoLower) ||
+                (JsonSafeHelper.DeserializeTags(i.Tags)?
+                    .Any(tag => tag.ToLower().Contains(termoLower)) ?? false)
+            ).ToList();
         }
     }
 }

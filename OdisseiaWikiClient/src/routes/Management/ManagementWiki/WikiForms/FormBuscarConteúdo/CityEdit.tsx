@@ -61,6 +61,7 @@ export const CityEdit: React.FC<CityEditProps> = ({ theme, neon, cityId, onBack,
       try {
         setIsLoading(true);
         const response = await getCidadeById(cityId);
+        console.log("🚀 ~ loadCity ~ response:", response)
         
         let cityData: CidadePayload | null = null;
         
@@ -83,6 +84,16 @@ export const CityEdit: React.FC<CityEditProps> = ({ theme, neon, cityId, onBack,
           } catch (e) {
             console.error('Erro ao parsear galeriaImagem:', e);
             cityData.galeriaImagem = [];
+          }
+        }
+
+        // Parse tags se for string (JSON stringificada)
+        if (cityData && typeof cityData.tags === 'string') {
+          try {
+            cityData.tags = JSON.parse(cityData.tags);
+          } catch (e) {
+            console.error('Erro ao parsear tags:', e);
+            cityData.tags = [];
           }
         }
         

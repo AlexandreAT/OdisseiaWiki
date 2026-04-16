@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { FormController, FormHeader, HeaderInputs, HeaderAvatar, GridInputs, SectionTable, TableTitle, RelatedCharactersSection, SectionTitle, SectionStatus, NavegationButtons, StatusHeader, HeaderInfo, LabelStatus, MinimalInput, StatusContent, StatusAtributosDiv, StatusImageDiv, AtributoBox, AtributoDiv, InfoImage, AvatarController, AtributeController, StatusContentCenter, StatusDefesaDiv, StatusDefesaController, CheckboxSection } from './FormCharacter.style';
 import { InputText } from '../../../../../../components/Generic/InputText/InputText';
 import { Select } from '../../../../../../components/Generic/Select/Select';
-import { AvatarIcon } from '../../../../../../components/Generic/AvatarIcon/AvatarIcon';
+import { ImageUploader } from '../../../../../../components/Generic/ImageUploader/ImageUploader';
 import { CyberButton } from '../../../../../../components/Generic/HighlightButton/HighlightButton';
 import { TextArea } from '../../../../../../components/Generic/TextArea/TextArea';
 import { RichTextEditor } from '../../../../../../components/Generic/RichTextEditor/RichTextEditor';
@@ -16,6 +16,7 @@ import { DataTable } from '../../../../../../components/Generic/DataTable/DataTa
 import { HorizontalList } from '../../../../../../components/Generic/HorizontalList/HorizontalList';
 import { StatusInput } from '../../../../../../components/Generic/StatusInput/StatusInput';
 import { useFormCharacter } from './useFormCharacter';
+import { CropPreset } from '../../../../../../components/Generic/ImageUploader/types';
 import toast from 'react-hot-toast';
 import { LabelInfoBox } from '../../../../../../components/Generic/LabelInfoBox/LabelInfoBox';
 import { createItemColumns, createMagiasColumns, createSkillsColumns } from '../../../../../Hub/UserCharacters/CharacterCreate/tableColumnsConfig';
@@ -114,6 +115,19 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
     [selectedRace]
   );
 
+  const characterAvatarCropPreset: CropPreset = {
+    mode: 'single',
+    aspectRatio: 1,
+    shape: 'circle',
+    displayShape: 'circle',
+    label: 'Avatar Circular',
+  };
+
+  const handleCharacterAvatarUpload = (result: any) => {
+    setAvatarUrl(result.preview);
+    setAvatarFile(result.file);
+  };
+
   const itemColumns = React.useMemo(() => createItemColumns(theme, neon), [theme, neon]);
   const skillsColumns = React.useMemo(() => createSkillsColumns(theme, neon), [theme, neon]);
   const magiasColumns = React.useMemo(() => createMagiasColumns(theme, neon), [theme, neon]);
@@ -162,18 +176,13 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
             </HeaderInputs>
 
             <HeaderAvatar theme={theme} neon={neon}>
-              <AvatarIcon
+              <ImageUploader
                 theme={theme}
                 neon={neon}
-                onFileSelect={(file) => {
-                  if (file) {
-                    const url = URL.createObjectURL(file);
-                    setAvatarUrl(url);
-                    setAvatarFile(file);
-                  }
-                }}
+                label="Avatar"
                 initialImage={avatarUrl}
-                size={150}
+                onImageCropped={handleCharacterAvatarUpload}
+                cropPreset={characterAvatarCropPreset}
               />
             </HeaderAvatar>
           </FormHeader>
@@ -569,21 +578,20 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
                     src={raceImageUrl}
                     alt={selectedRace?.nome || 'Background'}
                   />
-                  <AvatarController hasImage={!!avatarUrl}>
-                  <AvatarIcon
-                    theme={theme}
-                    neon={neon}
-                    onFileSelect={(file) => {
-                      if (file) {
-                        const url = URL.createObjectURL(file);
-                        setAvatarUrl(url);
-                      }
-                    }}
-                    initialImage={avatarUrl}
-                    size={200}
-                    clickable={false}
-                  />
-                  </AvatarController>
+                  {avatarUrl && (
+                    <AvatarController hasImage={!!avatarUrl}>
+                      <img 
+                        src={avatarUrl} 
+                        alt="Avatar do personagem"
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          borderRadius: '50%',
+                          objectFit: 'cover',
+                        }}
+                      />
+                    </AvatarController>
+                  )}
               </StatusImageDiv>
             </StatusContentCenter>
             

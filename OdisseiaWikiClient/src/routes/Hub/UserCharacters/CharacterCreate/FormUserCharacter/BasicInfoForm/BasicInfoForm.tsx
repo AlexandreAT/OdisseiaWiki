@@ -5,7 +5,8 @@ import { Magia } from '../../../../../../models/Magias';
 import { FormHeader, GridInputs, HeaderAvatar, HeaderInputs, RelatedCharactersSection, SectionStatus, SectionTable, SectionTitle, TableTitle } from '../FormUserCharacter.style';
 import { InputText } from '../../../../../../components/Generic/InputText/InputText';
 import { Select } from '../../../../../../components/Generic/Select/Select';
-import { AvatarIcon } from '../../../../../../components/Generic/AvatarIcon/AvatarIcon';
+import { ImageUploader } from '../../../../../../components/Generic/ImageUploader/ImageUploader';
+import { CropPreset } from '../../../../../../components/Generic/ImageUploader/types';
 import { StatusInput } from '../../../../../../components/Generic/StatusInput/StatusInput';
 import { TextArea } from '../../../../../../components/Generic/TextArea/TextArea';
 import { RichTextEditor } from '../../../../../../components/Generic/RichTextEditor/RichTextEditor';
@@ -73,6 +74,18 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
   skillsColumns,
   magiasColumns,
 }) => {
+  const characterAvatarCropPreset: CropPreset = {
+    mode: 'single',
+    aspectRatio: 1,
+    shape: 'circle',
+    displayShape: 'circle',
+    label: 'Avatar Circular',
+  };
+
+  const handleCharacterAvatarUpload = (result: any) => {
+    setAvatarUrl(result.preview);
+    setAvatarFile(result.file);
+  };
   return (
     <>
       <FormHeader theme={theme} neon={neon}>
@@ -115,18 +128,13 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
         </HeaderInputs>
 
         <HeaderAvatar theme={theme} neon={neon}>
-          <AvatarIcon
+          <ImageUploader
             theme={theme}
             neon={neon}
-            onFileSelect={(file) => {
-              if (file) {
-                const url = URL.createObjectURL(file);
-                setAvatarUrl(url);
-                setAvatarFile(file);
-              }
-            }}
+            label="Avatar"
             initialImage={avatarUrl}
-            size={150}
+            onImageCropped={handleCharacterAvatarUpload}
+            cropPreset={characterAvatarCropPreset}
           />
         </HeaderAvatar>
       </FormHeader>

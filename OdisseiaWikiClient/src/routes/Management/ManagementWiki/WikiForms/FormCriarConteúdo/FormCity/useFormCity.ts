@@ -33,6 +33,7 @@ export const useFormCity = (initialCity?: CidadePayload, contentType?: string) =
   // Inclui URLs existentes + BLOBs temporários (para preview)
   const [galeriaUrls, setGaleriaUrls] = useState<string[]>(parseGaleriaImagem());
   const [galeriaFiles, setGaleriaFiles] = useState<File[]>([]);
+  const [galeriaShapes, setGaleriaShapes] = useState<string[]>(Array(parseGaleriaImagem().length).fill('square'));
   const [tags, setTags] = useState<string[]>(initialCity?.tags || []);
   const [tagInput, setTagInput] = useState('');
   const [pontosDeInteresse, setPontosDeInteresse] = useState<PontoDeInteresse[]>(initialCity?.pontosDeInteresse || []);
@@ -120,10 +121,11 @@ export const useFormCity = (initialCity?: CidadePayload, contentType?: string) =
     }
   };
 
-  const handleGaleriaUpload = (files: File[]) => {
+  const handleGaleriaUpload = (files: File[], shapes: string[]) => {
     setGaleriaFiles(prev => [...prev, ...files]);
     const urls = files.map(file => URL.createObjectURL(file));
     setGaleriaUrls(prev => [...prev, ...urls]);
+    setGaleriaShapes(prev => [...prev, ...shapes]);
   };
 
   const handleRemoveGaleriaImage = (indexToRemove: number) => {
@@ -140,6 +142,7 @@ export const useFormCity = (initialCity?: CidadePayload, contentType?: string) =
     }
     
     setGaleriaUrls(prev => prev.filter((_, i) => i !== indexToRemove));
+    setGaleriaShapes(prev => prev.filter((_, i) => i !== indexToRemove));
   };
 
   const handleAddTag = () => {
@@ -197,6 +200,8 @@ export const useFormCity = (initialCity?: CidadePayload, contentType?: string) =
     setImagemFile(null);
     setGaleriaUrls([]);
     setGaleriaFiles([]);
+    setGaleriaShapes([]);
+    setExistingGaleriaUrls([]);
     setTags([]);
     setTagInput('');
     setPontosDeInteresse([]);
@@ -323,6 +328,7 @@ export const useFormCity = (initialCity?: CidadePayload, contentType?: string) =
     imagemFile,
     galeriaUrls,
     galeriaFiles,
+    galeriaShapes,
     tags,
     tagInput,
     pontosDeInteresse,

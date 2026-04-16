@@ -2,7 +2,8 @@ import React, { useRef, useEffect } from 'react';
 import { InputText } from '../../../../../../components/Generic/InputText/InputText';
 import { Select } from '../../../../../../components/Generic/Select/Select';
 import { CheckBox } from '../../../../../../components/Generic/CheckBox/CheckBox';
-import { ImageUpload } from '../../../../../../components/Generic/ImageUpload/ImageUpload';
+import { ImageUploader } from '../../../../../../components/Generic/ImageUploader/ImageUploader';
+import type { CropPreset } from '../../../../../../components/Generic/ImageUploader/types';
 import { ImageGallery } from '../../../../../../components/Generic/ImageGallery/ImageGallery';
 import { HorizontalList } from '../../../../../../components/Generic/HorizontalList/HorizontalList';
 import { CyberButton } from '../../../../../../components/Generic/HighlightButton/HighlightButton';
@@ -53,7 +54,6 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
     passivaInput,
     isSubmitting,
     nomeError,
-    imagemError,
     errors,
     atributoOptions,
     setNome,
@@ -75,6 +75,18 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
     handleSubmit,
     resetForm,
   } = useFormRace(initialRaca, contentType);
+
+  const raceImageCropPreset: CropPreset = {
+    mode: 'single',
+    aspectRatio: 1,
+    shape: 'square',
+    displayShape: 'square',
+    label: 'Quadrado (1:1)',
+  };
+
+  const handleRaceImageUpload = (result: any) => {
+    handleImagemUpload(result.file);
+  };
 
   const tagInputRef = useRef<HTMLInputElement>(null);
   const passivaInputRef = useRef<HTMLInputElement>(null);
@@ -164,18 +176,13 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
         </HeaderInfo>
 
         <ImageSection>
-          <ImageUpload
+          <ImageUploader
             theme={theme}
             neon={neon}
             label="Imagem Principal"
-            imageUrl={imagemUrl}
-            onChange={handleImagemUpload}
-            error={!!imagemError}
-            errorMessage={imagemError}
-            width="300px"
-            height="300px"
-            required
-            showRemoveButton
+            initialImage={imagemUrl}
+            onImageCropped={handleRaceImageUpload}
+            cropPreset={raceImageCropPreset}
           />
         </ImageSection>
       </FormHeader>

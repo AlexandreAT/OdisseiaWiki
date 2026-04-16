@@ -4,8 +4,9 @@ import { InputText } from '../../../../../../components/Generic/InputText/InputT
 import { RichTextEditor } from '../../../../../../components/Generic/RichTextEditor/RichTextEditor';
 import { CyberButton } from '../../../../../../components/Generic/HighlightButton/HighlightButton';
 import { CheckBox } from '../../../../../../components/Generic/CheckBox/CheckBox';
-import { ImageUpload } from '../../../../../../components/Generic/ImageUpload/ImageUpload';
-import { ImageGallery } from '../../../../../../components/Generic/ImageGallery/ImageGallery';
+import { ImageUploader } from '../../../../../../components/Generic/ImageUploader/ImageUploader';
+import type { CropPreset } from '../../../../../../components/Generic/ImageUploader/types';
+import { ImageGalleryWithCrop } from '../../../../../../components/Generic/ImageGallery/ImageGalleryWithCrop';
 import { HorizontalList } from '../../../../../../components/Generic/HorizontalList/HorizontalList';
 import {
   FormController,
@@ -38,6 +39,7 @@ export const FormCity = ({ theme, neon, initialCity, onSaveSuccess, contentType 
     descricao,
     imagemUrl,
     galeriaUrls,
+    galeriaShapes,
     tags,
     tagInput,
     pontosDeInteresse,
@@ -45,7 +47,6 @@ export const FormCity = ({ theme, neon, initialCity, onSaveSuccess, contentType 
     visivel,
     isSubmitting,
     nomeError,
-    imagemError,
     setNome,
     setDescricao,
     setTagInput,
@@ -62,6 +63,18 @@ export const FormCity = ({ theme, neon, initialCity, onSaveSuccess, contentType 
     handleSubmit,
     resetForm,
   } = useFormCity(initialCity, contentType);
+
+  const cityImageCropPreset: CropPreset = {
+    mode: 'single',
+    aspectRatio: 16 / 9,
+    shape: 'rectangle',
+    displayShape: 'rectangle',
+    label: 'Retângulo (16:9)',
+  };
+
+  const handleCityImageUpload = (result: any) => {
+    handleImagemUpload(result.file);
+  };
 
   const tagInputRef = useRef<HTMLInputElement>(null);
 
@@ -172,18 +185,13 @@ export const FormCity = ({ theme, neon, initialCity, onSaveSuccess, contentType 
         </HeaderInfo>
 
         <ImageSection>
-          <ImageUpload
+          <ImageUploader
             theme={theme}
             neon={neon}
             label="Imagem Principal"
-            imageUrl={imagemUrl}
-            onChange={handleImagemUpload}
-            error={!!imagemError}
-            errorMessage={imagemError}
-            width="300px"
-            height="300px"
-            required
-            showRemoveButton
+            initialImage={imagemUrl}
+            onImageCropped={handleCityImageUpload}
+            cropPreset={cityImageCropPreset}
           />
         </ImageSection>
       </FormHeader>
@@ -210,11 +218,12 @@ export const FormCity = ({ theme, neon, initialCity, onSaveSuccess, contentType 
         />
       </CheckboxSection>
 
-      <ImageGallery
+      <ImageGalleryWithCrop
         theme={theme}
         neon={neon}
         label="Galeria de Imagens (Opcional)"
         imageUrls={galeriaUrls}
+        imageShapes={galeriaShapes}
         onAdd={handleGaleriaUpload}
         onRemove={handleRemoveGaleriaImage}
       />
