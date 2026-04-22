@@ -5,10 +5,10 @@ interface ThemeProps {
   neon: 'on' | 'off';
 }
 
-export const StepDotsAnchor = styled.div`
+export const StepDotsAnchor = styled.div<{ right?: string }>`
   position: absolute;
   top: 24px;
-  right: -46px;
+  right: ${({ right }) => right || '-46px'};
   z-index: 12;
 `;
 

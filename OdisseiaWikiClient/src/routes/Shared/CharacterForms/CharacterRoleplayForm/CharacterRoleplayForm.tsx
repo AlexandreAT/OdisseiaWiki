@@ -2,11 +2,12 @@ import React from 'react';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import { BiSearchAlt } from 'react-icons/bi';
 import toast from 'react-hot-toast';
-import { AvatarIcon } from '../../../../components/Generic/AvatarIcon/AvatarIcon';
+import { ImageUploader } from '../../../../components/Generic/ImageUploader/ImageUploader';
+import { ImageGalleryWithCrop } from '../../../../components/Generic/ImageGallery/ImageGalleryWithCrop';
+import type { CropPreset } from '../../../../components/Generic/ImageUploader/types';
 import { CheckBox } from '../../../../components/Generic/CheckBox/CheckBox';
 import { CheckSelect } from '../../../../components/Generic/CheckSelect/CheckSelect';
 import { HorizontalList } from '../../../../components/Generic/HorizontalList/HorizontalList';
-import { ImageGallery } from '../../../../components/Generic/ImageGallery/ImageGallery';
 import { InputText } from '../../../../components/Generic/InputText/InputText';
 import RichTextModal from '../../../../components/Generic/RichTextModal';
 import { RichTextEditor } from '../../../../components/Generic/RichTextEditor/RichTextEditor';
@@ -50,6 +51,7 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
   setAvatarUrl,
   setAvatarFile,
   galeriaUrls,
+  galeriaShapes,
   onAddGaleria,
   onRemoveGaleria,
   history,
@@ -76,6 +78,19 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
   raceChangeMode = 'default',
 }) => {
   const [historyModalOpen, setHistoryModalOpen] = React.useState(false);
+
+  const characterAvatarCropPreset: CropPreset = {
+    mode: 'single',
+    aspectRatio: 1,
+    shape: 'circle',
+    displayShape: 'circle',
+    label: 'Avatar Circular',
+  };
+
+  const handleCharacterAvatarUpload = (result: any) => {
+    setAvatarUrl(result.preview);
+    setAvatarFile(result.file);
+  };
 
   const canChangeRace = React.useMemo(
     () => {
@@ -150,27 +165,23 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
         </HeaderInputs>
 
         <HeaderAvatar theme={theme} neon={neon}>
-          <AvatarIcon
+          <ImageUploader
             theme={theme}
             neon={neon}
-            onFileSelect={(file) => {
-              if (file) {
-                const url = URL.createObjectURL(file);
-                setAvatarUrl(url);
-                setAvatarFile(file);
-              }
-            }}
+            label="Avatar"
             initialImage={avatarUrl}
-            size={170}
+            onImageCropped={handleCharacterAvatarUpload}
+            cropPreset={characterAvatarCropPreset}
           />
         </HeaderAvatar>
       </FormHeader>
 
-      <ImageGallery
+      <ImageGalleryWithCrop
         theme={theme}
         neon={neon}
         label="Galeria de imagens"
         imageUrls={galeriaUrls}
+        imageShapes={galeriaShapes}
         onAdd={onAddGaleria}
         onRemove={onRemoveGaleria}
       />

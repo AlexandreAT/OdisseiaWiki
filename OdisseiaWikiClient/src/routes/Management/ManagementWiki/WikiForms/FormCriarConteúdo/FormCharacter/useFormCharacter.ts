@@ -15,6 +15,7 @@ import { Magia, MagiaElemento, MagiaTipoString } from '../../../../../../models/
 import { salvarPersonagem } from '../../../../../../services/personagensService';
 import { getItens } from '../../../../../../services/itensService';
 import { prepareForAPI } from '../../../../../../utils/richTextHelpers';
+import { TOTAL_STEPS } from '../../../../../../constants';
 
 const serializeRichText = (value: any): string => {
   if (value === undefined || value === null) return '';
@@ -69,6 +70,9 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
   const [city, setCity] = useState<number | undefined>(undefined);
   const [avatarUrl, setAvatarUrl] = useState('');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [galeriaUrls, setGaleriaUrls] = useState<string[]>([]);
+  const [galeriaFiles, setGaleriaFiles] = useState<File[]>([]);
+  const [galeriaShapes, setGaleriaShapes] = useState<string[]>([]);
   const [history, setHistory] = useState<JSONContent | string>('');
   const [costumes, setCostumes] = useState('');
   const [nanites, setNanites] = useState('');
@@ -153,8 +157,6 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
   const [personagens, setPersonagens] = useState<typeof personagensMock>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loadingPersonagens, setLoadingPersonagens] = useState(false);
-
-  const TOTAL_STEPS = 2; // ajuste conforme for crescendo
 
   const isFirstStep = step === 1;
   const isLastStep = step === TOTAL_STEPS;
@@ -351,6 +353,19 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
     setTags(prev => prev.filter(tag => tag !== tagToRemove));
   }, []);
 
+  const handleGaleriaUpload = useCallback((files: File[], shapes: string[]) => {
+    setGaleriaFiles(prev => [...prev, ...files]);
+    const urls = files.map(file => URL.createObjectURL(file));
+    setGaleriaUrls(prev => [...prev, ...urls]);
+    setGaleriaShapes(prev => [...prev, ...shapes]);
+  }, []);
+
+  const handleRemoveGaleriaImage = useCallback((indexToRemove: number) => {
+    setGaleriaUrls(prev => prev.filter((_, i) => i !== indexToRemove));
+    setGaleriaFiles(prev => prev.filter((_, i) => i !== indexToRemove));
+    setGaleriaShapes(prev => prev.filter((_, i) => i !== indexToRemove));
+  }, []);
+
   // --- validação ---
   const validateCharacterForm = useCallback((data: CharacterFormData): CharacterFormErrors => {
     const errors: CharacterFormErrors = {};
@@ -530,6 +545,9 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
     city, setCity,
     avatarUrl, setAvatarUrl,
     avatarFile, setAvatarFile,
+    galeriaUrls,
+    galeriaFiles,
+    galeriaShapes,
     history, setHistory,
     costumes, setCostumes,
     nanites, setNanites,
@@ -567,6 +585,8 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
     searchPersonagens,
     handleAddTag,
     handleRemoveTag,
+    handleGaleriaUpload,
+    handleRemoveGaleriaImage,
     handleNext,
     handleSubmit,
     handlePrev,

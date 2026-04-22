@@ -27,20 +27,13 @@ import {
 import { useFormItem } from "./useFormItem";
 import { atributosFormMap } from "../FormCharacter/MapItensForm";
 import toast from "react-hot-toast";
+import { ITEM_TIPO_OPTIONS } from "../../formOptions";
 
 interface FormItemProps {
   theme: 'dark' | 'light';
   neon: 'on' | 'off';
   contentType?: string;
 }
-
-const ITEM_TIPO_OPTIONS: { value: ItemTipo; label: string }[] = [
-  { value: "arma", label: "Arma" },
-  { value: "traje", label: "Traje" },
-  { value: "consumiveis", label: "Consumível" },
-  { value: "acessorio", label: "Acessório" },
-  { value: "outro", label: "Outro" },
-];
 
 export const FormItem = ({ theme, neon, contentType }: FormItemProps) => {
   const {
@@ -113,6 +106,8 @@ export const FormItem = ({ theme, neon, contentType }: FormItemProps) => {
             neon={neon}
             error={!!nomeError}
             errorMessage={nomeError}
+            required
+            width="100%"
           />
 
           <Select
@@ -245,20 +240,20 @@ export const FormItem = ({ theme, neon, contentType }: FormItemProps) => {
         <CyberButton
           type="button"
           onClick={resetForm}
+          disabled={isSubmitting}
           theme={theme}
           neon={neon}
           colorType="secondary"
           text="Limpar Formulário"
-          width="160px"
+          width="200px"
         />
         <CyberButton
           type="submit"
-          disabled={isSubmitting}
+          loading={isSubmitting}
           theme={theme}
           neon={neon}
-          colorType="primary"
-          text={isSubmitting ? (itemId ? "Atualizando..." : "Criando...") : (itemId ? "Atualizar Item" : "Criar Item")}
-          width="160px"
+          text={itemId ? "Atualizar Item" : "Criar Item"}
+          width="200px"
         />
       </ButtonsContainer>
     </FormController>

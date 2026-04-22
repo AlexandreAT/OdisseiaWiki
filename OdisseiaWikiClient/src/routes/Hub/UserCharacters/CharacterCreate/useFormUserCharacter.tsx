@@ -76,6 +76,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
   const [avatarUrl, setAvatarUrl] = useState('');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [galeriaUrls, setGaleriaUrls] = useState<string[]>([]);
+  const [galeriaShapes, setGaleriaShapes] = useState<string[]>([]);
   const [galeriaPreviewFileMap, setGaleriaPreviewFileMap] = useState<Record<string, File>>({});
   const [history, setHistory] = useState<JSONContent | string>('');
   const [costumes, setCostumes] = useState('');
@@ -564,10 +565,11 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
 
   }, [personagem]);
 
-  const handleGaleriaUpload = useCallback((files: File[]) => {
+  const handleGaleriaUpload = useCallback((files: File[], shapes: string[]) => {
     const nextUrls = files.map((file) => URL.createObjectURL(file));
 
     setGaleriaUrls((prev) => [...prev, ...nextUrls]);
+    setGaleriaShapes((prev) => [...prev, ...shapes]);
     setGaleriaPreviewFileMap((prev) => {
       const next = { ...prev };
       nextUrls.forEach((url, index) => {
@@ -596,6 +598,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
 
       return prev.filter((_, i) => i !== index);
     });
+    setGaleriaShapes((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
   const validateCharacterForm = useCallback((data: CharacterFormData): CharacterFormErrors => {
@@ -814,7 +817,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     } catch (err: any) {
       toast.error(err?.response?.data || "Erro ao salvar personagem");
     }
-  }, [avatarUrl, avatarFile, galeriaUrls, galeriaPreviewFileMap, userName, itens, magias, skills, race, city, userId, selectedMesa, history, costumes, extraInformation, nanites, alignment, traits, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, defesas, buildStatusForPayload, onSave]);
+  }, [avatarUrl, avatarFile, galeriaUrls, galeriaShapes, galeriaPreviewFileMap, userName, itens, magias, skills, race, city, userId, selectedMesa, history, costumes, extraInformation, nanites, alignment, traits, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, defesas, buildStatusForPayload, onSave]);
 
   return {
     step,
@@ -832,6 +835,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     avatarFile,
     setAvatarFile,
     galeriaUrls,
+    galeriaShapes,
     handleGaleriaUpload,
     handleRemoveGaleriaImage,
     history,

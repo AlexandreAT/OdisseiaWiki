@@ -30,40 +30,8 @@ import {
   TagsInputContainer,
   TagInput,
 } from '../FormCriarConteúdo/FormItem/FormItem.style';
-import styled from 'styled-components';
-
-const ITEM_TIPO_OPTIONS: { value: ItemTipo; label: string }[] = [
-  { value: "arma", label: "Arma" },
-  { value: "traje", label: "Traje" },
-  { value: "consumiveis", label: "Consumível" },
-  { value: "acessorio", label: "Acessório" },
-  { value: "outro", label: "Outro" },
-];
-
-const EditHeader = styled.div<{ theme: 'dark' | 'light'; neon: 'on' | 'off' }>`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20px;
-  background: ${props => props.theme === 'dark' ? '#1a1a1a' : '#f5f5f5'};
-  border: 1px solid ${props => props.neon === 'on' ? '#00ff00' : '#333'};
-  border-radius: 8px;
-  margin-bottom: 20px;
-
-  h2 {
-    margin: 0;
-    color: ${props => props.theme === 'dark' ? '#fff' : '#000'};
-    font-size: 20px;
-  }
-`;
-
-const LoadingContainer = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 400px;
-  font-size: 18px;
-`;
+import { EditHeader, LoadingContainer } from './EditFormStyles';
+import { ITEM_TIPO_OPTIONS } from '../formOptions';
 
 interface ItemEditProps {
   theme: 'dark' | 'light';
@@ -413,6 +381,7 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
         <CyberButton
           type="button"
           onClick={handleDelete}
+          disabled={isSubmitting}
           theme={theme}
           neon={neon}
           colorType="secondary"
@@ -421,11 +390,11 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
         />
         <CyberButton
           type="submit"
-          disabled={isSubmitting}
+          loading={isSubmitting}
           theme={theme}
           neon={neon}
           colorType="primary"
-          text={isSubmitting ? "Atualizando..." : "Atualizar Item"}
+          text="Atualizar Item"
           width="160px"
         />
       </ButtonsContainer>

@@ -4,44 +4,7 @@ import { CyberButton } from '../../../../../components/Generic/HighlightButton/H
 import { getRacaById, deleteRaca } from '../../../../../services/racasService';
 import { FormRace } from '../FormCriarConteúdo/FormRace/FormRace';
 import { RacaPayload } from '../../../../../services/racasService';
-import styled from 'styled-components';
-
-const EditHeader = styled.div<{ theme: 'dark' | 'light'; neon: 'on' | 'off' }>`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20px;
-  background: ${props => props.theme === 'dark' ? '#1a1a1a' : '#f5f5f5'};
-  border: 1px solid ${props => props.neon === 'on' ? '#00ff00' : '#333'};
-  border-radius: 8px;
-  margin-bottom: 20px;
-
-  h2 {
-    margin: 0;
-    color: ${props => props.theme === 'dark' ? '#fff' : '#000'};
-    font-size: 20px;
-  }
-`;
-
-const LoadingContainer = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 400px;
-  font-size: 18px;
-`;
-
-const ActionButtonsContainer = styled.div<{ theme: 'dark' | 'light'; neon: 'on' | 'off' }>`
-  display: flex;
-  gap: 10px;
-  margin-top: 20px;
-  padding: 20px;
-  background: ${props => props.theme === 'dark' ? '#1a1a1a' : '#f5f5f5'};
-  border: 1px solid ${props => props.neon === 'on' ? '#00ff00' : '#333'};
-  border-radius: 8px;
-  border-top: none;
-  justify-content: flex-end;
-`;
+import { EditHeader, LoadingContainer, ActionButtonsContainer } from './EditFormStyles';
 
 interface RaceEditProps {
   theme: 'dark' | 'light';

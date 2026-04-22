@@ -7,9 +7,10 @@ export const CharacterStepDots: React.FC<CharacterStepDotsProps> = ({
   neon,
   activeStep,
   onStepClick,
+  rightPosition,
 }) => {
   return (
-    <StepDotsAnchor>
+    <StepDotsAnchor right={rightPosition}>
       <StepDotsContainer>
         <StepDot
           type="button"

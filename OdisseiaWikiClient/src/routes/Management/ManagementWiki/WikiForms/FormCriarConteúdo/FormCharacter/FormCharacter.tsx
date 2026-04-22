@@ -3,6 +3,7 @@ import { FormController, FormHeader, HeaderInputs, HeaderAvatar, GridInputs, Sec
 import { InputText } from '../../../../../../components/Generic/InputText/InputText';
 import { Select } from '../../../../../../components/Generic/Select/Select';
 import { ImageUploader } from '../../../../../../components/Generic/ImageUploader/ImageUploader';
+import { ImageGalleryWithCrop } from '../../../../../../components/Generic/ImageGallery/ImageGalleryWithCrop';
 import { CyberButton } from '../../../../../../components/Generic/HighlightButton/HighlightButton';
 import { TextArea } from '../../../../../../components/Generic/TextArea/TextArea';
 import { RichTextEditor } from '../../../../../../components/Generic/RichTextEditor/RichTextEditor';
@@ -23,6 +24,7 @@ import { createItemColumns, createMagiasColumns, createSkillsColumns } from '../
 import { Skills } from '../../../../../../models/Skills';
 import { Item } from '../../../../../../models/Itens';
 import { Magia } from '../../../../../../models/Magias';
+import { TRAITS_OPTIONS, ALIGNMENT_OPTIONS } from '../../formOptions';
 //import OrcBack from '../../../../../../assets/racas/orc/OrcBackground.jpeg';
 
 interface FormProps {
@@ -30,29 +32,6 @@ interface FormProps {
   neon: 'on' | 'off';
   contentType?: string;
 }
-
-const TRAITS_OPTIONS = [
-  { value: 'bravo', label: 'Bravo' },
-  { value: 'curioso', label: 'Curioso' },
-  { value: 'ambicioso', label: 'Ambicioso' },
-  { value: 'leal', label: 'Leal' },
-  { value: 'orgulhoso', label: 'Orgulhoso' },
-  { value: 'calculista', label: 'Calculista' },
-  { value: 'bondoso', label: 'Bondoso' },
-  { value: 'impulsivo', label: 'Impulsivo' },
-];
-
-const ALIGNMENT_OPTIONS = [
-  { value: 'leal_bondoso', label: 'Leal e Bondoso' },
-  { value: 'neutro_bondoso', label: 'Neutro e Bondoso' },
-  { value: 'caotico_bondoso', label: 'Caótico e Bondoso' },
-  { value: 'leal_neutro', label: 'Leal Neutro' },
-  { value: 'neutro', label: 'Neutro Puro' },
-  { value: 'caotico_neutro', label: 'Caótico Neutro' },
-  { value: 'leal_mal', label: 'Leal e Maligno' },
-  { value: 'neutro_mal', label: 'Neutro e Maligno' },
-  { value: 'caotico_mal', label: 'Caótico e Maligno' },
-];
 
 export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
   const {
@@ -63,6 +42,10 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
     city, setCity,
     avatarUrl, setAvatarUrl,
     setAvatarFile,
+    galeriaUrls,
+    galeriaShapes,
+    handleGaleriaUpload,
+    handleRemoveGaleriaImage,
     history, setHistory,
     costumes, setCostumes,
     nanites, setNanites,
@@ -438,6 +421,16 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
               onChange={(checked) => setVisivel(checked)}
             />
           </CheckboxSection>
+
+          <ImageGalleryWithCrop
+            theme={theme}
+            neon={neon}
+            label="Galeria de Imagens (Opcional)"
+            imageUrls={galeriaUrls}
+            imageShapes={galeriaShapes}
+            onAdd={handleGaleriaUpload}
+            onRemove={handleRemoveGaleriaImage}
+          />
         </>
       )}
       {step === 2 && 

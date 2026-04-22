@@ -1,4 +1,5 @@
 import React, { memo } from 'react';
+import { CircularProgress } from '@mui/material';
 import { ButtonClipController, ButtonBoxShadow, ButtonClipBorder, ButtonContentContainer } from './HighlightButton.styles';
 
 interface CyberButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -14,6 +15,7 @@ interface CyberButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement>
     children?: React.ReactNode;
     onClick?: () => void;
     type?: "button" | "submit" | "reset";
+    loading?: boolean;
 }
 
 const CyberButtonComponent = ({
@@ -30,8 +32,11 @@ const CyberButtonComponent = ({
   onClick,
   type = "button",
   disabled = false,
+  loading = false,
   ...rest
 }: CyberButtonProps) => {
+  const isDisabledState = disabled || loading;
+  
   return (
     <ButtonClipController
       theme={theme}
@@ -42,7 +47,7 @@ const CyberButtonComponent = ({
       borderColor={borderColor}
       width={width}
       height={height}
-      style={{ opacity: disabled ? 0.5 : 1, pointerEvents: disabled ? 'none' : 'auto' }}
+      style={{ opacity: isDisabledState ? 0.5 : 1, pointerEvents: isDisabledState ? 'none' : 'auto' }}
     >
       <ButtonBoxShadow theme={theme} neon={neon} colorType={colorType} width={width} height={height} />
       <ButtonClipBorder theme={theme} neon={neon} colorType={colorType} width={width} height={height} />
@@ -56,10 +61,17 @@ const CyberButtonComponent = ({
         height={height}
         onClick={onClick}
         type={type}
-        disabled={disabled}
+        disabled={isDisabledState}
         {...rest}
       >
-        {children || text}
+        {loading ? (
+          <CircularProgress 
+            size={20} 
+            sx={{ color: theme === 'dark' ? '#00ff00' : '#000000' }}
+          />
+        ) : (
+          children || text
+        )}
       </ButtonContentContainer>
     </ButtonClipController>
   );

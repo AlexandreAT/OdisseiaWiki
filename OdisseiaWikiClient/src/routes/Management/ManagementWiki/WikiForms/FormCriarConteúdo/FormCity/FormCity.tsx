@@ -117,10 +117,12 @@ export const FormCity = ({ theme, neon, initialCity, onSaveSuccess, contentType 
             label="Nome da Cidade *"
             value={nome}
             onChange={(e) => setNome(e.target.value)}
+            onFocus={() => setNome(nome)} // Limpa erro ao focar
             width="100%"
             error={!!nomeError}
+            errorMessage={nomeError}
+            required
           />
-          {nomeError && <ErrorText>{nomeError}</ErrorText>}
           <TagsSection>
         <InputText
           ref={tagInputRef}
@@ -235,17 +237,18 @@ export const FormCity = ({ theme, neon, initialCity, onSaveSuccess, contentType 
           type="button"
           onClick={resetForm}
           disabled={isSubmitting}
-        >
-          Limpar
-        </CyberButton>
+          colorType="secondary"
+          text="Limpar"
+          width="200px"
+        />
         <CyberButton
           theme={theme}
           neon={neon}
           type="submit"
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? 'Salvando...' : cidadeId ? 'Atualizar Cidade' : 'Criar Cidade'}
-        </CyberButton>
+          loading={isSubmitting}
+          text={cidadeId ? 'Atualizar Cidade' : 'Criar Cidade'}
+          width="200px"
+        />
       </ButtonsContainer>
     </FormController>
   );

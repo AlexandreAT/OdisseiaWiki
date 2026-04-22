@@ -3,4 +3,5 @@ export interface CharacterStepDotsProps {
   neon: 'on' | 'off';
   activeStep: 1 | 2;
   onStepClick: (step: 1 | 2) => void;
+  rightPosition?: string;
 }

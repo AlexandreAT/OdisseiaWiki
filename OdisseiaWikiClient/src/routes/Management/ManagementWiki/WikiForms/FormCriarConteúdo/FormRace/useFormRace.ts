@@ -2,15 +2,7 @@ import { useState, useEffect } from 'react';
 import { RaceFormErrors, UploadResult } from './FormRace.type';
 import { RacaStatus, CreateRacaDto, createRaca, updateRaca, RacaPayload } from '../../../../../../services/racasService';
 import { saveAsset } from '../../../../../../services/assetsService';
-
-const ATRIBUTO_OPTIONS = [
-  { value: 'Força', label: 'Força' },
-  { value: 'Agilidade', label: 'Agilidade' },
-  { value: 'Resistência', label: 'Resistência' },
-  { value: 'Sabedoria', label: 'Sabedoria' },
-  { value: 'Precisão', label: 'Precisão' },
-  { value: 'Inteligência', label: 'Inteligência' },
-];
+import { ATRIBUTO_OPTIONS } from '../../../../../../constants';
 
 export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => {
   const [racaId] = useState<number | undefined>(initialRaca?.idraca);

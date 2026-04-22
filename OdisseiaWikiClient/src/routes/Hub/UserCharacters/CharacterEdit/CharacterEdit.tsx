@@ -38,6 +38,7 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserC
     setAvatarUrl,
     setAvatarFile,
     galeriaUrls,
+    galeriaShapes,
     handleGaleriaUpload,
     handleRemoveGaleriaImage,
     history,
@@ -98,6 +99,7 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserC
       city,
       avatarUrl,
       galeriaUrls,
+      galeriaShapes,
       history,
       costumes,
       extraInformation,
@@ -120,6 +122,7 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserC
       city,
       avatarUrl,
       galeriaUrls,
+      galeriaShapes,
       history,
       costumes,
       extraInformation,
@@ -254,6 +257,7 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserC
                   setAvatarUrl={setAvatarUrl}
                   setAvatarFile={setAvatarFile}
                   galeriaUrls={galeriaUrls}
+                  galeriaShapes={galeriaShapes}
                   onAddGaleria={handleGaleriaUpload}
                   onRemoveGaleria={handleRemoveGaleriaImage}
                   history={history}

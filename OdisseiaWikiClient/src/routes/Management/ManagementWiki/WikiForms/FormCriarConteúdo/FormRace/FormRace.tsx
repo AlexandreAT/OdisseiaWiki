@@ -145,10 +145,12 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
             label="Nome da Raça *"
             value={nome}
             onChange={(e) => setNome(e.target.value)}
+            onFocus={() => setNome(nome)} // Limpa erro ao focar
             width="100%"
             error={!!nomeError}
+            errorMessage={nomeError}
+            required
           />
-          {nomeError && <ErrorText theme={theme} neon={neon}>{nomeError}</ErrorText>}
 
           <TagsSection>
             <InputText
@@ -269,9 +271,8 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
               neon={neon}
               type="button"
               onClick={handleAddPassiva}
-            >
-              Adicionar
-            </CyberButton>
+              text="Adicionar"
+            />
           </AddPassivaContainer>
 
           {passivas.length > 0 && (
@@ -319,17 +320,18 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
           type="button"
           onClick={resetForm}
           disabled={isSubmitting}
-        >
-          Limpar
-        </CyberButton>
+          colorType="secondary"
+          text="Limpar"
+          width="200px"
+        />
         <CyberButton
           theme={theme}
           neon={neon}
           type="submit"
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? 'Salvando...' : racaId ? 'Atualizar Raça' : 'Criar Raça'}
-        </CyberButton>
+          loading={isSubmitting}
+          text={racaId ? 'Atualizar Raça' : 'Criar Raça'}
+          width="200px"
+        />
       </ButtonsContainer>
     </FormController>
   );

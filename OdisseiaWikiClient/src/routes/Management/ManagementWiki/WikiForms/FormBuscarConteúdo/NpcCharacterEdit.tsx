@@ -198,6 +198,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
 
   const [extraInformation, setExtraInformation] = React.useState('');
   const [galeriaUrls, setGaleriaUrls] = React.useState<string[]>([]);
+  const [galeriaShapes, setGaleriaShapes] = React.useState<string[]>([]);
   const [galeriaPreviewFileMap, setGaleriaPreviewFileMap] = React.useState<Record<string, File>>({});
 
   const raceImageUrl = React.useMemo(
@@ -418,6 +419,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
     skills,
     magias,
     galeriaUrls,
+    galeriaShapes,
   }), [
     userName,
     race,
@@ -442,6 +444,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
     skills,
     magias,
     galeriaUrls,
+    galeriaShapes,
   ]);
 
   React.useEffect(() => {
@@ -462,10 +465,11 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
   const isFirstStep = editStep === 1;
   const isLastStep = editStep === 2;
 
-  const handleAddGaleria = React.useCallback((files: File[]) => {
+  const handleAddGaleria = React.useCallback((files: File[], shapes: string[]) => {
     const urls = files.map((file) => URL.createObjectURL(file));
 
     setGaleriaUrls((prev) => [...prev, ...urls]);
+    setGaleriaShapes((prev) => [...prev, ...shapes]);
 
     setGaleriaPreviewFileMap((prev) => {
       const next = { ...prev };
@@ -499,6 +503,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
 
       return prev.filter((_, i) => i !== index);
     });
+    setGaleriaShapes((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
   const validateEdit = React.useCallback(() => {
@@ -740,6 +745,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
         neon={neon}
         activeStep={editStep}
         onStepClick={(targetStep) => setEditStep(targetStep)}
+        rightPosition='30px'
       />
 
       <FormEditController>
@@ -797,6 +803,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
             setAvatarUrl={setAvatarUrl}
             setAvatarFile={setAvatarFile}
             galeriaUrls={galeriaUrls}
+            galeriaShapes={galeriaShapes}
             onAddGaleria={handleAddGaleria}
             onRemoveGaleria={handleRemoveGaleria}
             history={history}
@@ -840,10 +847,10 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
           type="button"
           theme={theme}
           neon={neon}
-          text={isSaving ? 'Salvando...' : 'Salvar'}
+          text="Salvar"
           width="200px"
           onClick={handleSaveAndBack}
-          disabled={isSaving}
+          loading={isSaving}
         />
 
         <CyberButton
