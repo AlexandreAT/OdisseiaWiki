@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import CloseIcon from '@mui/icons-material/Close';
+import toast from 'react-hot-toast';
 import { JSONContent } from '../../../models/Characters';
 import { RichTextEditor } from '../RichTextEditor/RichTextEditor';
 import { CyberButton } from '../HighlightButton/HighlightButton';
+import { ConfirmDialog } from '../ConfirmDialog/ConfirmDialog';
 import {
   ModalOverlay,
   ModalSheet,
@@ -39,6 +41,7 @@ const RichTextModal: React.FC<RichTextModalProps> = ({
   const [content, setContent] = useState<JSONContent | string>(initialContent);
   const [hasChanges, setHasChanges] = useState(false);
   const [modalRoot, setModalRoot] = useState<HTMLElement | null>(null);
+  const [openConfirmCancel, setOpenConfirmCancel] = useState(false);
 
   useEffect(() => {
     // Busca ou cria o elemento modal-root
@@ -86,12 +89,19 @@ const RichTextModal: React.FC<RichTextModalProps> = ({
 
   const handleCancel = () => {
     if (hasChanges) {
-      const confirmCancel = window.confirm(
-        'Você tem alterações não salvas. Deseja realmente cancelar?'
-      );
-      if (!confirmCancel) return;
+      setOpenConfirmCancel(true);
+    } else {
+      onClose();
     }
+  };
+
+  const handleConfirmCancel = () => {
+    setOpenConfirmCancel(false);
     onClose();
+  };
+
+  const handleCancelSave = () => {
+    setOpenConfirmCancel(false);
   };
 
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -153,6 +163,16 @@ const RichTextModal: React.FC<RichTextModalProps> = ({
             width="120px"
           />
         </ModalFooter>
+        
+        <ConfirmDialog
+          open={openConfirmCancel}
+          title="Alterações não salvas"
+          message="Você tem alterações não salvas. Deseja realmente cancelar?"
+          confirmText="Descartar"
+          cancelText="Continuar editando"
+          onConfirm={handleConfirmCancel}
+          onCancel={handleCancelSave}
+        />
       </ModalSheet>
     </ModalOverlay>
   );

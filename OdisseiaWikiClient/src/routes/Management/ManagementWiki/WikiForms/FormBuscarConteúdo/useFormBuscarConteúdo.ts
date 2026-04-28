@@ -22,6 +22,8 @@ export const useFormBuscarConteúdo = () => {
   const [errors, setErrors] = useState<SearchFormErrors>({});
   const [selectedFilter, setSelectedFilter] = useState<EntityType | 'Todos'>('Todos');
   const [isDeleting, setIsDeleting] = useState(false);
+  const [openConfirmDelete, setOpenConfirmDelete] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<SearchResultItem | null>(null);
 
   // Função de busca
   const handleSearch = useCallback(async () => {
@@ -138,78 +140,88 @@ export const useFormBuscarConteúdo = () => {
     console.log('Editar:', item);
   }, []);
 
-  const handleDelete = useCallback(async (item: SearchResultItem) => {
+  const handleDelete = useCallback((item: SearchResultItem) => {
     const itemId = String(item.idString ?? item.id ?? '');
     if (!itemId) {
       toast.error(`Não foi possível identificar o ${item.tipoEntidade?.toLowerCase()} para exclusão.`);
       return;
     }
+    setItemToDelete(item);
+    setOpenConfirmDelete(true);
+  }, []);
 
-    const confirmed = window.confirm(
-      `Tem certeza que deseja excluir o ${item.tipoEntidade?.toLowerCase()} "${item.nome}"? Esta ação não pode ser desfeita.`
-    );
+  const handleConfirmDelete = useCallback(async () => {
+    if (!itemToDelete) return;
 
-    if (confirmed) {
-      setIsDeleting(true);
-      try {
-        let success = false;
+    const item = itemToDelete;
+    const itemId = String(item.idString ?? item.id ?? '');
 
-        switch (item.tipoEntidade) {
-          case 'Item':
-            success = await excluirItem(itemId);
-            if (success) {
-              setResults(prev => ({
-                ...prev,
-                itens: prev.itens.filter(i => (i.idString ?? i.id) !== itemId)
-              }));
-            }
-            break;
-          case 'Cidade':
-            success = await deleteCidade(Number(itemId));
-            if (success) {
-              setResults(prev => ({
-                ...prev,
-                cidades: prev.cidades.filter(c => (c.idString ?? c.id) !== itemId)
-              }));
-            }
-            break;
-          case 'Raca':
-            success = await deleteRaca(Number(itemId));
-            if (success) {
-              setResults(prev => ({
-                ...prev,
-                racas: prev.racas.filter(r => (r.idString ?? r.id) !== itemId)
-              }));
-            }
-            break;
-          case 'Personagem':
-            success = await deletePersonagem(itemId);
-            if (success) {
-              setResults(prev => ({
-                ...prev,
-                personagens: prev.personagens.filter(p => (p.idString ?? p.id) !== itemId)
-              }));
-            }
-            break;
-          default:
-            toast.error(`Exclusão não disponível para ${item.tipoEntidade}.`);
-            setIsDeleting(false);
-            return;
-        }
+    setOpenConfirmDelete(false);
+    setIsDeleting(true);
+    try {
+      let success = false;
 
-        if (success) {
-          toast.success(`${item.tipoEntidade} excluído com sucesso`);
-          setTotalResultados(prev => Math.max(0, prev - 1));
-        } else {
-          toast.error(`Erro ao excluir ${item.tipoEntidade?.toLowerCase()}`);
-        }
-      } catch (error: any) {
-        console.error(`Erro ao excluir ${item.tipoEntidade}:`, error);
-        toast.error(`Erro ao excluir ${item.tipoEntidade?.toLowerCase()}`);
-      } finally {
-        setIsDeleting(false);
+      switch (item.tipoEntidade) {
+        case 'Item':
+          success = await excluirItem(itemId);
+          if (success) {
+            setResults(prev => ({
+              ...prev,
+              itens: prev.itens.filter(i => (i.idString ?? i.id) !== itemId)
+            }));
+          }
+          break;
+        case 'Cidade':
+          success = await deleteCidade(Number(itemId));
+          if (success) {
+            setResults(prev => ({
+              ...prev,
+              cidades: prev.cidades.filter(c => (c.idString ?? c.id) !== itemId)
+            }));
+          }
+          break;
+        case 'Raca':
+          success = await deleteRaca(Number(itemId));
+          if (success) {
+            setResults(prev => ({
+              ...prev,
+              racas: prev.racas.filter(r => (r.idString ?? r.id) !== itemId)
+            }));
+          }
+          break;
+        case 'Personagem':
+          success = await deletePersonagem(itemId);
+          if (success) {
+            setResults(prev => ({
+              ...prev,
+              personagens: prev.personagens.filter(p => (p.idString ?? p.id) !== itemId)
+            }));
+          }
+          break;
+        default:
+          toast.error(`Exclusão não disponível para ${item.tipoEntidade}.`);
+          setIsDeleting(false);
+          return;
       }
+
+      if (success) {
+        toast.success(`${item.tipoEntidade} excluído com sucesso`);
+        setTotalResultados(prev => Math.max(0, prev - 1));
+      } else {
+        toast.error(`Erro ao excluir ${item.tipoEntidade?.toLowerCase()}`);
+      }
+    } catch (error: any) {
+      console.error(`Erro ao excluir ${item.tipoEntidade}:`, error);
+      toast.error(`Erro ao excluir ${item.tipoEntidade?.toLowerCase()}`);
+    } finally {
+      setIsDeleting(false);
+      setItemToDelete(null);
     }
+  }, [itemToDelete]);
+
+  const handleCancelDelete = useCallback(() => {
+    setOpenConfirmDelete(false);
+    setItemToDelete(null);
   }, []);
 
   const resetSearch = useCallback(() => {
@@ -244,5 +256,10 @@ export const useFormBuscarConteúdo = () => {
     handleDelete,
     resetSearch,
     isDeleting,
+    openConfirmDelete,
+    setOpenConfirmDelete,
+    itemToDelete,
+    handleConfirmDelete,
+    handleCancelDelete,
   };
 };

@@ -341,6 +341,7 @@ export const useFormCity = (initialCity?: CidadePayload, contentType?: string) =
     imagemError,
     
     setNome: handleNomeChange,
+    setNomeError,
     setDescricao,
     setTagInput,
     setPontoInteresseSearch,

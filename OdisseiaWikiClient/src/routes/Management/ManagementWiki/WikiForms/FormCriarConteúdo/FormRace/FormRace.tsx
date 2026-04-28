@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { InputText } from '../../../../../../components/Generic/InputText/InputText';
 import { Select } from '../../../../../../components/Generic/Select/Select';
 import { CheckBox } from '../../../../../../components/Generic/CheckBox/CheckBox';
@@ -27,6 +28,7 @@ import {
   ButtonsContainer,
   ErrorText,
 } from './FormRace.style';
+import { ImageGalleryWithCrop } from '../../../../../../components/Generic/ImageGallery/ImageGalleryWithCrop';
 
 interface FormRaceProps {
   theme: 'dark' | 'light';
@@ -42,6 +44,7 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
     nome,
     imagemUrl,
     galeriaUrls,
+    galeriaShapes,
     tags,
     tagInput,
     visivel,
@@ -57,6 +60,7 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
     errors,
     atributoOptions,
     setNome,
+    setNomeError,
     setTagInput,
     setPassivaInput,
     setVisivel,
@@ -126,12 +130,16 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
     const result = await handleSubmit(e);
 
     if (result?.success) {
-      alert(result.message);
+      toast.success(result.message);
       if (onSaveSuccess) {
         onSaveSuccess();
       }
     } else {
-      alert(result?.message || 'Erro ao salvar raça');
+      if (imagemUrl == "") {
+        toast.error("É necessário fazer upload de uma imagem para a raça");
+        return;
+      }
+      toast.error(result?.message || 'Erro ao salvar raça');
     }
   };
 
@@ -145,11 +153,10 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
             label="Nome da Raça *"
             value={nome}
             onChange={(e) => setNome(e.target.value)}
-            onFocus={() => setNome(nome)} // Limpa erro ao focar
+            onFocus={() => setNomeError('')}
             width="100%"
             error={!!nomeError}
             errorMessage={nomeError}
-            required
           />
 
           <TagsSection>
@@ -304,11 +311,12 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
         />
       </CheckboxSection>
 
-      <ImageGallery
+      <ImageGalleryWithCrop
         theme={theme}
         neon={neon}
         label="Galeria de Imagens (Opcional)"
         imageUrls={galeriaUrls}
+        imageShapes={galeriaShapes}
         onAdd={handleGaleriaUpload}
         onRemove={handleRemoveGaleriaImage}
       />

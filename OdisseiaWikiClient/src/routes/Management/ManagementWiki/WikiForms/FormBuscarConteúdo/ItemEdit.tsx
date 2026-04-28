@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { CyberButton } from '../../../../../components/Generic/HighlightButton/HighlightButton';
+import { ConfirmDialog } from '../../../../../components/Generic/ConfirmDialog/ConfirmDialog';
 import { Select } from '../../../../../components/Generic/Select/Select';
 import { CheckBox } from '../../../../../components/Generic/CheckBox/CheckBox';
 import { RichTextEditor } from '../../../../../components/Generic/RichTextEditor/RichTextEditor';
@@ -154,6 +155,9 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
   onBack,
   onSave
 }) => {
+  const [openConfirmDelete, setOpenConfirmDelete] = React.useState(false);
+  const [isDeletingItem, setIsDeletingItem] = React.useState(false);
+
   const {
     nome,
     setNome,
@@ -212,24 +216,31 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
 
   const handleDelete = async () => {
     if (!initialItem.iditem) return;
+    setOpenConfirmDelete(true);
+  };
 
-    const confirmed = window.confirm(
-      `Tem certeza que deseja excluir o item "${initialItem.nome}"? Esta ação não pode ser desfeita.`
-    );
+  const handleConfirmDelete = async () => {
+    if (!initialItem.iditem) return;
 
-    if (confirmed) {
-      try {
-        await excluirItem(initialItem.iditem);
-        toast.success('Item excluído com sucesso');
-        if (onSave) {
-          onSave();
-        }
-        onBack();
-      } catch (error: any) {
-        toast.error('Erro ao excluir item');
-        console.error('Erro ao excluir:', error);
+    try {
+      setIsDeletingItem(true);
+      await excluirItem(initialItem.iditem);
+      setOpenConfirmDelete(false);
+      toast.success('Item excluído com sucesso');
+      if (onSave) {
+        onSave();
       }
+      onBack();
+    } catch (error: any) {
+      toast.error('Erro ao excluir item');
+      console.error('Erro ao excluir:', error);
+    } finally {
+      setIsDeletingItem(false);
     }
+  };
+
+  const handleCancelDelete = () => {
+    setOpenConfirmDelete(false);
   };
 
   const AtributosForm = atributosFormMap[tipo];
@@ -381,7 +392,7 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
         <CyberButton
           type="button"
           onClick={handleDelete}
-          disabled={isSubmitting}
+          disabled={isSubmitting || isDeletingItem}
           theme={theme}
           neon={neon}
           colorType="secondary"
@@ -398,6 +409,16 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
           width="160px"
         />
       </ButtonsContainer>
+      <ConfirmDialog
+        open={openConfirmDelete}
+        title="Excluir Item"
+        message={`Tem certeza que deseja excluir o item "${initialItem.nome}"? Esta ação não pode ser desfeita.`}
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+        isLoading={isDeletingItem}
+      />
     </FormController>
   );
 };

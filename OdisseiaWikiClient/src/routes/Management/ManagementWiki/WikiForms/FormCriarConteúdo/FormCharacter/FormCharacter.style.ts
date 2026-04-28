@@ -20,16 +20,14 @@ export const FormHeader = styled.div<Props>`
     width: 100%;
     display: flex;
     flex-direction: row;
-    align-items: center;
-    justify-content: center;
+    justify-content: space-between;
 `;
 
 export const HeaderInputs = styled.div<Props>`
-    width: 75%;
+    width: 80%;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
     gap: 10px;
 
     @media (max-width: 768px) {
@@ -39,10 +37,8 @@ export const HeaderInputs = styled.div<Props>`
 `;
 
 export const HeaderAvatar = styled.div<Props>`
-    width: 25%;
+    width: 18%;
     display: flex;
-    align-items: center;
-    justify-content: center;
 
     @media (max-width: 768px) {
         width: 100%;

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { CyberButton } from '../../../../../components/Generic/HighlightButton/HighlightButton';
+import { ConfirmDialog } from '../../../../../components/Generic/ConfirmDialog/ConfirmDialog';
 import { getRacaById, deleteRaca } from '../../../../../services/racasService';
 import { FormRace } from '../FormCriarConteúdo/FormRace/FormRace';
 import { RacaPayload } from '../../../../../services/racasService';
@@ -18,6 +19,8 @@ export const RaceEdit: React.FC<RaceEditProps> = ({ theme, neon, raceId, onBack,
   const [race, setRace] = useState<RacaPayload | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [openConfirmDelete, setOpenConfirmDelete] = useState(false);
+  const [isDeletingRace, setIsDeletingRace] = useState(false);
 
   useEffect(() => {
     const loadRace = async () => {
@@ -69,28 +72,35 @@ export const RaceEdit: React.FC<RaceEditProps> = ({ theme, neon, raceId, onBack,
 
   const handleDelete = async () => {
     if (!race) return;
+    setOpenConfirmDelete(true);
+  };
 
-    const confirmed = window.confirm(
-      `Tem certeza que deseja excluir a raça "${race.nome}"? Esta ação não pode ser desfeita.`
-    );
+  const handleConfirmDelete = async () => {
+    if (!race) return;
 
-    if (confirmed) {
-      try {
-        const success = await deleteRaca(raceId);
-        if (success) {
-          toast.success('Raça excluída com sucesso');
-          if (onSave) {
-            onSave();
-          }
-          onBack();
-        } else {
-          toast.error('Erro ao excluir raça');
+    try {
+      setIsDeletingRace(true);
+      const success = await deleteRaca(raceId);
+      setOpenConfirmDelete(false);
+      if (success) {
+        toast.success('Raça excluída com sucesso');
+        if (onSave) {
+          onSave();
         }
-      } catch (error: any) {
+        onBack();
+      } else {
         toast.error('Erro ao excluir raça');
-        console.error('Erro ao excluir:', error);
       }
+    } catch (error: any) {
+      toast.error('Erro ao excluir raça');
+      console.error('Erro ao excluir:', error);
+    } finally {
+      setIsDeletingRace(false);
     }
+  };
+
+  const handleCancelDelete = () => {
+    setOpenConfirmDelete(false);
   };
 
   if (isLoading) {
@@ -175,6 +185,16 @@ export const RaceEdit: React.FC<RaceEditProps> = ({ theme, neon, raceId, onBack,
           width="160px"
         />
       </ActionButtonsContainer>
+      <ConfirmDialog
+        open={openConfirmDelete}
+        title="Excluir Raça"
+        message={`Tem certeza que deseja excluir a raça "${race.nome}"? Esta ação não pode ser desfeita.`}
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+        isLoading={isDeletingRace}
+      />
     </div>
   );
 };

@@ -65,6 +65,7 @@ export const FormItem = ({ theme, neon, contentType }: FormItemProps) => {
     resetForm,
     isSubmitting,
     nomeError,
+    setNomeError,
   } = useFormItem(undefined, contentType);
 
   const itemImageCropPreset: CropPreset = {
@@ -86,6 +87,12 @@ export const FormItem = ({ theme, neon, contentType }: FormItemProps) => {
     if (result?.success) {
       toast.success(result.message);
     } else {
+      if(imagemUrl == "")
+      {
+        toast.error("É necessário fazer upload de uma imagem para o item");
+        return;
+      }
+
       toast.error(result?.message || "Erro ao criar item");
     }
   };
@@ -99,19 +106,19 @@ export const FormItem = ({ theme, neon, contentType }: FormItemProps) => {
 
         <GridInputsRow>
           <InputText
-            label="Nome do Item*"
+            label="Nome do Item *"
             value={nome}
             onChange={(e) => setNome(e.target.value)}
             theme={theme}
             neon={neon}
             error={!!nomeError}
             errorMessage={nomeError}
-            required
+            onFocus={() => setNomeError('')}
             width="100%"
           />
 
           <Select
-            label="Tipo*"
+            label="Tipo *"
             value={tipo}
             onChange={(e) => setTipo(e.target.value as ItemTipo)}
             theme={theme}
@@ -148,7 +155,6 @@ export const FormItem = ({ theme, neon, contentType }: FormItemProps) => {
         />
       </FormHeader>
 
-      {/* Seção de Atributos Dinâmicos */}
       {AtributosForm && (
         <AtributosSection theme={theme} neon={neon}>
           <SectionTitle theme={theme} neon={neon}>Atributos do {ITEM_TIPO_OPTIONS.find(o => o.value === tipo)?.label}</SectionTitle>
@@ -163,7 +169,6 @@ export const FormItem = ({ theme, neon, contentType }: FormItemProps) => {
         </AtributosSection>
       )}
 
-      {/* Seção de Descrição */}
       <RichTextSection>
         <SectionTitle theme={theme} neon={neon}>Descrição</SectionTitle>
         <RichTextEditor
@@ -178,7 +183,6 @@ export const FormItem = ({ theme, neon, contentType }: FormItemProps) => {
         />
       </RichTextSection>
 
-      {/* Seção de Imagem */}
       <ImageSection>
         <SectionTitle theme={theme} neon={neon}>Imagem</SectionTitle>
         <ImageUploader
@@ -225,7 +229,6 @@ export const FormItem = ({ theme, neon, contentType }: FormItemProps) => {
         )}
       </div>
 
-      {/* Seção de Visibilidade */}
       <CheckboxContainer>
         <CheckBox
           label="Item visível"
@@ -235,7 +238,6 @@ export const FormItem = ({ theme, neon, contentType }: FormItemProps) => {
         />
       </CheckboxContainer>
 
-      {/* Botões de Ação */}
       <ButtonsContainer theme={theme} neon={neon}>
         <CyberButton
           type="button"

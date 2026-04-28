@@ -24,7 +24,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   initialImage,
   onCancel,
   accept = 'image/*',
-  label = 'Selecionar Imagem',
+  label,
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [imageUrl, setImageUrl] = useState<string | undefined>(initialImage);

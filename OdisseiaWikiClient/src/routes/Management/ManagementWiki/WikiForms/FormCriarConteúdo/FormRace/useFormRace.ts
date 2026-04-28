@@ -29,6 +29,7 @@ export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => 
   // Inclui URLs existentes + BLOBs temporários (para preview)
   const [galeriaUrls, setGaleriaUrls] = useState<string[]>(parseGaleriaImagem());
   const [galeriaFiles, setGaleriaFiles] = useState<File[]>([]);
+  const [galeriaShapes, setGaleriaShapes] = useState<string[]>(Array(parseGaleriaImagem().length).fill('square'));
   const [tags, setTags] = useState<string[]>(initialRaca?.tags || []);
   const [tagInput, setTagInput] = useState('');
   const [visivel, setVisivel] = useState(initialRaca?.visivel !== false);
@@ -143,10 +144,11 @@ export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => 
     }
   };
 
-  const handleGaleriaUpload = (files: File[]) => {
+  const handleGaleriaUpload = (files: File[], shapes: string[]) => {
     setGaleriaFiles(prev => [...prev, ...files]);
     const urls = files.map(file => URL.createObjectURL(file));
     setGaleriaUrls(prev => [...prev, ...urls]);
+    setGaleriaShapes(prev => [...prev, ...shapes]);
   };
 
   const handleRemoveGaleriaImage = (indexToRemove: number) => {
@@ -167,6 +169,9 @@ export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => 
       URL.revokeObjectURL(prev[indexToRemove]);
       return newUrls;
     });
+
+    
+    setGaleriaShapes(prev => prev.filter((_, i) => i !== indexToRemove));
   };
 
   const handleAddTag = () => {
@@ -312,6 +317,7 @@ export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => 
     setImagemFile(null);
     setGaleriaUrls([]);
     setGaleriaFiles([]);
+    setGaleriaShapes([]);
     setTags([]);
     setTagInput('');
     setVida(100);
@@ -350,6 +356,7 @@ export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => 
     imagemError,
     atributoOptions: ATRIBUTO_OPTIONS,
     setNome: handleNomeChange,
+    setNomeError,
     setTagInput,
     setPassivaInput,
     setVisivel,
@@ -368,5 +375,6 @@ export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => 
     handleSubmit,
     resetForm,
     validateForm,
+    galeriaShapes,
   };
 };

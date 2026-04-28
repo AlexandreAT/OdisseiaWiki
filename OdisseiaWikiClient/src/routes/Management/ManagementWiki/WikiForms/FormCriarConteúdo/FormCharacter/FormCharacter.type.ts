@@ -1,30 +1,21 @@
-import { Skills, SkillTipoString, SkillElemento } from '../../../../../models/Skills';
-import { Item, ItemTipo } from '../../../../../models/Itens';
-import { Magia, MagiaTipoString, MagiaElemento } from '../../../../../models/Magias';
-import { JSONContent } from '../../../../../models/Characters';
-import { RacaPayload } from '../../../../../services/racasService';
-import { CidadePayload } from '../../../../../services/cidadesService';
+import { Skills, SkillTipoString, SkillElemento } from '../../../../../../models/Skills';
+import { Item, ItemTipo } from '../../../../../../models/Itens';
+import { Magia, MagiaTipoString, MagiaElemento } from '../../../../../../models/Magias';
+import { JSONContent } from '../../../../../../models/Characters';
+import { RacaPayload } from '../../../../../../services/racasService';
+import { CidadePayload } from '../../../../../../services/cidadesService';
 
-/**
- * Form validation errors
- */
 export interface CharacterFormErrors {
   name?: string;
   race?: string;
 }
 
-/**
- * Character form submission data
- */
 export interface CharacterFormData {
   name: string;
   race?: number;
   city?: number;
 }
 
-/**
- * Character status/health stats
- */
 export interface StatusBasico {
   vida: number;
   vidaMaxima: number;
@@ -35,9 +26,6 @@ export interface StatusBasico {
   capacidadeCarga: number;
 }
 
-/**
- * Character defense attributes
- */
 export interface Defesas {
   armadura: number;
   protecao: number;
@@ -45,9 +33,6 @@ export interface Defesas {
   outras: number;
 }
 
-/**
- * Character primary attributes (main stats)
- */
 export interface Principais {
   resistencia: number;
   agilidade: number;
@@ -56,9 +41,6 @@ export interface Principais {
   forca: number;
 }
 
-/**
- * Character secondary attributes (derived stats)
- */
 export interface Secundarios {
   sanidade: number;
   coragem: number;
@@ -68,17 +50,11 @@ export interface Secundarios {
   intimidacao: number;
 }
 
-/**
- * Related character reference
- */
 export interface RelatedCharacter {
   id: number;
   nome: string;
 }
 
-/**
- * Character form hook return type
- */
 export interface CharacterFormHookReturn {
   // Navigation
   step: number;

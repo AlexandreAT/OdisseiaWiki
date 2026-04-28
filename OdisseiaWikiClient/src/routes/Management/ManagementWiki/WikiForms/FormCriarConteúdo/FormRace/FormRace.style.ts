@@ -60,8 +60,16 @@ export const StatusSection = styled.div<Props>`
   width: 100%;
   padding: 20px;
   border-radius: 8px;
+  border: 1px solid transparent;
+  border-color: ${(props) =>
+    props.neon === 'on'
+      && (props.theme === 'light'
+        ? 'var(--clearneonViolet)'
+        : 'var(--clearneonBlue)')};
   background-color: ${(props) =>
-    props.theme === 'light' ? 'var(--lightgray)' : 'var(--deepgray)'};
+    props.theme === 'light' ? 'var(--lightgray)' : 'var(--clearblack)'};
+
+  transition: border-color 0.3s ease, background-color 0.3s ease;
 `;
 
 export const StatusTitle = styled.h3<Props>`

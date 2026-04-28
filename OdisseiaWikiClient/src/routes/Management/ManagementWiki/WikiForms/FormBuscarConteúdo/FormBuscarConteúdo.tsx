@@ -1,6 +1,7 @@
 import React from 'react';
 import toast from 'react-hot-toast';
 import { InputText } from '../../../../../components/Generic/InputText/InputText';
+import { ConfirmDialog } from '../../../../../components/Generic/ConfirmDialog/ConfirmDialog';
 import { SearchResultItem } from '../../../../../services/infoLoreService';
 import { ResultCard } from './ResultCard/ResultCard';
 import { useFormBuscarConteúdo } from './useFormBuscarConteúdo';
@@ -59,6 +60,12 @@ export const FormBuscarConteúdo: React.FC<FormBuscarConteúdoProps> = ({ theme,
     getFilteredResults,
     getResultCountByType,
     handleDelete,
+    openConfirmDelete,
+    setOpenConfirmDelete,
+    itemToDelete,
+    handleConfirmDelete,
+    handleCancelDelete,
+    isDeleting,
   } = useFormBuscarConteúdo();
 
   const filteredResults = getFilteredResults();
@@ -256,6 +263,17 @@ export const FormBuscarConteúdo: React.FC<FormBuscarConteúdoProps> = ({ theme,
       </SearchHeader>
 
       {renderContent()}
+      
+      <ConfirmDialog
+        open={openConfirmDelete}
+        title="Excluir Item"
+        message={`Tem certeza que deseja excluir o ${itemToDelete?.tipoEntidade?.toLowerCase()} "${itemToDelete?.nome}"? Esta ação não pode ser desfeita.`}
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+        isLoading={isDeleting}
+      />
     </Main>
   );
 };

@@ -370,8 +370,8 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
   const validateCharacterForm = useCallback((data: CharacterFormData): CharacterFormErrors => {
     const errors: CharacterFormErrors = {};
 
-    if (!data.name || data.name.trim().length < 1) {
-      errors.name = 'O nome deve ter pelo menos 1 caracter.';
+    if (!data.name || data.name.trim().length < 3) {
+      errors.name = 'O nome deve ter pelo menos 3 caracteres.';
     }
 
     if (!data.race || data.race === 0) {

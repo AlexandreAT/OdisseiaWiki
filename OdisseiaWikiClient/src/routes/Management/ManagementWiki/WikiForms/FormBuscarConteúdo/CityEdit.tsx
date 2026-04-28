@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { CyberButton } from '../../../../../components/Generic/HighlightButton/HighlightButton';
+import { ConfirmDialog } from '../../../../../components/Generic/ConfirmDialog/ConfirmDialog';
 import { getCidadeById, deleteCidade } from '../../../../../services/cidadesService';
 import { FormCity } from '../FormCriarConteúdo/FormCity/FormCity';
 import { CidadePayload } from '../../../../../services/cidadesService';
@@ -18,6 +19,8 @@ export const CityEdit: React.FC<CityEditProps> = ({ theme, neon, cityId, onBack,
   const [city, setCity] = useState<CidadePayload | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [openConfirmDelete, setOpenConfirmDelete] = useState(false);
+  const [isDeletingCity, setIsDeletingCity] = useState(false);
 
   useEffect(() => {
     const loadCity = async () => {
@@ -80,28 +83,35 @@ export const CityEdit: React.FC<CityEditProps> = ({ theme, neon, cityId, onBack,
 
   const handleDelete = async () => {
     if (!city) return;
+    setOpenConfirmDelete(true);
+  };
 
-    const confirmed = window.confirm(
-      `Tem certeza que deseja excluir a cidade "${city.nome}"? Esta ação não pode ser desfeita.`
-    );
+  const handleConfirmDelete = async () => {
+    if (!city) return;
 
-    if (confirmed) {
-      try {
-        const success = await deleteCidade(cityId);
-        if (success) {
-          toast.success('Cidade excluída com sucesso');
-          if (onSave) {
-            onSave();
-          }
-          onBack();
-        } else {
-          toast.error('Erro ao excluir cidade');
+    try {
+      setIsDeletingCity(true);
+      const success = await deleteCidade(cityId);
+      setOpenConfirmDelete(false);
+      if (success) {
+        toast.success('Cidade excluída com sucesso');
+        if (onSave) {
+          onSave();
         }
-      } catch (error: any) {
+        onBack();
+      } else {
         toast.error('Erro ao excluir cidade');
-        console.error('Erro ao excluir:', error);
       }
+    } catch (error: any) {
+      toast.error('Erro ao excluir cidade');
+      console.error('Erro ao excluir:', error);
+    } finally {
+      setIsDeletingCity(false);
     }
+  };
+
+  const handleCancelDelete = () => {
+    setOpenConfirmDelete(false);
   };
 
   if (isLoading) {
@@ -186,6 +196,16 @@ export const CityEdit: React.FC<CityEditProps> = ({ theme, neon, cityId, onBack,
           width="160px"
         />
       </ActionButtonsContainer>
+      <ConfirmDialog
+        open={openConfirmDelete}
+        title="Excluir Cidade"
+        message={`Tem certeza que deseja excluir a cidade "${city.nome}"? Esta ação não pode ser desfeita.`}
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+        isLoading={isDeletingCity}
+      />
     </div>
   );
 };

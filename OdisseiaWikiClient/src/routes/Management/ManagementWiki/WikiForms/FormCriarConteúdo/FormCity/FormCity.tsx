@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { useFormCity } from './useFormCity';
 import { InputText } from '../../../../../../components/Generic/InputText/InputText';
 import { RichTextEditor } from '../../../../../../components/Generic/RichTextEditor/RichTextEditor';
@@ -48,6 +49,7 @@ export const FormCity = ({ theme, neon, initialCity, onSaveSuccess, contentType 
     isSubmitting,
     nomeError,
     setNome,
+    setNomeError,
     setDescricao,
     setTagInput,
     setPontoInteresseSearch,
@@ -98,12 +100,16 @@ export const FormCity = ({ theme, neon, initialCity, onSaveSuccess, contentType 
     const result = await handleSubmit(e);
     
     if (result?.success) {
-      alert(result.message);
+      toast.success(result.message);
       if (onSaveSuccess) {
         onSaveSuccess();
       }
     } else {
-      alert(result?.message || 'Erro ao salvar cidade');
+      if (imagemUrl == "") {
+        toast.error("É necessário fazer upload de uma imagem para a cidade");
+        return;
+      }
+      toast.error(result?.message || 'Erro ao salvar cidade');
     }
   };
 
@@ -117,11 +123,10 @@ export const FormCity = ({ theme, neon, initialCity, onSaveSuccess, contentType 
             label="Nome da Cidade *"
             value={nome}
             onChange={(e) => setNome(e.target.value)}
-            onFocus={() => setNome(nome)} // Limpa erro ao focar
+            onFocus={() => setNomeError('')}
             width="100%"
             error={!!nomeError}
             errorMessage={nomeError}
-            required
           />
           <TagsSection>
         <InputText

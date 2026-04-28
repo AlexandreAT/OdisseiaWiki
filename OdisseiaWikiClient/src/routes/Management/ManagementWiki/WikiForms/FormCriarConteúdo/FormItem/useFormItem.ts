@@ -3,6 +3,7 @@ import { ItemTipo, JSONContent } from "../../../../../../models/Itens";
 import { saveAsset } from "../../../../../../services/assetsService";
 import { prepareForAPI } from "../../../../../../utils/richTextHelpers";
 import { salvarItem, ItemPayload } from "../../../../../../services/itensService";
+import toast from "react-hot-toast";
 
 // Atributos iniciais para cada tipo
 const getEmptyAtributos = (tipo: ItemTipo): any => {
@@ -146,10 +147,12 @@ export const useFormItem = (initialItem?: ItemPayload, contentType?: string) => 
       return false;
     }
 
-    if (value.length < 2) {
-      setNomeError("Nome muito curto");
+    if (value.length < 3) {
+      setNomeError("O nome deve ter 3 caracteres ou mais");
       return false;
     }
+
+    if (imagemUrl == "") return false;
 
     setNomeError("");
     return true;
@@ -356,6 +359,7 @@ export const useFormItem = (initialItem?: ItemPayload, contentType?: string) => 
     visivel,
     setVisivel,
     nomeError,
+    setNomeError,
     handleSubmit,
     resetForm,
     isSubmitting
