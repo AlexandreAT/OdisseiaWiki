@@ -86,5 +86,55 @@ namespace OdisseiaWiki.Helpers
                 return false;
             }
         }
+
+        public static string ExtractPlainText(string? jsonString)
+        {
+            if (string.IsNullOrWhiteSpace(jsonString))
+                return string.Empty;
+
+            try
+            {
+                JsonDocument doc = JsonDocument.Parse(jsonString);
+
+                List<string> texts = new();
+
+                ExtractTextRecursive(doc.RootElement, texts);
+
+                return string.Join(" ", texts);
+            }
+            catch
+            {
+                return jsonString;
+            }
+        }
+
+        private static void ExtractTextRecursive(
+            JsonElement element,
+            List<string> texts)
+        {
+            if (element.ValueKind == JsonValueKind.Object)
+            {
+                if (element.TryGetProperty("text", out JsonElement textProp))
+                {
+                    string? value = textProp.GetString();
+
+                    if (!string.IsNullOrWhiteSpace(value))
+                        texts.Add(value);
+                }
+
+                foreach (JsonProperty prop in element.EnumerateObject())
+                {
+                    ExtractTextRecursive(prop.Value, texts);
+                }
+            }
+
+            if (element.ValueKind == JsonValueKind.Array)
+            {
+                foreach (JsonElement item in element.EnumerateArray())
+                {
+                    ExtractTextRecursive(item, texts);
+                }
+            }
+        }
     }
 }

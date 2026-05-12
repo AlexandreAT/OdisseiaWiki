@@ -1,18 +1,26 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 
 namespace OdisseiaWiki.Dtos
 {
     public class InfoLoreDto
     {
+        [Key]
         public int IdinfoLore { get; set; }
+
+        [Required]
         public string Titulo { get; set; } = null!;
-        public JsonElement? Descricao { get; set; }
+
+        public object? Conteudo { get; set; }
+
         public string? Imagem { get; set; }
-        public int? Ordem { get; set; }
+
         public List<string>? Tags { get; set; }
+
         public bool Visivel { get; set; } = true;
-        public DateTime DataCriacao { get; set; }
+
+        public DateTime DataCriacao { get; set; } = DateTime.UtcNow;
     }
 }

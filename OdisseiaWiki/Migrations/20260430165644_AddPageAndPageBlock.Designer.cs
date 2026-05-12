@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using OdisseiaWiki.Data;
 
@@ -11,9 +12,11 @@ using OdisseiaWiki.Data;
 namespace OdisseiaWiki.Migrations
 {
     [DbContext(typeof(OdisseiaContext))]
-    partial class OdisseiaContextModelSnapshot : ModelSnapshot
+    [Migration("20260430165644_AddPageAndPageBlock")]
+    partial class AddPageAndPageBlock
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -309,12 +312,17 @@ namespace OdisseiaWiki.Migrations
                     b.Property<int>("Ordem")
                         .HasColumnType("int");
 
-                    b.Property<int>("Tipo")
+                    b.Property<int>("PageIdPage")
                         .HasColumnType("int");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
 
                     b.HasKey("IdPageBlock");
 
-                    b.HasIndex("IdPage");
+                    b.HasIndex("PageIdPage");
 
                     b.ToTable("PageBlocks");
                 });
@@ -660,7 +668,7 @@ namespace OdisseiaWiki.Migrations
                 {
                     b.HasOne("OdisseiaWiki.Models.Page", "Page")
                         .WithMany("Blocks")
-                        .HasForeignKey("IdPage")
+                        .HasForeignKey("PageIdPage")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

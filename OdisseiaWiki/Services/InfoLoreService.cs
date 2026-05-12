@@ -42,9 +42,8 @@ namespace OdisseiaWiki.Services
             var infoLore = new Infolore
             {
                 Titulo = dto.Titulo,
-                Descricao = RichTextHelper.SerializeRichText(dto.Descricao),
+                Conteudo = RichTextHelper.SerializeRichText(dto.Conteudo),
                 Imagem = dto.Imagem,
-                Ordem = dto.Ordem,
                 Tags = dto.Tags != null && dto.Tags.Any()
                     ? JsonSerializer.Serialize(dto.Tags)
                     : null,
@@ -82,11 +81,10 @@ namespace OdisseiaWiki.Services
             //}
 
             infoLore.Titulo = dto.Titulo ?? infoLore.Titulo;
-            infoLore.Descricao = dto.Descricao.HasValue
-                ? RichTextHelper.SerializeRichText(dto.Descricao)
-                : infoLore.Descricao;
+            infoLore.Conteudo = dto.Conteudo != null
+                ? RichTextHelper.SerializeRichText(dto.Conteudo)
+                : infoLore.Conteudo;
             infoLore.Imagem = dto.Imagem ?? infoLore.Imagem;
-            infoLore.Ordem = dto.Ordem ?? infoLore.Ordem;
             infoLore.Tags = dto.Tags != null && dto.Tags.Any()
                 ? JsonSerializer.Serialize(dto.Tags)
                 : infoLore.Tags;
@@ -220,9 +218,8 @@ namespace OdisseiaWiki.Services
         {
             IdinfoLore = infoLore.IdinfoLore,
             Titulo = infoLore.Titulo,
-            Descricao = RichTextHelper.DeserializeRichText(infoLore.Descricao),
+            Conteudo = RichTextHelper.DeserializeRichText(infoLore.Conteudo),
             Imagem = infoLore.Imagem,
-            Ordem = infoLore.Ordem,
             Tags = !string.IsNullOrWhiteSpace(infoLore.Tags)
                 ? JsonSerializer.Deserialize<List<string>>(infoLore.Tags)
                 : null,

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 
 namespace OdisseiaWiki.Models;
 
@@ -9,14 +10,12 @@ public partial class Infolore
     [Key]
     public int IdinfoLore { get; set; }
 
-    [Required(ErrorMessage = "O título é obrigatório.")]
+    [Required]
     public string Titulo { get; set; } = null!;
 
-    public string? Descricao { get; set; }
+    public string? Conteudo { get; set; }
 
     public string? Imagem { get; set; }
-
-    public int? Ordem { get; set; }
 
     public string? Tags { get; set; }
 

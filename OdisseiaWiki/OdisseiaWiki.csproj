@@ -32,4 +32,16 @@
     <Folder Include="wwwroot\assets_dynamic\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EditorConfigFiles Remove="C:\Users\alexa\Desktop\Cursos e Derivados\OdisseiaWiki\OdisseiaWiki\Repositories\.editorconfig" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="Repositories\.editorconfig" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EditorConfigFiles Remove="C:\Users\alexa\Desktop\Cursos e Derivados\OdisseiaWiki\OdisseiaWiki\Repositories\.editorconfig" />
+  </ItemGroup>
+
 </Project>

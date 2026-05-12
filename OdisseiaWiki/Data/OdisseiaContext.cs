@@ -39,11 +39,21 @@ public partial class OdisseiaContext : DbContext
 
     public virtual DbSet<Item> Itens { get; set; }
 
+    public DbSet<Page> Pages { get; set; }
+
+    public DbSet<PageBlock> PageBlocks { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder
             .UseCollation("utf8mb4_general_ci")
             .HasCharSet("utf8mb4");
+
+        modelBuilder.Entity<Page>()
+            .HasMany(p => p.Blocks)
+            .WithOne(b => b.Page)
+            .HasForeignKey(b => b.IdPage)
+            .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<Cidade>(entity =>
         {
@@ -74,9 +84,8 @@ public partial class OdisseiaContext : DbContext
                 .HasColumnType("int(11)")
                 .HasColumnName("IDInfoLore");
             entity.Property(e => e.DataCriacao).HasColumnType("datetime");
-            entity.Property(e => e.Descricao).HasColumnType("text");
+            entity.Property(e => e.Conteudo).HasColumnType("text");
             entity.Property(e => e.Imagem).HasMaxLength(255);
-            entity.Property(e => e.Ordem).HasColumnType("int(11)");
             entity.Property(e => e.Titulo).HasMaxLength(150);
             entity.Property(e => e.Tags).HasColumnType("longtext");
             entity.Property(e => e.Visivel).HasColumnType("tinyint(1)");
