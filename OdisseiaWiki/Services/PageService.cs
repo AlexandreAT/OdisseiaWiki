@@ -15,7 +15,7 @@ namespace OdisseiaWiki.Services
             _repository = repository;
         }
 
-        public async Task<PageDto> CreateAsync(CreatePageWithBlocksDto dto)
+        public async Task<ResultPage> CreateAsync(CreatePageWithBlocksDto dto)
         {
             Page? slugExistente = await _repository.GetBySlugAsync(dto.Page.Slug);
 
@@ -36,7 +36,7 @@ namespace OdisseiaWiki.Services
 
             Page created = await _repository.CreateAsync(page);
 
-            return MapPageToDto(created);
+            return ResultPage.Ok(MapPageToDto(created));
         }
 
         public async Task<PageDto?> GetByIdAsync(int id)

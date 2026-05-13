@@ -5,6 +5,7 @@ import { FormCharacter } from './FormCharacter/FormCharacter';
 import { FormCity } from './FormCity/FormCity';
 import { FormRace } from './FormRace/FormRace';
 import { FormItem } from './FormItem/FormItem';
+import { FormPage } from './FormPage/FormPage';
 
 interface FormProps {
   theme: 'dark' | 'light';
@@ -15,7 +16,8 @@ const OPTIONS = [
     { value: 'character', label: 'Personagem' },
     { value: 'city', label: 'Cidade' },
     { value: 'race', label: 'Raça' },
-    { value: 'item', label: 'Item' }
+    { value: 'item', label: 'Item' },
+    { value: 'page', label: 'Página' }
 ];
 
 export const FormCriarConteúdo = ({ theme, neon }: FormProps) => {
@@ -31,6 +33,8 @@ export const FormCriarConteúdo = ({ theme, neon }: FormProps) => {
                 return <FormRace theme={theme} neon={neon} contentType="Raça" />;
             case 'item':
                 return <FormItem theme={theme} neon={neon} contentType="Item" />;
+            case 'page':
+                return <FormPage theme={theme} neon={neon} />;
             default:
                 return null;
         }

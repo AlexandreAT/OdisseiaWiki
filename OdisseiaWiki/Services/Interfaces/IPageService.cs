@@ -5,7 +5,7 @@ namespace OdisseiaWiki.Services.Interfaces
 {
     public interface IPageService
     {
-        Task<PageDto> CreateAsync(CreatePageWithBlocksDto dto);
+        Task<ResultPage> CreateAsync(CreatePageWithBlocksDto dto);
 
         Task<PageDto?> GetByIdAsync(int id);
 
