@@ -7,6 +7,8 @@ import { CyberButton } from '../../../../../../components/Generic/HighlightButto
 import { InputText } from '../../../../../../components/Generic/InputText/InputText';
 import { TextArea } from '../../../../../../components/Generic/TextArea/TextArea';
 import { CheckBox } from '../../../../../../components/Generic/CheckBox/CheckBox';
+import { ImageUploader } from '../../../../../../components/Generic/ImageUploader/ImageUploader';
+import type { CropPreset } from '../../../../../../components/Generic/ImageUploader/types';
 import {
   RichTextBlockEditor,
   ImageBlockEditor,
@@ -20,8 +22,6 @@ import {
   SectionTitle,
   GridInputs,
   FullWidthInput,
-  CoverImageContainer,
-  CoverImagePreview,
   BlocksContainer,
   BlockItem,
   BlockHeader,
@@ -34,7 +34,6 @@ import {
   BlockTypeButton,
   ActionButtonsContainer,
   EmptyBlocksMessage,
-  ErrorMessage,
 } from './FormPage.style';
 import { BiTrash, BiChevronUp, BiChevronDown, BiPlus } from 'react-icons/bi';
 
@@ -80,7 +79,9 @@ export const FormPage: React.FC<FormPageProps> = ({
     moveBlockUp,
     moveBlockDown,
     tituloError,
+    setTituloError,
     slugError,
+    setSlugError,
     handleSubmit,
   } = useFormPage({
     initialPage,
@@ -89,18 +90,19 @@ export const FormPage: React.FC<FormPageProps> = ({
   });
 
   const [selectedBlockType, setSelectedBlockType] = useState<PageBlockType | null>(null);
-  const [coverImagePreview, setCoverImagePreview] = useState(initialPage?.coverImage || '');
+  const [coverImageUrl, setCoverImageUrl] = useState(initialPage?.coverImage || '');
 
-  const handleCoverImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setCoverImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setCoverImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
+  const coverImageCropPreset: CropPreset = {
+    mode: 'single',
+    aspectRatio: 16 / 9,
+    shape: 'rectangle',
+    displayShape: 'rectangle',
+    label: 'Retângulo (16:9)',
+  };
+
+  const handleCoverImageUpload = (result: any) => {
+    setCoverImageFile(result.file);
+    setCoverImageUrl(result.preview);
   };
 
   const handleAddBlock = (tipo: PageBlockType) => {
@@ -143,29 +145,29 @@ export const FormPage: React.FC<FormPageProps> = ({
         </SectionHeader>
 
         <GridInputs>
-          <div>
-            <InputText
-              theme={theme}
-              neon={neon}
-              label="Título"
-              value={titulo}
-              onChange={(e) => setTitulo(e.target.value)}
-              width="100%"
-            />
-            {tituloError && <ErrorMessage>Título é obrigatório</ErrorMessage>}
-          </div>
+          <InputText
+            theme={theme}
+            neon={neon}
+            label="Título *"
+            value={titulo}
+            onChange={(e) => setTitulo(e.target.value)}
+            onFocus={() => setTituloError('')}
+            width="100%"
+            error={!!tituloError}
+            errorMessage={tituloError}
+          />
 
-          <div>
-            <InputText
-              theme={theme}
-              neon={neon}
-              label="Slug"
-              value={slug}
-              onChange={(e) => setSlug(e.target.value)}
-              width="100%"
-            />
-            {slugError && <ErrorMessage>Slug é obrigatório</ErrorMessage>}
-          </div>
+          <InputText
+            theme={theme}
+            neon={neon}
+            label="Slug *"
+            value={slug}
+            onChange={(e) => setSlug(e.target.value)}
+            onFocus={() => setSlugError('')}
+            width="100%"
+            error={!!slugError}
+            errorMessage={slugError}
+          />
         </GridInputs>
 
         <FullWidthInput>
@@ -180,23 +182,14 @@ export const FormPage: React.FC<FormPageProps> = ({
         </FullWidthInput>
         
         <FullWidthInput>
-          <CoverImageContainer $isDark={theme === 'dark'}>
-            <label style={{ fontWeight: 'bold', fontSize: '14px' }}>
-              Imagem de Capa (opcional)
-            </label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleCoverImageUpload}
-              style={{ padding: '8px' }}
-            />
-            {coverImagePreview && (
-              <>
-                <label style={{ fontSize: '12px', opacity: 0.7 }}>Preview:</label>
-                <CoverImagePreview src={coverImagePreview} alt="Capa" />
-              </>
-            )}
-          </CoverImageContainer>
+          <ImageUploader
+            theme={theme}
+            neon={neon}
+            label="Imagem de Capa (opcional)"
+            initialImage={coverImageUrl}
+            onImageCropped={handleCoverImageUpload}
+            cropPreset={coverImageCropPreset}
+          />
         </FullWidthInput>
 
         <FullWidthInput>

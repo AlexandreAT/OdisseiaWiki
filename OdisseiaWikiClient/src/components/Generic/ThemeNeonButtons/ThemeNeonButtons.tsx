@@ -33,7 +33,7 @@ export const ThemeNeonButtons = () => {
         {neon === "off" && (<BsLightningCharge className="icon iconOff" />)}
         {neon === "on" && (<BsLightningChargeFill className="icon iconOn" />)}
       </OptionButton>
-      <OptionButton theme={theme} neon={neon} onClick={handleTheme}>
+      <OptionButton theme={theme} neon={neon} onClick={handleTheme} disabled={true}>
         {theme === "dark" && (<BsLightbulbOffFill className="icon iconDark" />)}
         {theme === "light" && (<BsLightbulbFill className="icon iconLight" />)}
       </OptionButton>

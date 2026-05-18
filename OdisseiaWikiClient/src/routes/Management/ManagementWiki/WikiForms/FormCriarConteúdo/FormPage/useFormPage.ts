@@ -69,25 +69,25 @@ export const useFormPage = ({
   );
 
   // --- Erros ---
-  const [tituloError, setTituloError] = useState(false);
-  const [slugError, setSlugError] = useState(false);
+  const [tituloError, setTituloError] = useState('');
+  const [slugError, setSlugError] = useState('');
 
   // --- Validações básicas ---
   const validateForm = useCallback((): boolean => {
     let isValid = true;
 
     if (!titulo.trim()) {
-      setTituloError(true);
+      setTituloError('Título é obrigatório');
       isValid = false;
     } else {
-      setTituloError(false);
+      setTituloError('');
     }
 
     if (!slug.trim()) {
-      setSlugError(true);
+      setSlugError('Slug é obrigatório');
       isValid = false;
     } else {
-      setSlugError(false);
+      setSlugError('');
     }
 
     if (blocks.length === 0) {
@@ -254,7 +254,9 @@ export const useFormPage = ({
 
     // Erros
     tituloError,
+    setTituloError,
     slugError,
+    setSlugError,
 
     // Submit
     handleSubmit,

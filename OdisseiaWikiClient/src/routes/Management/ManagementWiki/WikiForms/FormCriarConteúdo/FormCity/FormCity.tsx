@@ -16,7 +16,6 @@ import {
   ImageSection,
   DescriptionSection,
   ButtonsContainer,
-  ErrorText,
   TagsSection,
   CheckboxSection,
   PontosInteresseSection,

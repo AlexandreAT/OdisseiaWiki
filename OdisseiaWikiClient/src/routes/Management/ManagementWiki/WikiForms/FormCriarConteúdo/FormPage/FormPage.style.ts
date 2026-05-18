@@ -42,21 +42,7 @@ margin-top: 12px;
   grid-column: 1 / -1;
 `;
 
-export const CoverImageContainer = styled.div<ThemeProps>`
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 12px;
-  border-radius: 8px;
-  background-color: ${props => (props.$isDark ? '#1a1a1a' : '#f5f5f5')};
-`;
 
-export const CoverImagePreview = styled.img`
-  max-width: 100%;
-  max-height: 200px;
-  border-radius: 8px;
-  object-fit: cover;
-`;
 
 export const BlocksContainer = styled.div<ThemeProps>`
   display: flex;
@@ -195,13 +181,4 @@ export const EmptyBlocksMessage = styled.div`
   p {
     margin: 0;
   }
-`;
-
-export const ErrorMessage = styled.div`
-  padding: 8px 12px;
-  border-radius: 4px;
-  background-color: rgba(220, 53, 69, 0.1);
-  color: #dc3545;
-  font-size: 12px;
-  border: 1px solid rgba(220, 53, 69, 0.3);
 `;

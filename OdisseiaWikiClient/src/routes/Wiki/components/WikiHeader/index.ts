@@ -1,0 +1,1 @@
+export { WikiHeader } from './WikiHeader';

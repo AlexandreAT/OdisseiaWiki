@@ -29,7 +29,13 @@ const router = createBrowserRouter([{
     },
     {
       path: 'wiki',
-      element: <Wiki />
+      element: <Wiki />,
+      children: [
+        {
+          path: ':slug',
+          element: <Wiki />
+        }
+      ]
     },
     {
       path: 'management',

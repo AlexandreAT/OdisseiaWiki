@@ -1,0 +1,1 @@
+export { InfoLoreBlock } from './InfoLoreBlock';

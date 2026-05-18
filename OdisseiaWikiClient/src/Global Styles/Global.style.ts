@@ -76,7 +76,7 @@ const Body = styled.body<Props>`
 const Footer = styled.footer<Props>`
     width: 100%;
     bottom: 0;
-    z-index: 5;
+    z-index: 15;
     position: relative;
     
     ${props => props.theme === 'dark' ? `

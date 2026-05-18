@@ -1,18 +1,26 @@
-import { WikiSection } from '../../components/InfoComponents/WikiSummary/index';
-import { personagensMock } from '../../Mock/characters.mock'
+import { useEffect } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import { WikiContainer } from './components/WikiContainer/WikiContainer';
+import { WikiPageContainer } from './Wiki.style';
 
 const Wiki = () => {
-  
-  return (
-    <div>
-        <WikiSection 
-          colorScheme='bluePink'
-          title='Personagens'
-          content={personagensMock}
-          contentType='characters'
-        />
-    </div>
-  )
-}
+  const navigate = useNavigate();
+  const { slug } = useParams<{ slug?: string }>();
+  const [searchParams] = useSearchParams();
+  const { theme, neon } = useSelector((state: any) => state.themesReducer);
 
-export default Wiki
+  useEffect(() => {
+    if (!slug && !searchParams.has('q')) {
+      navigate('/wiki/MainPage');
+    }
+  }, [slug, searchParams, navigate]);
+
+  return (
+    <WikiPageContainer theme={theme} neon={neon}>
+      <WikiContainer />
+    </WikiPageContainer>
+  );
+};
+
+export default Wiki;

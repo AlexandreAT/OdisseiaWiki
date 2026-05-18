@@ -1,7 +1,5 @@
 import api from "../axios/api";
 import {
-  PageDto,
-  PageBlockDto,
   CreatePageWithBlocksDto,
   ResultPage,
   ResultPages

@@ -23,11 +23,13 @@ export const OptionButton = styled.button<Props>`
     border: none;
     font-size: 18px;
 
-    .iconOff:hover,
-    .iconOn:hover,
-    .iconDark:hover,
-    .iconLight:hover {
-        transform: scale(1.5);
+    &:not(:disabled) {
+        .iconOff:hover,
+        .iconOn:hover,
+        .iconDark:hover,
+        .iconLight:hover {
+            transform: scale(1.5);
+        }
     }
     
     ${ props => props.theme === 'dark' ? `
@@ -57,4 +59,9 @@ export const OptionButton = styled.button<Props>`
     @media (max-width: 480px) {
         font-size: 14px;
     };
+
+    &:disabled {
+        cursor: not-allowed;
+        opacity: 0.4;
+    }
 `;

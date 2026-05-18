@@ -14,7 +14,6 @@ import {
 } from './ImageUploader.style';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
-const ALLOWED_MIME_TYPES = ['image/'];
 
 export const ImageUploader: React.FC<ImageUploaderProps> = ({
   theme,

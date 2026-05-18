@@ -28,16 +28,17 @@ namespace OdisseiaWiki.Controllers
             var page = await _service.GetBySlugAsync(slug);
 
             if (page == null)
-                return NotFound();
+                return NotFound(ResultPage.Fail("Página não encontrada."));
 
-            return Ok(page);
+            return Ok(ResultPage.Ok(page));
         }
 
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] bool? visivel = null)
         {
             var pages = await _service.GetAllAsync(visivel);
-            return Ok(pages);
+
+            return Ok(ResultPage.Ok(pages));
         }
 
         [HttpPut("{id:int}")]
