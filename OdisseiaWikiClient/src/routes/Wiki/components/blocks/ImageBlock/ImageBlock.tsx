@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ImageBlockProps } from './types';
+import { normalizeImagePath } from '../../../utils/imagePathHelper';
 import {
   ImageBlockContainer,
   ImageWrapper,
@@ -30,7 +31,7 @@ export const ImageBlock: React.FC<ImageBlockProps> = ({ block }) => {
       <ImageWrapper>
         {!imageError ? (
           <StyledImage
-            src={url}
+            src={normalizeImagePath(url)}
             alt={legenda || 'Imagem'}
             onError={() => setImageError(true)}
           />

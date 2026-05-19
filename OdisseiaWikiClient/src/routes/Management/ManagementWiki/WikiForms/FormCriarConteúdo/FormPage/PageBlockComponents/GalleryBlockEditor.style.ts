@@ -11,6 +11,34 @@ export const Container = styled.div`
   gap: 12px;
 `;
 
+export const AspectRatioSelector = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+export const AspectButton = styled.button<{ $isActive: boolean }>`
+  flex: 1;
+  padding: 8px 12px;
+  border: 2px solid ${props => (props.$isActive ? '#00d4ff' : '#333')};
+  border-radius: 4px;
+  background-color: ${props => (props.$isActive ? 'rgba(0, 212, 255, 0.1)' : 'transparent')};
+  color: ${props => (props.$isActive ? '#00d4ff' : '#fff')};
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 12px;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: #00d4ff;
+    color: #00d4ff;
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+`;
+
 export const GalleryContainer = styled.div<ThemeProps>`
   width: 100%;
   padding: 12px;
@@ -36,12 +64,15 @@ export const ImageItem = styled.div<ThemeProps>`
   overflow: hidden;
   background-color: ${props => (props.$isDark ? '#2a2a2a' : '#e0e0e0')};
   border: 1px solid ${props => (props.$isDark ? '#444' : '#ccc')};
+  display: flex;
+  flex-direction: column;
 `;
 
 export const ImageThumb = styled.img`
   width: 100%;
   height: 100%;
   object-fit: cover;
+  flex: 1;
 `;
 
 export const DeleteButton = styled.button`
@@ -63,40 +94,6 @@ export const DeleteButton = styled.button`
 
   &:hover {
     background-color: #cc0000;
-  }
-`;
-
-export const ActionButtons = styled.div`
-  display: flex;
-  gap: 8px;
-  width: 100%;
-  flex-wrap: wrap;
-`;
-
-export const ActionButton = styled.button`
-  flex: 1;
-  min-width: 120px;
-  padding: 8px 12px;
-  border: none;
-  border-radius: 6px;
-  background-color: #4a4a4a;
-  color: white;
-  cursor: pointer;
-  font-weight: bold;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  transition: background-color 0.2s;
-
-  &:hover {
-    background-color: #5a5a5a;
-  }
-
-  &:disabled {
-    background-color: #2a2a2a;
-    cursor: not-allowed;
-    opacity: 0.5;
   }
 `;
 

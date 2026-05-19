@@ -17,7 +17,7 @@ export const WikiContentArea = styled.div<WikiLayoutProps>`
   overflow: hidden;
 `;
 
-export const WikiMainSection = styled.div<WikiLayoutProps & { $sidebarExpanded: boolean }>`
+export const WikiMainSection = styled.div<WikiLayoutProps & { $sidebarExpanded: boolean; $headerExpanded: boolean }>`
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -25,7 +25,8 @@ export const WikiMainSection = styled.div<WikiLayoutProps & { $sidebarExpanded: 
   min-height: 0;
   overflow-y: auto;
   margin-left: ${props => (props.$sidebarExpanded ? '180px' : '0px')};
-  transition: margin-left 0.3s ease-in-out;
+  padding-top: ${props => (props.$headerExpanded ? '76px' : '0px')};
+  transition: margin-left 0.3s ease-in-out, padding-top 0.3s ease-in-out;
 `;
 
 export const ErrorContainer = styled.div<WikiLayoutProps>`

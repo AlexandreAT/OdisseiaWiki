@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { BiX, BiChevronLeft, BiChevronRight, BiImage } from 'react-icons/bi';
+import { normalizeImagePath } from '../../../utils/imagePathHelper';
 import { GalleryBlockProps } from './types';
 import {
   GalleryBlockContainer,
@@ -77,7 +78,7 @@ export const GalleryBlock: React.FC<GalleryBlockProps> = ({ block }) => {
             >
               {!imageErrors.has(index) && imagem.url ? (
                 <GalleryItemImage
-                  src={imagem.url}
+                  src={normalizeImagePath(imagem.url)}
                   alt={imagem.legenda || `Imagem ${index + 1}`}
                   onError={() => handleImageError(index)}
                 />
@@ -100,7 +101,7 @@ export const GalleryBlock: React.FC<GalleryBlockProps> = ({ block }) => {
 
             {!imageErrors.has(selectedIndex) && imagens[selectedIndex]?.url ? (
               <ModalImage
-                src={imagens[selectedIndex].url}
+                src={normalizeImagePath(imagens[selectedIndex].url)}
                 alt={imagens[selectedIndex].legenda || `Imagem ${selectedIndex + 1}`}
                 onError={() => handleImageError(selectedIndex)}
               />

@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import { PageBlock, GalleryBlockContent, ImageBlockContent } from '../../../../../../../models/Pages';
+import { ImageUploader } from '../../../../../../../components/Generic/ImageUploader/ImageUploader';
 import { InputText } from '../../../../../../../components/Generic/InputText/InputText';
+import { saveAsset } from '../../../../../../../services/assetsService';
+import type { CropPreset } from '../../../../../../../components/Generic/ImageUploader/types';
 import {
   Container,
   GalleryContainer,
@@ -8,8 +12,9 @@ import {
   ImageItem,
   ImageThumb,
   DeleteButton,
-  ActionButton,
   GalleryLabel,
+  AspectRatioSelector,
+  AspectButton,
 } from './GalleryBlockEditor.style';
 
 interface GalleryBlockEditorProps {
@@ -27,23 +32,55 @@ export const GalleryBlockEditor: React.FC<GalleryBlockEditorProps> = ({
 }) => {
   const content = (block.conteudo as GalleryBlockContent) || { imagens: [] };
   const [imagens, setImagens] = useState<ImageBlockContent[]>(content.imagens || []);
-  const [newUrl, setNewUrl] = useState('');
   const [newLegenda, setNewLegenda] = useState('');
+  const [aspectRatio, setAspectRatio] = useState<'square' | 'rectangle'>('rectangle');
+  const [uploadingImage, setUploadingImage] = useState(false);
 
-  const handleAddImage = () => {
-    if (!newUrl.trim()) return;
-
-    const novaImagem: ImageBlockContent = {
-      url: newUrl,
-      legenda: newLegenda,
+  const getCropPreset = (): CropPreset => {
+    if (aspectRatio === 'square') {
+      return {
+        mode: 'single',
+        aspectRatio: 1,
+        shape: 'rectangle',
+        displayShape: 'rectangle',
+        label: 'Quadrado (1:1)',
+      };
+    }
+    return {
+      mode: 'single',
+      aspectRatio: 16 / 9,
+      shape: 'rectangle',
+      displayShape: 'rectangle',
+      label: 'Retângulo (16:9)',
     };
+  };
 
-    const novasImagens = [...imagens, novaImagem];
-    setImagens(novasImagens);
-    onUpdate({ imagens: novasImagens });
+  const handleImageUpload = async (result: any) => {
+    setUploadingImage(true);
+    try {
+      const assetResult = await saveAsset({
+        imageFile: result.file,
+        type: "pages/gallery",
+        entityName: `gallery_${Date.now()}`,
+      });
+      
+      const novaImagem: ImageBlockContent = {
+        url: assetResult.path,
+        legenda: newLegenda,
+      };
 
-    setNewUrl('');
-    setNewLegenda('');
+      const novasImagens = [...imagens, novaImagem];
+      setImagens(novasImagens);
+      onUpdate({ imagens: novasImagens });
+
+      setNewLegenda('');
+      toast.success('Imagem adicionada com sucesso!');
+    } catch (error) {
+      toast.error('Erro ao salvar imagem');
+      console.error(error);
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const handleRemoveImage = (index: number) => {
@@ -55,13 +92,34 @@ export const GalleryBlockEditor: React.FC<GalleryBlockEditorProps> = ({
   return (
     <GalleryContainer $isDark={theme === 'dark'}>
       <Container>
-        <InputText
+        <AspectRatioSelector>
+          <label style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
+            Proporção:
+          </label>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <AspectButton
+              $isActive={aspectRatio === 'square'}
+              onClick={() => setAspectRatio('square')}
+              type="button"
+            >
+              Quadrado (1:1)
+            </AspectButton>
+            <AspectButton
+              $isActive={aspectRatio === 'rectangle'}
+              onClick={() => setAspectRatio('rectangle')}
+              type="button"
+            >
+              Retângulo (16:9)
+            </AspectButton>
+          </div>
+        </AspectRatioSelector>
+
+        <ImageUploader
           theme={theme}
           neon={neon}
-          label="URL da Imagem"
-          value={newUrl}
-          onChange={(e) => setNewUrl(e.target.value)}
-          width="100%"
+          label="Adicionar Imagem"
+          onImageCropped={handleImageUpload}
+          cropPreset={getCropPreset()}
         />
 
         <InputText
@@ -72,10 +130,6 @@ export const GalleryBlockEditor: React.FC<GalleryBlockEditorProps> = ({
           onChange={(e) => setNewLegenda(e.target.value)}
           width="100%"
         />
-
-        <ActionButton onClick={handleAddImage}>
-          Adicionar Imagem
-        </ActionButton>
       </Container>
 
       {imagens.length > 0 && (
@@ -87,6 +141,11 @@ export const GalleryBlockEditor: React.FC<GalleryBlockEditorProps> = ({
             {imagens.map((img, idx) => (
               <ImageItem key={idx} $isDark={theme === 'dark'}>
                 <ImageThumb src={img.url} alt={img.legenda || `Imagem ${idx + 1}`} />
+                {img.legenda && (
+                  <div style={{ fontSize: '10px', padding: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#fff' }}>
+                    {img.legenda}
+                  </div>
+                )}
                 <DeleteButton onClick={() => handleRemoveImage(idx)}>
                   ✕
                 </DeleteButton>

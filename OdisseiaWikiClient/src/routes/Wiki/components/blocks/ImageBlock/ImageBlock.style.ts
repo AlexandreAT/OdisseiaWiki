@@ -12,17 +12,16 @@ export const ImageWrapper = styled.div`
   align-items: center;
   justify-content: center;
   width: 100%;
-  max-height: 500px;
+  height: 200px;
   overflow: hidden;
   border-radius: 8px;
-  background-color: #000;
+  background-color: #0004;
 `;
 
 export const StyledImage = styled.img`
   width: 100%;
-  height: auto;
-  max-height: 500px;
-  object-fit: cover;
+  height: 200px;
+  object-fit: contain;
   border-radius: 8px;
 `;
 

@@ -10,9 +10,9 @@ export const WikiPageHeaderSection = styled.section`
 `;
 
 export const PageCoverImage = styled.img`
-  width: 100%;
-  max-height: 300px;
-  object-fit: cover;
+  width: 60%;
+  height: auto;
+  object-fit: contain;
   border-radius: 8px;
   margin-bottom: 16px;
 `;

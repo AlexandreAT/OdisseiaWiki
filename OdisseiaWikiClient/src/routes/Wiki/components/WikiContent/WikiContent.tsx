@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { normalizeImagePath } from '../../utils/imagePathHelper';
 import { WikiContentProps } from './types';
 import {
   WikiPageHeaderSection,
@@ -12,7 +13,6 @@ import {
 import { WikiBlockRenderer } from '../blocks';
 
 export const WikiContent: React.FC<WikiContentProps> = ({ page }) => {
-  // Ordenar blocos por ordem
   const sortedBlocks = useMemo(() => {
     if (!page.blocks || page.blocks.length === 0) {
       return [];
@@ -20,7 +20,6 @@ export const WikiContent: React.FC<WikiContentProps> = ({ page }) => {
     return [...page.blocks].sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
   }, [page.blocks]);
 
-  // Formatar data
   const formatDate = (dateString?: string): string => {
     if (!dateString) return '';
     try {
@@ -38,7 +37,7 @@ export const WikiContent: React.FC<WikiContentProps> = ({ page }) => {
   return (
     <>
       <WikiPageHeaderSection>
-        {page.coverImage && <PageCoverImage src={page.coverImage} alt={page.titulo} />}
+        {page.coverImage && <PageCoverImage src={normalizeImagePath(page.coverImage)} alt={page.titulo} />}
         <PageTitle>{page.titulo}</PageTitle>
         {page.descricao && <PageDescription>{page.descricao}</PageDescription>}
         {page.dataCriacao && (
