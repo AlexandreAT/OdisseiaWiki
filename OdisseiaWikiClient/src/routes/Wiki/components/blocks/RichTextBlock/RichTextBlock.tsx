@@ -5,14 +5,13 @@ import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
 import Link from '@tiptap/extension-link';
 import { RichTextBlockProps } from './types';
-import { RichTextBlockContainer, ErrorMessage } from './RichTextBlock.style';
+import { RichTextBlockContainer, ErrorMessage, DivController } from './RichTextBlock.style';
 
 export const RichTextBlock: React.FC<RichTextBlockProps> = ({ block }) => {
   if (!block.conteudo) {
     return null;
   }
 
-  // Criar editor no modo readonly
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -23,7 +22,7 @@ export const RichTextBlock: React.FC<RichTextBlockProps> = ({ block }) => {
       }),
     ],
     content: block.conteudo,
-    editable: false, // ReadOnly mode
+    editable: false,
   });
 
   if (!editor) {
@@ -35,8 +34,10 @@ export const RichTextBlock: React.FC<RichTextBlockProps> = ({ block }) => {
   }
 
   return (
-    <RichTextBlockContainer>
-      <EditorContent editor={editor} />
-    </RichTextBlockContainer>
+    <DivController>
+      <RichTextBlockContainer>
+        <EditorContent editor={editor} />
+      </RichTextBlockContainer>
+    </DivController>
   );
 };

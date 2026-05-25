@@ -12,23 +12,19 @@ export const ImageWrapper = styled.div`
   align-items: center;
   justify-content: center;
   width: 100%;
-  height: 200px;
   overflow: hidden;
-  border-radius: 8px;
-  background-color: #0004;
 `;
 
 export const StyledImage = styled.img`
-  width: 100%;
-  height: 200px;
+  height: 350px;
   object-fit: contain;
-  border-radius: 8px;
+  border-radius: 10px !important;
 `;
 
 export const ImageCaption = styled.p`
   margin: 0;
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--lightGrey) !important;
   font-style: italic;
   text-align: center;
 `;

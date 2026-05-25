@@ -33,6 +33,17 @@ namespace OdisseiaWiki.Controllers
             return Ok(ResultPage.Ok(page));
         }
 
+        [HttpGet("id/{id:int}")]
+        public async Task<IActionResult> GetById(int id)
+        {
+            var page = await _service.GetByIdAsync(id);
+
+            if (page == null)
+                return NotFound(ResultPage.Fail("Página não encontrada."));
+
+            return Ok(ResultPage.Ok(page));
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] bool? visivel = null)
         {

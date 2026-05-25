@@ -2,6 +2,7 @@ import api from "../axios/api";
 import {
   CreatePageWithBlocksDto,
   ResultPage,
+  ResultPageComplete,
   ResultPages
 } from "../models/Pages";
 
@@ -39,7 +40,7 @@ export const getPageBySlug = async (
 
 export const getPageById = async (
   id: number
-): Promise<ResultPage> => {
+): Promise<ResultPageComplete> => {
   const response = await api.get(`/pages/id/${id}`);
   return response.data;
 };
@@ -50,4 +51,11 @@ export const deletePage = async (
   const response = await api.delete(`/pages/${id}`);
 
   return response.status === 204 || response.status === 200;
+};
+
+export const searchPages = async (termo: string) => {
+  const response = await api.get("/pages/search", {
+    params: { termo }
+  });
+  return response.data;
 };

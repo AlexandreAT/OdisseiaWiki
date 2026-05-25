@@ -28,7 +28,7 @@ export const GalleryItem = styled.button`
   padding: 0;
   border: 2px solid #333;
   border-radius: 8px;
-  background-color: #000;
+  background-color: var(--blackTransp);
   cursor: pointer;
   overflow: hidden;
   transition: all 0.3s ease;
@@ -46,7 +46,6 @@ export const GalleryItem = styled.button`
 
 export const GalleryItemImage = styled.img`
   width: 100%;
-  height: 150px;
   object-fit: contain;
 `;
 

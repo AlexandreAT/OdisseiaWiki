@@ -1,18 +1,22 @@
 import React, { useMemo } from 'react';
+import { useSelector } from 'react-redux';
 import { normalizeImagePath } from '../../utils/imagePathHelper';
 import { WikiContentProps } from './types';
 import {
   WikiPageHeaderSection,
-  PageCoverImage,
-  PageTitle,
   PageDescription,
   PageMeta,
   WikiBlocksSection,
   WikiBlockWrapper,
+  ContentHeader,
 } from './WikiContent.style';
 import { WikiBlockRenderer } from '../blocks';
+import TitleGlitch from '../../../../components/Generic/TitleGlitch/TitleGlitch';
 
-export const WikiContent: React.FC<WikiContentProps> = ({ page }) => {
+export const WikiContent: React.FC<WikiContentProps> = ({ page, headerExpanded = true }) => {
+  const { theme } = useSelector((state: any) => state.themesReducer);
+  const neon = useSelector((state: any) => state.themesReducer?.neon);
+
   const sortedBlocks = useMemo(() => {
     if (!page.blocks || page.blocks.length === 0) {
       return [];
@@ -36,15 +40,21 @@ export const WikiContent: React.FC<WikiContentProps> = ({ page }) => {
 
   return (
     <>
-      <WikiPageHeaderSection>
-        {page.coverImage && <PageCoverImage src={normalizeImagePath(page.coverImage)} alt={page.titulo} />}
-        <PageTitle>{page.titulo}</PageTitle>
-        {page.descricao && <PageDescription>{page.descricao}</PageDescription>}
-        {page.dataCriacao && (
-          <PageMeta>
-            <span>Criado em {formatDate(page.dataCriacao)}</span>
-          </PageMeta>
-        )}
+      <WikiPageHeaderSection $coverImage={normalizeImagePath(page.coverImage)} $headerExpanded={headerExpanded}>
+        <ContentHeader>
+            <TitleGlitch
+                theme={theme}
+                neon={neon}
+                text={page.titulo}
+                fontSize="4rem"
+            />
+            {page.descricao && <PageDescription>{page.descricao}</PageDescription>}
+            {page.dataCriacao && (
+            <PageMeta>
+                <span>Criado em {formatDate(page.dataCriacao)}</span>
+            </PageMeta>
+            )}
+        </ContentHeader>
       </WikiPageHeaderSection>
 
       <WikiBlocksSection>

@@ -8,8 +8,7 @@ import { useFormBuscarConteúdo } from './useFormBuscarConteúdo';
 import { NpcCharacterEdit } from './NpcCharacterEdit';
 import { ItemEdit } from './ItemEdit';
 import { CityEdit } from './CityEdit';
-import { RaceEdit } from './RaceEdit';
-import { EntityType } from './types';
+import { RaceEdit } from './RaceEdit';import { PageEdit } from './PageEdit';import { EntityType } from './types';
 import {
   Main,
   SearchHeader,
@@ -39,6 +38,7 @@ const FILTER_OPTIONS: Array<{ key: EntityType | 'Todos'; label: string }> = [
   { key: 'Item', label: 'Itens' },
   { key: 'InfoLore', label: 'Lore' },
   { key: 'Raca', label: 'Raças' },
+  { key: 'Page', label: 'Páginas' },
 ];
 
 export const FormBuscarConteúdo: React.FC<FormBuscarConteúdoProps> = ({ theme, neon }) => {
@@ -46,6 +46,7 @@ export const FormBuscarConteúdo: React.FC<FormBuscarConteúdoProps> = ({ theme,
   const [editingItemId, setEditingItemId] = React.useState<string | null>(null);
   const [editingCityId, setEditingCityId] = React.useState<number | null>(null);
   const [editingRaceId, setEditingRaceId] = React.useState<number | null>(null);
+  const [editingPageId, setEditingPageId] = React.useState<number | null>(null);
 
   const {
     termo,
@@ -163,6 +164,13 @@ export const FormBuscarConteúdo: React.FC<FormBuscarConteúdoProps> = ({ theme,
         return;
       }
       setEditingRaceId(raceId);
+    } else if (item.tipoEntidade === 'Page') {
+      const pageId = Number(item.idString ?? item.id ?? 0);
+      if (!pageId || pageId === 0) {
+        toast.error('Não foi possível identificar a página para edição.');
+        return;
+      }
+      setEditingPageId(pageId);
     } else {
       toast('Edição não disponível para este tipo de conteúdo.');
     }
@@ -211,6 +219,18 @@ export const FormBuscarConteúdo: React.FC<FormBuscarConteúdoProps> = ({ theme,
         neon={neon}
         raceId={editingRaceId}
         onBack={() => setEditingRaceId(null)}
+        onSave={handleSearch}
+      />
+    );
+  }
+
+  if (editingPageId !== null) {
+    return (
+      <PageEdit
+        theme={theme}
+        neon={neon}
+        pageId={editingPageId}
+        onBack={() => setEditingPageId(null)}
         onSave={handleSearch}
       />
     );

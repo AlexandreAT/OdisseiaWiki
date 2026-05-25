@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { PageDto, PageBlock, CreatePageWithBlocksDto, PageBlockType, PageBlockDto } from '../../../../../../models/Pages';
 import { createPage, updatePage } from '../../../../../../services/pageService';
@@ -71,6 +71,29 @@ export const useFormPage = ({
   // --- Erros ---
   const [tituloError, setTituloError] = useState('');
   const [slugError, setSlugError] = useState('');
+
+  useEffect(() => {
+    if (initialPage) {
+      setTitulo(initialPage.titulo || '');
+      setSlug(initialPage.slug || '');
+      setDescricao(initialPage.descricao || '');
+      setCoverImageUrl(initialPage.coverImage || '');
+      setVisivel(initialPage.visivel ?? true);
+    }
+  }, [initialPage]);
+
+  useEffect(() => {
+    console.log("🚀 ~ useFormPage ~ initialBlocks:", initialBlocks)
+    if (initialBlocks && initialBlocks.length > 0) {
+      setBlocks(
+        initialBlocks.map((b, idx) => ({
+          ...b,
+          tempId: b.tempId || generateTempId(),
+          ordem: idx,
+        }))
+      );
+    }
+  }, [initialBlocks]);
 
   // --- Validações básicas ---
   const validateForm = useCallback((): boolean => {

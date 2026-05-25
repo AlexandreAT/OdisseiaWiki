@@ -1,5 +1,10 @@
 import styled from 'styled-components';
 
+export const DivController = styled.section`
+  position: relative;
+  z-index: 1;
+`
+
 export const WikiHeaderWrapper = styled.div<{ $isExpanded: boolean }>`
   display: flex;
   align-items: center;
@@ -21,6 +26,7 @@ export const WikiHeaderWrapper = styled.div<{ $isExpanded: boolean }>`
       : 'none'};
   position: fixed;
   top: 94px;
+  z-index: 5;
   transition:
     max-height 0.3s ease-in-out,
     padding 0.3s ease-in-out;
@@ -122,7 +128,7 @@ export const ToggleHeaderButton = styled.button<{ $isExpanded: boolean }>`
 
   cursor: pointer;
 
-  z-index: 20;
+  z-index: 5;
 
   transition:
     top 0.3s ease-in-out,

@@ -10,9 +10,10 @@ export interface GroupedResults {
   itens: SearchResultItem[];
   infoLores: SearchResultItem[];
   racas: SearchResultItem[];
+  pages: SearchResultItem[];
 }
 
-export type EntityType = "Cidade" | "Personagem" | "Item" | "InfoLore" | "Raca";
+export type EntityType = "Cidade" | "Personagem" | "Item" | "InfoLore" | "Raca" | "Page";
 
 export interface CardProps {
   theme: 'dark' | 'light';

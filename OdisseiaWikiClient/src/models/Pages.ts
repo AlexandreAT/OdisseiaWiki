@@ -32,11 +32,18 @@ export interface CreatePageWithBlocksDto {
   blocks: PageBlockDto[];
 }
 
-// DTOs de resposta da API
 export interface ResultPage {
   sucesso: boolean;
   mensagemErro?: string;
   page?: PageDto;
+  blocks?: PageBlockDto[];
+}
+
+export interface ResultPageComplete {
+  sucesso: boolean;
+  mensagemErro?: string;
+  page?: Page;
+  blocks?: PageBlockDto[];
 }
 
 export interface ResultPages {

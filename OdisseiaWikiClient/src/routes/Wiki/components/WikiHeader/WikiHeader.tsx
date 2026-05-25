@@ -9,6 +9,7 @@ import {
   SearchInput,
   SearchIcon,
   ToggleHeaderButton,
+  DivController,
 } from './WikiHeader.style';
 
 interface WikiHeaderInternalProps extends WikiHeaderProps {
@@ -55,7 +56,7 @@ export const WikiHeader: React.FC<WikiHeaderInternalProps> = ({ onSearch, onTogg
   };
 
   return (
-    <>
+    <DivController>
         <WikiHeaderWrapper $isExpanded={isExpanded}>
         <HomeButton
             onClick={handleHomeClick}
@@ -89,6 +90,6 @@ export const WikiHeader: React.FC<WikiHeaderInternalProps> = ({ onSearch, onTogg
         >
         <BiChevronUp />
         </ToggleHeaderButton>
-    </>
+    </DivController>
     );
 };

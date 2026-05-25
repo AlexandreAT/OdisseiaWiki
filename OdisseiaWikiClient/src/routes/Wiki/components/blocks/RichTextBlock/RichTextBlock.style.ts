@@ -1,11 +1,20 @@
 import styled from 'styled-components';
 
+export const DivController = styled.section`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+`
+
 export const RichTextBlockContainer = styled.div`
   display: flex;
   flex-direction: column;
   gap: 0;
   width: 100%;
   line-height: 1.8;
+  width: 65%;
+  min-width: 900px;
 
   /* TipTap Editor Styles */
   .ProseMirror {

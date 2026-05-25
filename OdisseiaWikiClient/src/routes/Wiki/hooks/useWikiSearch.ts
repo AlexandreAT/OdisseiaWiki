@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { getPages } from '../../../services/pageService';
+import { searchPages } from '../../../services/pageService';
 import { Page } from '../../../models/Pages';
 import { WikiSearchState } from '../types';
 
@@ -30,19 +30,13 @@ export const useWikiSearch = () => {
       setState(prev => ({ ...prev, loading: true, error: null, query }));
 
       try {
-        const response = await getPages(true); // buscar apenas páginas visíveis
+        const response = await searchPages(query);
         console.log("🚀 ~ performSearch ~ response:", response)
         
         if (response.sucesso && response.pages) {
-          // Filtrar por título ou slug
-          const filtered = response.pages.filter(page =>
-            page.titulo.toLowerCase().includes(query.toLowerCase()) ||
-            page.slug.toLowerCase().includes(query.toLowerCase())
-          );
-
           setState(prev => ({
             ...prev,
-            results: filtered as Page[],
+            results: response.pages as Page[],
             loading: false,
           }));
         } else {

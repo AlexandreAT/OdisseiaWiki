@@ -9,7 +9,8 @@ namespace OdisseiaWiki.Dtos
         public List<SearchItemDto> Itens { get; set; } = new();
         public List<SearchItemDto> InfoLores { get; set; } = new();
         public List<SearchItemDto> Racas { get; set; } = new();
-        public int TotalResultados => Cidades.Count + Personagens.Count + Itens.Count + InfoLores.Count + Racas.Count;
+        public List<SearchItemDto> Pages { get; set; } = new();
+        public int TotalResultados => Cidades.Count + Personagens.Count + Itens.Count + InfoLores.Count + Racas.Count + Pages.Count;
     }
 
     public class SearchItemDto
@@ -21,5 +22,6 @@ namespace OdisseiaWiki.Dtos
         public List<string>? Tags { get; set; }
         public bool Visivel { get; set; }
         public string TipoEntidade { get; set; } = null!; // "Cidade", "Personagem", "Item", "InfoLore", "Raca"
+        public string? Slug { get; set; }
     }
 }

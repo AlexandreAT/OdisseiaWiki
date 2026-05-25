@@ -14,6 +14,8 @@ const ContainerNavbar = styled.div<Props>`
     padding: 1rem;
     border-bottom: 2px solid transparent;
     border-radius: 10px;
+    position: relative;
+    z-index: 40;
 
     ${ props => props.theme === 'dark' ? `
         border-color: var(--grey);
@@ -155,6 +157,7 @@ export const AvatarCotroller = styled.div`
     justify-content: center;
     height: 100%;
     position: relative;
+    z-index: 9999;
 `
 
 export const Avatar = styled.div<Props>`

@@ -8,6 +8,8 @@ namespace OdisseiaWiki.Repositories.Interfaces
 
         Task<Page?> GetByIdAsync(int id);
 
+        Task<List<Page>> SearchAsync(string termo);
+
         Task<Page?> GetBySlugAsync(string slug);
 
         Task<List<Page>> GetAllAsync(bool? visivel = null);

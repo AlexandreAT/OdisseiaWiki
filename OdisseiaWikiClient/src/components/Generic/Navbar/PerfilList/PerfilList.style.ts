@@ -8,7 +8,7 @@ export const PerfilDropdown = styled.div<{ themeMode?: 'dark' | 'light' }>`
   background: var(--black-blue);
   border-radius: 10px;
   min-width: 180px;
-  z-index: 100;
+  z-index: 1;
   padding: 12px 0;
   display: flex;
   flex-direction: column;

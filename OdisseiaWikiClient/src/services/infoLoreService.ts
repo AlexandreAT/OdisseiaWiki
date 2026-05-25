@@ -18,7 +18,7 @@ export interface SearchResultItem {
   imagem?: string;
   tags?: string[];
   visivel: boolean;
-  tipoEntidade: "Cidade" | "Personagem" | "Item" | "InfoLore" | "Raca";
+  tipoEntidade: "Cidade" | "Personagem" | "Item" | "InfoLore" | "Raca" | "Page";
 }
 
 export interface GlobalSearchResultDto {
@@ -27,6 +27,7 @@ export interface GlobalSearchResultDto {
   itens: SearchResultItem[];
   infoLores: SearchResultItem[];
   racas: SearchResultItem[];
+  pages: SearchResultItem[];
   totalResultados: number;
 }
 

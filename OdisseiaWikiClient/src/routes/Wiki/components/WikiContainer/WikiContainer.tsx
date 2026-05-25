@@ -72,7 +72,7 @@ export const WikiContainer: React.FC<WikiContainerProps> = () => {
                 </ErrorContainer>
               )}
               {!pageLoading && !pageError && page && (
-                <WikiContent page={page} />
+                <WikiContent page={page} headerExpanded={headerExpanded} />
               )}
             </>
           )}

@@ -19,19 +19,22 @@ namespace OdisseiaWiki.Services
         private readonly IPersonagemRepository _personagemRepo;
         private readonly IItemRepository _itemRepo;
         private readonly IRacaRepository _racaRepo;
+        private readonly IPageRepository _pageRepo;
 
         public InfoLoreService(
             IInfoLoreRepository infoLoreRepo,
             ICidadeRepository cidadeRepo,
             IPersonagemRepository personagemRepo,
             IItemRepository itemRepo,
-            IRacaRepository racaRepo)
+            IRacaRepository racaRepo,
+            IPageRepository pageRepo)
         {
             _infoLoreRepo = infoLoreRepo;
             _cidadeRepo = cidadeRepo;
             _personagemRepo = personagemRepo;
             _itemRepo = itemRepo;
             _racaRepo = racaRepo;
+            _pageRepo = pageRepo;
         }
 
         public async Task<ResultInfoLore> CreateAsync(InfoLoreDto dto)
@@ -209,6 +212,25 @@ namespace OdisseiaWiki.Services
             catch
             {
                 result.Racas = new List<SearchItemDto>();
+            }
+
+            try
+            {
+                var pages = await _pageRepo.SearchAsync(termo);
+
+                result.Pages = pages.Select(p => new SearchItemDto
+                {
+                    Id = p.IdPage,
+                    Nome = p.Titulo,
+                    Imagem = p.CoverImage,
+                    Visivel = p.Visivel,
+                    Slug = p.Slug,
+                    TipoEntidade = "Page"
+                }).ToList();
+            }
+            catch
+            {
+                result.Pages = new List<SearchItemDto>();
             }
 
             return result;

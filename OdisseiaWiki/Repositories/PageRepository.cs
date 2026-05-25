@@ -23,6 +23,22 @@ namespace OdisseiaWiki.Repositories
             return page;
         }
 
+        public async Task<List<Page>> SearchAsync(string termo)
+        {
+            termo = termo.ToLower();
+
+            return await _context.Pages
+                .Where(p =>
+                    p.Visivel &&
+                    (
+                        p.Titulo.ToLower().Contains(termo) ||
+                        p.Slug.ToLower().Contains(termo)
+                    )
+                )
+                .OrderBy(p => p.Titulo)
+                .ToListAsync();
+        }
+
         public async Task<Page?> GetByIdAsync(int id)
             => await _context.Pages
                 .Include(p => p.Blocks.OrderBy(b => b.Ordem))

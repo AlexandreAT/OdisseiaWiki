@@ -4,6 +4,7 @@ import { excluirItem } from '../../../../../services/itensService';
 import { deleteCidade } from '../../../../../services/cidadesService';
 import { deleteRaca } from '../../../../../services/racasService';
 import { deletePersonagem } from '../../../../../services/personagensService';
+import { deletePage } from '../../../../../services/pageService';
 import { GroupedResults, SearchFormErrors, EntityType } from './types';
 import toast from 'react-hot-toast';
 
@@ -15,6 +16,7 @@ export const useFormBuscarConteúdo = () => {
     itens: [],
     infoLores: [],
     racas: [],
+    pages: [],
   });
   const [totalResultados, setTotalResultados] = useState(0);
   const [isSearching, setIsSearching] = useState(false);
@@ -46,6 +48,7 @@ export const useFormBuscarConteúdo = () => {
         itens: response.itens || [],
         infoLores: response.infoLores || [],
         racas: response.racas || [],
+        pages: response.pages || [],
       });
       setTotalResultados(response.totalResultados || 0);
       setHasSearched(true);
@@ -58,6 +61,7 @@ export const useFormBuscarConteúdo = () => {
         itens: [],
         infoLores: [],
         racas: [],
+        pages: [],
       });
       setTotalResultados(0);
     } finally {
@@ -74,6 +78,7 @@ export const useFormBuscarConteúdo = () => {
         itens: [],
         infoLores: [],
         racas: [],
+        pages: [],
       });
       setTotalResultados(0);
       setHasSearched(false);
@@ -99,6 +104,7 @@ export const useFormBuscarConteúdo = () => {
         ...results.itens,
         ...results.infoLores,
         ...results.racas,
+        ...results.pages,
       ];
     }
 
@@ -113,6 +119,8 @@ export const useFormBuscarConteúdo = () => {
         return results.infoLores;
       case 'Raca':
         return results.racas;
+      case 'Page':
+        return results.pages;
       default:
         return [];
     }
@@ -130,6 +138,8 @@ export const useFormBuscarConteúdo = () => {
         return results.infoLores.length;
       case 'Raca':
         return results.racas.length;
+      case 'Page':
+        return results.pages.length;
       default:
         return 0;
     }
@@ -198,6 +208,15 @@ export const useFormBuscarConteúdo = () => {
             }));
           }
           break;
+        case 'Page':
+          success = await deletePage(Number(itemId));
+          if (success) {
+            setResults(prev => ({
+              ...prev,
+              pages: prev.pages.filter(pg => (pg.idString ?? pg.id) !== itemId)
+            }));
+          }
+          break;
         default:
           toast.error(`Exclusão não disponível para ${item.tipoEntidade}.`);
           setIsDeleting(false);
@@ -232,6 +251,7 @@ export const useFormBuscarConteúdo = () => {
       itens: [],
       infoLores: [],
       racas: [],
+      pages: [],
     });
     setTotalResultados(0);
     setHasSearched(false);

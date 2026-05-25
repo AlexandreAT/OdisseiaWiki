@@ -28,6 +28,8 @@ export const ResultCard: React.FC<CardProps> = ({ theme, neon, item, onEdit, onD
         return 'Lore';
       case 'Raca':
         return 'Raça';
+      case 'Page':
+        return 'Página';
       default:
         return 'Desconhecido';
     }
@@ -67,6 +69,13 @@ export const ResultCard: React.FC<CardProps> = ({ theme, neon, item, onEdit, onD
         return (
           <InfoText theme={theme} neon={neon}>
             Raça jogável
+          </InfoText>
+        );
+      
+      case 'Page':
+        return (
+          <InfoText theme={theme} neon={neon}>
+            Página da Wiki
           </InfoText>
         );
       

@@ -1,15 +1,20 @@
 import { Title } from './TitleGlitch.style';
 
 interface Props {
-    theme: 'dark' | 'light';
-    neon: 'on' | 'off';
-    text: string;
+  theme: 'dark' | 'light';
+  neon: 'on' | 'off';
+  text: string;
+  fontSize?: string;
 } 
 
-const TitleGlitch = ({ theme, neon, text }: Props) => {
+const TitleGlitch = ({ theme, neon, text, fontSize }: Props) => {
   return (
-    <Title theme={theme} neon={neon}>
-        {text}
+    <Title
+      theme={theme}
+      neon={neon}
+      $fontSize={fontSize}
+    >
+      {text}
     </Title>
   )
 }

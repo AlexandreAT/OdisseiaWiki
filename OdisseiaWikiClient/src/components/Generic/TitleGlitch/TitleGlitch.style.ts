@@ -33,9 +33,13 @@ const neonBlinkPink = keyframes`
     52%, 100% { text-shadow: -1px -1px 3px var(--clearneonPink), 1px 1px 3px var(--clearneonPink); }
 `;
 
-export const Title = styled.h2<Props>`
+export const Title = styled.h1<{
+  theme: 'dark' | 'light';
+  neon: 'on' | 'off';
+  $fontSize?: string;
+}>`
     font-family: 'Cyberpunk Is Not Dead', sans-serif;
-    font-size: 2rem;
+    font-size: ${props => props.$fontSize || '2rem'};
     color: var(--black) !important;
     text-shadow: ${({theme}) => theme === 'dark'
         ? `-1px -1px 0px var(--neonBlue), -1px 1px 0px var(--neonBlue), 1px -1px 0px var(--neonBlue), 1px 1px 0px var(--neonBlue)`
