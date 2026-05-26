@@ -57,6 +57,21 @@ namespace OdisseiaWiki.Services
                 : null;
         }
 
+        public async Task<List<SearchItemDto>> SearchAsync(string termo)
+        {
+            List<Page> pages = await _repository.SearchAsync(termo);
+
+            return pages.Select(p => new SearchItemDto
+            {
+                Id = p.IdPage,
+                Nome = p.Titulo,
+                Imagem = p.CoverImage,
+                Visivel = p.Visivel,
+                Slug = p.Slug,
+                TipoEntidade = "Page"
+            }).ToList();
+        }
+
         public async Task<List<PageDto>> GetAllAsync(bool? visivel = null)
         {
             List<Page> pages = await _repository.GetAllAsync(visivel);

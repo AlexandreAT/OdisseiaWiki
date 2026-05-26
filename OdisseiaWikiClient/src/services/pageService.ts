@@ -57,5 +57,24 @@ export const searchPages = async (termo: string) => {
   const response = await api.get("/pages/search", {
     params: { termo }
   });
+  
+  if (response.data.sucesso && response.data.pages) {
+      const mappedPages = response.data.pages.map((page: any) => {
+        return {
+        idPage: page.id,
+        titulo: page.nome,
+        slug: page.slug,
+        coverImage: page.imagem,
+        visivel: page.visivel,
+        descricao: page.tags
+      };
+    });
+    
+    return {
+      ...response.data,
+      pages: mappedPages
+    };
+  }
+  
   return response.data;
 };

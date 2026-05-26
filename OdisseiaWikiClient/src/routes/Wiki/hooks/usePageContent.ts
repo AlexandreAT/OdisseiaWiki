@@ -19,12 +19,21 @@ export const usePageContent = () => {
       return;
     }
 
+    if (slug === 'search') {
+      setState(prev => ({
+        ...prev,
+        page: null,
+        loading: false,
+        error: null,
+      }));
+      return;
+    }
+
     const loadPage = async () => {
       setState(prev => ({ ...prev, loading: true, error: null }));
       
       try {
         const response = await getPageBySlug(slug);
-        console.log("🚀 ~ loadPage ~ slug:", slug)
         
         if (response.sucesso && response.page) {
           setState(prev => ({

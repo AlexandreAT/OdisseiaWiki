@@ -22,6 +22,18 @@ namespace OdisseiaWiki.Controllers
             return Ok(result);
         }
 
+        [HttpGet("search")]
+        public async Task<IActionResult> Search([FromQuery] string termo)
+        {
+            List<SearchItemDto> result = await _service.SearchAsync(termo);
+
+            return Ok(new
+            {
+                sucesso = true,
+                pages = result
+            });
+        }
+
         [HttpGet("{slug}")]
         public async Task<IActionResult> GetBySlug(string slug)
         {
@@ -61,11 +73,19 @@ namespace OdisseiaWiki.Controllers
             {
                 PageDto result = await _service.UpdateAsync(id, dto);
 
-                return Ok(result);
+                return Ok(new
+                {
+                    sucesso = true,
+                    page = result
+                });
             }
             catch (Exception ex)
             {
-                return BadRequest(ex.Message);
+                return BadRequest(new
+                {
+                    sucesso = false,
+                    mensagemErro = ex.Message
+                });
             }
         }
 

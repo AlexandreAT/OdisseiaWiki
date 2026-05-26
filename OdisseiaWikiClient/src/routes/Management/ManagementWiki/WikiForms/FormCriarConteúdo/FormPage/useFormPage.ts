@@ -234,8 +234,6 @@ export const useFormPage = ({
         blocks: blocksForApi,
       };
 
-      console.log("🚀 ~ handleSubmit ~ payload:", payload);
-
       const result = pageId
         ? await updatePage(pageId, payload)
         : await createPage(payload);

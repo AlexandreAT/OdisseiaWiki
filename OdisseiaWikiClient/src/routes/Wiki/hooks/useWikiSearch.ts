@@ -17,6 +17,7 @@ export const useWikiSearch = () => {
   const query = searchParams.get('q') || '';
 
   useEffect(() => {
+    
     if (!query) {
       setState(prev => ({
         ...prev,
@@ -31,7 +32,6 @@ export const useWikiSearch = () => {
 
       try {
         const response = await searchPages(query);
-        console.log("🚀 ~ performSearch ~ response:", response)
         
         if (response.sucesso && response.pages) {
           setState(prev => ({
@@ -60,8 +60,11 @@ export const useWikiSearch = () => {
   }, [query]);
 
   const handleSearch = (searchQuery: string) => {
+    console.log("🚀 ~ handleSearch ~ searchQuery:", searchQuery);
     if (searchQuery.trim()) {
-      navigate(`/wiki/search?q=${encodeURIComponent(searchQuery)}`);
+      const encodedQuery = encodeURIComponent(searchQuery);
+      console.log("🚀 ~ handleSearch ~ encoded:", encodedQuery);
+      navigate(`/wiki/search?q=${encodedQuery}`);
     } else {
       navigate('/wiki/MainPage');
     }

@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { BiBookmark } from 'react-icons/bi';
+import { normalizeImagePath } from '../../utils/imagePathHelper';
 import { WikiSearchResultsProps } from './types';
 import {
   SearchResultsContainer,
@@ -54,7 +55,7 @@ export const WikiSearchResults: React.FC<WikiSearchResultsProps> = ({ results })
             type="button"
           >
             {page.coverImage ? (
-              <ResultCardImage src={page.coverImage} alt={page.titulo} />
+              <ResultCardImage src={normalizeImagePath(page.coverImage)} alt={page.titulo} />
             ) : (
               <ResultCardPlaceholder>
                 <BiBookmark />

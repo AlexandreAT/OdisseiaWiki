@@ -11,6 +11,8 @@ namespace OdisseiaWiki.Services.Interfaces
 
         Task<PageDto?> GetBySlugAsync(string slug);
 
+        Task<List<SearchItemDto>> SearchAsync(string termo);
+
         Task<List<PageDto>> GetAllAsync(bool? visivel = null);
 
         Task<PageDto> UpdateAsync(int id, CreatePageWithBlocksDto dto);
