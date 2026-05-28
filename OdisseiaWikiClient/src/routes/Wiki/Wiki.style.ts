@@ -1,13 +1,26 @@
 import styled from 'styled-components';
 
-interface WikiPageContainerProps {
+export const WikiPageContainer = styled.div<{
   theme: 'dark' | 'light';
   neon: 'on' | 'off';
-}
-
-export const WikiPageContainer = styled.div<WikiPageContainerProps>`
-  display: flex;
-  flex-direction: column;
+}>`
+  position: relative;
+  min-height: 100vh;
+  isolation: isolate;
   width: 100%;
-  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image: var(--wiki-background-image);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    filter: blur(12px);
+    transform: scale(1.08);
+    opacity: 0.35;
+  }
 `;

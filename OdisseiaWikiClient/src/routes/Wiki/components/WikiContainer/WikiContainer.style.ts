@@ -17,7 +17,9 @@ export const WikiContentArea = styled.div<WikiLayoutProps>`
   overflow: hidden;
 `;
 
-export const WikiMainSection = styled.div<WikiLayoutProps & { $sidebarExpanded: boolean; $headerExpanded: boolean }>`
+export const WikiMainSection = styled.div<
+  WikiLayoutProps & { $sidebarExpanded: boolean; $headerExpanded: boolean }
+>`
   display: flex;
   flex-direction: column;
   flex: 1;

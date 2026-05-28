@@ -136,16 +136,28 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
       rendered.height
     );
 
+    // Escala para exportar a imagem em resolução maior
+    // sem alterar a experiência visual do crop
+    const EXPORT_SCALE = 3;
+
     const canvas = document.createElement('canvas');
-    canvas.width = containerWidth;
-    canvas.height = containerHeight;
+
+    // Canvas em resolução maior
+    canvas.width = containerWidth * EXPORT_SCALE;
+    canvas.height = containerHeight * EXPORT_SCALE;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // Escala o contexto para manter a lógica visual atual
+    ctx.scale(EXPORT_SCALE, EXPORT_SCALE);
+
     // Aplicar clipping path baseado no formato para cortar de fato a imagem
-    const displayShape = (cropPreset.displayShape || cropPreset.shape) as 'circle' | 'square' | 'rectangle';
-    
+    const displayShape = (cropPreset.displayShape || cropPreset.shape) as
+      | 'circle'
+      | 'square'
+      | 'rectangle';
+
     if (displayShape === 'circle') {
       // Criar máscara circular
       ctx.beginPath();
@@ -167,25 +179,46 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
 
     // Preencher com preto dentro do clipping (vai respeitar o shape)
     ctx.fillStyle = '#000000';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, containerWidth, containerHeight);
 
     ctx.save();
-    ctx.translate(offset.x + rendered.width / 2, offset.y + rendered.height / 2);
+
+    ctx.translate(
+      offset.x + rendered.width / 2,
+      offset.y + rendered.height / 2
+    );
+
     ctx.scale(cropState.scale, cropState.scale);
+
     ctx.translate(cropState.x, cropState.y);
-    ctx.drawImage(img, -rendered.width / 2, -rendered.height / 2, rendered.width, rendered.height);
+
+    ctx.drawImage(
+      img,
+      -rendered.width / 2,
+      -rendered.height / 2,
+      rendered.width,
+      rendered.height
+    );
+
     ctx.restore();
 
-    canvas.toBlob((blob) => {
-      if (!blob) return;
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) return;
 
-      const file = new File([blob], `cropped-${Date.now()}.png`, {
-        type: 'image/png',
-      });
+        const file = new File([blob], `cropped-${Date.now()}.png`, {
+          type: 'image/png',
+        });
 
-      const previewUrl = canvas.toDataURL('image/png');
-      onConfirm({ file, preview: previewUrl });
-    }, 'image/png');
+        const previewUrl = canvas.toDataURL('image/png');
+
+        onConfirm({
+          file,
+          preview: previewUrl,
+        });
+      },
+      'image/png'
+    );
   };
 
   const handleCancel = () => {
