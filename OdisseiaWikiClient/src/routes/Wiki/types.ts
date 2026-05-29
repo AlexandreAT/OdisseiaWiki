@@ -1,4 +1,4 @@
-import { Page, PageBlock } from '../../../models/Pages';
+import { Page } from '../../models/Pages';
 
 export interface WikiContextualBlock {
   id: string;

@@ -1,22 +1,6 @@
 import styled from 'styled-components';
 import { Link } from 'react-router-dom';
 
-interface StyleProps {
-    colorScheme: {
-        primary: string;
-        primaryClear: string;
-        primaryDeep: string;
-        secondary: string;
-        secondaryClear: string;
-        secondaryDeep: string;
-    };
-    imagePosition?: 'left' | 'right';
-    imageStyleBottom?: 'circle' | 'rectangle';
-    type?: 'simple' | 'city';
-    theme: 'dark' | 'light';
-    neon: 'on' | 'off';
-}
-
 export const SectionContainer = styled.section<{ scheme: any }>`
   min-height: 100vh;
   padding: 4rem 2rem;

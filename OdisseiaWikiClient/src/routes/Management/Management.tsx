@@ -17,8 +17,6 @@ export const Management = () => {
     const { theme, neon } = useSelector((state: any) => state.themesReducer);
     const [selected, setSelected] = useState<string>('wiki');
     const [sidebarExpanded, setSidebarExpanded] = useState<boolean>(true);
-    const [hasPlayedIntro, setHasPlayedIntro] = useState(false);
-
     const renderContent = () => {
         switch (selected) {
             case 'wiki':

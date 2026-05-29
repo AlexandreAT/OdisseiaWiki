@@ -6,7 +6,7 @@ export const personagensMock: Personagem[] = [
     Nome: "Sute",
     Idraca: 1,
     Idcidade: 1,
-    Historia: "Um jovem aventureiro curioso e leal, sempre ajuda os necessitados.",
+    Historia: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Um jovem aventureiro curioso e leal, sempre ajuda os necessitados.' }] }] },
     StatusJson: {
       status: { vida: 1200, vidaMaxima: 1200, estamina: 50, estaminaMaxima: 50, mana: 35, manaMaxima: 35, capacidadeCarga: 30 },
       atributos: {
@@ -59,7 +59,7 @@ export const personagensMock: Personagem[] = [
     Nome: "Gunther",
     Idraca: 2,
     Idcidade: 2,
-    Historia: "Guerreiro orgulhoso e bravo, segue o código de honra dos guerreiros.",
+    Historia: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Guerreiro orgulhoso e bravo, segue o código de honra dos guerreiros.' }] }] },
     StatusJson: {
       status: { vida: 2000, vidaMaxima: 2000, estamina: 80, estaminaMaxima: 80, mana: 20, manaMaxima: 20, capacidadeCarga: 40 },
       atributos: {
@@ -112,7 +112,7 @@ export const personagensMock: Personagem[] = [
     Nome: "Laraki",
     Idraca: 3,
     Idcidade: undefined,
-    Historia: "Impulsivo e bondoso, canta histórias antigas em tavernas.",
+    Historia: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Impulsivo e bondoso, canta histórias antigas em tavernas.' }] }] },
     StatusJson: {
       status: { vida: 1500, vidaMaxima: 1500, estamina: 40, estaminaMaxima: 40, mana: 50, manaMaxima: 50, capacidadeCarga: 20 },
       atributos: {
@@ -155,7 +155,7 @@ export const personagensMock: Personagem[] = [
     Nome: "Tigre",
     Idraca: 4,
     Idcidade: undefined,
-    Historia: "Calculista e leal, sempre em vigília pela matilha.",
+    Historia: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Calculista e leal, sempre em vigília pela matilha.' }] }] },
     StatusJson: {
       status: { vida: 2500, vidaMaxima: 2500, estamina: 60, estaminaMaxima: 60, mana: 0, manaMaxima: 0, capacidadeCarga: 50 },
       atributos: {
@@ -200,7 +200,7 @@ export const personagensMock: Personagem[] = [
     Nome: "Faevh",
     Idraca: 1,
     Idcidade: 3,
-    Historia: "Curioso e impulsivo, gosta de mexer com magias proibidas.",
+    Historia: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Curioso e impulsivo, gosta de mexer com magias proibidas.' }] }] },
     StatusJson: {
       status: { vida: 1800, vidaMaxima: 1800, estamina: 55, estaminaMaxima: 55, mana: 80, manaMaxima: 80, capacidadeCarga: 25 },
       atributos: {

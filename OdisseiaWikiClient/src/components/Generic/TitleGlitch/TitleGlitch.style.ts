@@ -1,10 +1,5 @@
 import styled, { keyframes, css } from 'styled-components';
 
-interface Props {
-    theme?: 'dark' | 'light';
-    neon?: 'on' | 'off';
-}
-
 const neonBlinkBlue = keyframes`
     0%, 2% { text-shadow: -1px -1px 3px var(--neonBlue), 1px 1px 3px var(--neonBlue); }
     3%, 3.5% { text-shadow: none; }

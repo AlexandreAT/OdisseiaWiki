@@ -1,6 +1,6 @@
-import { Skills, SkillTipoString, SkillElemento } from '../../../../../../models/Skills';
-import { Item, ItemTipo } from '../../../../../../models/Itens';
-import { Magia, MagiaTipoString, MagiaElemento } from '../../../../../../models/Magias';
+import { Skills } from '../../../../../../models/Skills';
+import { Item } from '../../../../../../models/Itens';
+import { Magia } from '../../../../../../models/Magias';
 import { JSONContent } from '../../../../../../models/Characters';
 import { RacaPayload } from '../../../../../../services/racasService';
 import { CidadePayload } from '../../../../../../services/cidadesService';

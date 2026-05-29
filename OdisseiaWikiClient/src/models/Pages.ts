@@ -68,6 +68,8 @@ export interface RichTextBlockContent extends JSONContent {
 export interface ImageBlockContent {
   url: string;
   legenda?: string;
+  texto?: JSONContent;
+  posicaoTexto?: 'left' | 'right';
 }
 
 export interface GalleryBlockContent {

@@ -4,7 +4,7 @@ import { CyberButton } from '../../../../../components/Generic/HighlightButton/H
 import { ConfirmDialog } from '../../../../../components/Generic/ConfirmDialog/ConfirmDialog';
 import { getPageById, deletePage } from '../../../../../services/pageService';
 import { FormPage } from '../FormCriarConteúdo/FormPage/FormPage';
-import { PageDto, PageBlock, Page } from '../../../../../models/Pages';
+import { PageBlock, Page } from '../../../../../models/Pages';
 import { EditHeader, LoadingContainer, ActionButtonsContainer } from './EditFormStyles';
 
 interface PageEditProps {
@@ -147,13 +147,6 @@ export const PageEdit: React.FC<PageEditProps> = ({ theme, neon, pageId, onBack,
       </div>
     );
   }
-
-  const handleSaveSuccess = () => {
-    if (onSave) {
-      onSave();
-    }
-    onBack();
-  };
 
   return (
     <div>

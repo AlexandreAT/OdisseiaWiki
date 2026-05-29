@@ -34,7 +34,6 @@ export const GalleryBlockEditor: React.FC<GalleryBlockEditorProps> = ({
   const [imagens, setImagens] = useState<ImageBlockContent[]>(content.imagens || []);
   const [newLegenda, setNewLegenda] = useState('');
   const [aspectRatio, setAspectRatio] = useState<'square' | 'rectangle'>('rectangle');
-  const [uploadingImage, setUploadingImage] = useState(false);
 
   const getCropPreset = (): CropPreset => {
     if (aspectRatio === 'square') {
@@ -56,7 +55,6 @@ export const GalleryBlockEditor: React.FC<GalleryBlockEditorProps> = ({
   };
 
   const handleImageUpload = async (result: any) => {
-    setUploadingImage(true);
     try {
       const assetResult = await saveAsset({
         imageFile: result.file,
@@ -78,8 +76,6 @@ export const GalleryBlockEditor: React.FC<GalleryBlockEditorProps> = ({
     } catch (error) {
       toast.error('Erro ao salvar imagem');
       console.error(error);
-    } finally {
-      setUploadingImage(false);
     }
   };
 

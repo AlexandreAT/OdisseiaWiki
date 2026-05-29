@@ -41,7 +41,6 @@ const CheckSelectComponent = ({
   onChange,
   error,
   errorMessage,
-  required,
   typeStyle = 'primary',
   width,
   height,

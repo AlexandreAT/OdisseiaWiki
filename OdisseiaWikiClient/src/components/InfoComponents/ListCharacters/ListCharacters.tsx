@@ -6,9 +6,8 @@ interface Props {
   colorScheme: keyof typeof colorCardsSchemes;
 }
 
-const ListCharacters:React.FC<Props> = ({ colorScheme }) => {
+const ListCharacters:React.FC<Props> = ({ colorScheme: _colorScheme }) => {
 
-  const scheme = colorCardsSchemes[colorScheme];
   const { theme, neon } = useSelector((state: any) => state.themesReducer);
   return (
     <div>

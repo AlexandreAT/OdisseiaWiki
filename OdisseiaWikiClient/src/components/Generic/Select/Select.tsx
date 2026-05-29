@@ -1,4 +1,4 @@
-import { useState, forwardRef, useEffect, memo, useCallback } from 'react';
+import { useState, forwardRef, useEffect, useCallback } from 'react';
 import {
   ContentController,
   Label,

@@ -55,7 +55,10 @@ const Body = styled.body<Props>`
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: ${props => props.isLoginPage ? '0px' : '6% 0px 4rem'};
+    padding: ${props =>
+        props.isLoginPage
+            ? '0px'
+            : 'clamp(64px, 5vw, 76px) 0px 4rem'};
     width: 100%;
     min-height: 100vh;
     height: 100%;

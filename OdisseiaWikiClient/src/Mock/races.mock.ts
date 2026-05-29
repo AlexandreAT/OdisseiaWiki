@@ -11,6 +11,7 @@ export const racasMock: Raca[] = [
     },
     Imagem: "assets_dynamic/racas/humano/u82be71e-c50c-4e06-8d79-9ea7a77f1zbh.jpeg",
     Variantes: [],
+    Visivel: true,
     DataCriacao: "2025-09-17"
   },
   {
@@ -23,6 +24,7 @@ export const racasMock: Raca[] = [
     },
     Imagem: "assets_dynamic/racas/elfo/s82be25e-c50c-4e05-8d78-9ea7d77f1daf.jpeg",
     Variantes: ["Alto Elfo", "Elfo Negro", "Elfo da Floresta"],
+    Visivel: true,
     DataCriacao: "2025-09-17"
   },
   {
@@ -35,6 +37,7 @@ export const racasMock: Raca[] = [
     },
     Imagem: "assets_dynamic/racas/anao/b52be15e-c50c-4e05-8a78-9ea7u71f1daw.jpeg",
     Variantes: [],
+    Visivel: true,
     DataCriacao: "2025-09-17"
   },
   {
@@ -47,6 +50,7 @@ export const racasMock: Raca[] = [
     },
     Imagem: "assets_dynamic/racas/orc/a82be25e-c50c-4e09-8d79-9ea7d77f1dbf.jpeg",
     Variantes: ["Brutorquiano", "Hominorc"],
+    Visivel: true,
     DataCriacao: "2025-09-17"
   }
 ];

@@ -3,7 +3,6 @@ import { ItemTipo, JSONContent } from "../../../../../../models/Itens";
 import { saveAsset } from "../../../../../../services/assetsService";
 import { prepareForAPI } from "../../../../../../utils/richTextHelpers";
 import { salvarItem, ItemPayload } from "../../../../../../services/itensService";
-import toast from "react-hot-toast";
 
 // Atributos iniciais para cada tipo
 const getEmptyAtributos = (tipo: ItemTipo): any => {

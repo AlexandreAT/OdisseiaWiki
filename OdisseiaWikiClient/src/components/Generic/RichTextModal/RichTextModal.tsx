@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import CloseIcon from '@mui/icons-material/Close';
-import toast from 'react-hot-toast';
 import { JSONContent } from '../../../models/Characters';
 import { RichTextEditor } from '../RichTextEditor/RichTextEditor';
 import { CyberButton } from '../HighlightButton/HighlightButton';

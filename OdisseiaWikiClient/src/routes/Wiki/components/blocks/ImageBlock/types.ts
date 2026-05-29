@@ -1,4 +1,4 @@
-import { PageBlock } from '../../../../models/Pages';
+import { PageBlock } from '../../../../../models/Pages';
 
 export interface ImageBlockProps {
   block: PageBlock;

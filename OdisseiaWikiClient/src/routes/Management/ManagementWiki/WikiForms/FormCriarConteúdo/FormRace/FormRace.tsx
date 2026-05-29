@@ -5,7 +5,6 @@ import { Select } from '../../../../../../components/Generic/Select/Select';
 import { CheckBox } from '../../../../../../components/Generic/CheckBox/CheckBox';
 import { ImageUploader } from '../../../../../../components/Generic/ImageUploader/ImageUploader';
 import type { CropPreset } from '../../../../../../components/Generic/ImageUploader/types';
-import { ImageGallery } from '../../../../../../components/Generic/ImageGallery/ImageGallery';
 import { HorizontalList } from '../../../../../../components/Generic/HorizontalList/HorizontalList';
 import { CyberButton } from '../../../../../../components/Generic/HighlightButton/HighlightButton';
 import { useFormRace } from './useFormRace';
