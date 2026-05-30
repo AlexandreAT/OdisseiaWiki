@@ -12,6 +12,7 @@ import {
   StyledImage,
   ImageCaption,
   ErrorMessage,
+  ImageContent,
 } from './ImageBlock.style';
 
 export const ImageBlock: React.FC<ImageBlockProps> = ({ block }) => {
@@ -40,11 +41,13 @@ export const ImageBlock: React.FC<ImageBlockProps> = ({ block }) => {
         <ImageWithTextContainer $posicaoTexto={posicaoTexto || 'right'}>
           <ImageSide>
             {!imageError ? (
-              <StyledImage
-                src={normalizeImagePath(url)}
-                alt={legenda || 'Imagem'}
-                onError={() => setImageError(true)}
-              />
+              <ImageContent>
+                <StyledImage
+                  src={normalizeImagePath(url)}
+                  alt={legenda || 'Imagem'}
+                  onError={() => setImageError(true)}
+                />
+              </ImageContent>
             ) : (
               <ErrorMessage style={{ margin: 0, borderRadius: 0 }}>
                 <p>Erro ao carregar a imagem</p>

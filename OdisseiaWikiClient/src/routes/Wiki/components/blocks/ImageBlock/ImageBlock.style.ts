@@ -7,6 +7,7 @@ interface ImageWithTextProps {
 export const ImageBlockContainer = styled.div`
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 12px;
   width: 100%;
 `;
@@ -15,7 +16,7 @@ export const ImageWithTextContainer = styled.div<ImageWithTextProps>`
   display: flex;
   flex-direction: ${props => (props.$posicaoTexto === 'left' ? 'row-reverse' : 'row')};
   gap: 20px;
-  width: 100%;
+  width: 65%;
   align-items: flex-start;
 `;
 
@@ -30,6 +31,39 @@ export const ImageSide = styled.div`
 export const TextSide = styled.div`
   flex: 1;
   min-width: 0;
+  padding: 0 16px;
+  background-color: #0006;
+  border-radius: 10px;
+
+  h1 {
+    font-family: 'DO Futuristic', sans-serif !important;
+    font-size: 2.5rem !important;
+    font-weight: 100;
+    letter-spacing: 4px;
+    color: white;
+    text-align: center;
+  }
+
+  p {
+  }
+`;
+
+export const ImageContent = styled.div`
+  width: fit-content;
+  max-width: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  border-radius: 10px;
+  align-self: flex-start;
+  line-height: 0;
+`;
+
+export const StyledImage = styled.img`
+  max-height: 350px;
+  max-width: 350px;
+  object-fit: contain;
+  max-width: 100%;
+  display: block;
 `;
 
 export const ImageWrapper = styled.div`
@@ -38,12 +72,6 @@ export const ImageWrapper = styled.div`
   justify-content: center;
   width: 100%;
   overflow: hidden;
-`;
-
-export const StyledImage = styled.img`
-  height: 350px;
-  object-fit: contain;
-  border-radius: 10px !important;
 `;
 
 export const ImageCaption = styled.p`
