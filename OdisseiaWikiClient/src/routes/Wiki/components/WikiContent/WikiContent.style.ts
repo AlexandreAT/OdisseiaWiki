@@ -119,13 +119,4 @@ export const WikiBlockWrapper = styled.div`
   display: flex;
   flex-direction: column;
   padding: 32px 24px;
-  border-bottom: 1px solid #333;
-
-  &:last-child {
-    border-bottom: none;
-  }
-
-  &:hover {
-    background-color: rgba(0, 212, 255, 0.02);
-  }
 `;

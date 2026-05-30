@@ -1,4 +1,14 @@
 import styled from 'styled-components';
+import {
+  wikiHeading1Style,
+  wikiHeading2Style,
+  wikiHeading3Style,
+  wikiParagraphStyle,
+  wikiListStyle,
+  wikiBlockquoteStyle,
+  wikiCodeStyle,
+  wikiLinkStyle,
+} from '../../../shared/WikiTextStyles';
 
 export const DivController = styled.section`
   display: flex;
@@ -11,7 +21,6 @@ export const RichTextBlockContainer = styled.div`
   display: flex;
   flex-direction: column;
   gap: 0;
-  width: 100%;
   line-height: 1.8;
   width: 65%;
   min-width: 900px;
@@ -23,71 +32,47 @@ export const RichTextBlockContainer = styled.div`
     background-color: transparent;
 
     p {
-      margin: 0.5em 0;
-      line-height: 1.6;
-    }
-
-    h1,
-    h2,
-    h3,
-    h4,
-    h5,
-    h6 {
-      margin: 1em 0 0.5em 0;
-      font-weight: 600;
-      line-height: 1.4;
-      letter-spacing: -0.5px;
+      ${wikiParagraphStyle}
     }
 
     h1 {
-      font-size: 28px;
+      ${wikiHeading1Style}
     }
 
     h2 {
-      font-size: 24px;
+      ${wikiHeading2Style}
     }
 
     h3 {
-      font-size: 20px;
+      ${wikiHeading3Style}
     }
 
-    h4 {
-      font-size: 16px;
-    }
-
-    h5 {
-      font-size: 14px;
-    }
-
+    h4,
+    h5,
     h6 {
-      font-size: 12px;
+      font-family: 'DO Futuristic', sans-serif !important;
+      font-weight: 100;
+      letter-spacing: 1px;
+      margin: 0.6em 0 0.3em 0;
+      line-height: 1.4;
+      color: var(--whitesmoke);
     }
+
+    h4 { font-size: 1.1rem !important; }
+    h5 { font-size: 1rem !important; }
+    h6 { font-size: 0.9rem !important; }
 
     ul,
     ol {
-      margin: 1em 0;
-      padding-left: 2em;
-
-      li {
-        margin: 0.5em 0;
-      }
+      ${wikiListStyle}
     }
 
     blockquote {
-      margin: 1em 0;
-      padding: 12px 16px;
-      border-left: 4px solid #00d4ff;
-      background-color: rgba(0, 212, 255, 0.05);
-      font-style: italic;
-      color: rgba(255, 255, 255, 0.8);
+      ${wikiBlockquoteStyle}
     }
 
     code {
-      background-color: rgba(0, 0, 0, 0.2);
-      padding: 2px 6px;
-      border-radius: 3px;
-      font-family: 'Courier New', monospace;
-      font-size: 0.9em;
+      ${wikiCodeStyle}
     }
 
     pre {
@@ -149,14 +134,7 @@ export const RichTextBlockContainer = styled.div`
     }
 
     a {
-      color: #00d4ff;
-      text-decoration: underline;
-      cursor: pointer;
-      transition: opacity 0.2s ease;
-
-      &:hover {
-        opacity: 0.8;
-      }
+      ${wikiLinkStyle}
     }
 
     img {

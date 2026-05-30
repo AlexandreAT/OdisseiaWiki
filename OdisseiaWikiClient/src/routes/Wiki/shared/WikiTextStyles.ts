@@ -1,0 +1,90 @@
+/**
+ * Shared wiki text styles that follow the site's standard design language.
+ * Uses 'DO Futuristic' font family, neon-consistent text shadows,
+ * and responsive sizing aligned with patterns from the homepage/Banner.
+ */
+
+export const wikiHeading1Style = `
+  font-family: 'DO Futuristic', sans-serif !important;
+  font-size: 2.2rem !important;
+  font-weight: 100;
+  letter-spacing: 3px;
+  line-height: 1.4;
+  text-shadow: 1px 1px 8px var(--neonBlue);
+  color: var(--whitesmoke);
+
+  @media (max-width: 768px) {
+    font-size: 1.8rem !important;
+  }
+`;
+
+export const wikiHeading2Style = `
+  font-family: 'DO Futuristic', sans-serif !important;
+  font-size: 1.6rem !important;
+  font-weight: 100;
+  letter-spacing: 2px;
+  line-height: 1.4;
+  text-shadow: 0px 0px 8px var(--clearneonPink);
+  color: var(--whitesmoke);
+
+  @media (max-width: 768px) {
+    font-size: 1.4rem !important;
+  }
+`;
+
+export const wikiHeading3Style = `
+  font-family: 'DO Futuristic', sans-serif !important;
+  font-size: 1.3rem !important;
+  font-weight: 100;
+  letter-spacing: 1.5px;
+  line-height: 1.4;
+  text-shadow: 0px 0px 6px var(--clearneonPink);
+  color: var(--whitesmoke);
+
+  @media (max-width: 768px) {
+    font-size: 1.15rem !important;
+  }
+`;
+
+export const wikiParagraphStyle = `
+  line-height: 1.8;
+  font-size: 14px;
+  color: var(--whitesmoke);
+`;
+
+export const wikiListStyle = `
+  padding-left: 2em;
+
+  li {
+    line-height: 1.8;
+    font-size: 14px;
+    color: var(--whitesmoke);
+  }
+`;
+
+export const wikiBlockquoteStyle = `
+  padding: 12px 16px;
+  border-left: 4px solid var(--clearneonBlue);
+  background-color: rgba(0, 212, 255, 0.05);
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.8);
+`;
+
+export const wikiCodeStyle = `
+  background-color: rgba(0, 0, 0, 0.2);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+`;
+
+export const wikiLinkStyle = `
+  color: var(--clearneonBlue);
+  text-decoration: underline;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+
+  &:hover {
+    opacity: 0.8;
+  }
+`;

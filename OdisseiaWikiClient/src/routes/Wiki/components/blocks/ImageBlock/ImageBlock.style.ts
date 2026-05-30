@@ -1,4 +1,11 @@
 import styled from 'styled-components';
+import {
+  wikiHeading1Style,
+  wikiHeading2Style,
+  wikiHeading3Style,
+  wikiParagraphStyle,
+  wikiListStyle,
+} from '../../../shared/WikiTextStyles';
 
 interface ImageWithTextProps {
   $posicaoTexto: 'left' | 'right';
@@ -28,21 +35,26 @@ export const TextSide = styled.div`
   border-radius: 10px;
 
   h1 {
-    font-family: 'DO Futuristic', sans-serif !important;
-    font-size: 2.5rem !important;
-    font-weight: 100;
-    letter-spacing: 4px;
-    color: white;
+    ${wikiHeading1Style}
+    margin: 10px 0 5px;
     text-align: center;
   }
 
+  h2 {
+    ${wikiHeading2Style}
+  }
+
+  h3 {
+    ${wikiHeading3Style}
+  }
+
   p {
+    ${wikiParagraphStyle}
   }
 
   ul,
   ol {
-    padding-left: 20px;
-    margin-left: 0;
+    ${wikiListStyle}
   }
 `;
 
@@ -92,17 +104,33 @@ export const ImageCaption = styled.p`
 `;
 
 export const TextContent = styled.div`
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--text-primary);
   padding: 8px 0;
 
-  p {
-    margin: 0 0 8px 0;
-  }
+  .ProseMirror {
+    outline: none;
+    padding: 0;
+    background-color: transparent;
 
-  p:last-child {
-    margin-bottom: 0;
+    p {
+      ${wikiParagraphStyle}
+    }
+
+    h1 {
+      ${wikiHeading1Style}
+    }
+
+    h2 {
+      ${wikiHeading2Style}
+    }
+
+    h3 {
+      ${wikiHeading3Style}
+    }
+
+    ul,
+    ol {
+      ${wikiListStyle}
+    }
   }
 `;
 
