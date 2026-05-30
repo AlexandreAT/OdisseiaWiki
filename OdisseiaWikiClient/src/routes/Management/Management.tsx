@@ -38,17 +38,17 @@ export const Management = () => {
                 type='management' 
                 skipIntro={true}
             />
+            <ToggleSidebarButton
+                theme={theme}
+                neon={neon}
+                expanded={sidebarExpanded}
+                onClick={() => setSidebarExpanded(!sidebarExpanded)}
+                title={sidebarExpanded ? 'Retrair sidebar' : 'Expandir sidebar'}
+            >
+                {sidebarExpanded ? <ChevronLeftIcon /> : <ChevronRightIcon />}
+            </ToggleSidebarButton>
+            
             <OptionsController expanded={sidebarExpanded}>
-                <ToggleSidebarButton
-                    theme={theme}
-                    neon={neon}
-                    expanded={sidebarExpanded}
-                    onClick={() => setSidebarExpanded(!sidebarExpanded)}
-                    title={sidebarExpanded ? 'Retrair sidebar' : 'Expandir sidebar'}
-                >
-                    {sidebarExpanded ? <ChevronLeftIcon /> : <ChevronRightIcon />}
-                </ToggleSidebarButton>
-                
                 {sidebarExpanded && (
                     <Options theme={theme} neon={neon}>
                         {OPTIONS.map(option => (

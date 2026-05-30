@@ -1,20 +1,14 @@
 import React, { useState, useCallback } from 'react';
-import { BiX, BiChevronLeft, BiChevronRight, BiImage } from 'react-icons/bi';
+import { BiImage } from 'react-icons/bi';
 import { normalizeImagePath } from '../../../utils/imagePathHelper';
 import { GalleryBlockProps } from './types';
+import { Lightbox } from '../shared/Lightbox/Lightbox';
 import {
   GalleryBlockContainer,
   GalleryGrid,
   GalleryItem,
   GalleryItemImage,
   GalleryItemPlaceholder,
-  ModalOverlay,
-  ModalContent,
-  ModalImage,
-  ModalCaption,
-  ModalCloseButton,
-  ModalNavigation,
-  ModalNavButton,
   ErrorMessage,
 } from './GalleryBlock.style';
 
@@ -32,6 +26,11 @@ export const GalleryBlock: React.FC<GalleryBlockProps> = ({ block }) => {
 
   const imagens = block.conteudo.imagens;
 
+  const lightboxImages = imagens.map((imagem: any) => ({
+    url: normalizeImagePath(imagem.url),
+    caption: imagem.legenda,
+  }));
+
   const handleImageClick = (index: number) => {
     setSelectedIndex(index);
   };
@@ -44,27 +43,15 @@ export const GalleryBlock: React.FC<GalleryBlockProps> = ({ block }) => {
     setImageErrors(prev => new Set(prev).add(index));
   };
 
-  const handlePrevious = () => {
-    if (selectedIndex !== null && selectedIndex > 0) {
-      setSelectedIndex(selectedIndex - 1);
-    }
-  };
+  const handlePrevious = useCallback(() => {
+    setSelectedIndex(prev => (prev !== null && prev > 0 ? prev - 1 : prev));
+  }, []);
 
-  const handleNext = () => {
-    if (selectedIndex !== null && selectedIndex < imagens.length - 1) {
-      setSelectedIndex(selectedIndex + 1);
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      handleCloseModal();
-    } else if (e.key === 'ArrowLeft') {
-      handlePrevious();
-    } else if (e.key === 'ArrowRight') {
-      handleNext();
-    }
-  };
+  const handleNext = useCallback(() => {
+    setSelectedIndex(prev =>
+      prev !== null && prev < imagens.length - 1 ? prev + 1 : prev
+    );
+  }, [imagens.length]);
 
   return (
     <>
@@ -92,51 +79,14 @@ export const GalleryBlock: React.FC<GalleryBlockProps> = ({ block }) => {
         </GalleryGrid>
       </GalleryBlockContainer>
 
-      {selectedIndex !== null && (
-        <ModalOverlay onClick={handleCloseModal} onKeyDown={handleKeyDown} tabIndex={-1}>
-          <ModalContent onClick={e => e.stopPropagation()}>
-            <ModalCloseButton onClick={handleCloseModal} type="button">
-              <BiX />
-            </ModalCloseButton>
-
-            {!imageErrors.has(selectedIndex) && imagens[selectedIndex]?.url ? (
-              <ModalImage
-                src={normalizeImagePath(imagens[selectedIndex].url)}
-                alt={imagens[selectedIndex].legenda || `Imagem ${selectedIndex + 1}`}
-                onError={() => handleImageError(selectedIndex)}
-              />
-            ) : (
-              <div style={{ textAlign: 'center', color: 'rgba(255, 255, 255, 0.5)' }}>
-                Erro ao carregar a imagem
-              </div>
-            )}
-
-            {imagens[selectedIndex]?.legenda && (
-              <ModalCaption>{imagens[selectedIndex].legenda}</ModalCaption>
-            )}
-
-            <ModalNavigation>
-              <ModalNavButton
-                onClick={handlePrevious}
-                disabled={selectedIndex === 0}
-                type="button"
-              >
-                <BiChevronLeft /> Anterior
-              </ModalNavButton>
-              <span style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '12px' }}>
-                {selectedIndex + 1} / {imagens.length}
-              </span>
-              <ModalNavButton
-                onClick={handleNext}
-                disabled={selectedIndex === imagens.length - 1}
-                type="button"
-              >
-                Próximo <BiChevronRight />
-              </ModalNavButton>
-            </ModalNavigation>
-          </ModalContent>
-        </ModalOverlay>
-      )}
+      <Lightbox
+        isOpen={selectedIndex !== null}
+        images={lightboxImages}
+        selectedIndex={selectedIndex ?? 0}
+        onPrevious={handlePrevious}
+        onNext={handleNext}
+        onClose={handleCloseModal}
+      />
     </>
   );
 };

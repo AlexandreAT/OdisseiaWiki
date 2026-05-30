@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { ImageBlockProps } from './types';
 import { normalizeImagePath } from '../../../utils/imagePathHelper';
 import { ImageBlockContent } from '../../../../../models/Pages';
 import { ImageTextRenderer } from './ImageTextRenderer';
+import { Lightbox } from '../shared/Lightbox/Lightbox';
 import {
   ImageBlockContainer,
   ImageWithTextContainer,
@@ -17,6 +18,15 @@ import {
 
 export const ImageBlock: React.FC<ImageBlockProps> = ({ block }) => {
   const [imageError, setImageError] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+
+  const handleImageClick = useCallback(() => {
+    setLightboxOpen(true);
+  }, []);
+
+  const handleCloseLightbox = useCallback(() => {
+    setLightboxOpen(false);
+  }, []);
 
   if (!block.conteudo) {
     return null;
@@ -35,37 +45,43 @@ export const ImageBlock: React.FC<ImageBlockProps> = ({ block }) => {
 
   const hasText = !!texto;
 
+  const images = [{ url: normalizeImagePath(url), caption: legenda }];
+
   if (hasText) {
     return (
       <ImageBlockContainer>
         <ImageWithTextContainer $posicaoTexto={posicaoTexto || 'right'}>
-          <ImageSide>
+          <ImageContent onClick={handleImageClick} style={{ cursor: 'pointer' }}>
             {!imageError ? (
-              <ImageContent>
                 <StyledImage
                   src={normalizeImagePath(url)}
                   alt={legenda || 'Imagem'}
                   onError={() => setImageError(true)}
                 />
-              </ImageContent>
             ) : (
               <ErrorMessage style={{ margin: 0, borderRadius: 0 }}>
                 <p>Erro ao carregar a imagem</p>
               </ErrorMessage>
             )}
             {legenda && <ImageCaption>{legenda}</ImageCaption>}
-          </ImageSide>
+          </ImageContent>
           <TextSide>
             <ImageTextRenderer content={texto} />
           </TextSide>
         </ImageWithTextContainer>
+
+        <Lightbox
+          isOpen={lightboxOpen}
+          images={images}
+          onClose={handleCloseLightbox}
+        />
       </ImageBlockContainer>
     );
   }
 
   return (
     <ImageBlockContainer>
-      <ImageWrapper>
+      <ImageWrapper onClick={handleImageClick} style={{ cursor: 'pointer' }}>
         {!imageError ? (
           <StyledImage
             src={normalizeImagePath(url)}
@@ -79,6 +95,12 @@ export const ImageBlock: React.FC<ImageBlockProps> = ({ block }) => {
         )}
       </ImageWrapper>
       {legenda && <ImageCaption>{legenda}</ImageCaption>}
+
+      <Lightbox
+        isOpen={lightboxOpen}
+        images={images}
+        onClose={handleCloseLightbox}
+      />
     </ImageBlockContainer>
   );
 };

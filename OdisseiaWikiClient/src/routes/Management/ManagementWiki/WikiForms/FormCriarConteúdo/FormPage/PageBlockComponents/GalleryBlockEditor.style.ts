@@ -59,7 +59,6 @@ export const GalleryGrid = styled.div`
 
 export const ImageItem = styled.div<ThemeProps>`
   position: relative;
-  aspect-ratio: 1;
   border-radius: 8px;
   overflow: hidden;
   background-color: ${props => (props.$isDark ? '#2a2a2a' : '#e0e0e0')};
@@ -70,9 +69,9 @@ export const ImageItem = styled.div<ThemeProps>`
 
 export const ImageThumb = styled.img`
   width: 100%;
-  height: 100%;
+  aspect-ratio: 1;
   object-fit: cover;
-  flex: 1;
+  display: block;
 `;
 
 export const DeleteButton = styled.button`

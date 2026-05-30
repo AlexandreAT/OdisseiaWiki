@@ -20,14 +20,6 @@ export const ImageWithTextContainer = styled.div<ImageWithTextProps>`
   align-items: flex-start;
 `;
 
-export const ImageSide = styled.div`
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-`;
-
 export const TextSide = styled.div`
   flex: 1;
   min-width: 0;
@@ -46,6 +38,21 @@ export const TextSide = styled.div`
 
   p {
   }
+
+  ul,
+  ol {
+    padding-left: 20px;
+    margin-left: 0;
+  }
+`;
+
+export const ImageSide = styled.div`
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background-color: #0006;
 `;
 
 export const ImageContent = styled.div`
@@ -55,7 +62,6 @@ export const ImageContent = styled.div`
   overflow: hidden;
   border-radius: 10px;
   align-self: flex-start;
-  line-height: 0;
 `;
 
 export const StyledImage = styled.img`
@@ -80,6 +86,9 @@ export const ImageCaption = styled.p`
   color: var(--lightGrey) !important;
   font-style: italic;
   text-align: center;
+  width: 100%;
+  padding: 4px 0;
+  background-color: #0006;
 `;
 
 export const TextContent = styled.div`

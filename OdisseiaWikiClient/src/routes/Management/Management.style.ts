@@ -36,6 +36,7 @@ export const OptionsController = styled.div<OptionsControllerProps>`
     height: calc(100vh - 80px);
     transition: width 0.3s ease-in-out;
     z-index: 0;
+    overflow: hidden;
 `
 
 export const Options = styled.div<Props>`
@@ -141,9 +142,9 @@ export const ContainerContent = styled.div`
 `
 
 export const ToggleSidebarButton = styled.button<ToggleSidebarButtonProps>`
-    position: absolute;
-    top: 80px;
-    right: ${props => props.expanded ? '-40px' : '-40px'};
+    position: fixed;
+    top: 120px;
+    left: ${props => props.expanded ? '150px' : '0px'};
     width: 40px;
     height: 40px;
     border: 1px solid ${({ theme, neon }) =>
@@ -154,6 +155,7 @@ export const ToggleSidebarButton = styled.button<ToggleSidebarButtonProps>`
             : theme === 'dark'
                 ? 'var(--grey)'
                 : 'var(--lightGrey)'};
+    border-left: none;
     background-color: ${({ theme }) =>
         theme === 'light' ? 'var(--black)' : 'var(--black-blue)'};
     color: ${({ theme, neon }) =>
@@ -172,6 +174,7 @@ export const ToggleSidebarButton = styled.button<ToggleSidebarButtonProps>`
     transition: all 0.3s ease-in-out;
     outline: none;
     z-index: 15;
+    padding: 0;
 
     &:hover {
         color: ${({ theme, neon }) =>
@@ -193,5 +196,6 @@ export const ToggleSidebarButton = styled.button<ToggleSidebarButtonProps>`
     svg {
         width: 24px;
         height: 24px;
+        pointer-events: none;
     }
 `

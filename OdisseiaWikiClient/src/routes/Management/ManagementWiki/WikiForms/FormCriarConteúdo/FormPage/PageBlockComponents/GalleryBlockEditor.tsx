@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import { PageBlock, GalleryBlockContent, ImageBlockContent } from '../../../../../../../models/Pages';
 import { ImageUploader } from '../../../../../../../components/Generic/ImageUploader/ImageUploader';
-import { InputText } from '../../../../../../../components/Generic/InputText/InputText';
 import { saveAsset } from '../../../../../../../services/assetsService';
 import type { CropPreset } from '../../../../../../../components/Generic/ImageUploader/types';
 import {
@@ -32,7 +31,6 @@ export const GalleryBlockEditor: React.FC<GalleryBlockEditorProps> = ({
 }) => {
   const content = (block.conteudo as GalleryBlockContent) || { imagens: [] };
   const [imagens, setImagens] = useState<ImageBlockContent[]>(content.imagens || []);
-  const [newLegenda, setNewLegenda] = useState('');
   const [aspectRatio, setAspectRatio] = useState<'square' | 'rectangle'>('rectangle');
 
   const getCropPreset = (): CropPreset => {
@@ -64,19 +62,25 @@ export const GalleryBlockEditor: React.FC<GalleryBlockEditorProps> = ({
       
       const novaImagem: ImageBlockContent = {
         url: assetResult.path,
-        legenda: newLegenda,
       };
 
       const novasImagens = [...imagens, novaImagem];
       setImagens(novasImagens);
       onUpdate({ imagens: novasImagens });
 
-      setNewLegenda('');
       toast.success('Imagem adicionada com sucesso!');
     } catch (error) {
       toast.error('Erro ao salvar imagem');
       console.error(error);
     }
+  };
+
+  const handleLegendaChange = (index: number, newLegenda: string) => {
+    const novasImagens = imagens.map((img, idx) =>
+      idx === index ? { ...img, legenda: newLegenda || undefined } : img
+    );
+    setImagens(novasImagens);
+    onUpdate({ imagens: novasImagens });
   };
 
   const handleRemoveImage = (index: number) => {
@@ -117,15 +121,6 @@ export const GalleryBlockEditor: React.FC<GalleryBlockEditorProps> = ({
           onImageCropped={handleImageUpload}
           cropPreset={getCropPreset()}
         />
-
-        <InputText
-          theme={theme}
-          neon={neon}
-          label="Legenda (opcional)"
-          value={newLegenda}
-          onChange={(e) => setNewLegenda(e.target.value)}
-          width="100%"
-        />
       </Container>
 
       {imagens.length > 0 && (
@@ -137,11 +132,31 @@ export const GalleryBlockEditor: React.FC<GalleryBlockEditorProps> = ({
             {imagens.map((img, idx) => (
               <ImageItem key={idx} $isDark={theme === 'dark'}>
                 <ImageThumb src={img.url} alt={img.legenda || `Imagem ${idx + 1}`} />
-                {img.legenda && (
-                  <div style={{ fontSize: '10px', padding: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#fff' }}>
-                    {img.legenda}
-                  </div>
-                )}
+                <div style={{ padding: '4px 6px', flexShrink: 0 }}>
+                  <input
+                    type="text"
+                    placeholder="Legenda (opcional)"
+                    value={img.legenda || ''}
+                    onChange={(e) => handleLegendaChange(idx, e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '3px 6px',
+                      fontSize: '11px',
+                      border: '1px solid #555',
+                      borderRadius: '4px',
+                      backgroundColor: theme === 'dark' ? '#2a2a2a' : '#f0f0f0',
+                      color: theme === 'dark' ? '#ccc' : '#333',
+                      boxSizing: 'border-box',
+                      outline: 'none',
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#00d4ff';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#555';
+                    }}
+                  />
+                </div>
                 <DeleteButton onClick={() => handleRemoveImage(idx)}>
                   ✕
                 </DeleteButton>
