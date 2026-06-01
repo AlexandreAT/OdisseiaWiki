@@ -1,9 +1,3 @@
-/**
- * Shared wiki text styles that follow the site's standard design language.
- * Uses 'DO Futuristic' font family, neon-consistent text shadows,
- * and responsive sizing aligned with patterns from the homepage/Banner.
- */
-
 export const wikiHeading1Style = `
   font-family: 'DO Futuristic', sans-serif !important;
   font-size: 2.2rem !important;
@@ -34,7 +28,7 @@ export const wikiHeading2Style = `
 
 export const wikiHeading3Style = `
   font-family: 'DO Futuristic', sans-serif !important;
-  font-size: 1.3rem !important;
+  font-size: 1.2rem !important;
   font-weight: 100;
   letter-spacing: 1.5px;
   line-height: 1.4;
@@ -47,7 +41,6 @@ export const wikiHeading3Style = `
 `;
 
 export const wikiParagraphStyle = `
-  line-height: 1.8;
   font-size: 14px;
   color: var(--whitesmoke);
 `;

@@ -20,6 +20,7 @@ export const LightboxContent = styled.div`
   gap: 12px;
   max-width: 90vw;
   max-height: 90vh;
+  min-height: 0;
   background-color: #1a1a1a;
   border: 2px solid #333;
   border-radius: 12px;
@@ -30,6 +31,7 @@ export const LightboxContent = styled.div`
 export const LightboxImage = styled.img`
   max-width: 100%;
   max-height: 70vh;
+  min-height: 0;
   object-fit: contain;
   border-radius: 8px;
 `;

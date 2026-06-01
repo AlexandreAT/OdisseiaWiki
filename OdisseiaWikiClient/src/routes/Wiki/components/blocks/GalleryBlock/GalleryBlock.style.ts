@@ -5,24 +5,14 @@ export const GalleryBlockContainer = styled.div`
   flex-direction: column;
   gap: 16px;
   width: 100%;
-`;
-
-export const GalleryGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 12px;
-  width: 100%;
-
-  @media (max-width: 768px) {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 8px;
-  }
+  align-items: center;
 `;
 
 export const GalleryItem = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
+  flex: 0 0 auto;
   width: 100%;
   aspect-ratio: 1 / 1;
   padding: 0;
@@ -41,6 +31,111 @@ export const GalleryItem = styled.button`
 
   &:active {
     transform: scale(0.98);
+  }
+`;
+
+export const GalleryGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 18px;
+  width: 80%;
+  max-width: 1100px;
+  padding: 14px;
+  border-radius: 8px;
+
+  &:has(> ${GalleryItem}:hover) {
+    background-color: #0006;
+  }
+
+  transition: background-color 0.3s ease;
+
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 8px;
+  }
+`;
+
+/* ── Carousel ── */
+
+export const CarouselWrapper = styled.div`
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 1100px;
+`;
+
+export const CarouselViewport = styled.div`
+  display: flex;
+  gap: 18px;
+  overflow: hidden;
+  scroll-behavior: smooth;
+  width: 100%;
+  padding: 14px 4px;
+  border-radius: 8px;
+  cursor: grab;
+
+  &:active {
+    cursor: grabbing;
+  }
+
+  &:has(> ${GalleryItem}:hover) {
+    background-color: #0006;
+  }
+
+  transition: background-color 0.3s ease;
+
+  > ${GalleryItem} {
+    width: 200px;
+    min-width: 200px;
+    aspect-ratio: 1 / 1;
+
+    @media (max-width: 768px) {
+      width: 150px;
+      min-width: 150px;
+    }
+  }
+
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+`;
+
+export const CarouselArrow = styled.button<{ $direction: 'left' | 'right' }>`
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  ${({ $direction }) => ($direction === 'left' ? 'left: -12px;' : 'right: -12px;')}
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background-color: var(--black-blue);
+  color: #000;
+  font-size: 20px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+  opacity: 0.85;
+
+  &:hover {
+    opacity: 1;
+    transform: translateY(-50%) scale(1.1);
+  }
+
+  &:active {
+    transform: translateY(-50%) scale(0.95);
+  }
+
+  &:disabled {
+    opacity: 0.25;
+    cursor: default;
+    transform: translateY(-50%) scale(1);
   }
 `;
 

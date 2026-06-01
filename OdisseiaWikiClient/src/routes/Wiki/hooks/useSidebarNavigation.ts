@@ -16,20 +16,19 @@ export const useSidebarNavigation = (page: Page | null) => {
       const blockId = block.tempId || `block-${blockIndex}`;
 
       if (block.tipo === PageBlockType.RICH_TEXT) {
-        // Extrair títulos (headings) do conteúdo rich text
+        // Extract headings from rich text content for the sidebar labels
         const headings = extractHeadingsFromRichText(block.conteudo);
-        
+
         if (headings.length > 0) {
-          headings.forEach(heading => {
+          headings.forEach((heading, headingIndex) => {
             textBlocks.push({
-              id: `heading-${blockIndex}-${heading.level}`,
+              id: `heading-${blockIndex}-${headingIndex}`,
               title: heading.text,
               type: PageBlockType.RICH_TEXT,
               blockIndex,
             });
           });
         } else {
-          // Se não houver headings, criar um item genérico para o bloco
           textBlocks.push({
             id: blockId,
             title: `Seção de Texto ${blockIndex + 1}`,
@@ -71,14 +70,16 @@ export const useSidebarNavigation = (page: Page | null) => {
   const scrollToBlock = (blockIndex: number) => {
     const element = document.getElementById(`wiki-block-${blockIndex}`);
     if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Offset for the fixed header (167px when expanded, 100px when collapsed)
+      window.scrollBy({ top: -200, behavior: 'smooth' });
     }
   };
 
   return { sections, scrollToBlock };
 };
 
-// Função auxiliar para extrair headings do JSONContent
+// Helper to extract headings from JSONContent — used only for sidebar text labels
 interface Heading {
   level: number;
   text: string;
@@ -94,7 +95,6 @@ const extractHeadingsFromRichText = (content: JSONContent | any): Heading[] => {
   const traverse = (node: any): void => {
     if (!node) return;
 
-    // Se for um heading
     if (node.type && node.type.match(/^heading/)) {
       const level = parseInt(node.type.replace('heading', '')) || 1;
       let text = '';
@@ -111,7 +111,6 @@ const extractHeadingsFromRichText = (content: JSONContent | any): Heading[] => {
       }
     }
 
-    // Recursivamente procurar em child nodes
     if (node.content && Array.isArray(node.content)) {
       node.content.forEach(traverse);
     }

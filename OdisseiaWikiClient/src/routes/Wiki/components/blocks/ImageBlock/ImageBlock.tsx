@@ -7,7 +7,6 @@ import { Lightbox } from '../shared/Lightbox/Lightbox';
 import {
   ImageBlockContainer,
   ImageWithTextContainer,
-  ImageSide,
   TextSide,
   ImageWrapper,
   StyledImage,

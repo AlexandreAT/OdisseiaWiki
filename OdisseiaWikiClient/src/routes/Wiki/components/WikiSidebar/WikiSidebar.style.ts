@@ -103,13 +103,17 @@ export const SectionItems = styled.div<{ $expanded: boolean }>`
   transition: all 0.2s ease;
 `;
 
+export const SectionItemContainer = styled.div`
+  overflow: hidden;
+  width: 100%;
+`;
+
 export const SectionItem = styled.button<SectionItemProps>`
   display: flex;
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 10px 16px;
-  margin-left: 16px;
+  padding: 10px 16px 10px 18px;
   background-color: transparent;
   border: none;
   border-left: 2px solid ${props => (props.$isActive ? '#00d4ff' : 'transparent')};

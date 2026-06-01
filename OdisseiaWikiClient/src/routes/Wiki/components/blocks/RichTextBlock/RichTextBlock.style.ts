@@ -25,7 +25,6 @@ export const RichTextBlockContainer = styled.div`
   width: 65%;
   min-width: 900px;
 
-  /* TipTap Editor Styles */
   .ProseMirror {
     outline: none;
     padding: 0;

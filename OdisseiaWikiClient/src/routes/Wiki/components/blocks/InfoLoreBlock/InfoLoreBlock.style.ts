@@ -1,4 +1,11 @@
 import styled from 'styled-components';
+import {
+  wikiHeading1Style,
+  wikiHeading2Style,
+  wikiHeading3Style,
+  wikiParagraphStyle,
+  wikiListStyle,
+} from '../../../shared/WikiTextStyles';
 
 export const InfoLoreBlockContainer = styled.div`
   display: flex;
@@ -52,6 +59,27 @@ export const InfoLoreContent = styled.div`
   gap: 12px;
   flex: 1;
   min-width: 0;
+
+  p {
+    ${wikiParagraphStyle}
+  }
+
+  h1 {
+    ${wikiHeading1Style}
+  }
+
+  h2 {
+    ${wikiHeading2Style}
+  }
+
+  h3 {
+    ${wikiHeading3Style}
+  }
+
+  ul,
+  ol {
+    ${wikiListStyle}
+  }
 `;
 
 export const InfoLoreTitle = styled.h3`

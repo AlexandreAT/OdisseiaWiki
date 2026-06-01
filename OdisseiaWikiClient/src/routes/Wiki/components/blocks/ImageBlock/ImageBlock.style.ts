@@ -23,7 +23,8 @@ export const ImageWithTextContainer = styled.div<ImageWithTextProps>`
   display: flex;
   flex-direction: ${props => (props.$posicaoTexto === 'left' ? 'row-reverse' : 'row')};
   gap: 20px;
-  width: 65%;
+  width: 80%;
+  max-width: 1100px;
   align-items: flex-start;
 `;
 
@@ -36,8 +37,6 @@ export const TextSide = styled.div`
 
   h1 {
     ${wikiHeading1Style}
-    margin: 10px 0 5px;
-    text-align: center;
   }
 
   h2 {
@@ -104,8 +103,6 @@ export const ImageCaption = styled.p`
 `;
 
 export const TextContent = styled.div`
-  padding: 8px 0;
-
   .ProseMirror {
     outline: none;
     padding: 0;
@@ -117,6 +114,7 @@ export const TextContent = styled.div`
 
     h1 {
       ${wikiHeading1Style}
+      margin: 10px 0 5px;
     }
 
     h2 {

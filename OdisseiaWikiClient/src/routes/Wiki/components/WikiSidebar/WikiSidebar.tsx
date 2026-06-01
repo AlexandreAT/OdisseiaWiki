@@ -9,6 +9,7 @@ import {
   SectionHeader,
   SectionItems,
   SectionItem,
+  SectionItemContainer,
   EmptySidebarMessage,
   ToggleSidebarButton,
 } from './WikiSidebar.style';
@@ -88,13 +89,14 @@ export const WikiSidebar: React.FC<WikiSidebarInternalProps> = ({ page, onToggle
 
               <SectionItems $expanded={expandedSections.has(section.title)}>
                 {section.blocks.map(block => (
-                  <SectionItem
-                    key={block.id}
-                    onClick={() => handleBlockClick(block.blockIndex)}
-                    title={block.title}
-                  >
-                    {block.title}
-                  </SectionItem>
+                  <SectionItemContainer key={block.id}>
+                    <SectionItem
+                      onClick={() => handleBlockClick(block.blockIndex)}
+                      title={block.title}
+                    >
+                      {block.title}
+                    </SectionItem>
+                  </SectionItemContainer>
                 ))}
               </SectionItems>
             </SectionWrapper>

@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { BiImage } from 'react-icons/bi';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { BiImage, BiChevronLeft, BiChevronRight } from 'react-icons/bi';
 import { normalizeImagePath } from '../../../utils/imagePathHelper';
 import { GalleryBlockProps } from './types';
 import { Lightbox } from '../shared/Lightbox/Lightbox';
@@ -9,12 +9,26 @@ import {
   GalleryItem,
   GalleryItemImage,
   GalleryItemPlaceholder,
+  CarouselWrapper,
+  CarouselViewport,
+  CarouselArrow,
   ErrorMessage,
 } from './GalleryBlock.style';
+
+const CAROUSEL_LIMIT = 5;
 
 export const GalleryBlock: React.FC<GalleryBlockProps> = ({ block }) => {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
+
+  /* ── drag-to-scroll state ── */
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartX = useRef(0);
+  const dragScrollLeft = useRef(0);
+  const didDrag = useRef(false);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
 
   if (!block.conteudo || !block.conteudo.imagens || block.conteudo.imagens.length === 0) {
     return (
@@ -25,6 +39,7 @@ export const GalleryBlock: React.FC<GalleryBlockProps> = ({ block }) => {
   }
 
   const imagens = block.conteudo.imagens;
+  const isCarousel = imagens.length > CAROUSEL_LIMIT;
 
   const lightboxImages = imagens.map((imagem: any) => ({
     url: normalizeImagePath(imagem.url),
@@ -32,6 +47,10 @@ export const GalleryBlock: React.FC<GalleryBlockProps> = ({ block }) => {
   }));
 
   const handleImageClick = (index: number) => {
+    if (didDrag.current) {
+      didDrag.current = false;
+      return;
+    }
     setSelectedIndex(index);
   };
 
@@ -53,30 +72,127 @@ export const GalleryBlock: React.FC<GalleryBlockProps> = ({ block }) => {
     );
   }, [imagens.length]);
 
+  /* ── scroll arrow helpers ── */
+  const updateScrollButtons = useCallback(() => {
+    const el = viewportRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 4);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }, []);
+
+  useEffect(() => {
+    const el = viewportRef.current;
+    if (!el || !isCarousel) return;
+    updateScrollButtons();
+    el.addEventListener('scroll', updateScrollButtons, { passive: true });
+    return () => el.removeEventListener('scroll', updateScrollButtons);
+  }, [isCarousel, updateScrollButtons]);
+
+  const scrollByArrow = (direction: 'left' | 'right') => {
+    const el = viewportRef.current;
+    if (!el) return;
+    const itemWidth = el.querySelector('button')?.offsetWidth ?? 200;
+    const gap = 18;
+    const scrollAmount = itemWidth + gap;
+    el.scrollBy({
+      left: direction === 'left' ? -scrollAmount : scrollAmount,
+      behavior: 'smooth',
+    });
+  };
+
+  /* ── drag-to-scroll handlers ── */
+  const handleMouseDown = (e: React.MouseEvent) => {
+    const el = viewportRef.current;
+    if (!el) return;
+    setIsDragging(true);
+    didDrag.current = false;
+    dragStartX.current = e.pageX - el.offsetLeft;
+    dragScrollLeft.current = el.scrollLeft;
+    el.style.cursor = 'grabbing';
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+    const el = viewportRef.current;
+    if (el) el.style.cursor = 'grab';
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    e.preventDefault();
+    const el = viewportRef.current;
+    if (!el) return;
+    const x = e.pageX - el.offsetLeft;
+    const walk = (x - dragStartX.current) * 1.5;
+    el.scrollLeft = dragScrollLeft.current - walk;
+    /* mark as a real drag so the upcoming click is suppressed */
+    didDrag.current = true;
+  };
+
+  const handleMouseLeave = () => {
+    if (isDragging) handleMouseUp();
+  };
+
+  /* ── render item ── */
+  const renderItem = (imagem: any, index: number) => (
+    <GalleryItem
+      key={index}
+      onClick={() => handleImageClick(index)}
+      type="button"
+    >
+      {!imageErrors.has(index) && imagem.url ? (
+        <GalleryItemImage
+          src={normalizeImagePath(imagem.url)}
+          alt={imagem.legenda || `Imagem ${index + 1}`}
+          onError={() => handleImageError(index)}
+        />
+      ) : (
+        <GalleryItemPlaceholder>
+          <BiImage />
+        </GalleryItemPlaceholder>
+      )}
+    </GalleryItem>
+  );
+
   return (
     <>
       <GalleryBlockContainer>
-        <GalleryGrid>
-          {imagens.map((imagem: any, index: number) => (
-            <GalleryItem
-              key={index}
-              onClick={() => handleImageClick(index)}
-              type="button"
+        {isCarousel ? (
+          <CarouselWrapper>
+            <CarouselArrow
+              $direction="left"
+              disabled={!canScrollLeft}
+              onClick={() => scrollByArrow('left')}
+              aria-label="Anterior"
             >
-              {!imageErrors.has(index) && imagem.url ? (
-                <GalleryItemImage
-                  src={normalizeImagePath(imagem.url)}
-                  alt={imagem.legenda || `Imagem ${index + 1}`}
-                  onError={() => handleImageError(index)}
-                />
-              ) : (
-                <GalleryItemPlaceholder>
-                  <BiImage />
-                </GalleryItemPlaceholder>
-              )}
-            </GalleryItem>
-          ))}
-        </GalleryGrid>
+              <BiChevronLeft />
+            </CarouselArrow>
+
+            <CarouselViewport
+              ref={viewportRef}
+              onMouseDown={handleMouseDown}
+              onMouseUp={handleMouseUp}
+              onMouseMove={handleMouseMove}
+              onMouseLeave={handleMouseLeave}
+              onDragStart={e => e.preventDefault()}
+            >
+              {imagens.map((imagem: any, index: number) => renderItem(imagem, index))}
+            </CarouselViewport>
+
+            <CarouselArrow
+              $direction="right"
+              disabled={!canScrollRight}
+              onClick={() => scrollByArrow('right')}
+              aria-label="Próximo"
+            >
+              <BiChevronRight />
+            </CarouselArrow>
+          </CarouselWrapper>
+        ) : (
+          <GalleryGrid>
+            {imagens.map((imagem: any, index: number) => renderItem(imagem, index))}
+          </GalleryGrid>
+        )}
       </GalleryBlockContainer>
 
       <Lightbox
