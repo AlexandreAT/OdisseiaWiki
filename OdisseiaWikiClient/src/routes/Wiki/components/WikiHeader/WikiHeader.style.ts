@@ -2,7 +2,7 @@ import styled from 'styled-components';
 
 export const DivController = styled.section`
   position: relative;
-  z-index: 1;
+  z-index: 2;
 `
 
 export const WikiHeaderWrapper = styled.div<{ $isExpanded: boolean }>`

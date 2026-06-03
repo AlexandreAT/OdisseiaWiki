@@ -47,10 +47,12 @@ export const ImageBlock: React.FC<ImageBlockProps> = ({ block }) => {
   const images = [{ url: normalizeImagePath(url), caption: legenda }];
 
   if (hasText) {
+    const floatDir: 'left' | 'right' = posicaoTexto === 'left' ? 'right' : 'left';
+
     return (
       <ImageBlockContainer>
-        <ImageWithTextContainer $posicaoTexto={posicaoTexto || 'right'}>
-          <ImageContent onClick={handleImageClick} style={{ cursor: 'pointer' }}>
+        <ImageWithTextContainer>
+          <ImageContent $float={floatDir} onClick={handleImageClick}>
             {!imageError ? (
                 <StyledImage
                   src={normalizeImagePath(url)}

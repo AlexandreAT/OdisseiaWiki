@@ -1,4 +1,4 @@
-import styled from 'styled-components';
+import styled, { css } from 'styled-components';
 import {
   wikiHeading1Style,
   wikiHeading2Style,
@@ -7,8 +7,8 @@ import {
   wikiListStyle,
 } from '../../../shared/WikiTextStyles';
 
-interface ImageWithTextProps {
-  $posicaoTexto: 'left' | 'right';
+interface ImageFloatProps {
+  $float: 'left' | 'right';
 }
 
 export const ImageBlockContainer = styled.div`
@@ -19,41 +19,54 @@ export const ImageBlockContainer = styled.div`
   width: 100%;
 `;
 
-export const ImageWithTextContainer = styled.div<ImageWithTextProps>`
-  display: flex;
-  flex-direction: ${props => (props.$posicaoTexto === 'left' ? 'row-reverse' : 'row')};
-  gap: 20px;
+/* Clearfix container that wraps the floated image + text */
+export const ImageWithTextContainer = styled.div`
   width: 80%;
   max-width: 1100px;
-  align-items: flex-start;
+  background-color: #0006;
+  border-radius: 10px;
+
+  &::after {
+    content: '';
+    display: table;
+    clear: both;
+  }
 `;
 
 export const TextSide = styled.div`
-  flex: 1;
-  min-width: 0;
   padding: 0 16px;
-  background-color: #0006;
+  margin: 0;
   border-radius: 10px;
 
   h1 {
     ${wikiHeading1Style}
+    margin-top: 0;
   }
 
   h2 {
     ${wikiHeading2Style}
+    margin-top: 0;
   }
 
   h3 {
     ${wikiHeading3Style}
+    margin-top: 0;
   }
 
   p {
     ${wikiParagraphStyle}
+    margin-top: 0;
   }
 
   ul,
   ol {
     ${wikiListStyle}
+    margin-top: 0;
+  }
+
+  /* Reset all top margins so text starts flush at the top */
+  > * {
+    margin-top: 0;
   }
 `;
 
@@ -66,13 +79,19 @@ export const ImageSide = styled.div`
   background-color: #0006;
 `;
 
-export const ImageContent = styled.div`
-  width: fit-content;
+export const ImageContent = styled.div<ImageFloatProps>`
+  float: ${props => props.$float};
+  ${props =>
+    props.$float === 'right'
+      ? css`margin-left: 20px;`
+      : css`margin-right: 20px;`
+  }
   max-width: 100%;
-  max-height: 100%;
   overflow: hidden;
   border-radius: 10px;
-  align-self: flex-start;
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
 `;
 
 export const StyledImage = styled.img`
@@ -81,6 +100,7 @@ export const StyledImage = styled.img`
   object-fit: contain;
   max-width: 100%;
   display: block;
+  cursor: pointer;
 `;
 
 export const ImageWrapper = styled.div`
@@ -89,6 +109,7 @@ export const ImageWrapper = styled.div`
   justify-content: center;
   width: 100%;
   overflow: hidden;
+  cursor: pointer;
 `;
 
 export const ImageCaption = styled.p`

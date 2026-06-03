@@ -40,7 +40,7 @@ export const WikiContainer: React.FC<WikiContainerProps> = () => {
       <WikiHeader onSearch={handleSearch} onToggle={handleHeaderToggle} isExpanded={headerExpanded} />
       
       <WikiContentArea $isDark={isDark}>
-        {!isSearching && <WikiSidebar page={page} onToggle={handleSidebarToggle} headerExpanded={headerExpanded} />}
+        {!isSearching && <WikiSidebar page={page} onToggle={handleSidebarToggle} headerExpanded={headerExpanded} sidebarExpanded={sidebarExpanded} />}
         
         <WikiMainSection $isDark={isDark} $sidebarExpanded={sidebarExpanded} $headerExpanded={headerExpanded}>
           {isSearching ? (

@@ -17,14 +17,21 @@ import {
 interface WikiSidebarInternalProps extends WikiSidebarProps {
   onToggle?: (expanded: boolean) => void;
   headerExpanded?: boolean;
+  sidebarExpanded?: boolean;
 }
 
-export const WikiSidebar: React.FC<WikiSidebarInternalProps> = ({ page, onToggle, headerExpanded = true }) => {
+export const WikiSidebar: React.FC<WikiSidebarInternalProps> = ({ page, onToggle, headerExpanded = true, sidebarExpanded: externalExpanded }) => {
   const { sections, scrollToBlock } = useSidebarNavigation(page);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(sections.filter(s => s.expanded).map(s => s.title))
   );
-  const [sidebarExpanded, setSidebarExpanded] = useState(true);
+  const [localExpanded, setLocalExpanded] = useState(true);
+  
+  // Use external state if provided, otherwise fall back to local state
+  const sidebarExpanded = externalExpanded !== undefined ? externalExpanded : localExpanded;
+  const setSidebarExpanded = externalExpanded !== undefined
+    ? (value: boolean) => { if (onToggle) onToggle(value); }
+    : setLocalExpanded;
 
   const toggleSection = (sectionTitle: string) => {
     const newExpanded = new Set(expandedSections);
