@@ -92,6 +92,18 @@ export const ImageContent = styled.div<ImageFloatProps>`
   cursor: pointer;
   position: relative;
   z-index: 1;
+  border: 2px solid transparent;
+  transition: border-color 0.2s ease, scale 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    border-color: var(--clearneonBlue);
+    box-shadow: 0 0 10px 1px var(--black-blue);
+    scale: 1.03;
+  }
+
+  &:hover p {
+    color: var(--clearneonBlue) !important;
+  }
 `;
 
 export const StyledImage = styled.img`
@@ -107,9 +119,14 @@ export const ImageWrapper = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-direction: column;
   width: 100%;
   overflow: hidden;
   cursor: pointer;
+
+  &:hover p {
+    color: var(--clearneonBlue) !important;
+  }
 `;
 
 export const ImageCaption = styled.p`
@@ -120,7 +137,8 @@ export const ImageCaption = styled.p`
   text-align: center;
   width: 100%;
   padding: 4px 0;
-  background-color: #0006;
+  background-color: var(--black-blue);
+  transition: color 0.2s ease;
 `;
 
 export const TextContent = styled.div`

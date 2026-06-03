@@ -14,6 +14,17 @@ const generateTempId = () => {
   return `block_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 };
 
+const getDefaultContent = (tipo: PageBlockType): any => {
+  switch (tipo) {
+    case PageBlockType.RICH_TEXT:
+      return { content: [] };
+    case PageBlockType.RELATION:
+      return [];
+    default:
+      return {};
+  }
+};
+
 const extractErrorMessage = (error: any): string => {
   const responseData = error?.response?.data;
   console.log("🚀 ~ extractErrorMessage ~ responseData:", responseData)
@@ -125,7 +136,7 @@ export const useFormPage = ({
   const addBlock = useCallback((tipo: PageBlockType) => {
     const novoBloco: PageBlock = {
       tipo,
-      conteudo: tipo === PageBlockType.RICH_TEXT ? { content: [] } : {},
+      conteudo: getDefaultContent(tipo),
       ordem: blocks.length,
       tempId: generateTempId(),
     };

@@ -82,12 +82,17 @@ export interface InfoLoreBlockContent {
   imagem?: string;
 }
 
-export interface RelatedEntityBlockContent {
-  idEntidade: number;
-  tipoEntidade: 'Cidade' | 'Personagem' | 'Item' | 'Raca';
+export type EntityKind = 'Cidade' | 'Personagem' | 'Item' | 'Raca';
+
+export interface RelatedEntityReference {
+  idEntidade: number | string;
+  tipoEntidade: EntityKind;
   nome?: string;
   imagem?: string;
 }
+
+// Um bloco de relação agora contém uma LISTA de referências
+export type RelatedEntityBlockContent = RelatedEntityReference[];
 
 // Modelo para uso interno (com ID de renderização)
 export interface PageBlock extends PageBlockDto {

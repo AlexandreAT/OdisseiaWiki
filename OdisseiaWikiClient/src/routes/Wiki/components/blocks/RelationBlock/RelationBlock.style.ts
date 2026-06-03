@@ -3,8 +3,23 @@ import styled from 'styled-components';
 export const RelationBlockContainer = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 24px;
   width: 100%;
+`;
+
+export const RelationTypeGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+`;
+
+export const RelationTypeGroupHeader = styled.div`
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 `;
 
 export const RelationBlockHeader = styled.div`
@@ -45,16 +60,21 @@ export const RelationCard = styled.button`
   border: 2px solid #333;
   border-radius: 8px;
   background-color: #0a0a0a;
-  cursor: not-allowed; // Relações não são clicáveis nesta versão
+  cursor: pointer;
   overflow: hidden;
   transition: all 0.3s ease;
   text-align: left;
-  opacity: 0.8;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.8;
+  }
 
   @media (hover: hover) {
-    &:hover {
-      border-color: rgba(0, 212, 255, 0.3);
-      background-color: rgba(0, 212, 255, 0.02);
+    &:hover:not(:disabled) {
+      border-color: rgba(0, 212, 255, 0.6);
+      background-color: rgba(0, 212, 255, 0.05);
+      transform: translateY(-2px);
     }
   }
 `;
@@ -73,8 +93,8 @@ export const RelationCardPlaceholder = styled.div`
   width: 100%;
   height: 150px;
   background: linear-gradient(135deg, #0a3a3a 0%, #1a1a1a 100%);
-  color: rgba(0, 212, 255, 0.2);
-  font-size: 32px;
+  color: rgba(0, 212, 255, 0.4);
+  font-size: 48px;
 `;
 
 export const RelationCardContent = styled.div`
@@ -130,7 +150,7 @@ export const TypeIconWrapper = styled.div`
 `;
 
 export const TypeLabel = styled.span`
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: #00d4ff;
   text-transform: capitalize;

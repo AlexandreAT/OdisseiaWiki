@@ -118,5 +118,5 @@ export const WikiBlocksSection = styled.section`
 export const WikiBlockWrapper = styled.div`
   display: flex;
   flex-direction: column;
-  padding: 32px 24px;
+  padding: 24px;
 `;

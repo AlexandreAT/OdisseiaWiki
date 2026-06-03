@@ -94,8 +94,8 @@ export const ImageBlock: React.FC<ImageBlockProps> = ({ block }) => {
             <p>Erro ao carregar a imagem</p>
           </ErrorMessage>
         )}
+        {legenda && <ImageCaption>{legenda}</ImageCaption>}
       </ImageWrapper>
-      {legenda && <ImageCaption>{legenda}</ImageCaption>}
 
       <Lightbox
         isOpen={lightboxOpen}

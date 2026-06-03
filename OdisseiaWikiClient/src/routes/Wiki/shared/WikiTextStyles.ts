@@ -18,7 +18,7 @@ export const wikiHeading2Style = `
   font-weight: 100;
   letter-spacing: 2px;
   line-height: 1.4;
-  text-shadow: 0px 0px 8px var(--clearneonPink);
+  text-shadow: 1px 1px 8px var(--clearneonPink);
   color: var(--whitesmoke);
 
   @media (max-width: 768px) {
