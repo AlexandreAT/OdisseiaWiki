@@ -12,7 +12,7 @@ import {
 } from './InfoLoreBlock.style';
 import { jsonContentToString, isJSONContent } from '../../../../../utils/richTextHelpers';
 
-export const InfoLoreBlock: React.FC<InfoLoreBlockProps> = ({ block }) => {
+export const InfoLoreBlock: React.FC<InfoLoreBlockProps> = ({ block, theme: _theme, neon: _neon }) => {
   const [imageError, setImageError] = useState(false);
 
   if (!block.conteudo) {

@@ -109,6 +109,8 @@ export const WikiContent: React.FC<WikiContentProps> = ({
               <WikiBlockRenderer
                 block={block}
                 blockIndex={index}
+                theme={theme}
+                neon={neon}
               />
             </WikiBlockWrapper>
           ))

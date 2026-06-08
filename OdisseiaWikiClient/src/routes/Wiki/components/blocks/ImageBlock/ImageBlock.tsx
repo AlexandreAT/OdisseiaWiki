@@ -15,7 +15,7 @@ import {
   ImageContent,
 } from './ImageBlock.style';
 
-export const ImageBlock: React.FC<ImageBlockProps> = ({ block }) => {
+export const ImageBlock: React.FC<ImageBlockProps> = ({ block, theme: _theme, neon: _neon }) => {
   const [imageError, setImageError] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
 

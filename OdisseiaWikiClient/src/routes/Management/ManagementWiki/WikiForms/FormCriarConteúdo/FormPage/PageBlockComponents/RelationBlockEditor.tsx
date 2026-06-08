@@ -30,6 +30,7 @@ import {
   ReferenceOrderButtons,
   OrderButton,
 } from './RelationBlockEditor.style';
+import { normalizeImagePath } from '../../../../../../../routes/Wiki/utils/imagePathHelper';
 
 interface RelationBlockEditorProps {
   block: PageBlock;
@@ -270,7 +271,8 @@ export const RelationBlockEditor: React.FC<RelationBlockEditorProps> = ({
           <EntityContent>
             {extractEntityImage(previewEntity) && (
               <EntityImage
-                src={extractEntityImage(previewEntity)}
+                $entityType={pickingType}
+                src={normalizeImagePath(extractEntityImage(previewEntity))}
                 alt={extractEntityName(previewEntity)}
               />
             )}
@@ -329,7 +331,11 @@ export const RelationBlockEditor: React.FC<RelationBlockEditorProps> = ({
                     <EntityDisplay $isDark={theme === 'dark'}>
                       <EntityContent>
                         {ref.imagem && (
-                          <EntityImage src={ref.imagem} alt={ref.nome || 'Referência'} />
+                          <EntityImage
+                            $entityType={ref.tipoEntidade}
+                            src={normalizeImagePath(ref.imagem as string)}
+                            alt={ref.nome || 'Referência'}
+                          />
                         )}
                         <EntityDetails>
                           <EntityName>{ref.nome || 'Sem nome'}</EntityName>

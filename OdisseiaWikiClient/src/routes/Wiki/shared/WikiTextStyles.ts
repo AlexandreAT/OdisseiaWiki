@@ -43,6 +43,7 @@ export const wikiHeading3Style = `
 export const wikiParagraphStyle = `
   font-size: 14px;
   color: var(--whitesmoke);
+  text-shadow: 1px 1px 10px rgba(0, 0, 0, 1) !important;
 `;
 
 export const wikiListStyle = `

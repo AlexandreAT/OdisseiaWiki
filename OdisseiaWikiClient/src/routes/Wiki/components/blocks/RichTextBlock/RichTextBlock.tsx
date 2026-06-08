@@ -7,7 +7,7 @@ import Link from '@tiptap/extension-link';
 import { RichTextBlockProps } from './types';
 import { RichTextBlockContainer, ErrorMessage, DivController } from './RichTextBlock.style';
 
-export const RichTextBlock: React.FC<RichTextBlockProps> = ({ block }) => {
+export const RichTextBlock: React.FC<RichTextBlockProps> = ({ block, theme: _theme, neon: _neon }) => {
   if (!block.conteudo) {
     return null;
   }

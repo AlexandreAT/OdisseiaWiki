@@ -107,7 +107,7 @@ export const CarouselArrow = styled.button<{ $direction: 'left' | 'right' }>`
   top: 50%;
   transform: translateY(-50%);
   ${({ $direction }) => ($direction === 'left' ? 'left: -12px;' : 'right: -12px;')}
-  z-index: 2;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;

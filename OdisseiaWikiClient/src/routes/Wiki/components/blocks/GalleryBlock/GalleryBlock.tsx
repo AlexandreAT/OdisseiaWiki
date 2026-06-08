@@ -17,7 +17,7 @@ import {
 
 const CAROUSEL_LIMIT = 5;
 
-export const GalleryBlock: React.FC<GalleryBlockProps> = ({ block }) => {
+export const GalleryBlock: React.FC<GalleryBlockProps> = ({ block, theme: _theme, neon: _neon }) => {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
 

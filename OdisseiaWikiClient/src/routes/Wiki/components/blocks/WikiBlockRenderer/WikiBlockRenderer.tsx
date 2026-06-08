@@ -28,6 +28,8 @@ const BlockFallback = () => <div style={{ padding: '16px' }}>Carregando bloco...
 export const WikiBlockRenderer: React.FC<WikiBlockRendererProps> = ({
   block,
   blockIndex,
+  theme,
+  neon,
 }) => {
   if (!block) {
     return null;
@@ -38,35 +40,35 @@ export const WikiBlockRenderer: React.FC<WikiBlockRendererProps> = ({
       case PageBlockType.RICH_TEXT:
         return (
           <Suspense fallback={<BlockFallback />}>
-            <RichTextBlock block={block} blockIndex={blockIndex} />
+            <RichTextBlock block={block} blockIndex={blockIndex} theme={theme} neon={neon} />
           </Suspense>
         );
 
       case PageBlockType.IMAGE:
         return (
           <Suspense fallback={<BlockFallback />}>
-            <ImageBlock block={block} blockIndex={blockIndex} />
+            <ImageBlock block={block} blockIndex={blockIndex} theme={theme} neon={neon} />
           </Suspense>
         );
 
       case PageBlockType.GALLERY:
         return (
           <Suspense fallback={<BlockFallback />}>
-            <GalleryBlock block={block} blockIndex={blockIndex} />
+            <GalleryBlock block={block} blockIndex={blockIndex} theme={theme} neon={neon} />
           </Suspense>
         );
 
       case PageBlockType.INFOLORE:
         return (
           <Suspense fallback={<BlockFallback />}>
-            <InfoLoreBlock block={block} blockIndex={blockIndex} />
+            <InfoLoreBlock block={block} blockIndex={blockIndex} theme={theme} neon={neon} />
           </Suspense>
         );
 
       case PageBlockType.RELATION:
         return (
           <Suspense fallback={<BlockFallback />}>
-            <RelationBlock block={block} blockIndex={blockIndex} />
+            <RelationBlock block={block} blockIndex={blockIndex} theme={theme} neon={neon} />
           </Suspense>
         );
 

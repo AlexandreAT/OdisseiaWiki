@@ -5,13 +5,15 @@ export const RelationBlockContainer = styled.div`
   flex-direction: column;
   gap: 24px;
   width: 100%;
+  align-items: center;
+  margin-top: 15px;
 `;
 
 export const RelationTypeGroup = styled.div`
   display: flex;
   flex-direction: column;
   gap: 12px;
-  width: 100%;
+  width: 75%;
 `;
 
 export const RelationTypeGroupHeader = styled.div`
@@ -41,28 +43,102 @@ export const RelationBlockHeader = styled.div`
 `;
 
 export const RelationItemsGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 16px;
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
   width: 100%;
+  overflow-x: auto;
+  padding: 3px;
+  -webkit-overflow-scrolling: touch;
 
-  @media (max-width: 768px) {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 12px;
+  /* Make children not wrap so it behaves like a horizontal carousel */
+  white-space: nowrap;
+  & > * {
+    white-space: normal;
+    flex: 0 0 auto;
+  }
+`;
+
+/* Carousel variants (used when there are many items) */
+export const CarouselWrapper = styled.div`
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+`;
+
+export const CarouselViewport = styled.div`
+  display: flex;
+  gap: 12px;
+  overflow: hidden;
+  scroll-behavior: smooth;
+  width: 100%;
+  padding: 8px 4px;
+  border-radius: 8px;
+  cursor: grab;
+
+  &:active {
+    cursor: grabbing;
+  }
+
+  > button {
+    min-width: 200px;
+  }
+
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+`;
+
+export const CarouselArrow = styled.button<{ $direction: 'left' | 'right' }>`
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  ${({ $direction }) => ($direction === 'left' ? 'left: -8px;' : 'right: -8px;')}
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background-color: var(--black-blue);
+  color: #000;
+  font-size: 18px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+  opacity: 0.85;
+
+  &:hover {
+    opacity: 1;
+    transform: translateY(-50%) scale(1.05);
+  }
+
+  &:disabled {
+    opacity: 0.25;
+    cursor: default;
+    transform: translateY(-50%) scale(1);
   }
 `;
 
 export const RelationCard = styled.button`
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
   gap: 12px;
-  padding: 0;
+  padding: 8px;
+  min-width: 160px;
+  max-width: 320px;
+  flex: 0 0 auto;
   border: 2px solid #333;
   border-radius: 8px;
   background-color: #0a0a0a;
   cursor: pointer;
   overflow: hidden;
-  transition: all 0.3s ease;
+  transition: all 0.22s ease;
   text-align: left;
 
   &:disabled {
@@ -73,35 +149,45 @@ export const RelationCard = styled.button`
   @media (hover: hover) {
     &:hover:not(:disabled) {
       border-color: rgba(0, 212, 255, 0.6);
-      background-color: rgba(0, 212, 255, 0.05);
-      transform: translateY(-2px);
+      background-color: rgba(0, 212, 255, 0.03);
+      transform: scale(1.02);
     }
   }
 `;
 
-export const RelationCardImage = styled.img`
-  width: 100%;
-  height: 150px;
+export const RelationCardImage = styled.img<{ $entityType?: string }>`
+  height: 80px;
+  width: auto;
   object-fit: cover;
   background-color: #000;
+  flex-shrink: 0;
+  /* Shapes by entity type */
+  border-radius: ${props => (props.$entityType === 'Personagem' ? '50%' : '6px')};
+  aspect-ratio: ${props => (props.$entityType === 'Raca' || props.$entityType === 'Item' || props.$entityType === 'Personagem' ? '1 / 1' : '16 / 9')};
 `;
 
-export const RelationCardPlaceholder = styled.div`
+export const RelationCardPlaceholder = styled.div<{ $entityType?: string }>`
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  height: 150px;
+  height: 80px;
+  width: auto;
+  min-width: 80px;
   background: linear-gradient(135deg, #0a3a3a 0%, #1a1a1a 100%);
   color: rgba(0, 212, 255, 0.4);
-  font-size: 48px;
+  font-size: 28px;
+  flex-shrink: 0;
+  border-radius: ${props => (props.$entityType === 'Personagem' ? '50%' : '6px')};
+  aspect-ratio: ${props => (props.$entityType === 'Raca' || props.$entityType === 'Item' || props.$entityType === 'Personagem' ? '1 / 1' : '16 / 9')};
 `;
 
 export const RelationCardContent = styled.div`
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 12px;
+  padding: 0;
+  flex: 1 1 auto;
+  min-width: 0; /* allow truncation inside flex */
 `;
 
 export const RelationCardTitle = styled.h5`
@@ -111,9 +197,8 @@ export const RelationCardTitle = styled.h5`
   color: #fff;
   overflow: hidden;
   text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
+  white-space: nowrap;
+  display: block;
 `;
 
 export const RelationCardType = styled.span`

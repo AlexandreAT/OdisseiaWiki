@@ -42,11 +42,14 @@ export const EntityContent = styled.div`
   align-items: center;
 `;
 
-export const EntityImage = styled.img`
-  width: 60px;
-  height: 60px;
-  border-radius: 4px;
+export const EntityImage = styled.img<{ $entityType?: string }>`
+  height: 80px;
+  width: auto;
   object-fit: cover;
+  flex-shrink: 0;
+  /* Shape and aspect based on entity type */
+  border-radius: ${props => (props.$entityType === 'Personagem' ? '50%' : '6px')};
+  aspect-ratio: ${props => (props.$entityType === 'Raca' || props.$entityType === 'Item' || props.$entityType === 'Personagem' ? '1 / 1' : '16 / 9')};
 `;
 
 export const EntityDetails = styled.div`
