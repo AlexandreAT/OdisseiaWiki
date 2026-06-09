@@ -69,5 +69,13 @@ namespace OdisseiaWiki.Repositories
                     .Any(tag => tag.ToLower().Contains(termoLower)) ?? false)
             ).ToList();
         }
+
+        public async Task<List<Cidade>> GetBatchAsync(List<int> ids)
+        {
+            return await _context.Cidades
+                .AsNoTracking()
+                .Where(c => ids.Contains(c.Idcidade))
+                .ToListAsync();
+        }
     }
 }

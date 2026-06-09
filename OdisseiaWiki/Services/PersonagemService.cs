@@ -116,6 +116,11 @@ namespace OdisseiaWiki.Services
             return ResultPersonagem.Ok(atualizado);
         }
 
+        public async Task<List<Personagen>> GetBatchAsync(List<int> ids)
+        {
+            return await _repository.GetBatchAsync(ids);
+        }
+
         public async Task<bool> DeleteAsync(int id)
             => await _repository.DeleteAsync(id);
     }

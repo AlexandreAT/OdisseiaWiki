@@ -8,10 +8,10 @@ import {
 import { Select } from '../../../../../../../components/Generic/Select/Select';
 import { CyberButton } from '../../../../../../../components/Generic/HighlightButton/HighlightButton';
 
-import { getCidades } from '../../../../../../../services/cidadesService';
-import { getRacas } from '../../../../../../../services/racasService';
-import { getItens } from '../../../../../../../services/itensService';
-import { getPersonagens } from '../../../../../../../services/personagensService';
+import { getCidades, getCidadesByIds } from '../../../../../../../services/cidadesService';
+import { getRacas, getRacasByIds } from '../../../../../../../services/racasService';
+import { getItens, getItensByIds } from '../../../../../../../services/itensService';
+import { getPersonagens, getPersonagensByIds } from '../../../../../../../services/personagensService';
 import {
   RelationContainer,
   EntityDisplay,
@@ -49,9 +49,35 @@ const normalizeContent = (raw: any): RelatedEntityReference[] => {
   return [];
 };
 
-// Extrai o id de uma entidade suportando AMBOS os casos
-// (PascalCase vindo da API e camelCase vindo do frontend)
-const extractEntityId = (entity: any): string => {
+// Extrai o id de uma entidade preferindo o campo do tipo atual
+const extractEntityId = (entity: any, preferredType?: EntityKind): string => {
+  if (!entity) return '';
+
+  const tryKeys = (keys: string[]) => {
+    for (const k of keys) {
+      const v = entity?.[k];
+      if (v !== undefined && v !== null && String(v).toString().trim() !== '') return String(v);
+    }
+    return undefined as string | undefined;
+  };
+
+  if (preferredType === 'Personagem') {
+    return tryKeys(['Idpersonagem', 'idpersonagem', 'id', 'Id']) ?? '';
+  }
+
+  if (preferredType === 'Cidade') {
+    return tryKeys(['Idcidade', 'idcidade', 'id', 'Id']) ?? '';
+  }
+
+  if (preferredType === 'Raca') {
+    return tryKeys(['Idraca', 'idraca', 'id', 'Id']) ?? '';
+  }
+
+  if (preferredType === 'Item') {
+    return tryKeys(['IdItem', 'iditem', 'idItem', 'id', 'Id']) ?? '';
+  }
+
+  // fallback (legacy fields)
   const id =
     entity?.Idcidade ??
     entity?.idcidade ??
@@ -60,7 +86,10 @@ const extractEntityId = (entity: any): string => {
     entity?.IdItem ??
     entity?.iditem ??
     entity?.Idpersonagem ??
-    entity?.idpersonagem;
+    entity?.idpersonagem ??
+    entity?.id ??
+    entity?.Id;
+
   return id === undefined || id === null ? '' : String(id);
 };
 
@@ -158,14 +187,13 @@ export const RelationBlockEditor: React.FC<RelationBlockEditorProps> = ({
   const handleAddReference = () => {
     if (!selectedEntityId) return;
 
-    const entity = entities.find(e => extractEntityId(e) === selectedEntityId);
+    const entity = entities.find(e => extractEntityId(e, pickingType) === selectedEntityId);
     if (!entity) return;
 
+    // Only store id and type; name/image will be resolved at render time
     const newRef: RelatedEntityReference = {
       idEntidade: selectedEntityId,
       tipoEntidade: pickingType,
-      nome: extractEntityName(entity),
-      imagem: extractEntityImage(entity),
     };
 
     onUpdate([...references, newRef]);
@@ -186,23 +214,27 @@ export const RelationBlockEditor: React.FC<RelationBlockEditorProps> = ({
 
   // Opções do dropdown - filtradas para o tipo atual e removendo duplicatas
   const entityOptions = useMemo(() => {
-    return entities
+    const options = entities
       .filter(e => {
-        const id = extractEntityId(e);
+        const id = extractEntityId(e, pickingType);
         if (!id) return false;
         return !usedIds.has(`${pickingType}:${id}`);
       })
       .map(e => ({
-        value: extractEntityId(e),
+        value: extractEntityId(e, pickingType),
         label: extractEntityName(e),
       }));
+
+    // debug
+    // console.log('RelationBlockEditor entityOptions:', options);
+    return options;
   }, [entities, usedIds, pickingType]);
 
   // Encontra a entidade selecionada para mostrar a prévia
   const previewEntity = useMemo(() => {
     if (!selectedEntityId) return null;
-    return entities.find(e => extractEntityId(e) === selectedEntityId) || null;
-  }, [selectedEntityId, entities]);
+    return entities.find(e => extractEntityId(e, pickingType) === selectedEntityId) || null;
+  }, [selectedEntityId, entities, pickingType]);
 
   // Agrupa referências por tipo para a lista do editor
   const grouped = useMemo(() => {
@@ -213,6 +245,83 @@ export const RelationBlockEditor: React.FC<RelationBlockEditorProps> = ({
       map.get(key)!.push({ ref, globalIndex });
     });
     return Array.from(map.entries());
+  }, [references]);
+
+  // Cache fetched entity objects for the current references (so we always show up-to-date name/image)
+  const [entityMap, setEntityMap] = React.useState<Record<string, any>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchAll = async () => {
+      const map: Record<string, any> = {};
+      const idsByType = new Map<EntityKind, Set<string>>();
+      references.forEach(r => {
+        const set = idsByType.get(r.tipoEntidade as EntityKind) || new Set<string>();
+        if (r.idEntidade != null && String(r.idEntidade).trim() !== '') set.add(String(r.idEntidade));
+        idsByType.set(r.tipoEntidade as EntityKind, set);
+      });
+
+      const jobs: Promise<void>[] = [];
+
+      const push = (tipo: EntityKind, list: any[], idFields: string[]) => {
+        list.forEach(ent => {
+          let idVal: any = undefined;
+          for (const f of idFields) {
+            if (ent && ent[f] !== undefined && ent[f] !== null) { idVal = ent[f]; break; }
+          }
+          if (idVal === undefined || idVal === null) idVal = ent?.id ?? ent?.Id;
+          const key = `${tipo}:${String(idVal)}`;
+          map[key] = ent;
+        });
+      };
+
+      idsByType.forEach((set, tipo) => {
+        const ids = Array.from(set);
+        if (ids.length === 0) return;
+        switch (tipo) {
+          case 'Personagem':
+            jobs.push((async () => {
+              try {
+                const list = await getPersonagensByIds(ids);
+                push('Personagem', list, ['idpersonagem', 'Idpersonagem', 'id']);
+              } catch { /* ignore */ }
+            })());
+            break;
+          case 'Cidade':
+            jobs.push((async () => {
+              try {
+                const list = await getCidadesByIds(ids.map(i => Number(i)));
+                push('Cidade', list, ['idcidade', 'Idcidade', 'id']);
+              } catch { /* ignore */ }
+            })());
+            break;
+          case 'Raca':
+            jobs.push((async () => {
+              try {
+                const list = await getRacasByIds(ids.map(i => Number(i)));
+                push('Raca', list, ['idraca', 'Idraca', 'id']);
+              } catch { /* ignore */ }
+            })());
+            break;
+          case 'Item':
+            jobs.push((async () => {
+              try {
+                const list = await getItensByIds(ids);
+                push('Item', list, ['iditem', 'IdItem', 'id']);
+              } catch { /* ignore */ }
+            })());
+            break;
+          default:
+            break;
+        }
+      });
+
+      await Promise.all(jobs);
+      if (!cancelled) setEntityMap(map);
+    };
+
+    fetchAll();
+    return () => { cancelled = true; };
   }, [references]);
 
   return (
@@ -330,17 +439,26 @@ export const RelationBlockEditor: React.FC<RelationBlockEditorProps> = ({
                     </ReferenceHeader>
                     <EntityDisplay $isDark={theme === 'dark'}>
                       <EntityContent>
-                        {ref.imagem && (
-                          <EntityImage
-                            $entityType={ref.tipoEntidade}
-                            src={normalizeImagePath(ref.imagem as string)}
-                            alt={ref.nome || 'Referência'}
-                          />
-                        )}
-                        <EntityDetails>
-                          <EntityName>{ref.nome || 'Sem nome'}</EntityName>
-                          <EntityType>Tipo: {ref.tipoEntidade}</EntityType>
-                        </EntityDetails>
+                        {(() => {
+                          const ent = entityMap[`${ref.tipoEntidade}:${ref.idEntidade}`];
+                          const name = ent ? (ent.Nome || ent.nome || ent.nome) : ref.nome;
+                          const img = ent ? (ent.Imagem || ent.imagem || ent.imagem) : (ref.imagem as string | undefined);
+                          return (
+                            <>
+                              {img && (
+                                <EntityImage
+                                  $entityType={ref.tipoEntidade}
+                                  src={normalizeImagePath(img as string)}
+                                  alt={name || 'Referência'}
+                                />
+                              )}
+                              <EntityDetails>
+                                <EntityName>{name || 'Sem nome'}</EntityName>
+                                <EntityType>Tipo: {ref.tipoEntidade}</EntityType>
+                              </EntityDetails>
+                            </>
+                          );
+                        })()}
                       </EntityContent>
                     </EntityDisplay>
                   </ReferenceItem>

@@ -11,5 +11,6 @@ namespace OdisseiaWiki.Services.Interfaces
         Task<string> CreateAsync(ItemCreateDto dto);
         Task<bool> UpdateAsync(ItemUpdateDto dto);
         Task<bool> DeleteAsync(string id);
+        Task<List<ItemDto>> GetBatchAsync(List<string> ids);
     }
 }

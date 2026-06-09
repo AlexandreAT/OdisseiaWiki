@@ -11,5 +11,6 @@ namespace OdisseiaWiki.Repositories.Interfaces
         Task UpdateAsync(Item item);
         Task DeleteAsync(string id);
         Task<List<Item>> SearchAsync(string termo);
+        Task<List<Item>> GetBatchAsync(List<string> ids);
     }
 }

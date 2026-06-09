@@ -44,5 +44,17 @@ namespace OdisseiaWiki.Controllers
             bool deleted = await _service.DeleteAsync(id);
             return deleted ? NoContent() : NotFound();
         }
+
+        [HttpPost("batch")]
+        public async Task<IActionResult> GetBatch([FromBody] BatchStringRequestDto dto)
+        {
+            if (dto?.Ids == null || dto.Ids.Count == 0)
+                return BadRequest("Lista de ids inválida.");
+
+            List<ItemDto> items =
+                await _service.GetBatchAsync(dto.Ids);
+
+            return Ok(items);
+        }
     }
 }

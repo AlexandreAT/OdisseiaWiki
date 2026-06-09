@@ -63,5 +63,17 @@ namespace OdisseiaWiki.Controllers
 
             return NoContent();
         }
+
+        [HttpPost("batch")]
+        public async Task<IActionResult> GetBatch([FromBody] BatchRequestDto dto)
+        {
+            if (dto?.Ids == null || dto.Ids.Count == 0)
+                return BadRequest("Lista de ids inválida.");
+
+            List<Personagen> personagens =
+                await _service.GetBatchAsync(dto.Ids);
+
+            return Ok(personagens);
+        }
     }
 }

@@ -34,6 +34,11 @@ export const getItemById = async (id: string): Promise<ItemPayload> => {
   return response.data;
 };
 
+export const getItensByIds = async (ids: Array<string | number>): Promise<ItemPayload[]> => {
+  const response = await api.post(`/item/batch`, { ids });
+  return response.data;
+};
+
 export const salvarItem = async (
   payload: ItemPayload
 ): Promise<ResultItem> => {

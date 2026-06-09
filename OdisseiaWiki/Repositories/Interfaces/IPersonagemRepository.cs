@@ -12,5 +12,6 @@ namespace OdisseiaWiki.Repositories.Interfaces
         Task<Personagen> UpdateAsync(Personagen personagem);
         Task<bool> DeleteAsync(int id);
         Task<List<Personagen>> SearchAsync(string termo);
+        Task<List<Personagen>> GetBatchAsync(List<int> ids);
     }
 }

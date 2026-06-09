@@ -12,5 +12,6 @@ namespace OdisseiaWiki.Services.Interfaces
         Task<ResultCidade> CreateAsync(CidadeDto dto);
         Task<ResultCidade> UpdateAsync(int id, CidadeDto dto);
         Task<bool> DeleteAsync(int id);
+        Task<List<CidadeDto>> GetBatchAsync(List<int> ids);
     }
 }

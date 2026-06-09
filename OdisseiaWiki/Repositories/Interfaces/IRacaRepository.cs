@@ -12,5 +12,6 @@ namespace OdisseiaWiki.Repositories.Interfaces
         Task<Raca> UpdateAsync(Raca raca);
         Task<bool> DeleteAsync(int id);
         Task<List<Raca>> SearchAsync(string termo);
+        Task<List<Raca>> GetBatchAsync(List<int> ids);
     }
 }

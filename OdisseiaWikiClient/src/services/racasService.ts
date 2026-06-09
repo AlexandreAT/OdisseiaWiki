@@ -60,6 +60,11 @@ export const getRacaById = async (id: number): Promise<ResultRaca> => {
   return response.data;
 };
 
+export const getRacasByIds = async (ids: number[]): Promise<RacaPayload[]> => {
+  const response = await api.post(`/racas/batch`, { ids });
+  return response.data;
+};
+
 // CREATE
 export const createRaca = async (dto: CreateRacaDto): Promise<ResultRaca> => {
   const response = await api.post("/racas", dto);

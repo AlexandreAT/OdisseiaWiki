@@ -68,5 +68,17 @@ namespace OdisseiaWiki.Controllers
                 ? NotFound($"Cidade com id {id} não encontrada.")
                 : NoContent();
         }
+
+        [HttpPost("batch")]
+        public async Task<IActionResult> GetBatch([FromBody] BatchRequestDto dto)
+        {
+            if (dto?.Ids == null || dto.Ids.Count == 0)
+                return BadRequest("Lista de ids inválida.");
+
+            List<CidadeDto> cidades =
+                await _service.GetBatchAsync(dto.Ids);
+
+            return Ok(cidades);
+        }
     }
 }

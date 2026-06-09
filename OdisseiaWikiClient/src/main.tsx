@@ -13,6 +13,7 @@ import Wiki from './routes/Wiki/Wiki.tsx';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { Management } from './routes/Management/Management.tsx';
 import { Hub } from './routes/Hub/Hub.tsx';
+import PersonagemPage from './routes/Personagem/PersonagemPage';
 
 const router = createBrowserRouter([{
   path: '/',
@@ -44,6 +45,11 @@ const router = createBrowserRouter([{
     {
       path: 'hub',
       element: <Hub />
+    }
+    ,
+    {
+      path: 'personagem/:id',
+      element: <PersonagemPage />
     }
   ]
 }])

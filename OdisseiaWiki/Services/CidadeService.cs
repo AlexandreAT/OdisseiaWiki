@@ -116,6 +116,30 @@ namespace OdisseiaWiki.Services
             return ResultCidade.Ok(dtos);
         }
 
+        public async Task<List<CidadeDto>> GetBatchAsync(List<int> ids)
+        {
+            List<Cidade> cidades = await _repository.GetBatchAsync(ids);
+
+            return cidades.Select(c => new CidadeDto
+            {
+                Idcidade = c.Idcidade,
+                Nome = c.Nome,
+                Descricao = RichTextHelper.DeserializeRichText(c.Descricao),
+                Imagem = c.Imagem,
+                GaleriaImagem = !string.IsNullOrWhiteSpace(c.GaleriaImagem)
+                    ? JsonSerializer.Deserialize<List<string>>(c.GaleriaImagem)
+                    : null,
+                Tags = !string.IsNullOrWhiteSpace(c.Tags)
+                    ? JsonSerializer.Deserialize<List<string>>(c.Tags)
+                    : null,
+                PontosDeInteresse = !string.IsNullOrWhiteSpace(c.PontosDeInteresse)
+                    ? JsonSerializer.Deserialize<List<PontoDeInteresseDto>>(c.PontosDeInteresse)
+                    : null,
+                Visivel = c.Visivel,
+                DataCriacao = c.DataCriacao
+            }).ToList();
+        }
+
         public async Task<Cidade?> GetByIdAsync(int id)
             => await _repository.GetByIdAsync(id);
 

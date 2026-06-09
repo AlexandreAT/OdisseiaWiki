@@ -122,5 +122,14 @@ namespace OdisseiaWiki.Services
             Visivel = raca.Visivel,
             DataCriacao = raca.DataCriacao
         };
+
+        public async Task<List<RacaDto>> GetBatchAsync(List<int> ids)
+        {
+            List<Raca> racas = await _repository.GetBatchAsync(ids);
+
+            return racas
+                .Select(MapToDto)
+                .ToList();
+        }
     }
 }

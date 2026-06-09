@@ -152,5 +152,32 @@ namespace OdisseiaWiki.Services
             await _repository.DeleteAsync(id);
             return true;
         }
+
+        public async Task<List<ItemDto>> GetBatchAsync(List<string> ids)
+        {
+            List<Item> items = await _repository.GetBatchAsync(ids);
+
+            return items.Select(i => new ItemDto
+            {
+                Iditem = i.Iditem,
+                Nome = i.Nome,
+                Tipo = i.Tipo,
+                Quantidade = i.Quantidade,
+                Peso = i.Peso,
+                Descricao = RichTextHelper.DeserializeRichText(i.Descricao),
+                Efeito = i.Efeito,
+                Imagem = i.Imagem,
+                AtributosJson = !string.IsNullOrWhiteSpace(i.AtributosJson)
+                    ? JsonSerializer.Deserialize<object>(i.AtributosJson)
+                    : null,
+                IditemBase = i.IditemBase,
+                Tags = !string.IsNullOrWhiteSpace(i.Tags)
+                    ? JsonSerializer.Deserialize<List<string>>(i.Tags)
+                    : null,
+                Visivel = i.Visivel,
+                DataCriacao = i.DataCriacao,
+                Idpersonagem = i.Idpersonagem
+            }).ToList();
+        }
     }
 }

@@ -52,6 +52,11 @@ export const getCidadeById = async (id: number): Promise<ResultCreateCidade> => 
   return response.data;
 };
 
+export const getCidadesByIds = async (ids: number[]): Promise<CidadePayload[]> => {
+  const response = await api.post(`/cidades/batch`, { ids });
+  return response.data;
+};
+
 export const updateCidade = async (id: number, dto: CreateCidadeDto): Promise<ResultCreateCidade> => {
   const response = await api.put(`/cidades/${id}`, dto);
   return response.data;

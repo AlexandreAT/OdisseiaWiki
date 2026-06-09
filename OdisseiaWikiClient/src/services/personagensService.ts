@@ -144,6 +144,11 @@ export const getPersonagemById = async (id: string): Promise<ResultPersonagem | 
   return response.data;
 };
 
+export const getPersonagensByIds = async (ids: Array<string | number>): Promise<PersonagemPayload[]> => {
+  const response = await api.post(`/personagens/batch`, { ids });
+  return response.data;
+};
+
 export const atualizarPersonagem = async (
   id: string,
   payload: PersonagemUpdatePayload

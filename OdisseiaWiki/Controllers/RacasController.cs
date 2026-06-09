@@ -68,5 +68,17 @@ namespace OdisseiaWiki.Controllers
                 ? NotFound($"Raça com id {id} não encontrada.")
                 : NoContent();
         }
+
+        [HttpPost("batch")]
+        public async Task<IActionResult> GetBatch([FromBody] BatchRequestDto dto)
+        {
+            if (dto?.Ids == null || dto.Ids.Count == 0)
+                return BadRequest("Lista de ids inválida.");
+
+            List<RacaDto> racas =
+                await _service.GetBatchAsync(dto.Ids);
+
+            return Ok(racas);
+        }
     }
 }

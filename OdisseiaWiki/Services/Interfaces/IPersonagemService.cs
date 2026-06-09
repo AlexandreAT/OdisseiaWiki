@@ -12,5 +12,6 @@ namespace OdisseiaWiki.Services.Interfaces
         Task<List<Personagen>> GetAllAsync(bool? visivel = null);
         Task<Personagen?> GetByIdAsync(int id);
         Task<bool> DeleteAsync(int id);
+        Task<List<Personagen>> GetBatchAsync(List<int> ids);
     }
 }

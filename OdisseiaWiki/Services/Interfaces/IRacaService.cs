@@ -10,5 +10,6 @@ namespace OdisseiaWiki.Services.Interfaces
         Task<ResultRaca> CreateAsync(RacaDto dto);
         Task<ResultRaca> UpdateAsync(int id, RacaDto dto);
         Task<bool> DeleteAsync(int id);
+        Task<List<RacaDto>> GetBatchAsync(List<int> ids);
     }
 }
