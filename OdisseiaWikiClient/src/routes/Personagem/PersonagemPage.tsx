@@ -42,6 +42,7 @@ const PersonagemPage: React.FC = () => {
           }
         }
         const idRaca = getField(personagem, ['idraca', 'Idraca', 'idRaca']) as any;
+        
         if (idRaca) {
           const rr = await getRacaById(Number(idRaca));
           if (mounted && rr && rr.raca) {

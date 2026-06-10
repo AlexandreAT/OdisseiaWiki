@@ -45,6 +45,8 @@ export interface RawPersonagemApi {
   magia?: string | any[];
   personagemsVinculados?: string | any[];
   // ... outros campos que o back enviar
+  galeriaImagem?: string | string[];
+  tags?: string | string[];
 }
 
 // ----- default status para fallback -----
@@ -93,6 +95,8 @@ export function normalizePersonagem(raw: RawPersonagemApi) {
   const skills = parseJsonOr<Skill[]>(raw.skills, []);
   const magias = parseJsonOr<Magia[]>(raw.magia, []);
   const relacionados = parseJsonOr<any[]>(raw.personagemsVinculados, []);
+  const galeria = parseJsonOr<string[]>((raw as any).galeriaImagem ?? (raw as any).GaleriaImagem, []);
+  const tags = parseJsonOr<string[]>((raw as any).tags ?? (raw as any).Tags, []);
 
   return {
     idpersonagemJogador: raw.idpersonagemJogador,
@@ -108,11 +112,13 @@ export function normalizePersonagem(raw: RawPersonagemApi) {
     costumes,
     infoSecundariasJson: parseJsonOr<any>(raw.infoSecundariasJson, raw.infoSecundariasJson ?? ''),
     imagem: raw.imagem ?? '',
+    galeriaImagem: galeria,
     inventarioJson: inventario,
     nanites: raw.nanites ?? 0,
     dataCriacao: raw.dataCriacao ?? '',
     skills,
     magia: magias,
     personagemsVinculados: relacionados,
+    tags,
   } as const; // retorna um objeto normalizado
 }
