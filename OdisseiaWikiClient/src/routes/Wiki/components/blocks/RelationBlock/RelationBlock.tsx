@@ -207,6 +207,16 @@ const RelationTypeCarousel: React.FC<RelationTypeCarouselProps> = ({ tipo, items
           return;
         }
 
+        // if relation has no idEntidade or navigation didn't occur, try resolving from cached entityMap
+        const resolvedEnt = entityMap[`${relation.tipoEntidade}:${String(relation.idEntidade)}`];
+        if (resolvedEnt) {
+          const resolvedId = (resolvedEnt as any).idpersonagem ?? (resolvedEnt as any).Idpersonagem ?? (resolvedEnt as any).id ?? undefined;
+          if (resolvedId != null) {
+            navigate(`/personagem/${resolvedId}`);
+            return;
+          }
+        }
+
         // defensive: try to resolve by image filename if id seems wrong/missing
         if (relation.imagem) {
           (async () => {
