@@ -12,6 +12,8 @@ import TitleGlitch from '../../components/Generic/TitleGlitch/TitleGlitch';
 import { LabelInfoBox } from '../../components/Generic/LabelInfoBox/LabelInfoBox';
 import { getCidadeById } from '../../services/cidadesService';
 import { getRacaById } from '../../services/racasService';
+import { GalleryBlock } from '../Wiki/components/blocks/GalleryBlock/GalleryBlock';
+import { PageBlockType } from '../../models/Pages';
 
 const PersonagemPage: React.FC = () => {
   const params = useParams();
@@ -29,6 +31,7 @@ const PersonagemPage: React.FC = () => {
 
   const [cidadeNome, setCidadeNome] = React.useState<string | null>(null);
   const [racaNome, setRacaNome] = React.useState<string | null>(null);
+  const [galleryOpen, setGalleryOpen] = React.useState(true);
 
   React.useEffect(() => {
     let mounted = true;
@@ -42,6 +45,7 @@ const PersonagemPage: React.FC = () => {
           }
         }
         const idRaca = getField(personagem, ['idraca', 'Idraca', 'idRaca']) as any;
+        console.log("🚀 ~ fetchRelated ~ personagem:", personagem)
         
         if (idRaca) {
           const rr = await getRacaById(Number(idRaca));
@@ -109,6 +113,100 @@ const PersonagemPage: React.FC = () => {
                     <InfoItem>Tags: {Array.isArray((personagem as any).tags) && (personagem as any).tags.length ? (personagem as any).tags.join(', ') : '—'}</InfoItem>
                   </InfoList>
                 </CardContent>
+              </ClipBox>
+            </SectionSpacer>
+
+            <SectionSpacer>
+              <ClipBox theme={theme} neon={neon} useClip borderRadius="8px" zIndex={1} innerOffset="12px" backgroundColor="rgba(0,0,10,0.25)">
+                <CardContent>
+                  <SubHeading>Itens</SubHeading>
+                  {(Array.isArray((personagem as any).inventarioJson) && (personagem as any).inventarioJson.length > 0) ? (
+                    (personagem as any).inventarioJson.map((it: any, idx: number) => {
+                      const nomeItem = it.nome ?? it.nomeItem ?? it.titulo ?? String(it);
+                      const quantidade = it.quantidade ?? it.qtd ?? it.qtde ?? null;
+                      const imagem = it.imagem ?? it.url ?? (typeof it === 'string' ? it : undefined);
+                      return (
+                        <div key={idx} style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 8 }}>
+                          {imagem ? (
+                            <img src={normalizeImagePath(imagem)} alt={nomeItem} style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 6 }} />
+                          ) : (
+                            <div style={{ width: 48, height: 48, background: 'rgba(255,255,255,0.04)', borderRadius: 6 }} />
+                          )}
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 600 }}>{nomeItem}</div>
+                            {it.descricao && <div style={{ fontSize: 13, color: 'var(--muted, #cfcfcf)' }}>{it.descricao}</div>}
+                          </div>
+                          <div style={{ color: 'var(--muted, #cfcfcf)' }}>{quantidade ? `x${quantidade}` : ''}</div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div style={{ color: 'var(--muted, #cfcfcf)' }}>Sem itens cadastrados</div>
+                  )}
+                </CardContent>
+              </ClipBox>
+            </SectionSpacer>
+
+            <SectionSpacer>
+              <ClipBox theme={theme} neon={neon} useClip borderRadius="8px" zIndex={1} innerOffset="12px" backgroundColor="rgba(0,0,10,0.25)">
+                <CardContent>
+                  <SubHeading>Habilidades</SubHeading>
+                  {(Array.isArray((personagem as any).skills) && (personagem as any).skills.length > 0) ? (
+                    (personagem as any).skills.map((sk: any, idx: number) => (
+                      <div key={idx} style={{ marginBottom: 8 }}>
+                        <div style={{ fontWeight: 700 }}>{sk.nome ?? sk.titulo ?? `Habilidade ${idx + 1}`}</div>
+                        {(sk.descricao || sk.custo || sk.nivel) && (
+                          <div style={{ fontSize: 13, color: 'var(--muted, #cfcfcf)' }}>
+                            {sk.descricao ?? ''}{sk.custo ? ` • Custo: ${sk.custo}` : ''}{sk.nivel ? ` • Nível: ${sk.nivel}` : ''}
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{ color: 'var(--muted, #cfcfcf)' }}>Sem habilidades registradas</div>
+                  )}
+
+                  <div style={{ height: 12 }} />
+                  <SubHeading>Magias</SubHeading>
+                  {(Array.isArray((personagem as any).magia) && (personagem as any).magia.length > 0) ? (
+                    (personagem as any).magia.map((mg: any, idx: number) => (
+                      <div key={idx} style={{ marginBottom: 8 }}>
+                        <div style={{ fontWeight: 700 }}>{mg.nome ?? mg.titulo ?? `Magia ${idx + 1}`}</div>
+                        {(mg.descricao || mg.custo || mg.nivel) && (
+                          <div style={{ fontSize: 13, color: 'var(--muted, #cfcfcf)' }}>
+                            {mg.descricao ?? ''}{mg.custo ? ` • Custo: ${mg.custo}` : ''}{mg.nivel ? ` • Nível: ${mg.nivel}` : ''}
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{ color: 'var(--muted, #cfcfcf)' }}>Sem magias registradas</div>
+                  )}
+                </CardContent>
+              </ClipBox>
+            </SectionSpacer>
+
+            <SectionSpacer>
+              <ClipBox theme={theme} neon={neon} useClip borderRadius="8px" zIndex={1} innerOffset="8px" backgroundColor="rgba(0,0,10,0.12)">
+                <div style={{ cursor: 'pointer' }} onClick={() => setGalleryOpen(s => !s)}>
+                  <CardContent>
+                    <SubHeading>{galleryOpen ? 'Galeria ▾' : 'Galeria ▸'}</SubHeading>
+                  </CardContent>
+                </div>
+                {galleryOpen && (
+                  <div style={{ padding: '0 12px 12px 12px' }}>
+                    {Array.isArray((personagem as any).galeriaImagem) && (personagem as any).galeriaImagem.length > 0 ? (
+                      <GalleryBlock
+                        block={{ tipo: PageBlockType.GALLERY, conteudo: { imagens: (personagem as any).galeriaImagem.map((u: any) => ({ url: u, legenda: '' })) }, ordem: 0 }}
+                        blockIndex={0}
+                        theme={theme}
+                        neon={neon}
+                      />
+                    ) : (
+                      <div style={{ color: 'var(--muted, #cfcfcf)', padding: 12 }}>Nenhuma imagem na galeria</div>
+                    )}
+                  </div>
+                )}
               </ClipBox>
             </SectionSpacer>
 
