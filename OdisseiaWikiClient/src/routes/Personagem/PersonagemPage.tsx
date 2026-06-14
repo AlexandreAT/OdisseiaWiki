@@ -2,18 +2,79 @@ import React from 'react';
 import { useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { usePersonagem } from './usePersonagem';
-import { PageContainer, LeftColumn, RightColumn, AvatarWrapper, TitleRow, MetaRow, Sections, CardContent, Heading, SubHeading, InfoList, InfoItem, MetaContent, SectionSpacer } from './PersonagemPage.style';
+import { PageContainer, TopSection, BottomSection, AvatarWrapper, TitleRow, MetaRow, Sections, CardContent, Heading, SubHeading, InfoList, InfoItem, MetaContent, SectionSpacer, AvatarDivController, SatusDivController, StatusList, StatusDiv, HeaderStatusController, StatusController, StatusHeader, StatusBarWrapper, StatusBarFill } from './PersonagemPage.style';
+import glassHeart from '../../assets/svg/glass-heart.svg';
+import rollingEnergy from '../../assets/svg/rolling-energy.svg';
+import electric from '../../assets/svg/electric.svg';
+import upgrade from '../../assets/svg/upgrade.svg';
 import { RichTextDisplay } from '../../components/Generic/RichTextDisplay/RichTextDisplay';
 import { PersonagemRichText } from './PersonagemPage.style';
 import { normalizeImagePath } from '../Wiki/utils/imagePathHelper';
 import { ClipBox } from '../../components/Generic/ClipBox/ClipBox';
 import { AvatarIcon } from '../../components/Generic/AvatarIcon/AvatarIcon';
 import TitleGlitch from '../../components/Generic/TitleGlitch/TitleGlitch';
-import { LabelInfoBox } from '../../components/Generic/LabelInfoBox/LabelInfoBox';
 import { getCidadeById } from '../../services/cidadesService';
 import { getRacaById } from '../../services/racasService';
 import { GalleryBlock } from '../Wiki/components/blocks/GalleryBlock/GalleryBlock';
 import { PageBlockType } from '../../models/Pages';
+import village from '../../assets/svg/village.svg';
+import scales from '../../assets/svg/scales.svg';
+import dna1 from '../../assets/svg/dna1.svg';
+
+type InventarioItemProps = {
+  item: any;
+};
+
+const InventarioItem: React.FC<InventarioItemProps> = ({ item }) => {
+  const nomeItem = item.nome ?? item.nomeItem ?? item.titulo ?? String(item);
+  const quantidade = item.quantidade ?? item.qtd ?? item.qtde ?? null;
+  const imagem = item.imagem ?? item.url ?? (typeof item === 'string' ? item : undefined);
+
+  return (
+    <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 8 }}>
+      {imagem ? (
+        <img src={normalizeImagePath(imagem)} alt={nomeItem} style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 6 }} />
+      ) : (
+        <div style={{ width: 48, height: 48, background: 'rgba(255,255,255,0.04)', borderRadius: 6 }} />
+      )}
+      <div style={{ flex: 1 }}>
+        <div style={{ fontWeight: 600 }}>{nomeItem}</div>
+        {item.descricao && <div style={{ fontSize: 13, color: 'var(--muted, #cfcfcf)' }}>{item.descricao}</div>}
+      </div>
+      <div style={{ color: 'var(--muted, #cfcfcf)' }}>{quantidade ? `x${quantidade}` : ''}</div>
+    </div>
+  );
+};
+
+type StatusIconProps = {
+  src: string;
+  color?: string;
+  size?: number;
+  alt?: string;
+};
+
+const StatusIcon: React.FC<StatusIconProps> = ({ src, color = 'currentColor', size = 64, alt }) => {
+  const px = typeof size === 'number' ? `${size}px` : String(size);
+  const style: React.CSSProperties = {
+    width: px,
+    height: px,
+    display: 'inline-block',
+    backgroundColor: color,
+    WebkitMaskImage: `url("${src}")`,
+    WebkitMaskRepeat: 'no-repeat',
+    WebkitMaskSize: 'contain',
+    WebkitMaskPosition: 'center',
+    maskImage: `url("${src}")`,
+    maskRepeat: 'no-repeat',
+    maskSize: 'contain',
+    maskPosition: 'center',
+    backgroundSize: 'contain',
+    backgroundRepeat: 'no-repeat',
+    backgroundPosition: 'center'
+  };
+
+  return <div role="img" aria-label={alt} style={style} />;
+};
 
 const PersonagemPage: React.FC = () => {
   const params = useParams();
@@ -68,52 +129,117 @@ const PersonagemPage: React.FC = () => {
   const nome = getField(personagem, ['nome', 'Nome']) || 'Sem nome';
   const imagem = getField(personagem, ['imagem', 'Imagem', 'imagemUrl', 'ImagemUrl']) as string | undefined;
   const historia = getField(personagem, ['historia', 'Historia']) as any | undefined;
+  const alinhamento = getField(personagem, ['alinhamento', 'Alinhamento', 'alignment']);
   const idVal = getField(personagem, ['idpersonagem', 'Idpersonagem', 'id', 'Id']) || id;
 
   return (
     <PageContainer>
-      <LeftColumn>
-        <ClipBox theme={theme} neon={neon} width="240px" useClip borderRadius="8px" zIndex={1}>
-          <AvatarWrapper>
-            <AvatarIcon theme={theme} neon={neon} initialImage={imagem ? normalizeImagePath(imagem) : ''} size={180} clickable={false} />
-          </AvatarWrapper>
+        <ClipBox theme={theme} neon={neon} width='100%' height='100vh' useClip borderRadius="8px" zIndex={1}>
+            <TopSection>
+                <AvatarDivController>
+                    <AvatarWrapper>
+                        <AvatarIcon theme={theme} neon={neon} initialImage={imagem ? normalizeImagePath(imagem) : ''} size={250} clickable={false} />
+                    </AvatarWrapper>
 
-          <CardContent>
-            <TitleRow>
-              <TitleGlitch theme={theme} neon={neon} text={nome} fontSize="20px" />
-            </TitleRow>
-            <MetaRow>
-              <LabelInfoBox theme={theme} neon={neon}>
-                <MetaContent>Personagem • ID {idVal}</MetaContent>
-              </LabelInfoBox>
-            </MetaRow>
-          </CardContent>
+                    <CardContent>
+                        <TitleRow>
+                            <TitleGlitch theme={theme} neon={neon} text={nome} fontSize="20px" />
+                        </TitleRow>
+                        <MetaRow>
+                            <HeaderStatusController>
+                                <MetaContent>Personagem • ID {idVal}</MetaContent>
+                                <MetaContent style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                    <div>Raça: {racaNome ?? ((personagem as any).idraca ?? '—')}</div>
+                                    <StatusIcon src={dna1} color={'var(--clearneonBlue)'} size={20} alt="raça" />
+                                  </div>
+                                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                    <div>Cidade: {cidadeNome ?? ((personagem as any).idcidade ?? '—')}</div>
+                                    <StatusIcon src={village} color={'var(--clearneonBlue)'} size={20} alt="cidade" />
+                                  </div>
+                                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                    <div>Alinhamento: {alinhamento ?? '—'}</div>
+                                    <StatusIcon src={scales} color={'var(--clearneonBlue)'} size={20} alt="alinhamento" />
+                                  </div>
+                                </MetaContent>
+                            </HeaderStatusController>
+                        </MetaRow>
+                    </CardContent>
+                </AvatarDivController>
+                <SatusDivController>
+                    <StatusController>
+                        <TitleGlitch theme={theme} neon={neon} text={"Status"} fontSize="20px" />
+                        <StatusList>
+                            <StatusHeader>
+                                <StatusDiv>
+                                  <StatusIcon src={glassHeart} color={'var(--neonRed)'} size={64} alt="vida" />
+                                  <div>
+                                    <div style={{ fontWeight: 700 }}>Vida</div>
+                                    <div style={{ color: 'var(--muted, #cfcfcf)' }}>{(personagem as any)?.statusJson?.status?.vida ?? '—'} / {(personagem as any)?.statusJson?.status?.vidaMaxima ?? '—'}</div>
+                                    <StatusBarWrapper>
+                                      <StatusBarFill $color={'var(--neonRed)'} $pct={Math.round(((Number((personagem as any)?.statusJson?.status?.vida) || 0) / (Number((personagem as any)?.statusJson?.status?.vidaMaxima) || 1)) * 100)} />
+                                    </StatusBarWrapper>
+                                  </div>
+                                </StatusDiv>
+                                <StatusDiv>
+                                  <StatusIcon src={rollingEnergy} color={'var(--neonBlue)'} size={64} alt="mana" />
+                                  <div>
+                                    <div style={{ fontWeight: 700 }}>Mana</div>
+                                    <div style={{ color: 'var(--muted, #cfcfcf)' }}>{(personagem as any)?.statusJson?.status?.mana ?? '—'} / {(personagem as any)?.statusJson?.status?.manaMaxima ?? '—'}</div>
+                                    <StatusBarWrapper>
+                                      <StatusBarFill $color={'var(--neonBlue)'} $pct={Math.round(((Number((personagem as any)?.statusJson?.status?.mana) || 0) / (Number((personagem as any)?.statusJson?.status?.manaMaxima) || 1)) * 100)} />
+                                    </StatusBarWrapper>
+                                  </div>
+                                </StatusDiv>
+                            </StatusHeader>
+
+                            <StatusHeader>
+                                <StatusDiv>
+                                  <StatusIcon src={electric} color={'var(--neonGreen)'} size={64} alt="estamina" />
+                                  <div>
+                                    <div style={{ fontWeight: 700 }}>Estamina</div>
+                                    <div style={{ color: 'var(--muted, #cfcfcf)' }}>{(personagem as any)?.statusJson?.status?.estamina ?? '—'} / {(personagem as any)?.statusJson?.status?.estaminaMaxima ?? '—'}</div>
+                                    <StatusBarWrapper>
+                                      <StatusBarFill $color={'var(--neonGreen)'} $pct={Math.round(((Number((personagem as any)?.statusJson?.status?.estamina) || 0) / (Number((personagem as any)?.statusJson?.status?.estaminaMaxima) || 1)) * 100)} />
+                                    </StatusBarWrapper>
+                                  </div>
+                                </StatusDiv>
+                                <StatusDiv>
+                                  <StatusIcon src={upgrade} color={'var(--neonYellow)'} size={64} alt="xp" />
+                                  <div>
+                                    <div style={{ fontWeight: 700 }}>Xp</div>
+                                    <div style={{ color: 'var(--muted, #cfcfcf)' }}>{(personagem as any)?.statusJson?.nivel ?? (personagem as any)?.statusJson?.nivel ?? '—'} / {(personagem as any)?.statusJson?.xp ?? '—'}</div>
+                                    <StatusBarWrapper>
+                                      <StatusBarFill $color={'var(--neonYellow)'} $pct={Math.round(((Number((personagem as any)?.statusJson?.xp) || 0) / (Number(((personagem as any)?.statusJson?.nivel) || 1)) * 100))} />
+                                    </StatusBarWrapper>
+                                  </div>
+                                </StatusDiv>
+                            </StatusHeader>
+                        </StatusList>
+                    </StatusController>
+                </SatusDivController>
+            </TopSection>
+            <BottomSection>
+                <CardContent>
+                    <SubHeading>Informações</SubHeading>
+                    <InfoList>
+                        <InfoItem>Tags: {Array.isArray((personagem as any).tags) && (personagem as any).tags.length ? (personagem as any).tags.join(', ') : '—'}</InfoItem>
+                    </InfoList>
+                </CardContent>
+                <CardContent>
+                    <Heading>História</Heading>
+                    <PersonagemRichText>
+                    <div className="ProseMirror">
+                        <RichTextDisplay content={historia} />
+                    </div>
+                    </PersonagemRichText>
+                </CardContent>
+            </BottomSection>
         </ClipBox>
-      </LeftColumn>
-      <RightColumn>
-        <Sections>
-            <ClipBox theme={theme} neon={neon} useClip borderRadius="8px" zIndex={1} innerOffset="16px" backgroundColor="rgba(0,0,10,0.35)">
-              <CardContent>
-                <Heading>História</Heading>
-                <PersonagemRichText>
-                  <div className="ProseMirror">
-                    <RichTextDisplay content={historia} />
-                  </div>
-                </PersonagemRichText>
-              </CardContent>
-            </ClipBox>
+
+      <Sections>
 
             <SectionSpacer>
-              <ClipBox theme={theme} neon={neon} useClip borderRadius="8px" zIndex={1} innerOffset="16px" backgroundColor="rgba(0,0,10,0.35)">
-                <CardContent>
-                  <SubHeading>Informações</SubHeading>
-                  <InfoList>
-                    <InfoItem>Raça: {racaNome ?? ((personagem as any).idraca ?? '—')}</InfoItem>
-                    <InfoItem>Cidade: {cidadeNome ?? ((personagem as any).idcidade ?? '—')}</InfoItem>
-                    <InfoItem>Tags: {Array.isArray((personagem as any).tags) && (personagem as any).tags.length ? (personagem as any).tags.join(', ') : '—'}</InfoItem>
-                  </InfoList>
-                </CardContent>
-              </ClipBox>
             </SectionSpacer>
 
             <SectionSpacer>
@@ -121,25 +247,9 @@ const PersonagemPage: React.FC = () => {
                 <CardContent>
                   <SubHeading>Itens</SubHeading>
                   {(Array.isArray((personagem as any).inventarioJson) && (personagem as any).inventarioJson.length > 0) ? (
-                    (personagem as any).inventarioJson.map((it: any, idx: number) => {
-                      const nomeItem = it.nome ?? it.nomeItem ?? it.titulo ?? String(it);
-                      const quantidade = it.quantidade ?? it.qtd ?? it.qtde ?? null;
-                      const imagem = it.imagem ?? it.url ?? (typeof it === 'string' ? it : undefined);
-                      return (
-                        <div key={idx} style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 8 }}>
-                          {imagem ? (
-                            <img src={normalizeImagePath(imagem)} alt={nomeItem} style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 6 }} />
-                          ) : (
-                            <div style={{ width: 48, height: 48, background: 'rgba(255,255,255,0.04)', borderRadius: 6 }} />
-                          )}
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 600 }}>{nomeItem}</div>
-                            {it.descricao && <div style={{ fontSize: 13, color: 'var(--muted, #cfcfcf)' }}>{it.descricao}</div>}
-                          </div>
-                          <div style={{ color: 'var(--muted, #cfcfcf)' }}>{quantidade ? `x${quantidade}` : ''}</div>
-                        </div>
-                      );
-                    })
+                    (personagem as any).inventarioJson.map((it: any, idx: number) => (
+                      <InventarioItem key={idx} item={it} />
+                    ))
                   ) : (
                     <div style={{ color: 'var(--muted, #cfcfcf)' }}>Sem itens cadastrados</div>
                   )}
@@ -209,10 +319,7 @@ const PersonagemPage: React.FC = () => {
                 )}
               </ClipBox>
             </SectionSpacer>
-
-            {/* debug block removed */}
         </Sections>
-      </RightColumn>
     </PageContainer>
   );
 };
