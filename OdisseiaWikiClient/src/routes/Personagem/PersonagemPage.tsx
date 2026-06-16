@@ -119,7 +119,7 @@ const PersonagemPage: React.FC = () => {
   const idVal = getField(personagem, ['idpersonagem', 'Idpersonagem', 'id', 'Id']) || id;
 
   const costumes = (personagem as any)?.costumes;
-  const costumesStr = Array.isArray(costumes) && costumes.length > 0 ? costumes.join(' - ') : null;
+  const costumesList = Array.isArray(costumes) && costumes.length > 0 ? costumes : null;
 
   const tracos = (personagem as any)?.tracos;
   const tracosList = Array.isArray(tracos) && tracos.length > 0 ? tracos : null;
@@ -129,6 +129,9 @@ const PersonagemPage: React.FC = () => {
 
   const vinculados = (personagem as any)?.personagemsVinculados;
   const hasVinculados = Array.isArray(vinculados) && vinculados.length > 0;
+
+  const tags = (personagem as any)?.tags;
+  const tagsList = Array.isArray(tags) && tags.length > 0 ? tags : null;
 
   return (
     <PageContainer>
@@ -219,50 +222,75 @@ const PersonagemPage: React.FC = () => {
                 </SatusDivController>
             </TopSection>
             <BottomSection>
-                <CardContent>
-                    <HeaderStatusController>
-                        <SubHeading>Informações</SubHeading>
-                        <InfoList>
-                            <InfoItem>Tags: {Array.isArray((personagem as any).tags) && (personagem as any).tags.length ? (personagem as any).tags.join(', ') : '—'}</InfoItem>
-                        </InfoList>
-                    </HeaderStatusController>
+                <CardContent gap={5}>
+                  <TitleGlitch theme={theme} neon={neon} text={"Informacoes"} fontSize="20px" />
 
-                    {costumesStr && (
+                    {/* Tags */}
+                    {tagsList && (
                       <HeaderStatusController>
-                          <SubHeading>Costumes</SubHeading>
-                          <InfoList>
-                              <InfoItem>{costumesStr}</InfoItem>
-                          </InfoList>
-                      </HeaderStatusController>
-                    )}
-
-                    {hasInfoExtras && (
-                      <HeaderStatusController>
-                          <SubHeading>Informações Extras</SubHeading>
-                          <InfoList>
-                              <InfoItem>{infoExtras}</InfoItem>
-                          </InfoList>
-                      </HeaderStatusController>
-                    )}
-
-                    {hasVinculados && (
-                      <HeaderStatusController>
-                          <SubHeading>Personagens Relacionados</SubHeading>
                           <InfoList>
                               <InfoItem>
+                                <BoldLabel>Tags:</BoldLabel>{' '}
+                                {tagsList.map((tag: string, idx: number) => (
+                                  <React.Fragment key={idx}>
+                                    {idx > 0 && <span> | </span>}
+                                    {tag}
+                                  </React.Fragment>
+                                ))}
+                              </InfoItem>
+                          </InfoList>
+                      </HeaderStatusController>
+                    )}
+
+                    {/* Costumes */}
+                    {costumesList && (
+                      <HeaderStatusController>
+                          <InfoList>
+                              <InfoItem>
+                                <BoldLabel>Costumes:</BoldLabel>{' '}
+                                {costumesList.map((c: string, idx: number) => (
+                                  <React.Fragment key={idx}>
+                                    {idx > 0 && <span> | </span>}
+                                    {c}
+                                  </React.Fragment>
+                                ))}
+                              </InfoItem>
+                          </InfoList>
+                      </HeaderStatusController>
+                    )}
+
+                    {/* Informações Extras */}
+                    {hasInfoExtras && (
+                      <HeaderStatusController>
+                          <InfoList>
+                              <InfoItem><BoldLabel>Informações Extras:</BoldLabel> {infoExtras}</InfoItem>
+                          </InfoList>
+                      </HeaderStatusController>
+                    )}
+
+                    {/* Personagens Relacionados */}
+                    {hasVinculados && (
+                      <HeaderStatusController>
+                          <InfoList>
+                              <InfoItem>
+                                <BoldLabel>Personagens Relacionados:</BoldLabel>{' '}
                                 {personagensVinculadosNomes.length > 0 ? (
                                   personagensVinculadosNomes.map((p, idx) => (
-                                    <RelatedLink key={p.id}>
-                                      <SpanLink
-                                        theme={theme}
-                                        neon={neon}
-                                        colorScheme="violetYellow"
-                                        link={`/personagem/${p.id}`}
-                                        textSize="14px"
-                                      >
-                                        {p.nome}
-                                      </SpanLink>
-                                    </RelatedLink>
+                                    <React.Fragment key={p.id}>
+                                      {idx > 0 && <span> | </span>}
+                                      <RelatedLink>
+                                        <SpanLink
+                                          theme={theme}
+                                          neon={neon}
+                                          colorScheme="bluePink"
+                                          link={`/personagem/${p.id}`}
+                                          textSize="14px"
+                                          className="inline-link"
+                                        >
+                                          {p.nome}
+                                        </SpanLink>
+                                      </RelatedLink>
+                                    </React.Fragment>
                                   ))
                                 ) : (
                                   <MutedText>Carregando...</MutedText>
@@ -272,10 +300,11 @@ const PersonagemPage: React.FC = () => {
                       </HeaderStatusController>
                     )}
 
+                    {/* Traços de Personalidade */}
                     {tracosList && (
                       <HeaderStatusController>
-                          <SubHeading>Traços de Personalidade</SubHeading>
                           <TagList>
+                            <BoldLabel>Traços de Personalidade:</BoldLabel>
                             {tracosList.map((traco: string, idx: number) => (
                               <TagItem key={idx}>{traco}</TagItem>
                             ))}

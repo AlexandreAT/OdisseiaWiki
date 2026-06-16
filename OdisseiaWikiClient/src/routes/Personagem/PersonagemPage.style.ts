@@ -1,5 +1,5 @@
 import { color } from './../../Global Styles/ColorScheme';
-import styled from 'styled-components';
+import styled, { css } from 'styled-components';
 import { wikiHeading1Style, wikiHeading2Style, wikiHeading3Style, wikiParagraphStyle, wikiListStyle, wikiBlockquoteStyle, wikiCodeStyle, wikiLinkStyle } from '../Wiki/shared/WikiTextStyles';
 
 export const PageContainer = styled.div`
@@ -17,7 +17,7 @@ export const TopSection = styled.div`
     display: flex;
     flex-direction: row;
     gap: 12px;
-    padding: 15px;
+    padding: 0 15px 25px;
 `;
 
 export const BottomSection = styled.div`
@@ -50,10 +50,12 @@ export const Sections = styled.div`
   gap: 12px;
 `;
 
-export const CardContent = styled.div`
+export const CardContent = styled.div<{ gap?: number }>`
   padding: 16px;
-  color: var(--text, #eaeaea);
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: ${({ gap }) => gap ?? 0}px;
 `;
 
 export const Heading = styled.h2`
@@ -62,10 +64,10 @@ export const Heading = styled.h2`
 `;
 
 export const SubHeading = styled.h3`
-  margin: 0 0 8px 0;
+  margin: 0;
   font-size: 16px;
   font-weight: 600;
-  width: 100%;
+  white-space: nowrap;
 `;
 
 export const InfoList = styled.div`
@@ -73,10 +75,14 @@ export const InfoList = styled.div`
   flex-direction: column;
   gap: 6px;
   color: var(--muted, #cfcfcf);
+  align-items: flex-start;
 `;
 
 export const InfoItem = styled.div`
   font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted, #cfcfcf);
+  display: inline;
 `;
 
 export const PersonagemRichText = styled.div`
@@ -89,32 +95,24 @@ export const PersonagemRichText = styled.div`
     p {
       ${wikiParagraphStyle}
     }
-
     h1 {
       ${wikiHeading1Style}
     }
-
     h2 {
       ${wikiHeading2Style}
     }
-
     h3 {
       ${wikiHeading3Style}
     }
-
-    ul,
-    ol {
+    ul, ol {
       ${wikiListStyle}
     }
-
     blockquote {
       ${wikiBlockquoteStyle}
     }
-
     code {
       ${wikiCodeStyle}
     }
-
     a {
       ${wikiLinkStyle}
     }
@@ -188,12 +186,8 @@ export const HistoryModalSheet = styled.div<{ theme: 'dark' | 'light'; neon: 'on
   background: ${({ theme }) => theme === 'dark' ? 'var(--lightBlack)' : 'var(--whitesmoke)'};
   border: 2px solid ${({ theme, neon }) =>
     theme === "dark"
-      ? neon === "on"
-        ? "var(--clearneonBlue)"
-        : "var(--lightBlack)"
-      : neon === "on"
-        ? "var(--neonViolet)"
-        : "var(--lightGrey)"
+      ? neon === "on" ? "var(--clearneonBlue)" : "var(--lightBlack)"
+      : neon === "on" ? "var(--neonViolet)" : "var(--lightGrey)"
   };
   border-radius: 8px;
   width: 100%;
@@ -205,14 +199,8 @@ export const HistoryModalSheet = styled.div<{ theme: 'dark' | 'light'; neon: 'on
   animation: slideIn 0.3s ease-out;
 
   @keyframes slideIn {
-    from {
-      opacity: 0;
-      transform: translateY(-20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 `;
 
@@ -220,12 +208,8 @@ export const HistoryModalHeader = styled.div<{ theme: 'dark' | 'light'; neon: 'o
   padding: 20px 24px;
   border-bottom: 1px solid ${({ theme, neon }) =>
     theme === "dark"
-      ? neon === "on"
-        ? "var(--clearneonBlue)"
-        : "var(--lightBlack)"
-      : neon === "on"
-        ? "var(--neonViolet)"
-        : "var(--lightGrey)"
+      ? neon === "on" ? "var(--clearneonBlue)" : "var(--lightBlack)"
+      : neon === "on" ? "var(--neonViolet)" : "var(--lightGrey)"
   };
   display: flex;
   justify-content: space-between;
@@ -236,12 +220,8 @@ export const HistoryModalTitle = styled.h2<{ theme: 'dark' | 'light'; neon: 'on'
   margin: 0;
   color: ${({ theme, neon }) =>
     theme === "dark"
-      ? neon === "on"
-        ? "var(--clearneonBlue)"
-        : "var(--clearWhite)"
-      : neon === "on"
-        ? "var(--neonViolet)"
-        : "var(--deepgray)"
+      ? neon === "on" ? "var(--clearneonBlue)" : "var(--clearWhite)"
+      : neon === "on" ? "var(--neonViolet)" : "var(--deepgray)"
   };
   font-size: 1.5rem;
   font-weight: 600;
@@ -261,19 +241,13 @@ export const HistoryModalClose = styled.button<{ theme: 'dark' | 'light'; neon: 
   transition: all 0.3s ease;
   border-radius: 4px;
 
-  svg {
-    font-size: 1.5rem;
-  }
+  svg { font-size: 1.5rem; }
 
   &:hover {
     color: ${({ theme, neon }) =>
       theme === "dark"
-        ? neon === "on"
-          ? "var(--clearneonRed)"
-          : "var(--whitesmoke)"
-        : neon === "on"
-          ? "var(--neonPink)"
-          : "var(--grey)"
+        ? neon === "on" ? "var(--clearneonRed)" : "var(--whitesmoke)"
+        : neon === "on" ? "var(--neonPink)" : "var(--grey)"
     };
     background: ${({ theme }) => theme === 'dark' ? 'var(--lightBlack)' : 'var(--lightGrey)'};
     transform: scale(1.1);
@@ -298,39 +272,30 @@ export const HistoryModalContent = styled.div<{ theme: 'dark' | 'light'; neon: '
       ${wikiParagraphStyle}
       color: ${({ theme }) => theme === 'dark' ? 'var(--clearWhite)' : 'var(--deepgray)'};
     }
-
     h1 {
       ${wikiHeading1Style}
       color: ${({ theme }) => theme === 'dark' ? 'var(--clearWhite)' : 'var(--deepgray)'};
     }
-
     h2 {
       ${wikiHeading2Style}
       color: ${({ theme }) => theme === 'dark' ? 'var(--clearWhite)' : 'var(--deepgray)'};
     }
-
     h3 {
       ${wikiHeading3Style}
       color: ${({ theme }) => theme === 'dark' ? 'var(--clearWhite)' : 'var(--deepgray)'};
     }
-
-    ul,
-    ol {
+    ul, ol {
       ${wikiListStyle}
     }
-
     blockquote {
       ${wikiBlockquoteStyle}
     }
-
     code {
       ${wikiCodeStyle}
     }
-
     a {
       ${wikiLinkStyle}
     }
-
     img {
       max-width: 100%;
       height: auto;
@@ -339,44 +304,30 @@ export const HistoryModalContent = styled.div<{ theme: 'dark' | 'light'; neon: '
     }
   }
 
-  &::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: ${({ theme }) => theme === 'dark' ? 'var(--black-blue)' : 'var(--whitesmoke)'};
-  }
-
+  &::-webkit-scrollbar { width: 8px; }
+  &::-webkit-scrollbar-track { background: ${({ theme }) => theme === 'dark' ? 'var(--black-blue)' : 'var(--whitesmoke)'}; }
   &::-webkit-scrollbar-thumb {
     background: ${({ theme, neon }) =>
       theme === "dark"
-        ? neon === "on"
-          ? "var(--clearneonBlue)"
-          : "var(--lightBlack)"
-        : neon === "on"
-          ? "var(--neonViolet)"
-          : "var(--lightGrey)"
+        ? neon === "on" ? "var(--clearneonBlue)" : "var(--lightBlack)"
+        : neon === "on" ? "var(--neonViolet)" : "var(--lightGrey)"
     };
     border-radius: 4px;
   }
-
   &::-webkit-scrollbar-thumb:hover {
     background: ${({ theme, neon }) =>
       theme === "dark"
-        ? neon === "on"
-          ? "var(--neonBlue)"
-          : "var(--clearWhite)"
-        : neon === "on"
-          ? "var(--deepneonViolet)"
-          : "var(--deepgray)"
+        ? neon === "on" ? "var(--neonBlue)" : "var(--clearWhite)"
+        : neon === "on" ? "var(--deepneonViolet)" : "var(--deepgray)"
     };
   }
 `;
 
 export const HeaderStatusController = styled.div`
     display: flex;
-    flex-direction: column;
-    gap: 4px;
+    flex-direction: row;
+    gap: 8px;
+    align-items: center;
     justify-content: flex-start;
 `;
 
@@ -475,6 +426,7 @@ export const MutedText = styled.div<{ padding?: string }>`
 export const BoldLabel = styled.div`
   color: var(--whitesmoke);
   font-family: "Orbitron", sans-serif;
+  display: inline;
 `;
 
 export const ItemThumb = styled.img`
@@ -563,6 +515,11 @@ export const TagList = styled.div`
 `;
 
 export const RelatedLink = styled.span`
-  display: inline-block;
-  margin: 2px 4px 2px 0;
+  display: inline-flex;
+  align-items: center;
+
+  .inline-link {
+    display: inline-flex !important;
+    width: auto !important;
+  }
 `;

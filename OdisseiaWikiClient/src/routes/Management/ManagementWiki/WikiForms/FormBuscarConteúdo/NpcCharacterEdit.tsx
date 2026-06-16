@@ -292,10 +292,10 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
             const id = Number(item);
             if (Number.isNaN(id)) return null;
 
-            const found = allPersonagens.find((personagem) => personagem.Idpersonagem === id);
+            const found = allPersonagens.find((p: any) => (p.idpersonagem ?? p.Idpersonagem) === id);
             return {
               id,
-              nome: found?.Nome ?? `Personagem ${id}`,
+              nome: found ? (found.nome ?? found.Nome ?? `Personagem ${id}`) : `Personagem ${id}`,
             };
           })
           .filter((item): item is { id: number; nome: string } => !!item);

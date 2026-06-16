@@ -244,18 +244,18 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
           icon={<BiSearchAlt className="icon" />}
           iconSize={20}
           disabled={!allPersonagens.length}
-          suggestions={personagens.map(p => `${p.Idpersonagem}|${p.Nome}`)}
+          suggestions={personagens.map(p => `${p.idpersonagem}|${p.nome}`)}
           onSelectSuggestion={(suggestion) => {
             const [idStr] = suggestion.split('|');
             const id = parseInt(idStr);
-            const personagem = allPersonagens.find(p => p.Idpersonagem === id);
+            const personagem = allPersonagens.find(p => p.idpersonagem === id);
             if (personagem) {
               setListPersonagemRelacionado(prev => {
-                if (prev.some(item => item.id === personagem.Idpersonagem)) {
+                if (prev.some(item => item.id === personagem.idpersonagem)) {
                   toast.error('Esse personagem já está vinculado.');
                   return prev;
                 }
-                return [...prev, { id: personagem.Idpersonagem, nome: personagem.Nome }];
+                return [...prev, { id: personagem.idpersonagem, nome: personagem.nome }];
               });
             }
           }}

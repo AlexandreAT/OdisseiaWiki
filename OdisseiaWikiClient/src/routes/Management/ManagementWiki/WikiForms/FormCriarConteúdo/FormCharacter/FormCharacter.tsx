@@ -115,6 +115,7 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
   const skillsColumns = React.useMemo(() => createSkillsColumns(theme, neon), [theme, neon]);
   const magiasColumns = React.useMemo(() => createMagiasColumns(theme, neon), [theme, neon]);
   
+                console.log("🚀 ~ FormCharacter ~ allPersonagens:", allPersonagens)
   return (
     <FormController onSubmit={handleSubmit}>
       {step === 1 && (
@@ -294,18 +295,19 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
               icon={<BiSearchAlt className="icon" />}
               iconSize={20}
               disabled={!allPersonagens.length}
-              suggestions={personagens.map(p => `${p.Idpersonagem}|${p.Nome}`)}
+              suggestions={personagens.map(p => `${p.idpersonagem}|${p.nome}`)}
               onSelectSuggestion={(suggestion) => {
-                const [idStr] = suggestion.split('|');
+                const [idStr, ...nomeParts] = suggestion.split('|');
                 const id = parseInt(idStr);
-                const personagem = allPersonagens.find(p => p.Idpersonagem === id);
+                const personagem = allPersonagens.find(p => p.idpersonagem === id);
+                console.log("🚀 ~ FormCharacter ~ personagem:", personagem)
                 if (personagem) {
                   setListPersonagemRelacionado(prev => {
-                    if (prev.some(item => item.id === personagem.Idpersonagem)) {
+                    if (prev.some(item => item.id === personagem.idpersonagem)) {
                       toast.error("Esse personagem já está vinculado.");
                       return prev;
                     }
-                    return [...prev, { id: personagem.Idpersonagem, nome: personagem.Nome }];
+                    return [...prev, { id: personagem.idpersonagem, nome: personagem.nome }];
                   });
                 }
               }}

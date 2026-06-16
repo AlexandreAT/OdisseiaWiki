@@ -2,10 +2,9 @@ import { mapToItem } from './../../../../../../utils/mapItem';
 import { getRacas } from './../../../../../../services/racasService';
 import { RacaPayload } from './../../../../../../services/racasService';
 import { CidadePayload, getCidades } from './../../../../../../services/cidadesService';
-import { PersonagemCreatePayload } from './../../../../../../services/personagensService';
+import { PersonagemCreatePayload, getPersonagens } from './../../../../../../services/personagensService';
 import { saveAsset } from './../../../../../../services/assetsService';
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { personagensMock } from '../../../../../../Mock/characters.mock';
 import { CharacterFormData, CharacterFormErrors } from './FormCharacter.type';
 import toast from 'react-hot-toast';
 import { Principais, Secundarios, JSONContent } from '../../../../../../models/Characters';
@@ -153,8 +152,8 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
   const [searchItensTerm, setSearchItensTerm] = useState("");
 
   // --- personagens ---
-  const [allPersonagens, setAllPersonagens] = useState<typeof personagensMock>([]);
-  const [personagens, setPersonagens] = useState<typeof personagensMock>([]);
+  const [allPersonagens, setAllPersonagens] = useState<any[]>([]);
+  const [personagens, setPersonagens] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loadingPersonagens, setLoadingPersonagens] = useState(false);
 
@@ -233,8 +232,28 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
 
 
   useEffect(() => {
-    setAllPersonagens(personagensMock);
-    setPersonagens([]);
+    const fetchPersonagens = async () => {
+      try {
+        const result = await getPersonagens();
+        console.log("🚀 ~ fetchPersonagens ~ result:", result)
+        // API pode retornar array diretamente ou { personagens: [...] }
+        const rawList = Array.isArray(result)
+          ? result
+          : (result as any)?.personagens ?? [];
+        console.log("🚀 ~ fetchPersonagens ~ rawList:", rawList)
+        // Normaliza cada item para garantir idpersonagem e nome
+        const normalized = rawList.map((p: any) => ({
+          ...p,
+          idpersonagem: p.idpersonagem ?? p.Idpersonagem ?? p.id,
+          nome: p.nome ?? p.Nome ?? 'Sem nome'
+        }));
+        console.log("🚀 ~ fetchPersonagens ~ normalized:", normalized)
+        setAllPersonagens(normalized);
+      } catch (err) {
+        console.error("Erro ao buscar personagens:", err);
+      }
+    };
+    fetchPersonagens();
   }, []);
 
   useEffect(() => {
@@ -333,9 +352,10 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
 
     setLoadingPersonagens(true);
     setTimeout(() => {
-      const filtered = allPersonagens.filter(p =>
-        p.Nome.toLowerCase().includes(query.toLowerCase())
-      );
+      const filtered = allPersonagens.filter(p => {
+        const nome = p.nome ?? p.Nome ?? '';
+        return nome.toLowerCase().includes(query.toLowerCase());
+      });
       setPersonagens(filtered);
       setLoadingPersonagens(false);
     }, 300);

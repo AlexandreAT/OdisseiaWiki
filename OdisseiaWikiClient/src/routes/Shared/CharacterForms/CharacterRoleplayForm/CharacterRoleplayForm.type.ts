@@ -1,7 +1,6 @@
 import { JSONContent } from '../../../../models/Characters';
 import { RacaPayload } from '../../../../services/racasService';
 import { CidadePayload } from '../../../../services/cidadesService';
-import { personagensMock } from '../../../../Mock/characters.mock';
 
 export interface CharacterRoleplayFormProps {
   theme: 'dark' | 'light';
@@ -40,8 +39,8 @@ export interface CharacterRoleplayFormProps {
   setVisivel?: (value: boolean) => void;
   listPersonagemRelacionado: { id: number; nome: string }[];
   setListPersonagemRelacionado: React.Dispatch<React.SetStateAction<{ id: number; nome: string }[]>>;
-  personagens: typeof personagensMock;
-  allPersonagens: typeof personagensMock;
+  personagens: any[];
+  allPersonagens: any[];
   searchTerm: string;
   loadingPersonagens: boolean;
   searchPersonagens: (query: string) => void;
