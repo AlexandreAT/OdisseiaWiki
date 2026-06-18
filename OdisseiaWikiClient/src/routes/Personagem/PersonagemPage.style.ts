@@ -20,11 +20,20 @@ export const TopSection = styled.div`
     padding: 0 15px 25px;
 `;
 
+export const BottomInfoLeft = styled.div`
+  width: 35%;
+`
+
+export const BottomInfoRight = styled.div`
+  width: 65%;
+`
+
 export const BottomSection = styled.div`
     width: 100%;
     display: flex;
     flex-direction: row;
     gap: 12px;
+    padding: 0 25px;
 `;
 
 export const AvatarDivController = styled.div`
@@ -86,15 +95,24 @@ export const InfoItem = styled.div`
 `;
 
 export const PersonagemRichText = styled.div`
+  position: relative;
+  z-index: 1;
   width: 100%;
+  box-sizing: border-box;
   .ProseMirror {
     outline: none;
     padding: 0;
     background-color: transparent;
+    font-size: 13px;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-wrap: break-word;
 
     p {
       ${wikiParagraphStyle}
+      margin: 0 0 12px;
     }
+
     h1 {
       ${wikiHeading1Style}
     }
@@ -128,7 +146,7 @@ export const PersonagemRichText = styled.div`
 
 export const HistoryWrapper = styled.div`
   position: relative;
-  max-height: 200px;
+  max-height: 250px;
   overflow: hidden;
   cursor: pointer;
 
@@ -165,8 +183,6 @@ export const HistoryExpandHint = styled.div`
     box-shadow: 0 0 8px var(--clearneonBlue, #4fc3f7);
   }
 `;
-
-// ─── History Modal ────────────────────────────────────────────────────────────
 
 export const HistoryModalOverlay = styled.div`
   position: fixed;
@@ -424,10 +440,16 @@ export const MutedText = styled.div<{ padding?: string }>`
 `;
 
 export const BoldLabel = styled.div`
-  color: var(--whitesmoke);
+  color: var(--neonBlue);
   font-family: "Orbitron", sans-serif;
   display: inline;
+  font-size: 16px;
 `;
+
+export const InfoSpan = styled.span`
+  color: var(--lightGrey);
+  font-size: 13px;
+`
 
 export const ItemThumb = styled.img`
   width: 48px;
@@ -522,4 +544,28 @@ export const RelatedLink = styled.span`
     display: inline-flex !important;
     width: auto !important;
   }
+`;
+
+export const StoryWithImage = styled.div<{ cityImage?: string | null }>`
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+  ${({ cityImage }) => cityImage ? `
+    display: flex;
+    padding-right: 0;
+  ` : ''}
+`;
+
+export const StoryImage = styled.img<{ src?: string }>`
+  position: relative;
+  width: 38%;
+  height: auto;
+  object-fit: cover;
+  object-position: center;
+  border-radius: 4px;
+  opacity: 0.5;
+  pointer-events: none;
+  flex-shrink: 0;
+  mask-image: linear-gradient(to right, transparent, black 20%, black 80%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 20%, black 80%, transparent);
 `;

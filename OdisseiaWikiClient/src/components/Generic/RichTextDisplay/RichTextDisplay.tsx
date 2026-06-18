@@ -44,8 +44,11 @@ const renderNode = (node: JSONContent, key?: React.Key): React.ReactNode => {
   switch (node.type) {
     case 'doc':
       return <>{children}</>;
-    case 'paragraph':
-      return <p key={key} style={{ margin: '0 0 12px' }}>{children}</p>;
+    case 'paragraph': {
+      const attrs = (node.attrs || {}) as any;
+      const align = attrs.align || attrs.textAlign || 'left';
+      return <p key={key} style={{ margin: '0 0 12px', textAlign: align }}>{children}</p>;
+    }
     case 'heading':
       // level in attrs.level
       const level = (node.attrs && node.attrs.level) || 2;

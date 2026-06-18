@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { usePersonagem } from './usePersonagem';
-import { PageContainer, TopSection, BottomSection, AvatarWrapper, MetaRow, Sections, CardContent, Heading, SubHeading, InfoList, InfoItem, MetaContent, SectionSpacer, AvatarDivController, SatusDivController, StatusList, StatusDiv, HeaderStatusController, StatusController, StatusHeader, StatusBarWrapper, StatusBarFill, PersonagemRichText, FlexRow, MutedText, BoldLabel, ItemThumb, ItemPlaceholder, GalleryToggle, GalleryContent, SkillItem, Spacer, MaskIcon, ItemRow, FlexFill, InfoControllers, TitleDiv, TagItem, TagList, RelatedLink, HistoryWrapper, HistoryExpandHint, HistoryModalOverlay, HistoryModalSheet, HistoryModalHeader, HistoryModalTitle, HistoryModalClose, HistoryModalContent } from './PersonagemPage.style';
+import { PageContainer, TopSection, BottomSection, AvatarWrapper, MetaRow, Sections, CardContent, Heading, SubHeading, InfoList, InfoItem, MetaContent, SectionSpacer, AvatarDivController, SatusDivController, StatusList, StatusDiv, HeaderStatusController, StatusController, StatusHeader, StatusBarWrapper, StatusBarFill, PersonagemRichText, FlexRow, MutedText, BoldLabel, ItemThumb, ItemPlaceholder, GalleryToggle, GalleryContent, SkillItem, Spacer, MaskIcon, ItemRow, FlexFill, InfoControllers, TitleDiv, TagItem, TagList, RelatedLink, HistoryWrapper, HistoryExpandHint, HistoryModalOverlay, HistoryModalSheet, HistoryModalHeader, HistoryModalTitle, HistoryModalClose, HistoryModalContent, InfoSpan, BottomInfoLeft, BottomInfoRight, StoryWithImage, StoryImage } from './PersonagemPage.style';
 import glassHeart from '../../assets/svg/glass-heart.svg';
 import rollingEnergy from '../../assets/svg/rolling-energy.svg';
 import electric from '../../assets/svg/electric.svg';
@@ -64,6 +64,7 @@ const PersonagemPage: React.FC = () => {
   };
 
   const [cidadeNome, setCidadeNome] = React.useState<string | null>(null);
+  const [cidadeImagem, setCidadeImagem] = React.useState<string | null>(null);
   const [racaNome, setRacaNome] = React.useState<string | null>(null);
   const [personagensVinculadosNomes, setPersonagensVinculadosNomes] = React.useState<{ id: number; nome: string }[]>([]);
   const [galleryOpen, setGalleryOpen] = React.useState(true);
@@ -75,17 +76,20 @@ const PersonagemPage: React.FC = () => {
       try {
         const idCidade = getField(personagem, ['idcidade', 'Idcidade', 'idCidade', 'idcidade']) as any;
         if (idCidade) {
-          const res = await getCidadeById(Number(idCidade));
-          if (mounted && res && res.cidade) {
-            setCidadeNome(res.cidade.nome ?? null);
+          const res: any = await getCidadeById(Number(idCidade));
+          const cidade = res?.cidade ?? res;
+          if (mounted && cidade) {
+            setCidadeNome(cidade.nome ?? null);
+            setCidadeImagem(cidade.imagem ?? null);
           }
         }
         const idRaca = getField(personagem, ['idraca', 'Idraca', 'idRaca']) as any;
         
         if (idRaca) {
-          const rr = await getRacaById(Number(idRaca));
-          if (mounted && rr && rr.raca) {
-            setRacaNome(rr.raca.nome ?? null);
+          const rr: any = await getRacaById(Number(idRaca));
+          const raca = rr?.raca ?? rr;
+          if (mounted && raca) {
+            setRacaNome(raca.nome ?? null);
           }
         }
 
@@ -135,7 +139,7 @@ const PersonagemPage: React.FC = () => {
 
   return (
     <PageContainer>
-        <ClipBox theme={theme} neon={neon} width='100%' height='calc(100vh + 50px)' useClip borderRadius="8px" zIndex={1}>
+        <ClipBox theme={theme} neon={neon} width='100%' height='calc(100vh + 50px)' useClip={false} borderRadius="8px" zIndex={1}>
             <TopSection>
                 <AvatarDivController>
                     <AvatarWrapper>
@@ -151,15 +155,15 @@ const PersonagemPage: React.FC = () => {
                             <HeaderStatusController>
                                 <MetaContent as={FlexRow} gap={12} alignItems="flex-start">
                                   <FlexRow gap={8}>
-                                    <MaskIcon src={dna1} color={'var(--clearneonBlue)'} size={20} />
+                                    <MaskIcon src={dna1} color={'var(--neonBlue)'} size={20} />
                                     <BoldLabel>Raça:</BoldLabel> {racaNome ?? ((personagem as any).idraca ?? '—')}
                                   </FlexRow>
                                   <FlexRow gap={8}>
-                                    <MaskIcon src={village} color={'var(--clearneonBlue)'} size={20} />
+                                    <MaskIcon src={village} color={'var(--neonBlue)'} size={20} />
                                     <BoldLabel>Cidade:</BoldLabel> {cidadeNome ?? ((personagem as any).idcidade ?? '—')}
                                   </FlexRow>
                                   <FlexRow gap={8}>
-                                    <MaskIcon src={scales} color={'var(--clearneonBlue)'} size={20} />
+                                    <MaskIcon src={scales} color={'var(--neonBlue)'} size={20} />
                                     <BoldLabel>Alinhamento:</BoldLabel> {alinhamento ?? '—'}
                                   </FlexRow>
                                 </MetaContent>
@@ -222,107 +226,109 @@ const PersonagemPage: React.FC = () => {
                 </SatusDivController>
             </TopSection>
             <BottomSection>
-                <CardContent gap={5}>
-                  <TitleGlitch theme={theme} neon={neon} text={"Informacoes"} fontSize="20px" />
-
-                    {/* Tags */}
-                    {tagsList && (
-                      <HeaderStatusController>
-                          <InfoList>
-                              <InfoItem>
-                                <BoldLabel>Tags:</BoldLabel>{' '}
-                                {tagsList.map((tag: string, idx: number) => (
-                                  <React.Fragment key={idx}>
-                                    {idx > 0 && <span> | </span>}
-                                    {tag}
-                                  </React.Fragment>
-                                ))}
-                              </InfoItem>
-                          </InfoList>
-                      </HeaderStatusController>
-                    )}
-
-                    {/* Costumes */}
-                    {costumesList && (
-                      <HeaderStatusController>
-                          <InfoList>
-                              <InfoItem>
-                                <BoldLabel>Costumes:</BoldLabel>{' '}
-                                {costumesList.map((c: string, idx: number) => (
-                                  <React.Fragment key={idx}>
-                                    {idx > 0 && <span> | </span>}
-                                    {c}
-                                  </React.Fragment>
-                                ))}
-                              </InfoItem>
-                          </InfoList>
-                      </HeaderStatusController>
-                    )}
-
-                    {/* Informações Extras */}
-                    {hasInfoExtras && (
-                      <HeaderStatusController>
-                          <InfoList>
-                              <InfoItem><BoldLabel>Informações Extras:</BoldLabel> {infoExtras}</InfoItem>
-                          </InfoList>
-                      </HeaderStatusController>
-                    )}
-
-                    {/* Personagens Relacionados */}
-                    {hasVinculados && (
-                      <HeaderStatusController>
-                          <InfoList>
-                              <InfoItem>
-                                <BoldLabel>Personagens Relacionados:</BoldLabel>{' '}
-                                {personagensVinculadosNomes.length > 0 ? (
-                                  personagensVinculadosNomes.map((p, idx) => (
-                                    <React.Fragment key={p.id}>
+                <BottomInfoLeft>
+                  <CardContent gap={5}>
+                    <TitleGlitch theme={theme} neon={neon} text={"Informacoes"} fontSize="20px" />
+                      {tagsList && (
+                        <HeaderStatusController>
+                            <InfoList>
+                                <InfoItem>
+                                  <BoldLabel>Tags:</BoldLabel>{' '}
+                                  <InfoSpan>{tagsList.map((tag: string, idx: number) => (
+                                    <React.Fragment key={idx}>
                                       {idx > 0 && <span> | </span>}
-                                      <RelatedLink>
-                                        <SpanLink
-                                          theme={theme}
-                                          neon={neon}
-                                          colorScheme="bluePink"
-                                          link={`/personagem/${p.id}`}
-                                          textSize="14px"
-                                          className="inline-link"
-                                        >
-                                          {p.nome}
-                                        </SpanLink>
-                                      </RelatedLink>
+                                      {tag}
                                     </React.Fragment>
-                                  ))
-                                ) : (
-                                  <MutedText>Carregando...</MutedText>
-                                )}
-                              </InfoItem>
-                          </InfoList>
-                      </HeaderStatusController>
-                    )}
+                                  ))}
+                                  </InfoSpan>
+                                </InfoItem>
+                            </InfoList>
+                        </HeaderStatusController>
+                      )}
 
-                    {/* Traços de Personalidade */}
-                    {tracosList && (
-                      <HeaderStatusController>
-                          <TagList>
-                            <BoldLabel>Traços de Personalidade:</BoldLabel>
-                            {tracosList.map((traco: string, idx: number) => (
-                              <TagItem key={idx}>{traco}</TagItem>
-                            ))}
-                          </TagList>
-                      </HeaderStatusController>
-                    )}
-                </CardContent>
-                <CardContent>
-                    <Heading>História</Heading>
-                    <HistoryWrapper onClick={() => setHistoryModalOpen(true)}>
-                      <PersonagemRichText>
-                      <div className="ProseMirror">
-                          <RichTextDisplay content={historia} />
-                      </div>
-                      </PersonagemRichText>
-                    </HistoryWrapper>
-                    {historia && <HistoryExpandHint onClick={() => setHistoryModalOpen(true)}>Ler mais</HistoryExpandHint>}
-                </CardContent>
+                      {costumesList && (
+                        <HeaderStatusController>
+                            <InfoList>
+                                <InfoItem>
+                                  <BoldLabel>Costumes:</BoldLabel>{' '}
+                                  {costumesList.map((c: string, idx: number) => (
+                                    <React.Fragment key={idx}>
+                                      {idx > 0 && <span> | </span>}
+                                      {c}
+                                    </React.Fragment>
+                                  ))}
+                                </InfoItem>
+                            </InfoList>
+                        </HeaderStatusController>
+                      )}
+
+                      {hasVinculados && (
+                        <HeaderStatusController>
+                            <InfoList>
+                                <InfoItem>
+                                  <BoldLabel>Personagens Relacionados:</BoldLabel>{' '}
+                                  {personagensVinculadosNomes.length > 0 ? (
+                                    personagensVinculadosNomes.map((p, idx) => (
+                                      <React.Fragment key={p.id}>
+                                        {idx > 0 && <span> | </span>}
+                                        <RelatedLink>
+                                          <SpanLink
+                                            theme={theme}
+                                            neon={neon}
+                                            colorScheme="bluePink"
+                                            link={`/personagem/${p.id}`}
+                                            textSize="14px"
+                                            className="inline-link"
+                                          >
+                                            {p.nome}
+                                          </SpanLink>
+                                        </RelatedLink>
+                                      </React.Fragment>
+                                    ))
+                                  ) : (
+                                    <MutedText>Carregando...</MutedText>
+                                  )}
+                                </InfoItem>
+                            </InfoList>
+                        </HeaderStatusController>
+                      )}
+
+                      {tracosList && (
+                        <HeaderStatusController>
+                            <TagList>
+                              <BoldLabel>Traços de Personalidade:</BoldLabel>
+                              {tracosList.map((traco: string, idx: number) => (
+                                <TagItem key={idx}>{traco}</TagItem>
+                              ))}
+                            </TagList>
+                        </HeaderStatusController>
+                      )}
+
+                      {hasInfoExtras && (
+                        <HeaderStatusController>
+                            <InfoList>
+                                <InfoItem><BoldLabel>Informações Extras:</BoldLabel> {infoExtras}</InfoItem>
+                            </InfoList>
+                        </HeaderStatusController>
+                      )}
+                  </CardContent>
+                </BottomInfoLeft>
+                <BottomInfoRight>
+                  <CardContent>
+                      <Heading>História</Heading>
+                      <StoryWithImage cityImage={cidadeImagem}>
+                        <HistoryWrapper onClick={() => setHistoryModalOpen(true)}>
+                          <PersonagemRichText>
+                          <div className="ProseMirror">
+                              <RichTextDisplay content={historia} />
+                          </div>
+                          </PersonagemRichText>
+                        </HistoryWrapper>
+                        {historia && <HistoryExpandHint onClick={() => setHistoryModalOpen(true)}>Ler mais</HistoryExpandHint>}
+                        {cidadeImagem && <StoryImage src={normalizeImagePath(cidadeImagem)} alt={cidadeNome ?? 'Cidade'} />}
+                      </StoryWithImage>
+                  </CardContent>
+                </BottomInfoRight>
             </BottomSection>
         </ClipBox>
 
