@@ -1,6 +1,7 @@
 import { color } from './../../Global Styles/ColorScheme';
 import styled, { css } from 'styled-components';
 import { wikiHeading1Style, wikiHeading2Style, wikiHeading3Style, wikiParagraphStyle, wikiListStyle, wikiBlockquoteStyle, wikiCodeStyle, wikiLinkStyle } from '../Wiki/shared/WikiTextStyles';
+import CantoSuperiorEsquerdo from '../../assets/svg/CantoSuperiorEsquerdo.svg';
 
 export const PageContainer = styled.div`
   padding: 24px;
@@ -39,6 +40,7 @@ export const BottomSection = styled.div`
 export const AvatarDivController = styled.div`
     display: flex;
     width: 50%;
+    gap: 15px;
 `;
 
 export const AvatarWrapper = styled.div`
@@ -65,6 +67,49 @@ export const CardContent = styled.div<{ gap?: number }>`
   display: flex;
   flex-direction: column;
   gap: ${({ gap }) => gap ?? 0}px;
+  position: relative;
+  z-index: 2;
+  background: rgba(0, 0, 10, 0.3);
+  clip-path: polygon(
+    12px 0, calc(100% - 12px) 0, 100% 12px,
+    100% calc(100% - 12px), calc(100% - 12px) 100%,
+    12px 100%, 0 calc(100% - 12px), 0 12px
+  );
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    clip-path: polygon(
+      12px 0, calc(100% - 12px) 0, 100% 12px,
+      100% calc(100% - 12px), calc(100% - 12px) 100%,
+      12px 100%, 0 calc(100% - 12px), 0 12px
+    );
+    background: linear-gradient(45deg, var(--clearneonBlue, #00d4ff), var(--clearneonPink, #ff3d3d));
+
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    padding: 3px;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+
+    top: -2px;
+    left: -2px;
+
+    width: 50px;
+    height: 50px;
+
+    background-image: url(${CantoSuperiorEsquerdo});
+    background-repeat: no-repeat;
+    background-size: contain;
+
+    pointer-events: none;
+  }
 `;
 
 export const Heading = styled.h2`
@@ -174,7 +219,7 @@ export const HistoryExpandHint = styled.div`
   z-index: 2;
   padding: 4px 12px;
   border: 1px solid var(--clearneonBlue, #4fc3f7);
-  border-radius: 4px;
+  border-radius: 0;
   background: rgba(0, 0, 0, 0.6);
   transition: all 0.2s ease;
 
@@ -395,8 +440,32 @@ export const StatusDiv = styled.div`
   align-items: center;
   width: 250px;
   padding: 8px;
-  border: 1px solid var(--neonBlue);
-  border-radius: 8px;
+  position: relative;
+  z-index: 2;
+  background: rgba(0, 0, 10, 0.3);
+  clip-path: polygon(
+    10px 0, calc(100% - 10px) 0, 100% 10px,
+    100% calc(100% - 10px), calc(100% - 10px) 100%,
+    10px 100%, 0 calc(100% - 10px), 0 10px
+  );
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    clip-path: polygon(
+      10px 0, calc(100% - 10px) 0, 100% 10px,
+      100% calc(100% - 10px), calc(100% - 10px) 100%,
+      10px 100%, 0 calc(100% - 10px), 0 10px
+    );
+    background: linear-gradient(45deg, var(--neonRed, #ff3d3d), var(--neonYellow, #ffd700));
+
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    padding: 3px;
+  }
 `;
 
 export const StatusLabel = styled.div`
@@ -413,7 +482,7 @@ export const StatusBarWrapper = styled.div`
   width: 160px;
   height: 10px;
   background: rgba(255,255,255,0.06);
-  border-radius: 6px;
+  border-radius: 0;
   overflow: hidden;
   margin-top: 6px;
 `;
@@ -455,14 +524,14 @@ export const ItemThumb = styled.img`
   width: 48px;
   height: 48px;
   object-fit: cover;
-  border-radius: 6px;
+  border-radius: 0;
 `;
 
 export const ItemPlaceholder = styled.div`
   width: 48px;
   height: 48px;
   background: rgba(255,255,255,0.04);
-  border-radius: 6px;
+  border-radius: 0;
 `;
 
 export const GalleryToggle = styled.div`
@@ -522,7 +591,7 @@ export const TagItem = styled.span`
   display: inline-block;
   background: rgba(255,255,255,0.08);
   border: 1px solid var(--neonBlue);
-  border-radius: 4px;
+  border-radius: 0;
   padding: 2px 8px;
   margin: 2px 4px 2px 0;
   font-size: 13px;
@@ -548,6 +617,7 @@ export const RelatedLink = styled.span`
 
 export const StoryWithImage = styled.div<{ cityImage?: string | null }>`
   position: relative;
+  margin-top: 12px;
   width: 100%;
   box-sizing: border-box;
   ${({ cityImage }) => cityImage ? `
@@ -558,14 +628,14 @@ export const StoryWithImage = styled.div<{ cityImage?: string | null }>`
 
 export const StoryImage = styled.img<{ src?: string }>`
   position: relative;
-  width: 38%;
+  width: 50%;
   height: auto;
   object-fit: cover;
   object-position: center;
-  border-radius: 4px;
+  border-radius: 10px;
   opacity: 0.5;
   pointer-events: none;
   flex-shrink: 0;
   mask-image: linear-gradient(to right, transparent, black 20%, black 80%, transparent);
-  -webkit-mask-image: linear-gradient(to right, transparent, black 20%, black 80%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 50%, black 100%, transparent);
 `;

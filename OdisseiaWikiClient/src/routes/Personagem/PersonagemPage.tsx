@@ -315,7 +315,7 @@ const PersonagemPage: React.FC = () => {
                 </BottomInfoLeft>
                 <BottomInfoRight>
                   <CardContent>
-                      <Heading>História</Heading>
+                    <TitleGlitch theme={theme} neon={neon} text={"Historia"} fontSize="20px" />
                       <StoryWithImage cityImage={cidadeImagem}>
                         <HistoryWrapper onClick={() => setHistoryModalOpen(true)}>
                           <PersonagemRichText>

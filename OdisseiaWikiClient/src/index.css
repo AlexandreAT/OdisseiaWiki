@@ -41,6 +41,7 @@
   --lightBlack: rgb(30, 30, 30);
   --black: rgb(23, 23, 23);
   --black-blue: rgb(20, 20, 25);
+  --blackBlueTransp: rgba(0, 0, 57, 0.7);
   --blackTransp: rgba(0, 0, 0, 0.7);
   /*-----------------------------------*/
 }
