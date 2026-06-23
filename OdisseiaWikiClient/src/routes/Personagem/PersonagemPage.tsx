@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { usePersonagem } from './usePersonagem';
-import { PageContainer, TopSection, BottomSection, AvatarWrapper, MetaRow, Sections, CardContent, Heading, SubHeading, InfoList, InfoItem, MetaContent, SectionSpacer, AvatarDivController, SatusDivController, StatusList, StatusDiv, HeaderStatusController, StatusController, StatusHeader, StatusBarWrapper, StatusBarFill, PersonagemRichText, FlexRow, MutedText, BoldLabel, ItemThumb, ItemPlaceholder, GalleryToggle, GalleryContent, SkillItem, Spacer, MaskIcon, ItemRow, FlexFill, InfoControllers, TitleDiv, TagItem, TagList, RelatedLink, HistoryWrapper, HistoryExpandHint, HistoryModalOverlay, HistoryModalSheet, HistoryModalHeader, HistoryModalTitle, HistoryModalClose, HistoryModalContent, InfoSpan, BottomInfoLeft, BottomInfoRight, StoryWithImage, StoryImage } from './PersonagemPage.style';
+import { PageContainer, TopSection, BottomSection, AvatarWrapper, MetaRow, Sections, CardContent, Heading, SubHeading, InfoList, InfoItem, MetaContent, SectionSpacer, AvatarDivController, SatusDivController, StatusList, StatusDiv, HeaderStatusController, StatusController, StatusHeader, StatusBarWrapper, StatusBarFill, PersonagemRichText, FlexRow, MutedText, BoldLabel, ItemThumb, ItemPlaceholder, GalleryToggle, GalleryContent, SkillItem, Spacer, MaskIcon, ItemRow, FlexFill, InfoControllers, TitleDiv, TagItem, TagList, RelatedLink, HistoryWrapper, HistoryExpandHint, HistoryModalOverlay, HistoryModalSheet, HistoryModalHeader, HistoryModalTitle, HistoryModalClose, HistoryModalContent, InfoSpan, BottomInfoLeft, BottomInfoRight, StoryWithImage, StoryImage, HudCornerEl, HudTopLine, HudBottomLine, HudLeftLine, HudRightLine, StatusTopLine, StatusBottomLine, StatusLeftLine, StatusRightLine } from './PersonagemPage.style';
 import glassHeart from '../../assets/svg/glass-heart.svg';
 import rollingEnergy from '../../assets/svg/rolling-energy.svg';
 import electric from '../../assets/svg/electric.svg';
@@ -147,6 +147,14 @@ const PersonagemPage: React.FC = () => {
                     </AvatarWrapper>
 
                     <CardContent>
+                      <HudCornerEl $position="top-left" />
+                      <HudCornerEl $position="top-right" />
+                      <HudCornerEl $position="bottom-left" />
+                      <HudCornerEl $position="bottom-right" />
+                      <HudTopLine $isActive={neon === 'on'} />
+                      <HudBottomLine $isActive={neon === 'on'} />
+                      <HudLeftLine $isActive={neon === 'on'} />
+                      <HudRightLine $isActive={neon === 'on'} />
                       <InfoControllers>
                         <TitleDiv>
                             <TitleGlitch theme={theme} neon={neon} text={nome} fontSize="20px" />
@@ -178,6 +186,12 @@ const PersonagemPage: React.FC = () => {
                         <StatusList>
                             <StatusHeader>
                                 <StatusDiv>
+                                  <HudCornerEl $position="top-left" />
+                                  <HudCornerEl $position="bottom-right" />
+                                  <StatusTopLine $isActive={neon === 'on'} />
+                                  <StatusBottomLine $isActive={neon === 'on'} />
+                                  <StatusLeftLine $isActive={neon === 'on'} />
+                                  <StatusRightLine $isActive={neon === 'on'} />
                                   <MaskIcon src={glassHeart} color={'var(--neonRed)'} size={64} />
                                   <div>
                                     <BoldLabel>Vida</BoldLabel>
@@ -188,6 +202,12 @@ const PersonagemPage: React.FC = () => {
                                   </div>
                                 </StatusDiv>
                                 <StatusDiv>
+                                  <HudCornerEl $position="top-left" />
+                                  <HudCornerEl $position="bottom-right" />
+                                  <StatusTopLine $isActive={neon === 'on'} />
+                                  <StatusBottomLine $isActive={neon === 'on'} />
+                                  <StatusLeftLine $isActive={neon === 'on'} />
+                                  <StatusRightLine $isActive={neon === 'on'} />
                                   <MaskIcon src={rollingEnergy} color={'var(--neonBlue)'} size={64} />
                                   <div>
                                     <BoldLabel>Mana</BoldLabel>
@@ -201,6 +221,12 @@ const PersonagemPage: React.FC = () => {
 
                             <StatusHeader>
                                 <StatusDiv>
+                                  <HudCornerEl $position="top-left" />
+                                  <HudCornerEl $position="bottom-right" />
+                                  <StatusTopLine $isActive={neon === 'on'} />
+                                  <StatusBottomLine $isActive={neon === 'on'} />
+                                  <StatusLeftLine $isActive={neon === 'on'} />
+                                  <StatusRightLine $isActive={neon === 'on'} />
                                   <MaskIcon src={electric} color={'var(--neonGreen)'} size={64} />
                                   <div>
                                     <BoldLabel>Estamina</BoldLabel>
@@ -211,6 +237,12 @@ const PersonagemPage: React.FC = () => {
                                   </div>
                                 </StatusDiv>
                                 <StatusDiv>
+                                  <HudCornerEl $position="top-left" />
+                                  <HudCornerEl $position="bottom-right" />
+                                  <StatusTopLine $isActive={neon === 'on'} />
+                                  <StatusBottomLine $isActive={neon === 'on'} />
+                                  <StatusLeftLine $isActive={neon === 'on'} />
+                                  <StatusRightLine $isActive={neon === 'on'} />
                                   <MaskIcon src={upgrade} color={'var(--neonYellow)'} size={64} />
                                   <div>
                                     <BoldLabel>Xp</BoldLabel>
@@ -228,6 +260,14 @@ const PersonagemPage: React.FC = () => {
             <BottomSection>
                 <BottomInfoLeft>
                   <CardContent gap={5}>
+                    <HudCornerEl $position="top-left" />
+                    <HudCornerEl $position="top-right" />
+                    <HudCornerEl $position="bottom-left" />
+                    <HudCornerEl $position="bottom-right" />
+                    <HudTopLine $isActive={neon === 'on'} />
+                    <HudBottomLine $isActive={neon === 'on'} />
+                    <HudLeftLine $isActive={neon === 'on'} />
+                    <HudRightLine $isActive={neon === 'on'} />
                     <TitleGlitch theme={theme} neon={neon} text={"Informacoes"} fontSize="20px" />
                       {tagsList && (
                         <HeaderStatusController>
@@ -315,6 +355,14 @@ const PersonagemPage: React.FC = () => {
                 </BottomInfoLeft>
                 <BottomInfoRight>
                   <CardContent>
+                    <HudCornerEl $position="top-left" />
+                    <HudCornerEl $position="top-right" />
+                    <HudCornerEl $position="bottom-left" />
+                    <HudCornerEl $position="bottom-right" />
+                    <HudTopLine $isActive={neon === 'on'} />
+                    <HudBottomLine $isActive={neon === 'on'} />
+                    <HudLeftLine $isActive={neon === 'on'} />
+                    <HudRightLine $isActive={neon === 'on'} />
                     <TitleGlitch theme={theme} neon={neon} text={"Historia"} fontSize="20px" />
                       <StoryWithImage cityImage={cidadeImagem}>
                         <HistoryWrapper onClick={() => setHistoryModalOpen(true)}>
@@ -359,6 +407,14 @@ const PersonagemPage: React.FC = () => {
             <SectionSpacer>
               <ClipBox theme={theme} neon={neon} useClip borderRadius="8px" zIndex={1} innerOffset="12px" backgroundColor="rgba(0,0,10,0.25)">
                 <CardContent>
+                  <HudCornerEl $position="top-left" />
+                  <HudCornerEl $position="top-right" />
+                  <HudCornerEl $position="bottom-left" />
+                  <HudCornerEl $position="bottom-right" />
+                  <HudTopLine $isActive={neon === 'on'} />
+                  <HudBottomLine $isActive={neon === 'on'} />
+                  <HudLeftLine $isActive={neon === 'on'} />
+                  <HudRightLine $isActive={neon === 'on'} />
                   <SubHeading>Itens</SubHeading>
                   {(Array.isArray((personagem as any).inventarioJson) && (personagem as any).inventarioJson.length > 0) ? (
                     (personagem as any).inventarioJson.map((it: any, idx: number) => (
@@ -374,6 +430,14 @@ const PersonagemPage: React.FC = () => {
             <SectionSpacer>
               <ClipBox theme={theme} neon={neon} useClip borderRadius="8px" zIndex={1} innerOffset="12px" backgroundColor="rgba(0,0,10,0.25)">
                 <CardContent>
+                  <HudCornerEl $position="top-left" />
+                  <HudCornerEl $position="top-right" />
+                  <HudCornerEl $position="bottom-left" />
+                  <HudCornerEl $position="bottom-right" />
+                  <HudTopLine $isActive={neon === 'on'} />
+                  <HudBottomLine $isActive={neon === 'on'} />
+                  <HudLeftLine $isActive={neon === 'on'} />
+                  <HudRightLine $isActive={neon === 'on'} />
                   <SubHeading>Habilidades</SubHeading>
                   {(Array.isArray((personagem as any).skills) && (personagem as any).skills.length > 0) ? (
                     (personagem as any).skills.map((sk: any, idx: number) => (
@@ -414,6 +478,14 @@ const PersonagemPage: React.FC = () => {
               <ClipBox theme={theme} neon={neon} useClip borderRadius="8px" zIndex={1} innerOffset="8px" backgroundColor="rgba(0,0,10,0.12)">
                 <GalleryToggle onClick={() => setGalleryOpen(s => !s)}>
                   <CardContent>
+                    <HudCornerEl $position="top-left" />
+                    <HudCornerEl $position="top-right" />
+                    <HudCornerEl $position="bottom-left" />
+                    <HudCornerEl $position="bottom-right" />
+                    <HudTopLine $isActive={neon === 'on'} />
+                    <HudBottomLine $isActive={neon === 'on'} />
+                    <HudLeftLine $isActive={neon === 'on'} />
+                    <HudRightLine $isActive={neon === 'on'} />
                     <SubHeading>{galleryOpen ? 'Galeria ▾' : 'Galeria ▸'}</SubHeading>
                   </CardContent>
                 </GalleryToggle>

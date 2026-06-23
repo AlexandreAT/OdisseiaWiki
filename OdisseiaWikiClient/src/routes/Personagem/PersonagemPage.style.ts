@@ -1,7 +1,7 @@
 import { color } from './../../Global Styles/ColorScheme';
 import styled, { css } from 'styled-components';
 import { wikiHeading1Style, wikiHeading2Style, wikiHeading3Style, wikiParagraphStyle, wikiListStyle, wikiBlockquoteStyle, wikiCodeStyle, wikiLinkStyle } from '../Wiki/shared/WikiTextStyles';
-import CantoSuperiorEsquerdo from '../../assets/svg/CantoSuperiorEsquerdo.svg';
+import HudCorner from '../../assets/svg/HudCorner.svg';
 
 export const PageContainer = styled.div`
   padding: 24px;
@@ -33,7 +33,7 @@ export const BottomSection = styled.div`
     width: 100%;
     display: flex;
     flex-direction: row;
-    gap: 12px;
+    gap: 25px;
     padding: 0 25px;
 `;
 
@@ -81,12 +81,13 @@ export const CardContent = styled.div<{ gap?: number }>`
     position: absolute;
     inset: 0;
     z-index: 2;
+    pointer-events: none;
     clip-path: polygon(
       12px 0, calc(100% - 12px) 0, 100% 12px,
       100% calc(100% - 12px), calc(100% - 12px) 100%,
       12px 100%, 0 calc(100% - 12px), 0 12px
     );
-    background: linear-gradient(45deg, var(--clearneonBlue, #00d4ff), var(--clearneonPink, #ff3d3d));
+    //background: linear-gradient(45deg, var(--clearneonBlue, #00d4ff), var(--clearneonPink, #ff3d3d));
 
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
@@ -94,22 +95,220 @@ export const CardContent = styled.div<{ gap?: number }>`
     padding: 3px;
   }
 
-  &::after {
-    content: '';
-    position: absolute;
+`;
 
-    top: -2px;
-    left: -2px;
+export type CornerPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 
-    width: 50px;
-    height: 50px;
+export const HudCornerEl = styled.div<{ $position: CornerPosition }>`
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  pointer-events: none;
+  z-index: 3;
+  filter:
+    drop-shadow(0 0 2px var(--neonBlue))
+    drop-shadow(0 0 4px var(--neonBlue))
+    drop-shadow(0 0 8px var(--neonBlue))
+    drop-shadow(0 0 16px var(--neonBlue));
 
-    background-image: url(${CantoSuperiorEsquerdo});
-    background-repeat: no-repeat;
-    background-size: contain;
+  ${({ $position }) => {
+    switch ($position) {
+      case 'bottom-left':
+        return css`
+          bottom: 0;
+          left: 0;
+          transform: scale(1, 1);
+          background-color: var(--neonBlue);
+        `;
+      case 'bottom-right':
+        return css`
+          bottom: 0;
+          right: 0;
+          transform: scaleX(-1);
+          background: linear-gradient(to right, var(--clearneonBlue), var(--neonBlue));
+        `;
+      case 'top-left':
+        return css`
+          top: 0;
+          left: 0;
+          transform: scaleY(-1);
+          background: linear-gradient(to right, var(--neonBlue), var(--clearneonBlue));
+        `;
+      case 'top-right':
+        return css`
+          top: 0;
+          right: 0;
+          transform: scale(-1);
+          background-color: var(--clearneonBlue);
+        `;
+      default:
+        return css``;
+    }
+  }}
 
-    pointer-events: none;
+  -webkit-mask-image: url(${HudCorner});
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  -webkit-mask-position: center;
+  mask-image: url(${HudCorner});
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  mask-position: center;
+
+  ${({ $position }) => {
+    switch ($position) {
+      case 'top-left':
+        return css`
+          -webkit-mask-position: top left;
+          mask-position: top left;
+        `;
+      case 'bottom-right':
+        return css`
+          -webkit-mask-position: bottom right;
+          mask-position: bottom right;
+        `;
+      default:
+        return css``;
+    }
+  }}
+`;
+
+export const HudTopLine = styled.div<{ $isActive?: boolean }>`
+  position: absolute;
+  top: 0;
+  left: 50px;
+  right: 50px;
+  height: 2px;
+  background: var(--neonBlue);
+  transform: scaleX(0);
+  transform-origin: left center;
+  pointer-events: none;
+  z-index: 1;
+  ${({ $isActive }) => $isActive && `
+    animation: hudLineHorizontal 500ms ease-out forwards;
+  `}
+
+  @keyframes hudLineHorizontal {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
   }
+`;
+
+export const HudBottomLine = styled.div<{ $isActive?: boolean }>`
+  position: absolute;
+  bottom: 0;
+  left: 50px;
+  right: 50px;
+  height: 2px;
+  background: var(--neonBlue);
+  transform: scaleX(0);
+  transform-origin: right center;
+  pointer-events: none;
+  z-index: 1;
+  ${({ $isActive }) => $isActive && `
+    animation: hudLineHorizontal 500ms ease-out forwards;
+  `}
+`;
+
+export const HudLeftLine = styled.div<{ $isActive?: boolean }>`
+  position: absolute;
+  left: 0;
+  top: 50px;
+  bottom: 50px;
+  width: 2px;
+  background: var(--neonBlue);
+  transform: scaleY(0);
+  transform-origin: top center;
+  pointer-events: none;
+  z-index: 1;
+  ${({ $isActive }) => $isActive && `
+    animation: hudLineVertical 500ms ease-out 250ms forwards;
+  `}
+
+  @keyframes hudLineVertical {
+    from { transform: scaleY(0); }
+    to { transform: scaleY(1); }
+  }
+`;
+
+export const HudRightLine = styled.div<{ $isActive?: boolean }>`
+  position: absolute;
+  right: 0;
+  top: 50px;
+  bottom: 50px;
+  width: 2px;
+  background: var(--neonBlue);
+  transform: scaleY(0);
+  transform-origin: bottom center;
+  pointer-events: none;
+  z-index: 1;
+  ${({ $isActive }) => $isActive && `
+    animation: hudLineVertical 500ms ease-out 250ms forwards;
+  `}
+`;
+
+export const StatusTopLine = styled.div<{ $isActive?: boolean }>`
+  position: absolute;
+  top: 0;
+  left: 50px;
+  right: 2px;
+  height: 2px;
+  background: var(--neonBlue);
+  transform: scaleX(0);
+  transform-origin: left center;
+  pointer-events: none;
+  z-index: 1;
+  ${({ $isActive }) => $isActive && `
+    animation: hudLineHorizontal 500ms ease-out forwards;
+  `}
+`;
+
+export const StatusBottomLine = styled.div<{ $isActive?: boolean }>`
+  position: absolute;
+  bottom: 0;
+  left: 2px;
+  right: 50px;
+  height: 2px;
+  background: var(--neonBlue);
+  transform: scaleX(0);
+  transform-origin: right center;
+  pointer-events: none;
+  z-index: 1;
+  ${({ $isActive }) => $isActive && `
+    animation: hudLineHorizontal 500ms ease-out forwards;
+  `}
+`;
+
+export const StatusLeftLine = styled.div<{ $isActive?: boolean }>`
+  position: absolute;
+  left: 0;
+  top: 50px;
+  bottom: 2px;
+  width: 2px;
+  background: var(--neonBlue);
+  transform: scaleY(0);
+  transform-origin: top center;
+  pointer-events: none;
+  z-index: 1;
+  ${({ $isActive }) => $isActive && `
+    animation: hudLineVertical 500ms ease-out 250ms forwards;
+  `}
+`;
+
+export const StatusRightLine = styled.div<{ $isActive?: boolean }>`
+  position: absolute;
+  right: 0;
+  top: 2px;
+  bottom: 50px;
+  width: 2px;
+  background: var(--neonBlue);
+  transform: scaleY(0);
+  transform-origin: bottom center;
+  pointer-events: none;
+  z-index: 1;
+  ${({ $isActive }) => $isActive && `
+    animation: hudLineVertical 500ms ease-out 250ms forwards;
+  `}
 `;
 
 export const Heading = styled.h2`
@@ -312,7 +511,7 @@ export const HistoryModalClose = styled.button<{ theme: 'dark' | 'light'; neon: 
     };
     background: ${({ theme }) => theme === 'dark' ? 'var(--lightBlack)' : 'var(--lightGrey)'};
     transform: scale(1.1);
-    ${({ theme, neon }) => 
+    ${({ theme, neon }) =>
       neon === "on" && `box-shadow: 0 0 10px ${theme === 'dark' ? 'var(--clearneonRed)' : 'var(--neonPink)'};`
     }
   }
@@ -421,7 +620,7 @@ export const StatusController = styled.div`
 export const StatusList = styled.div`
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 32px;
     width: 100%;
     align-items: center;
     justify-content: center;
@@ -431,7 +630,7 @@ export const StatusHeader = styled.div`
     display: flex;
     flex-direction: row;
     width: 100%;
-    gap: 28px;
+    gap: 32px;
 `
 
 export const StatusDiv = styled.div`
@@ -459,7 +658,7 @@ export const StatusDiv = styled.div`
       100% calc(100% - 10px), calc(100% - 10px) 100%,
       10px 100%, 0 calc(100% - 10px), 0 10px
     );
-    background: linear-gradient(45deg, var(--neonRed, #ff3d3d), var(--neonYellow, #ffd700));
+    //background: linear-gradient(45deg, var(--neonBlue), var(--clearneonBlue));
 
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
