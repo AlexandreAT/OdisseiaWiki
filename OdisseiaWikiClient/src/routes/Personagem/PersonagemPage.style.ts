@@ -3,6 +3,27 @@ import styled, { css } from 'styled-components';
 import { wikiHeading1Style, wikiHeading2Style, wikiHeading3Style, wikiParagraphStyle, wikiListStyle, wikiBlockquoteStyle, wikiCodeStyle, wikiLinkStyle } from '../Wiki/shared/WikiTextStyles';
 import HudCorner from '../../assets/svg/HudCorner.svg';
 
+export const BackgroundVideoContainer = styled.div`
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+`;
+
+export const BackgroundVideo = styled.video`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+`;
+
+export const BackgroundOverlay = styled.div`
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 20, 0.75);
+  pointer-events: none;
+`;
+
 export const PageContainer = styled.div`
   padding: 24px;
   display: flex;
@@ -11,6 +32,8 @@ export const PageContainer = styled.div`
   max-width: 1400px;
   gap: 24px;
   align-items: flex-start;
+  position: relative;
+  z-index: 1;
 `;
 
 export const TopSection = styled.div`
@@ -40,7 +63,7 @@ export const BottomSection = styled.div`
 export const AvatarDivController = styled.div`
     display: flex;
     width: 50%;
-    gap: 15px;
+    gap: 25px;
 `;
 
 export const AvatarWrapper = styled.div`
@@ -69,7 +92,7 @@ export const CardContent = styled.div<{ gap?: number }>`
   gap: ${({ gap }) => gap ?? 0}px;
   position: relative;
   z-index: 2;
-  background: rgba(0, 0, 10, 0.3);
+  background: rgba(0, 0, 10, 0.65);
   clip-path: polygon(
     12px 0, calc(100% - 12px) 0, 100% 12px,
     100% calc(100% - 12px), calc(100% - 12px) 100%,
@@ -99,47 +122,50 @@ export const CardContent = styled.div<{ gap?: number }>`
 
 export type CornerPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 
-export const HudCornerEl = styled.div<{ $position: CornerPosition }>`
+export const HudCornerEl = styled.div<{ $position: CornerPosition; $color?: string; $clearColor?: string }>`
   position: absolute;
   width: 50px;
   height: 50px;
   pointer-events: none;
   z-index: 3;
-  filter:
-    drop-shadow(0 0 2px var(--neonBlue))
-    drop-shadow(0 0 4px var(--neonBlue))
-    drop-shadow(0 0 8px var(--neonBlue))
-    drop-shadow(0 0 16px var(--neonBlue));
+  filter: ${({ $color }) => `
+    drop-shadow(0 0 2px ${$color ?? 'var(--neonBlue)'})
+    drop-shadow(0 0 4px ${$color ?? 'var(--neonBlue)'})
+    drop-shadow(0 0 8px ${$color ?? 'var(--neonBlue)'})
+    drop-shadow(0 0 16px ${$color ?? 'var(--neonBlue)'})
+  `};
 
-  ${({ $position }) => {
+  ${({ $position, $color, $clearColor }) => {
+    const color = $color ?? 'var(--neonBlue)';
+    const clearColor = $clearColor ?? 'var(--clearneonBlue)';
     switch ($position) {
       case 'bottom-left':
         return css`
           bottom: 0;
           left: 0;
           transform: scale(1, 1);
-          background-color: var(--neonBlue);
+          background-color: ${color};
         `;
       case 'bottom-right':
         return css`
           bottom: 0;
           right: 0;
           transform: scaleX(-1);
-          background: linear-gradient(to right, var(--clearneonBlue), var(--neonBlue));
+          background: linear-gradient(to right, ${clearColor}, ${color});
         `;
       case 'top-left':
         return css`
           top: 0;
           left: 0;
           transform: scaleY(-1);
-          background: linear-gradient(to right, var(--neonBlue), var(--clearneonBlue));
+          background: linear-gradient(to right, ${color}, ${clearColor});
         `;
       case 'top-right':
         return css`
           top: 0;
           right: 0;
           transform: scale(-1);
-          background-color: var(--clearneonBlue);
+          background-color: ${clearColor};
         `;
       default:
         return css``;
@@ -173,13 +199,13 @@ export const HudCornerEl = styled.div<{ $position: CornerPosition }>`
   }}
 `;
 
-export const HudTopLine = styled.div<{ $isActive?: boolean }>`
+export const HudTopLine = styled.div<{ $isActive?: boolean; $color?: string }>`
   position: absolute;
   top: 0;
   left: 50px;
   right: 50px;
   height: 2px;
-  background: var(--neonBlue);
+  background: ${({ $color }) => $color ?? 'var(--neonBlue)'};
   transform: scaleX(0);
   transform-origin: left center;
   pointer-events: none;
@@ -194,13 +220,13 @@ export const HudTopLine = styled.div<{ $isActive?: boolean }>`
   }
 `;
 
-export const HudBottomLine = styled.div<{ $isActive?: boolean }>`
+export const HudBottomLine = styled.div<{ $isActive?: boolean; $color?: string }>`
   position: absolute;
   bottom: 0;
   left: 50px;
   right: 50px;
   height: 2px;
-  background: var(--neonBlue);
+  background: ${({ $color }) => $color ?? 'var(--neonBlue)'};
   transform: scaleX(0);
   transform-origin: right center;
   pointer-events: none;
@@ -210,13 +236,13 @@ export const HudBottomLine = styled.div<{ $isActive?: boolean }>`
   `}
 `;
 
-export const HudLeftLine = styled.div<{ $isActive?: boolean }>`
+export const HudLeftLine = styled.div<{ $isActive?: boolean; $color?: string }>`
   position: absolute;
   left: 0;
   top: 50px;
   bottom: 50px;
   width: 2px;
-  background: var(--neonBlue);
+  background: ${({ $color }) => $color ?? 'var(--neonBlue)'};
   transform: scaleY(0);
   transform-origin: top center;
   pointer-events: none;
@@ -231,13 +257,13 @@ export const HudLeftLine = styled.div<{ $isActive?: boolean }>`
   }
 `;
 
-export const HudRightLine = styled.div<{ $isActive?: boolean }>`
+export const HudRightLine = styled.div<{ $isActive?: boolean; $color?: string }>`
   position: absolute;
   right: 0;
   top: 50px;
   bottom: 50px;
   width: 2px;
-  background: var(--neonBlue);
+  background: ${({ $color }) => $color ?? 'var(--neonBlue)'};
   transform: scaleY(0);
   transform-origin: bottom center;
   pointer-events: none;
@@ -247,13 +273,13 @@ export const HudRightLine = styled.div<{ $isActive?: boolean }>`
   `}
 `;
 
-export const StatusTopLine = styled.div<{ $isActive?: boolean }>`
+export const StatusTopLine = styled.div<{ $isActive?: boolean; $color?: string }>`
   position: absolute;
   top: 0;
   left: 50px;
   right: 2px;
   height: 2px;
-  background: var(--neonBlue);
+  background: ${({ $color }) => $color ?? 'var(--neonBlue)'};
   transform: scaleX(0);
   transform-origin: left center;
   pointer-events: none;
@@ -263,13 +289,13 @@ export const StatusTopLine = styled.div<{ $isActive?: boolean }>`
   `}
 `;
 
-export const StatusBottomLine = styled.div<{ $isActive?: boolean }>`
+export const StatusBottomLine = styled.div<{ $isActive?: boolean; $color?: string }>`
   position: absolute;
   bottom: 0;
   left: 2px;
   right: 50px;
   height: 2px;
-  background: var(--neonBlue);
+  background: ${({ $color }) => $color ?? 'var(--neonBlue)'};
   transform: scaleX(0);
   transform-origin: right center;
   pointer-events: none;
@@ -279,13 +305,13 @@ export const StatusBottomLine = styled.div<{ $isActive?: boolean }>`
   `}
 `;
 
-export const StatusLeftLine = styled.div<{ $isActive?: boolean }>`
+export const StatusLeftLine = styled.div<{ $isActive?: boolean; $color?: string }>`
   position: absolute;
   left: 0;
   top: 50px;
   bottom: 2px;
   width: 2px;
-  background: var(--neonBlue);
+  background: ${({ $color }) => $color ?? 'var(--neonBlue)'};
   transform: scaleY(0);
   transform-origin: top center;
   pointer-events: none;
@@ -295,13 +321,13 @@ export const StatusLeftLine = styled.div<{ $isActive?: boolean }>`
   `}
 `;
 
-export const StatusRightLine = styled.div<{ $isActive?: boolean }>`
+export const StatusRightLine = styled.div<{ $isActive?: boolean; $color?: string }>`
   position: absolute;
   right: 0;
   top: 2px;
   bottom: 50px;
   width: 2px;
-  background: var(--neonBlue);
+  background: ${({ $color }) => $color ?? 'var(--neonBlue)'};
   transform: scaleY(0);
   transform-origin: bottom center;
   pointer-events: none;
@@ -638,10 +664,10 @@ export const StatusDiv = styled.div`
   gap: 12px;
   align-items: center;
   width: 250px;
-  padding: 8px;
+  padding: 12px 15px;
   position: relative;
   z-index: 2;
-  background: rgba(0, 0, 10, 0.3);
+  background: rgba(0, 0, 10, 0.65);
   clip-path: polygon(
     10px 0, calc(100% - 10px) 0, 100% 10px,
     100% calc(100% - 10px), calc(100% - 10px) 100%,

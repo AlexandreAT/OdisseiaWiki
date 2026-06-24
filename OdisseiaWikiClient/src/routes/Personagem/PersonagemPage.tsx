@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { usePersonagem } from './usePersonagem';
-import { PageContainer, TopSection, BottomSection, AvatarWrapper, MetaRow, Sections, CardContent, Heading, SubHeading, InfoList, InfoItem, MetaContent, SectionSpacer, AvatarDivController, SatusDivController, StatusList, StatusDiv, HeaderStatusController, StatusController, StatusHeader, StatusBarWrapper, StatusBarFill, PersonagemRichText, FlexRow, MutedText, BoldLabel, ItemThumb, ItemPlaceholder, GalleryToggle, GalleryContent, SkillItem, Spacer, MaskIcon, ItemRow, FlexFill, InfoControllers, TitleDiv, TagItem, TagList, RelatedLink, HistoryWrapper, HistoryExpandHint, HistoryModalOverlay, HistoryModalSheet, HistoryModalHeader, HistoryModalTitle, HistoryModalClose, HistoryModalContent, InfoSpan, BottomInfoLeft, BottomInfoRight, StoryWithImage, StoryImage, HudCornerEl, HudTopLine, HudBottomLine, HudLeftLine, HudRightLine, StatusTopLine, StatusBottomLine, StatusLeftLine, StatusRightLine } from './PersonagemPage.style';
+import { PageContainer, TopSection, BottomSection, AvatarWrapper, MetaRow, Sections, CardContent, Heading, SubHeading, InfoList, InfoItem, MetaContent, SectionSpacer, AvatarDivController, SatusDivController, StatusList, StatusDiv, HeaderStatusController, StatusController, StatusHeader, StatusBarWrapper, StatusBarFill, PersonagemRichText, FlexRow, MutedText, BoldLabel, ItemThumb, ItemPlaceholder, GalleryToggle, GalleryContent, SkillItem, Spacer, MaskIcon, ItemRow, FlexFill, InfoControllers, TitleDiv, TagItem, TagList, RelatedLink, HistoryWrapper, HistoryExpandHint, HistoryModalOverlay, HistoryModalSheet, HistoryModalHeader, HistoryModalTitle, HistoryModalClose, HistoryModalContent, InfoSpan, BottomInfoLeft, BottomInfoRight, StoryWithImage, StoryImage, HudCornerEl, HudTopLine, HudBottomLine, HudLeftLine, HudRightLine, StatusTopLine, StatusBottomLine, StatusLeftLine, StatusRightLine, BackgroundVideoContainer, BackgroundVideo, BackgroundOverlay } from './PersonagemPage.style';
 import glassHeart from '../../assets/svg/glass-heart.svg';
 import rollingEnergy from '../../assets/svg/rolling-energy.svg';
 import electric from '../../assets/svg/electric.svg';
@@ -23,6 +23,7 @@ import dna1 from '../../assets/svg/dna1.svg';
 import { SpanLink } from '../../components/Generic/SpanLink/SpanLink';
 import { getPersonagensByIds } from '../../services/personagensService';
 import CloseIcon from '@mui/icons-material/Close';
+import backgroundVideo from '../../assets/backgroundLinesScifiAnimation.mp4';
 
 type InventarioItemProps = {
   item: any;
@@ -114,6 +115,7 @@ const PersonagemPage: React.FC = () => {
 
   if (loading) return <div>Carregando personagem...</div>;
   if (error) return <div>Erro: {error}</div>;
+  console.log("🚀 ~ PersonagemPage ~ personagem:", personagem)
   if (!personagem) return <div>Personagem não encontrado</div>;
 
   const nome = getField(personagem, ['nome', 'Nome']) || 'Sem nome';
@@ -139,6 +141,16 @@ const PersonagemPage: React.FC = () => {
 
   return (
     <PageContainer>
+        <BackgroundVideoContainer>
+          <BackgroundVideo
+            src={backgroundVideo}
+            autoPlay
+            loop
+            muted
+            playsInline
+          />
+          <BackgroundOverlay />
+        </BackgroundVideoContainer>
         <ClipBox theme={theme} neon={neon} width='100%' height='calc(100vh + 50px)' useClip={false} borderRadius="8px" zIndex={1}>
             <TopSection>
                 <AvatarDivController>
@@ -186,12 +198,12 @@ const PersonagemPage: React.FC = () => {
                         <StatusList>
                             <StatusHeader>
                                 <StatusDiv>
-                                  <HudCornerEl $position="top-left" />
-                                  <HudCornerEl $position="bottom-right" />
-                                  <StatusTopLine $isActive={neon === 'on'} />
-                                  <StatusBottomLine $isActive={neon === 'on'} />
-                                  <StatusLeftLine $isActive={neon === 'on'} />
-                                  <StatusRightLine $isActive={neon === 'on'} />
+                                  <HudCornerEl $position="top-left" $color="var(--neonRed)" $clearColor="var(--clearneonRed)" />
+                                  <HudCornerEl $position="bottom-right" $color="var(--neonRed)" $clearColor="var(--clearneonRed)" />
+                                  <StatusTopLine $isActive={neon === 'on'} $color="var(--neonRed)" />
+                                  <StatusBottomLine $isActive={neon === 'on'} $color="var(--neonRed)" />
+                                  <StatusLeftLine $isActive={neon === 'on'} $color="var(--neonRed)" />
+                                  <StatusRightLine $isActive={neon === 'on'} $color="var(--neonRed)" />
                                   <MaskIcon src={glassHeart} color={'var(--neonRed)'} size={64} />
                                   <div>
                                     <BoldLabel>Vida</BoldLabel>
@@ -202,12 +214,12 @@ const PersonagemPage: React.FC = () => {
                                   </div>
                                 </StatusDiv>
                                 <StatusDiv>
-                                  <HudCornerEl $position="top-left" />
-                                  <HudCornerEl $position="bottom-right" />
-                                  <StatusTopLine $isActive={neon === 'on'} />
-                                  <StatusBottomLine $isActive={neon === 'on'} />
-                                  <StatusLeftLine $isActive={neon === 'on'} />
-                                  <StatusRightLine $isActive={neon === 'on'} />
+                                  <HudCornerEl $position="top-left" $color="var(--neonBlue)" $clearColor="var(--clearneonBlue)" />
+                                  <HudCornerEl $position="bottom-right" $color="var(--neonBlue)" $clearColor="var(--clearneonBlue)" />
+                                  <StatusTopLine $isActive={neon === 'on'} $color="var(--neonBlue)" />
+                                  <StatusBottomLine $isActive={neon === 'on'} $color="var(--neonBlue)" />
+                                  <StatusLeftLine $isActive={neon === 'on'} $color="var(--neonBlue)" />
+                                  <StatusRightLine $isActive={neon === 'on'} $color="var(--neonBlue)" />
                                   <MaskIcon src={rollingEnergy} color={'var(--neonBlue)'} size={64} />
                                   <div>
                                     <BoldLabel>Mana</BoldLabel>
@@ -221,12 +233,12 @@ const PersonagemPage: React.FC = () => {
 
                             <StatusHeader>
                                 <StatusDiv>
-                                  <HudCornerEl $position="top-left" />
-                                  <HudCornerEl $position="bottom-right" />
-                                  <StatusTopLine $isActive={neon === 'on'} />
-                                  <StatusBottomLine $isActive={neon === 'on'} />
-                                  <StatusLeftLine $isActive={neon === 'on'} />
-                                  <StatusRightLine $isActive={neon === 'on'} />
+                                  <HudCornerEl $position="top-left" $color="var(--neonGreen)" $clearColor="var(--clearneonGreen)" />
+                                  <HudCornerEl $position="bottom-right" $color="var(--neonGreen)" $clearColor="var(--clearneonGreen)" />
+                                  <StatusTopLine $isActive={neon === 'on'} $color="var(--neonGreen)" />
+                                  <StatusBottomLine $isActive={neon === 'on'} $color="var(--neonGreen)" />
+                                  <StatusLeftLine $isActive={neon === 'on'} $color="var(--neonGreen)" />
+                                  <StatusRightLine $isActive={neon === 'on'} $color="var(--neonGreen)" />
                                   <MaskIcon src={electric} color={'var(--neonGreen)'} size={64} />
                                   <div>
                                     <BoldLabel>Estamina</BoldLabel>
@@ -237,12 +249,12 @@ const PersonagemPage: React.FC = () => {
                                   </div>
                                 </StatusDiv>
                                 <StatusDiv>
-                                  <HudCornerEl $position="top-left" />
-                                  <HudCornerEl $position="bottom-right" />
-                                  <StatusTopLine $isActive={neon === 'on'} />
-                                  <StatusBottomLine $isActive={neon === 'on'} />
-                                  <StatusLeftLine $isActive={neon === 'on'} />
-                                  <StatusRightLine $isActive={neon === 'on'} />
+                                  <HudCornerEl $position="top-left" $color="var(--neonYellow)" $clearColor="var(--clearneonYellow)" />
+                                  <HudCornerEl $position="bottom-right" $color="var(--neonYellow)" $clearColor="var(--clearneonYellow)" />
+                                  <StatusTopLine $isActive={neon === 'on'} $color="var(--neonYellow)" />
+                                  <StatusBottomLine $isActive={neon === 'on'} $color="var(--neonYellow)" />
+                                  <StatusLeftLine $isActive={neon === 'on'} $color="var(--neonYellow)" />
+                                  <StatusRightLine $isActive={neon === 'on'} $color="var(--neonYellow)" />
                                   <MaskIcon src={upgrade} color={'var(--neonYellow)'} size={64} />
                                   <div>
                                     <BoldLabel>Xp</BoldLabel>
