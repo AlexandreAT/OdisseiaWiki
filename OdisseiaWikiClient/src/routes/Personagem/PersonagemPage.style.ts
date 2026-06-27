@@ -2,6 +2,8 @@ import { color } from './../../Global Styles/ColorScheme';
 import styled, { css } from 'styled-components';
 import { wikiHeading1Style, wikiHeading2Style, wikiHeading3Style, wikiParagraphStyle, wikiListStyle, wikiBlockquoteStyle, wikiCodeStyle, wikiLinkStyle } from '../Wiki/shared/WikiTextStyles';
 import HudCorner from '../../assets/svg/HudCorner.svg';
+import Hexagono from '../../assets/svg/Hexagono.svg';
+import HexagonoFill from '../../assets/svg/HexagonoFill.svg';
 
 export const BackgroundVideoContainer = styled.div`
   position: fixed;
@@ -10,6 +12,12 @@ export const BackgroundVideoContainer = styled.div`
   pointer-events: none;
   z-index: 0;
 `;
+
+export const PageController = styled.div`
+  width: 100%;
+  max-width: 100vw;
+  padding-top: 24px;
+`
 
 export const BackgroundVideo = styled.video`
   width: 100%;
@@ -84,15 +92,18 @@ export const Sections = styled.div`
   gap: 12px;
 `;
 
-export const CardContent = styled.div<{ gap?: number }>`
+export const CardContent = styled.div<{ gap?: number, maxWidth?: string, maxHeight?: string, neon: 'on' | 'off' }>`
   padding: 16px;
   width: 100%;
+  max-width: ${({ maxWidth }) => maxWidth || 'none'};
+  max-height: ${({ maxHeight }) => maxHeight || 'none'};
   display: flex;
   flex-direction: column;
   gap: ${({ gap }) => gap ?? 0}px;
   position: relative;
   z-index: 2;
   background: rgba(0, 0, 10, 0.65);
+  box-shadow: ${({ neon }) => neon === 'on' ? 'inset 0 0 20px var(--clearneonBlue)' : 'none'};
   clip-path: polygon(
     12px 0, calc(100% - 12px) 0, 100% 12px,
     100% calc(100% - 12px), calc(100% - 12px) 100%,
@@ -110,34 +121,49 @@ export const CardContent = styled.div<{ gap?: number }>`
       100% calc(100% - 12px), calc(100% - 12px) 100%,
       12px 100%, 0 calc(100% - 12px), 0 12px
     );
-    //background: linear-gradient(45deg, var(--clearneonBlue, #00d4ff), var(--clearneonPink, #ff3d3d));
-
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
     padding: 3px;
   }
 
+  transition: all 0.2s ease;
 `;
 
 export type CornerPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 
-export const HudCornerEl = styled.div<{ $position: CornerPosition; $color?: string; $clearColor?: string }>`
+export const HudCornerEl = styled.div<{ $position: CornerPosition; $color?: string; $clearColor?: string; $neon?: boolean }>` 
   position: absolute;
   width: 50px;
   height: 50px;
   pointer-events: none;
   z-index: 3;
-  filter: ${({ $color }) => `
-    drop-shadow(0 0 2px ${$color ?? 'var(--neonBlue)'})
-    drop-shadow(0 0 4px ${$color ?? 'var(--neonBlue)'})
-    drop-shadow(0 0 8px ${$color ?? 'var(--neonBlue)'})
-    drop-shadow(0 0 16px ${$color ?? 'var(--neonBlue)'})
-  `};
+  filter: ${({ $color, $clearColor, $neon }) => {
+    const glow = $neon ? ($clearColor ?? 'var(--clearneonBlue)') : ($color ?? 'var(--neonBlue)');
+    return `
+    drop-shadow(0 0 2px ${glow})
+    drop-shadow(0 0 4px ${glow})
+    drop-shadow(0 0 8px ${glow})
+    drop-shadow(0 0 16px ${glow})
+  `; }};
 
-  ${({ $position, $color, $clearColor }) => {
-    const color = $color ?? 'var(--neonBlue)';
+  ${({ $position, $color, $clearColor, $neon }) => {
     const clearColor = $clearColor ?? 'var(--clearneonBlue)';
+    if ($neon) {
+      switch ($position) {
+        case 'bottom-left':
+          return css`bottom: 0; left: 0; transform: scale(1, 1); background-color: ${clearColor};`;
+        case 'bottom-right':
+          return css`bottom: 0; right: 0; transform: scaleX(-1); background-color: ${clearColor};`;
+        case 'top-left':
+          return css`top: 0; left: 0; transform: scaleY(-1); background-color: ${clearColor};`;
+        case 'top-right':
+          return css`top: 0; right: 0; transform: scale(-1); background-color: ${clearColor};`;
+        default:
+          return css``;
+      }
+    }
+    const color = $color ?? 'var(--neonBlue)';
     switch ($position) {
       case 'bottom-left':
         return css`
@@ -199,13 +225,13 @@ export const HudCornerEl = styled.div<{ $position: CornerPosition; $color?: stri
   }}
 `;
 
-export const HudTopLine = styled.div<{ $isActive?: boolean; $color?: string }>`
+export const HudTopLine = styled.div<{ $isActive?: boolean; $color?: string; $clearColor?: string; $neon?: boolean }>`
   position: absolute;
   top: 0;
   left: 50px;
   right: 50px;
   height: 2px;
-  background: ${({ $color }) => $color ?? 'var(--neonBlue)'};
+  background: ${({ $color, $clearColor, $neon }) => $neon ? ($clearColor ?? 'var(--clearneonBlue)') : ($color ?? 'var(--neonBlue)')};
   transform: scaleX(0);
   transform-origin: left center;
   pointer-events: none;
@@ -220,13 +246,13 @@ export const HudTopLine = styled.div<{ $isActive?: boolean; $color?: string }>`
   }
 `;
 
-export const HudBottomLine = styled.div<{ $isActive?: boolean; $color?: string }>`
+export const HudBottomLine = styled.div<{ $isActive?: boolean; $color?: string; $clearColor?: string; $neon?: boolean }>`
   position: absolute;
   bottom: 0;
   left: 50px;
   right: 50px;
   height: 2px;
-  background: ${({ $color }) => $color ?? 'var(--neonBlue)'};
+  background: ${({ $color, $clearColor, $neon }) => $neon ? ($clearColor ?? 'var(--clearneonBlue)') : ($color ?? 'var(--neonBlue)')};
   transform: scaleX(0);
   transform-origin: right center;
   pointer-events: none;
@@ -236,13 +262,13 @@ export const HudBottomLine = styled.div<{ $isActive?: boolean; $color?: string }
   `}
 `;
 
-export const HudLeftLine = styled.div<{ $isActive?: boolean; $color?: string }>`
+export const HudLeftLine = styled.div<{ $isActive?: boolean; $color?: string; $clearColor?: string; $neon?: boolean }>`
   position: absolute;
   left: 0;
   top: 50px;
   bottom: 50px;
   width: 2px;
-  background: ${({ $color }) => $color ?? 'var(--neonBlue)'};
+  background: ${({ $color, $clearColor, $neon }) => $neon ? ($clearColor ?? 'var(--clearneonBlue)') : ($color ?? 'var(--neonBlue)')};
   transform: scaleY(0);
   transform-origin: top center;
   pointer-events: none;
@@ -257,13 +283,13 @@ export const HudLeftLine = styled.div<{ $isActive?: boolean; $color?: string }>`
   }
 `;
 
-export const HudRightLine = styled.div<{ $isActive?: boolean; $color?: string }>`
+export const HudRightLine = styled.div<{ $isActive?: boolean; $color?: string; $clearColor?: string; $neon?: boolean }>`
   position: absolute;
   right: 0;
   top: 50px;
   bottom: 50px;
   width: 2px;
-  background: ${({ $color }) => $color ?? 'var(--neonBlue)'};
+  background: ${({ $color, $clearColor, $neon }) => $neon ? ($clearColor ?? 'var(--clearneonBlue)') : ($color ?? 'var(--neonBlue)')};
   transform: scaleY(0);
   transform-origin: bottom center;
   pointer-events: none;
@@ -273,13 +299,13 @@ export const HudRightLine = styled.div<{ $isActive?: boolean; $color?: string }>
   `}
 `;
 
-export const StatusTopLine = styled.div<{ $isActive?: boolean; $color?: string }>`
+export const StatusTopLine = styled.div<{ $isActive?: boolean; $color?: string; $clearColor?: string; $neon?: boolean }>`
   position: absolute;
   top: 0;
   left: 50px;
   right: 2px;
   height: 2px;
-  background: ${({ $color }) => $color ?? 'var(--neonBlue)'};
+  background: ${({ $color, $clearColor, $neon }) => $neon ? ($clearColor ?? 'var(--clearneonBlue)') : ($color ?? 'var(--neonBlue)')};
   transform: scaleX(0);
   transform-origin: left center;
   pointer-events: none;
@@ -289,13 +315,13 @@ export const StatusTopLine = styled.div<{ $isActive?: boolean; $color?: string }
   `}
 `;
 
-export const StatusBottomLine = styled.div<{ $isActive?: boolean; $color?: string }>`
+export const StatusBottomLine = styled.div<{ $isActive?: boolean; $color?: string; $clearColor?: string; $neon?: boolean }>`
   position: absolute;
   bottom: 0;
   left: 2px;
   right: 50px;
   height: 2px;
-  background: ${({ $color }) => $color ?? 'var(--neonBlue)'};
+  background: ${({ $color, $clearColor, $neon }) => $neon ? ($clearColor ?? 'var(--clearneonBlue)') : ($color ?? 'var(--neonBlue)')};
   transform: scaleX(0);
   transform-origin: right center;
   pointer-events: none;
@@ -305,13 +331,13 @@ export const StatusBottomLine = styled.div<{ $isActive?: boolean; $color?: strin
   `}
 `;
 
-export const StatusLeftLine = styled.div<{ $isActive?: boolean; $color?: string }>`
+export const StatusLeftLine = styled.div<{ $isActive?: boolean; $color?: string; $clearColor?: string; $neon?: boolean }>`
   position: absolute;
   left: 0;
   top: 50px;
   bottom: 2px;
   width: 2px;
-  background: ${({ $color }) => $color ?? 'var(--neonBlue)'};
+  background: ${({ $color, $clearColor, $neon }) => $neon ? ($clearColor ?? 'var(--clearneonBlue)') : ($color ?? 'var(--neonBlue)')};
   transform: scaleY(0);
   transform-origin: top center;
   pointer-events: none;
@@ -321,13 +347,13 @@ export const StatusLeftLine = styled.div<{ $isActive?: boolean; $color?: string 
   `}
 `;
 
-export const StatusRightLine = styled.div<{ $isActive?: boolean; $color?: string }>`
+export const StatusRightLine = styled.div<{ $isActive?: boolean; $color?: string; $clearColor?: string; $neon?: boolean }>`
   position: absolute;
   right: 0;
   top: 2px;
   bottom: 50px;
   width: 2px;
-  background: ${({ $color }) => $color ?? 'var(--neonBlue)'};
+  background: ${({ $color, $clearColor, $neon }) => $neon ? ($clearColor ?? 'var(--clearneonBlue)') : ($color ?? 'var(--neonBlue)')};
   transform: scaleY(0);
   transform-origin: bottom center;
   pointer-events: none;
@@ -684,8 +710,6 @@ export const StatusDiv = styled.div`
       100% calc(100% - 10px), calc(100% - 10px) 100%,
       10px 100%, 0 calc(100% - 10px), 0 10px
     );
-    //background: linear-gradient(45deg, var(--neonBlue), var(--clearneonBlue));
-
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
@@ -717,9 +741,8 @@ export const StatusBarFill = styled.div<{ $color: string; $pct: number }>`
   width: ${({ $pct }) => `${Math.max(0, Math.min(100, $pct))}%`};
   background: ${({ $color }) => $color};
   transition: width 250ms ease;
+  border-radius: 20px;
 `;
-
-// ─── Consolidated reusable layout components ───────────────────────────────────
 
 export const FlexRow = styled.div<{ gap?: number; alignItems?: string }>`
   display: flex;
@@ -863,4 +886,70 @@ export const StoryImage = styled.img<{ src?: string }>`
   flex-shrink: 0;
   mask-image: linear-gradient(to right, transparent, black 20%, black 80%, transparent);
   -webkit-mask-image: linear-gradient(to right, transparent, black 50%, black 100%, transparent);
+`;
+
+export const HexagonHud = styled.div`
+  position: relative;
+  width: 85px;
+  height: 85px;
+  align-self: center;
+  margin-top: 12px;
+`;
+
+export const HexagonBackground = styled.div`
+  position: absolute;
+  inset: 6px;
+  background: rgba(0, 0, 10, 0.88);
+  -webkit-mask-image: url(${HexagonoFill});
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  -webkit-mask-position: center;
+  mask-image: url(${HexagonoFill});
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  mask-position: center;
+  z-index: 1;
+`;
+
+export const HexagonContent = styled.div`
+  position: absolute;
+  inset: 6px;
+  background: transparent;
+  -webkit-mask-image: url(${HexagonoFill});
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  -webkit-mask-position: center;
+  mask-image: url(${HexagonoFill});
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  mask-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  z-index: 2;
+`;
+
+export const HexagonBorder = styled.div<{ $neon?: boolean }>`
+  position: absolute;
+  inset: 0;
+  background: var(--neonBlue);
+  -webkit-mask-image: url(${Hexagono});
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  -webkit-mask-position: center;
+  mask-image: url(${Hexagono});
+  mask-repeat: no-repeat;
+  mask-size: 100% 100%;
+  mask-position: center;
+  z-index: 3;
+  filter: ${({ $neon }) => $neon ? 'drop-shadow(0 0 2px var(--clearneonBlue))' : 'none'};
+`;
+
+export const HexagonValue = styled.div`
+  font-size: 30px;
+  font-weight: 700;
+  color: var(--clearneonBlue);
+  line-height: 1;
+  font-family: "Orbitron", sans-serif;
 `;

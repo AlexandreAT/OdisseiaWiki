@@ -12,6 +12,8 @@ interface Props {
     zIndex?: number;
   enableClip?: boolean;
   backgroundColor?: string;
+  maxHeight?: string;
+  maxWidth?: string;
 }
 
 const getBlue = (type?: 'primary' | 'secondary') => type === 'secondary' ? 'var(--clearneonPink)' : 'var(--clearneonBlue)';
@@ -20,8 +22,10 @@ const getNeonBlue = (type?: 'primary' | 'secondary') => type === 'secondary' ? '
 const getNeonPink = (type?: 'primary' | 'secondary') => type === 'secondary' ? 'var(--neonBlue)' : 'var(--neonPink)';
 
 export const ClipController = styled.div<Props & { autoSize?: boolean }>`
-    width: ${({ width, autoSize }) => (autoSize ? 'auto' : width || '820px')};
-    height: ${({ height, autoSize }) => (autoSize ? 'auto' : height || '520px')};
+    width: ${({ width, autoSize }) => (width ? width : autoSize ? 'auto' : '820px')};
+    height: ${({ height, autoSize }) => (height ? height : autoSize ? 'auto' : '520px')};
+    max-height: ${({ maxHeight }) => maxHeight || 'none'};
+    max-width: ${({ maxWidth }) => maxWidth || 'none'};
 
     padding: ${({ autoSize }) => (autoSize ? '20px' : '0')};
 

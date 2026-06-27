@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { usePersonagem } from './usePersonagem';
-import { PageContainer, TopSection, BottomSection, AvatarWrapper, MetaRow, Sections, CardContent, Heading, SubHeading, InfoList, InfoItem, MetaContent, SectionSpacer, AvatarDivController, SatusDivController, StatusList, StatusDiv, HeaderStatusController, StatusController, StatusHeader, StatusBarWrapper, StatusBarFill, PersonagemRichText, FlexRow, MutedText, BoldLabel, ItemThumb, ItemPlaceholder, GalleryToggle, GalleryContent, SkillItem, Spacer, MaskIcon, ItemRow, FlexFill, InfoControllers, TitleDiv, TagItem, TagList, RelatedLink, HistoryWrapper, HistoryExpandHint, HistoryModalOverlay, HistoryModalSheet, HistoryModalHeader, HistoryModalTitle, HistoryModalClose, HistoryModalContent, InfoSpan, BottomInfoLeft, BottomInfoRight, StoryWithImage, StoryImage, HudCornerEl, HudTopLine, HudBottomLine, HudLeftLine, HudRightLine, StatusTopLine, StatusBottomLine, StatusLeftLine, StatusRightLine, BackgroundVideoContainer, BackgroundVideo, BackgroundOverlay } from './PersonagemPage.style';
+import { PageContainer, TopSection, BottomSection, AvatarWrapper, MetaRow, Sections, CardContent, Heading, SubHeading, InfoList, InfoItem, MetaContent, SectionSpacer, AvatarDivController, SatusDivController, StatusList, StatusDiv, HeaderStatusController, StatusController, StatusHeader, StatusBarWrapper, StatusBarFill, PersonagemRichText, FlexRow, MutedText, BoldLabel, ItemThumb, ItemPlaceholder, GalleryToggle, GalleryContent, SkillItem, Spacer, MaskIcon, ItemRow, FlexFill, InfoControllers, TitleDiv, TagItem, TagList, RelatedLink, HistoryWrapper, HistoryExpandHint, HistoryModalOverlay, HistoryModalSheet, HistoryModalHeader, HistoryModalTitle, HistoryModalClose, HistoryModalContent, InfoSpan, BottomInfoLeft, BottomInfoRight, StoryWithImage, StoryImage, HudCornerEl, HudTopLine, HudBottomLine, HudLeftLine, HudRightLine, StatusTopLine, StatusBottomLine, StatusLeftLine, StatusRightLine, BackgroundVideoContainer, BackgroundVideo, BackgroundOverlay, HexagonHud, HexagonBackground, HexagonBorder, HexagonContent, HexagonValue, PageController } from './PersonagemPage.style';
 import glassHeart from '../../assets/svg/glass-heart.svg';
 import rollingEnergy from '../../assets/svg/rolling-energy.svg';
 import electric from '../../assets/svg/electric.svg';
@@ -151,22 +151,23 @@ const PersonagemPage: React.FC = () => {
           />
           <BackgroundOverlay />
         </BackgroundVideoContainer>
-        <ClipBox theme={theme} neon={neon} width='100%' height='calc(100vh + 50px)' useClip={false} borderRadius="8px" zIndex={1}>
+        <PageController>
+        <ClipBox theme={theme} neon={neon} width="100%" height='auto' useClip={false} borderRadius="8px" zIndex={1}>
             <TopSection>
                 <AvatarDivController>
                     <AvatarWrapper>
                         <AvatarIcon theme={theme} neon={neon} initialImage={imagem ? normalizeImagePath(imagem) : ''} size={250} clickable={false} />
                     </AvatarWrapper>
 
-                    <CardContent>
-                      <HudCornerEl $position="top-left" />
-                      <HudCornerEl $position="top-right" />
-                      <HudCornerEl $position="bottom-left" />
-                      <HudCornerEl $position="bottom-right" />
-                      <HudTopLine $isActive={neon === 'on'} />
-                      <HudBottomLine $isActive={neon === 'on'} />
-                      <HudLeftLine $isActive={neon === 'on'} />
-                      <HudRightLine $isActive={neon === 'on'} />
+                    <CardContent maxWidth='300px' neon={neon}>
+                      <HudCornerEl $position="top-left" $neon={neon === 'on'} />
+                      <HudCornerEl $position="top-right" $neon={neon === 'on'} />
+                      <HudCornerEl $position="bottom-left" $neon={neon === 'on'} />
+                      <HudCornerEl $position="bottom-right" $neon={neon === 'on'} />
+                      <HudTopLine $isActive={neon === 'on'} $neon={neon === 'on'} />
+                      <HudBottomLine $isActive={neon === 'on'} $neon={neon === 'on'} />
+                      <HudLeftLine $isActive={neon === 'on'} $neon={neon === 'on'} />
+                      <HudRightLine $isActive={neon === 'on'} $neon={neon === 'on'} />
                       <InfoControllers>
                         <TitleDiv>
                             <TitleGlitch theme={theme} neon={neon} text={nome} fontSize="20px" />
@@ -198,12 +199,12 @@ const PersonagemPage: React.FC = () => {
                         <StatusList>
                             <StatusHeader>
                                 <StatusDiv>
-                                  <HudCornerEl $position="top-left" $color="var(--neonRed)" $clearColor="var(--clearneonRed)" />
-                                  <HudCornerEl $position="bottom-right" $color="var(--neonRed)" $clearColor="var(--clearneonRed)" />
-                                  <StatusTopLine $isActive={neon === 'on'} $color="var(--neonRed)" />
-                                  <StatusBottomLine $isActive={neon === 'on'} $color="var(--neonRed)" />
-                                  <StatusLeftLine $isActive={neon === 'on'} $color="var(--neonRed)" />
-                                  <StatusRightLine $isActive={neon === 'on'} $color="var(--neonRed)" />
+                                  <HudCornerEl $position="top-left" $color="var(--neonRed)" $clearColor="var(--clearneonRed)" $neon={neon === 'on'} />
+                                  <HudCornerEl $position="bottom-right" $color="var(--neonRed)" $clearColor="var(--clearneonRed)" $neon={neon === 'on'} />
+                                  <StatusTopLine $isActive={neon === 'on'} $color="var(--neonRed)" $clearColor="var(--clearneonRed)" $neon={neon === 'on'} />
+                                  <StatusBottomLine $isActive={neon === 'on'} $color="var(--neonRed)" $clearColor="var(--clearneonRed)" $neon={neon === 'on'} />
+                                  <StatusLeftLine $isActive={neon === 'on'} $color="var(--neonRed)" $clearColor="var(--clearneonRed)" $neon={neon === 'on'} />
+                                  <StatusRightLine $isActive={neon === 'on'} $color="var(--neonRed)" $clearColor="var(--clearneonRed)" $neon={neon === 'on'} />
                                   <MaskIcon src={glassHeart} color={'var(--neonRed)'} size={64} />
                                   <div>
                                     <BoldLabel>Vida</BoldLabel>
@@ -214,13 +215,13 @@ const PersonagemPage: React.FC = () => {
                                   </div>
                                 </StatusDiv>
                                 <StatusDiv>
-                                  <HudCornerEl $position="top-left" $color="var(--neonBlue)" $clearColor="var(--clearneonBlue)" />
-                                  <HudCornerEl $position="bottom-right" $color="var(--neonBlue)" $clearColor="var(--clearneonBlue)" />
-                                  <StatusTopLine $isActive={neon === 'on'} $color="var(--neonBlue)" />
-                                  <StatusBottomLine $isActive={neon === 'on'} $color="var(--neonBlue)" />
-                                  <StatusLeftLine $isActive={neon === 'on'} $color="var(--neonBlue)" />
-                                  <StatusRightLine $isActive={neon === 'on'} $color="var(--neonBlue)" />
-                                  <MaskIcon src={rollingEnergy} color={'var(--neonBlue)'} size={64} />
+                                  <HudCornerEl $position="top-left" $color="var(--neonBlue)" $clearColor="var(--clearneonBlue)" $neon={neon === 'on'} />
+                                  <HudCornerEl $position="bottom-right" $color="var(--neonBlue)" $clearColor="var(--clearneonBlue)" $neon={neon === 'on'} />
+                                  <StatusTopLine $isActive={neon === 'on'} $color="var(--neonBlue)" $clearColor="var(--clearneonBlue)" $neon={neon === 'on'} />
+                                  <StatusBottomLine $isActive={neon === 'on'} $color="var(--neonBlue)" $clearColor="var(--clearneonBlue)" $neon={neon === 'on'} />
+                                  <StatusLeftLine $isActive={neon === 'on'} $color="var(--neonBlue)" $clearColor="var(--clearneonBlue)" $neon={neon === 'on'} />
+                                  <StatusRightLine $isActive={neon === 'on'} $color="var(--neonBlue)" $clearColor="var(--clearneonBlue)" $neon={neon === 'on'} />
+                                  <MaskIcon src={rollingEnergy} color={neon === 'on' ? 'var(--clearneonBlue)' : 'var(--neonBlue)'} size={64} />
                                   <div>
                                     <BoldLabel>Mana</BoldLabel>
                                     <MutedText>{(personagem as any)?.statusJson?.status?.mana ?? '—'} / {(personagem as any)?.statusJson?.status?.manaMaxima ?? '—'}</MutedText>
@@ -233,12 +234,12 @@ const PersonagemPage: React.FC = () => {
 
                             <StatusHeader>
                                 <StatusDiv>
-                                  <HudCornerEl $position="top-left" $color="var(--neonGreen)" $clearColor="var(--clearneonGreen)" />
-                                  <HudCornerEl $position="bottom-right" $color="var(--neonGreen)" $clearColor="var(--clearneonGreen)" />
-                                  <StatusTopLine $isActive={neon === 'on'} $color="var(--neonGreen)" />
-                                  <StatusBottomLine $isActive={neon === 'on'} $color="var(--neonGreen)" />
-                                  <StatusLeftLine $isActive={neon === 'on'} $color="var(--neonGreen)" />
-                                  <StatusRightLine $isActive={neon === 'on'} $color="var(--neonGreen)" />
+                                  <HudCornerEl $position="top-left" $color="var(--neonGreen)" $clearColor="var(--clearneonGreen)" $neon={neon === 'on'} />
+                                  <HudCornerEl $position="bottom-right" $color="var(--neonGreen)" $clearColor="var(--clearneonGreen)" $neon={neon === 'on'} />
+                                  <StatusTopLine $isActive={neon === 'on'} $color="var(--neonGreen)" $clearColor="var(--clearneonGreen)" $neon={neon === 'on'} />
+                                  <StatusBottomLine $isActive={neon === 'on'} $color="var(--neonGreen)" $clearColor="var(--clearneonGreen)" $neon={neon === 'on'} />
+                                  <StatusLeftLine $isActive={neon === 'on'} $color="var(--neonGreen)" $clearColor="var(--clearneonGreen)" $neon={neon === 'on'} />
+                                  <StatusRightLine $isActive={neon === 'on'} $color="var(--neonGreen)" $clearColor="var(--clearneonGreen)" $neon={neon === 'on'} />
                                   <MaskIcon src={electric} color={'var(--neonGreen)'} size={64} />
                                   <div>
                                     <BoldLabel>Estamina</BoldLabel>
@@ -249,12 +250,12 @@ const PersonagemPage: React.FC = () => {
                                   </div>
                                 </StatusDiv>
                                 <StatusDiv>
-                                  <HudCornerEl $position="top-left" $color="var(--neonYellow)" $clearColor="var(--clearneonYellow)" />
-                                  <HudCornerEl $position="bottom-right" $color="var(--neonYellow)" $clearColor="var(--clearneonYellow)" />
-                                  <StatusTopLine $isActive={neon === 'on'} $color="var(--neonYellow)" />
-                                  <StatusBottomLine $isActive={neon === 'on'} $color="var(--neonYellow)" />
-                                  <StatusLeftLine $isActive={neon === 'on'} $color="var(--neonYellow)" />
-                                  <StatusRightLine $isActive={neon === 'on'} $color="var(--neonYellow)" />
+                                  <HudCornerEl $position="top-left" $color="var(--neonYellow)" $clearColor="var(--clearneonYellow)" $neon={neon === 'on'} />
+                                  <HudCornerEl $position="bottom-right" $color="var(--neonYellow)" $clearColor="var(--clearneonYellow)" $neon={neon === 'on'} />
+                                  <StatusTopLine $isActive={neon === 'on'} $color="var(--neonYellow)" $clearColor="var(--clearneonYellow)" $neon={neon === 'on'} />
+                                  <StatusBottomLine $isActive={neon === 'on'} $color="var(--neonYellow)" $clearColor="var(--clearneonYellow)" $neon={neon === 'on'} />
+                                  <StatusLeftLine $isActive={neon === 'on'} $color="var(--neonYellow)" $clearColor="var(--clearneonYellow)" $neon={neon === 'on'} />
+                                  <StatusRightLine $isActive={neon === 'on'} $color="var(--neonYellow)" $clearColor="var(--clearneonYellow)" $neon={neon === 'on'} />
                                   <MaskIcon src={upgrade} color={'var(--neonYellow)'} size={64} />
                                   <div>
                                     <BoldLabel>Xp</BoldLabel>
@@ -266,20 +267,28 @@ const PersonagemPage: React.FC = () => {
                                 </StatusDiv>
                             </StatusHeader>
                         </StatusList>
+                        <HexagonHud>
+                          <HexagonBackground />
+                          <HexagonContent>
+                            <BoldLabel>Nível</BoldLabel>
+                            <HexagonValue>{(personagem as any)?.statusJson?.nivel ?? '—'}</HexagonValue>
+                          </HexagonContent>
+                          <HexagonBorder $neon={neon === 'on'} />
+                        </HexagonHud>
                     </StatusController>
                 </SatusDivController>
             </TopSection>
             <BottomSection>
                 <BottomInfoLeft>
-                  <CardContent gap={5}>
-                    <HudCornerEl $position="top-left" />
-                    <HudCornerEl $position="top-right" />
-                    <HudCornerEl $position="bottom-left" />
-                    <HudCornerEl $position="bottom-right" />
-                    <HudTopLine $isActive={neon === 'on'} />
-                    <HudBottomLine $isActive={neon === 'on'} />
-                    <HudLeftLine $isActive={neon === 'on'} />
-                    <HudRightLine $isActive={neon === 'on'} />
+                  <CardContent gap={5} neon={neon}>
+                    <HudCornerEl $position="top-left" $neon={neon === 'on'} />
+                    <HudCornerEl $position="top-right" $neon={neon === 'on'} />
+                    <HudCornerEl $position="bottom-left" $neon={neon === 'on'} />
+                    <HudCornerEl $position="bottom-right" $neon={neon === 'on'} />
+                    <HudTopLine $isActive={neon === 'on'} $neon={neon === 'on'} />
+                    <HudBottomLine $isActive={neon === 'on'} $neon={neon === 'on'} />
+                    <HudLeftLine $isActive={neon === 'on'} $neon={neon === 'on'} />
+                    <HudRightLine $isActive={neon === 'on'} $neon={neon === 'on'} />
                     <TitleGlitch theme={theme} neon={neon} text={"Informacoes"} fontSize="20px" />
                       {tagsList && (
                         <HeaderStatusController>
@@ -366,15 +375,15 @@ const PersonagemPage: React.FC = () => {
                   </CardContent>
                 </BottomInfoLeft>
                 <BottomInfoRight>
-                  <CardContent>
-                    <HudCornerEl $position="top-left" />
-                    <HudCornerEl $position="top-right" />
-                    <HudCornerEl $position="bottom-left" />
-                    <HudCornerEl $position="bottom-right" />
-                    <HudTopLine $isActive={neon === 'on'} />
-                    <HudBottomLine $isActive={neon === 'on'} />
-                    <HudLeftLine $isActive={neon === 'on'} />
-                    <HudRightLine $isActive={neon === 'on'} />
+                  <CardContent neon={neon}>
+                    <HudCornerEl $position="top-left" $neon={neon === 'on'} />
+                    <HudCornerEl $position="top-right" $neon={neon === 'on'} />
+                    <HudCornerEl $position="bottom-left" $neon={neon === 'on'} />
+                    <HudCornerEl $position="bottom-right" $neon={neon === 'on'} />
+                    <HudTopLine $isActive={neon === 'on'} $neon={neon === 'on'} />
+                    <HudBottomLine $isActive={neon === 'on'} $neon={neon === 'on'} />
+                    <HudLeftLine $isActive={neon === 'on'} $neon={neon === 'on'} />
+                    <HudRightLine $isActive={neon === 'on'} $neon={neon === 'on'} />
                     <TitleGlitch theme={theme} neon={neon} text={"Historia"} fontSize="20px" />
                       <StoryWithImage cityImage={cidadeImagem}>
                         <HistoryWrapper onClick={() => setHistoryModalOpen(true)}>
@@ -391,6 +400,7 @@ const PersonagemPage: React.FC = () => {
                 </BottomInfoRight>
             </BottomSection>
         </ClipBox>
+        </PageController>
 
         {historyModalOpen && historia && createPortal(
           <HistoryModalOverlay onClick={(e) => { if (e.target === e.currentTarget) setHistoryModalOpen(false); }}>
@@ -418,7 +428,7 @@ const PersonagemPage: React.FC = () => {
 
             <SectionSpacer>
               <ClipBox theme={theme} neon={neon} useClip borderRadius="8px" zIndex={1} innerOffset="12px" backgroundColor="rgba(0,0,10,0.25)">
-                <CardContent>
+                <CardContent neon={neon}>
                   <HudCornerEl $position="top-left" />
                   <HudCornerEl $position="top-right" />
                   <HudCornerEl $position="bottom-left" />
@@ -441,7 +451,7 @@ const PersonagemPage: React.FC = () => {
 
             <SectionSpacer>
               <ClipBox theme={theme} neon={neon} useClip borderRadius="8px" zIndex={1} innerOffset="12px" backgroundColor="rgba(0,0,10,0.25)">
-                <CardContent>
+                <CardContent neon={neon}>
                   <HudCornerEl $position="top-left" />
                   <HudCornerEl $position="top-right" />
                   <HudCornerEl $position="bottom-left" />
@@ -489,7 +499,7 @@ const PersonagemPage: React.FC = () => {
             <SectionSpacer>
               <ClipBox theme={theme} neon={neon} useClip borderRadius="8px" zIndex={1} innerOffset="8px" backgroundColor="rgba(0,0,10,0.12)">
                 <GalleryToggle onClick={() => setGalleryOpen(s => !s)}>
-                  <CardContent>
+                  <CardContent neon={neon}>
                     <HudCornerEl $position="top-left" />
                     <HudCornerEl $position="top-right" />
                     <HudCornerEl $position="bottom-left" />
