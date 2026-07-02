@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { usePersonagem } from './usePersonagem';
-import { PageContainer, TopSection, BottomSection, AvatarWrapper, MetaRow, Sections, CardContent, Heading, SubHeading, InfoList, InfoItem, MetaContent, SectionSpacer, AvatarDivController, SatusDivController, StatusList, StatusDiv, HeaderStatusController, StatusController, StatusHeader, StatusBarWrapper, StatusBarFill, PersonagemRichText, FlexRow, MutedText, BoldLabel, ItemThumb, ItemPlaceholder, GalleryToggle, GalleryContent, SkillItem, Spacer, MaskIcon, ItemRow, FlexFill, InfoControllers, TitleDiv, TagItem, TagList, RelatedLink, HistoryWrapper, HistoryExpandHint, HistoryModalOverlay, HistoryModalSheet, HistoryModalHeader, HistoryModalTitle, HistoryModalClose, HistoryModalContent, InfoSpan, BottomInfoLeft, BottomInfoRight, StoryWithImage, StoryImage, HudCornerEl, HudTopLine, HudBottomLine, HudLeftLine, HudRightLine, StatusTopLine, StatusBottomLine, StatusLeftLine, StatusRightLine, BackgroundVideoContainer, BackgroundVideo, BackgroundOverlay, HexagonHud, HexagonBackground, HexagonBorder, HexagonContent, HexagonValue, PageController } from './PersonagemPage.style';
+import { PageContainer, TopSection, BottomSection, AvatarWrapper, MetaRow, Sections, CardContent, SubHeading, InfoList, InfoItem, MetaContent, SectionSpacer, AvatarDivController, SatusDivController, StatusList, StatusDiv, HeaderStatusController, StatusController, StatusHeader, StatusBarWrapper, StatusBarFill, PersonagemRichText, FlexRow, MutedText, BoldLabel, ItemThumb, ItemPlaceholder, GalleryToggle, GalleryContent, SkillItem, Spacer, MaskIcon, ItemRow, FlexFill, InfoControllers, TitleDiv, TagItem, TagList, RelatedLink, HistoryWrapper, HistoryModalOverlay, HistoryModalSheet, HistoryModalHeader, HistoryModalTitle, HistoryModalClose, HistoryModalContent, InfoSpan, BottomInfoLeft, BottomInfoRight, StoryWithImage, StoryImage, HudCornerEl, HudTopLine, HudBottomLine, HudLeftLine, HudRightLine, StatusTopLine, StatusBottomLine, StatusLeftLine, StatusRightLine, BackgroundVideoContainer, BackgroundVideo, BackgroundOverlay, HexagonHud, HexagonBackground, HexagonBorder, HexagonContent, HexagonValue, PageController } from './PersonagemPage.style';
 import glassHeart from '../../assets/svg/glass-heart.svg';
 import rollingEnergy from '../../assets/svg/rolling-energy.svg';
 import electric from '../../assets/svg/electric.svg';
@@ -122,7 +122,6 @@ const PersonagemPage: React.FC = () => {
   const imagem = getField(personagem, ['imagem', 'Imagem', 'imagemUrl', 'ImagemUrl']) as string | undefined;
   const historia = getField(personagem, ['historia', 'Historia']) as any | undefined;
   const alinhamento = getField(personagem, ['alinhamento', 'Alinhamento', 'alignment']);
-  const idVal = getField(personagem, ['idpersonagem', 'Idpersonagem', 'id', 'Id']) || id;
 
   const costumes = (personagem as any)?.costumes;
   const costumesList = Array.isArray(costumes) && costumes.length > 0 ? costumes : null;
@@ -393,7 +392,6 @@ const PersonagemPage: React.FC = () => {
                           </div>
                           </PersonagemRichText>
                         </HistoryWrapper>
-                        {historia && <HistoryExpandHint onClick={() => setHistoryModalOpen(true)}>Ler mais</HistoryExpandHint>}
                         {cidadeImagem && <StoryImage src={normalizeImagePath(cidadeImagem)} alt={cidadeNome ?? 'Cidade'} />}
                       </StoryWithImage>
                   </CardContent>

@@ -43,6 +43,14 @@ public partial class OdisseiaContext : DbContext
 
     public DbSet<PageBlock> PageBlocks { get; set; }
 
+    public virtual DbSet<Passiva> Passivas { get; set; }
+
+    public virtual DbSet<Passivaraca> Passivaracas { get; set; }
+
+    public virtual DbSet<Proficiencia> Proficiencias { get; set; }
+
+    public virtual DbSet<PersonagemProficiencia> PersonagemProficiencias { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder

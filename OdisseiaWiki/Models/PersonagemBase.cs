@@ -38,8 +38,14 @@ namespace OdisseiaWiki.Models
         public string? Nanites { get; set; }
 
         public DateTime DataCriacao { get; set; } = DateTime.UtcNow;
+        public string? Implantes { get; set; }
+        public int? Idpassiva { get; set; }
+        public string? Ultimate { get; set; }
 
         public virtual Cidade? IdcidadeNavigation { get; set; }
         public virtual Raca IdracaNavigation { get; set; } = null!;
+        public virtual Passiva? Passiva { get; set; }
+        public virtual ICollection<PersonagemProficiencia> PersonagemProficiencias { get; set; }
+            = new List<PersonagemProficiencia>();
     }
 }

@@ -122,6 +122,9 @@ namespace OdisseiaWiki.Services
             personagem.Magia = personagemDto.Magia != null ? JsonSerializer.Serialize(personagemDto.Magia) : personagem.Magia;
             personagem.StatusJson = personagemDto.StatusJson != null ? JsonSerializer.Serialize(personagemDto.StatusJson) : personagem.StatusJson;
             personagem.PersonagemsVinculados = personagemDto.PersonagemsVinculados != null ? JsonSerializer.Serialize(personagemDto.PersonagemsVinculados) : personagem.PersonagemsVinculados;
+            personagem.Implantes = personagemDto.Implantes != null ? JsonSerializer.Serialize(personagemDto.Implantes) : personagem.Implantes;
+            personagem.Idpassiva = personagemDto.Idpassiva ?? personagem.Idpassiva;
+            personagem.Ultimate = personagemDto.Ultimate ?? personagem.Ultimate;
 
             return personagem;
         }

@@ -1,4 +1,5 @@
-﻿using OdisseiaWiki.Dtos;
+﻿using Microsoft.AspNetCore.Identity;
+using OdisseiaWiki.Dtos;
 using OdisseiaWiki.Helpers;
 using OdisseiaWiki.Models;
 using OdisseiaWiki.Repositories.Interfaces;
@@ -53,6 +54,9 @@ namespace OdisseiaWiki.Services
                 Nanites = dto.Nanites?.ToString(),
                 Tags = dto.Tags != null && dto.Tags.Any() ? JsonSerializer.Serialize(dto.Tags) : null,
                 Visivel = dto.Visivel,
+                Implantes = dto.Implantes != null ? JsonSerializer.Serialize(dto.Implantes) : null,
+                Idpassiva = dto.Idpassiva,
+                Ultimate = dto.Ultimate != null ? JsonSerializer.Serialize(dto.Ultimate) : null,
                 DataCriacao = DateTime.UtcNow
             };
 
@@ -110,6 +114,8 @@ namespace OdisseiaWiki.Services
             personagem.Tracos = dto.Tracos != null ? JsonSerializer.Serialize(dto.Tracos) : personagem.Tracos;
             personagem.Nanites = dto.Nanites?.ToString() ?? personagem.Nanites;
             personagem.Tags = dto.Tags != null && dto.Tags.Any() ? JsonSerializer.Serialize(dto.Tags) : personagem.Tags;
+            personagem.Implantes = dto.Implantes != null ? JsonSerializer.Serialize(dto.Implantes) : personagem.Implantes;
+            personagem.Idpassiva = dto.Idpassiva ?? personagem.Idpassiva;
             personagem.Visivel = dto.Visivel;
 
             var atualizado = await _repository.UpdateAsync(personagem);

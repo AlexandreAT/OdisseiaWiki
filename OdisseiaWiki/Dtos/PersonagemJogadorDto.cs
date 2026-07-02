@@ -25,6 +25,9 @@ namespace OdisseiaWiki.Dtos
         public object? Magia { get; set; }
         public object? StatusJson { get; set; }
         public List<string>? PersonagemsVinculados { get; set; }
+        public List<string>? Implantes { get; set; }
+        public string? Ultimate { get; set; }
+        public int? Idpassiva { get; set; }
         public DateTime DataCriacao { get; set; }
     }
 }

@@ -17,7 +17,10 @@ namespace OdisseiaWiki.Dtos
         public List<string>? Tracos { get; set; }
         public int? Nanites { get; set; }
         public List<string>? Tags { get; set; }
+        public List<int>? Implantes { get; set; }
+        public int? Idpassiva { get; set; }
         public bool Visivel { get; set; } = true;
+        public Ultimate? Ultimate { get; set; }
 
         public PersonagemStatus? StatusJson { get; set; }
         public List<Item>? InventarioJson { get; set; }
@@ -32,6 +35,8 @@ namespace OdisseiaWiki.Dtos
         public Atributos atributos { get; set; } = null!;
         public int nivel { get; set; }
         public int xp { get; set; }
+        public int pontos { get; set; }
+        public List<string> condicioes { get; set; }
         public Defesas defesas { get; set; } = null!;
     }
 
@@ -110,5 +115,16 @@ namespace OdisseiaWiki.Dtos
         public string[] elemento { get; set; } = Array.Empty<string>();
         public string custo { get; set; } = "";
         public object atributos { get; set; } = new { };
+    }
+
+    public class Ultimate
+    {
+        public string id { get; set; } = null!;
+        public string nome { get; set; } = null!;
+        public string tipo { get; set; } = null!;
+        public string[] elemento { get; set; } = Array.Empty<string>();
+        public string custo { get; set; } = "";
+        public int nivel { get; set; }
+        public object atributos { get; set; } = new();
     }
 }

@@ -445,6 +445,7 @@ export const HistoryWrapper = styled.div`
   max-height: 250px;
   overflow: hidden;
   cursor: pointer;
+  border-bottom-left-radius: 10px;
 
   &::after {
     content: '';
@@ -452,31 +453,9 @@ export const HistoryWrapper = styled.div`
     bottom: 0;
     left: 0;
     right: 0;
-    height: 80px;
+    height: 50px;
     background: linear-gradient(transparent, var(--black-blue, #0a0a1a));
     pointer-events: none;
-  }
-`;
-
-export const HistoryExpandHint = styled.div`
-  position: absolute;
-  bottom: 8px;
-  left: 50%;
-  transform: translateX(-50%);
-  color: var(--clearneonBlue, #4fc3f7);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  z-index: 2;
-  padding: 4px 12px;
-  border: 1px solid var(--clearneonBlue, #4fc3f7);
-  border-radius: 0;
-  background: rgba(0, 0, 0, 0.6);
-  transition: all 0.2s ease;
-
-  &:hover {
-    background: rgba(0, 0, 0, 0.8);
-    box-shadow: 0 0 8px var(--clearneonBlue, #4fc3f7);
   }
 `;
 
@@ -868,6 +847,7 @@ export const StoryWithImage = styled.div<{ cityImage?: string | null }>`
   margin-top: 12px;
   width: 100%;
   box-sizing: border-box;
+  border-radius: 10px;
   ${({ cityImage }) => cityImage ? `
     display: flex;
     padding-right: 0;
