@@ -24,7 +24,8 @@ namespace OdisseiaWiki.Models
 
         public virtual ICollection<Passivaraca> Passivaracas { get; set; } = new List<Passivaraca>();
 
-        public virtual ICollection<PersonagemBase> Personagens { get; set; } = new List<PersonagemBase>();
+        public virtual ICollection<Personagen> Personagens { get; set; } = new List<Personagen>();
+
+        public virtual ICollection<PersonagemJogador> PersonagensJogadores { get; set; } = new List<PersonagemJogador>();
     }
-}
 }
