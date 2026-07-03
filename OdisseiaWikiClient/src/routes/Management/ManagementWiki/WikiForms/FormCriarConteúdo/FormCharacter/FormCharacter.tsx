@@ -51,6 +51,9 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
     nanites, setNanites,
     alignment, setAlignment,
     traits, setTraits,
+    idpassiva, setIdpassiva,
+    ultimate, setUltimate,
+    implantes, setImplantes,
     tags,
     tagInput, setTagInput,
     visivel, setVisivel,
@@ -297,7 +300,7 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
               disabled={!allPersonagens.length}
               suggestions={personagens.map(p => `${p.idpersonagem}|${p.nome}`)}
               onSelectSuggestion={(suggestion) => {
-                const [idStr, ...nomeParts] = suggestion.split('|');
+                const [idStr] = suggestion.split('|');
                 const id = parseInt(idStr);
                 const personagem = allPersonagens.find(p => p.idpersonagem === id);
                 console.log("🚀 ~ FormCharacter ~ personagem:", personagem)
@@ -321,6 +324,31 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
               onChange={(e) => setNanites(e.target.value)}
               width="100%"
               type='number'
+            />
+            <InputText
+              theme={theme}
+              neon={neon}
+              label="Idpassiva"
+              value={String(idpassiva ?? '')}
+              onChange={(e) => setIdpassiva(e.target.value ? Number(e.target.value) : undefined)}
+              width="100%"
+              type='number'
+            />
+            <InputText
+              theme={theme}
+              neon={neon}
+              label="Ultimate"
+              value={ultimate}
+              onChange={(e) => setUltimate(e.target.value)}
+              width="100%"
+            />
+            <InputText
+              theme={theme}
+              neon={neon}
+              label="Implantes"
+              value={implantes}
+              onChange={(e) => setImplantes(e.target.value)}
+              width="100%"
             />
             {listPersonagemRelacionado.length > 0 && (
               <RelatedCharactersSection fullWidth>

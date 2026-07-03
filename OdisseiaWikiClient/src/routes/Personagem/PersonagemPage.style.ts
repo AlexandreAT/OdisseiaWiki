@@ -1,4 +1,3 @@
-import { color } from './../../Global Styles/ColorScheme';
 import styled, { css } from 'styled-components';
 import { wikiHeading1Style, wikiHeading2Style, wikiHeading3Style, wikiParagraphStyle, wikiListStyle, wikiBlockquoteStyle, wikiCodeStyle, wikiLinkStyle } from '../Wiki/shared/WikiTextStyles';
 import HudCorner from '../../assets/svg/HudCorner.svg';

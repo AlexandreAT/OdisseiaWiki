@@ -5,23 +5,18 @@ import toast from 'react-hot-toast';
 import { ImageUploader } from '../../../../components/Generic/ImageUploader/ImageUploader';
 import { ImageGalleryWithCrop } from '../../../../components/Generic/ImageGallery/ImageGalleryWithCrop';
 import type { CropPreset } from '../../../../components/Generic/ImageUploader/types';
-import { CheckBox } from '../../../../components/Generic/CheckBox/CheckBox';
 import { CheckSelect } from '../../../../components/Generic/CheckSelect/CheckSelect';
-import { HorizontalList } from '../../../../components/Generic/HorizontalList/HorizontalList';
 import { InputText } from '../../../../components/Generic/InputText/InputText';
 import RichTextModal from '../../../../components/Generic/RichTextModal';
 import { RichTextEditor } from '../../../../components/Generic/RichTextEditor/RichTextEditor';
 import { Search } from '../../../../components/Generic/Search/Search';
 import { Select } from '../../../../components/Generic/Select/Select';
-import { TextArea } from '../../../../components/Generic/TextArea/TextArea';
 import { ALIGNMENT_OPTIONS, TRAITS_OPTIONS } from '../../../Hub/UserCharacters/CharacterCreate/constants';
 import {
   FormHeader,
   GridInputs,
   HeaderAvatar,
   HeaderInputs,
-  RelatedCharactersSection,
-  SectionTitle,
 } from '../../../Hub/UserCharacters/CharacterCreate/FormUserCharacter/FormUserCharacter.style';
 import {
   ExpandHistoryButton,
@@ -45,6 +40,7 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
   selectedRace,
   listRaces,
   listCities,
+  setListPersonagemRelacionado,
   loadingRaces,
   loadingCities,
   avatarUrl,
@@ -62,14 +58,12 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
   setTraits,
   nanites,
   setNanites,
-  costumes,
-  setCostumes,
-  extraInformation,
-  setExtraInformation,
-  visivel,
-  setVisivel,
-  listPersonagemRelacionado,
-  setListPersonagemRelacionado,
+  idpassiva,
+  setIdpassiva,
+  ultimate,
+  setUltimate,
+  implantes,
+  setImplantes,
   personagens,
   allPersonagens,
   searchTerm,
@@ -99,7 +93,6 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
     },
     [raceChangeMode, selectedRace?.nome]
   );
-
   const raceOptions = React.useMemo(() => {
     if (raceChangeMode !== 'current-or-android') {
       return listRaces.map((r) => ({ value: r.idraca, label: r.nome }));
@@ -250,13 +243,13 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
             const id = parseInt(idStr);
             const personagem = allPersonagens.find(p => p.idpersonagem === id);
             if (personagem) {
-              setListPersonagemRelacionado(prev => {
-                if (prev.some(item => item.id === personagem.idpersonagem)) {
-                  toast.error('Esse personagem já está vinculado.');
-                  return prev;
-                }
-                return [...prev, { id: personagem.idpersonagem, nome: personagem.nome }];
-              });
+                      setListPersonagemRelacionado((prev: { id: number; nome: string }[]) => {
+                        if (prev.some((item) => item.id === personagem.idpersonagem)) {
+                          toast.error('Esse personagem já está vinculado.');
+                          return prev;
+                        }
+                        return [...prev, { id: personagem.idpersonagem, nome: personagem.nome }];
+                      });
             }
           }}
           loading={loadingPersonagens}
@@ -272,51 +265,34 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
           type="number"
         />
 
-        <TextArea
-          theme={theme}
-          neon={neon}
-          label="Costumes"
-          value={costumes}
-          onChange={(e) => setCostumes(e.target.value)}
-          fullWidth
-        />
-
-        <TextArea
-          theme={theme}
-          neon={neon}
-          label="Informações extras"
-          value={extraInformation}
-          onChange={(e) => setExtraInformation(e.target.value)}
-          fullWidth
-        />
-
-        {typeof visivel === 'boolean' && setVisivel && (
-          <CheckBox
-            neon={neon}
-            label="Personagem visível"
-            checked={visivel}
-            onChange={(checked) => setVisivel(checked)}
-          />
-        )}
-      </GridInputs>
-
-      {listPersonagemRelacionado.length > 0 && (
-        <RelatedCharactersSection>
-          <SectionTitle theme={theme} neon={neon}>
-            Personagens Relacionados
-          </SectionTitle>
-          <HorizontalList
+          <InputText
             theme={theme}
             neon={neon}
-            data={listPersonagemRelacionado}
-            onDelete={(id) =>
-              setListPersonagemRelacionado((prev) =>
-                prev.filter((item) => item.id !== id)
-              )
-            }
+            label="Idpassiva"
+            value={String(idpassiva ?? '')}
+            onChange={(e) => setIdpassiva(e.target.value ? Number(e.target.value) : undefined)}
+            width="100%"
+            type="number"
           />
-        </RelatedCharactersSection>
-      )}
+
+          <InputText
+            theme={theme}
+            neon={neon}
+            label="Ultimate"
+            value={ultimate}
+            onChange={(e) => setUltimate(e.target.value)}
+            width="100%"
+          />
+
+          <InputText
+            theme={theme}
+            neon={neon}
+            label="Implantes"
+            value={implantes}
+            onChange={(e) => setImplantes(e.target.value)}
+            width="100%"
+          />
+        </GridInputs>
 
       <RichTextModal
         isOpen={historyModalOpen}

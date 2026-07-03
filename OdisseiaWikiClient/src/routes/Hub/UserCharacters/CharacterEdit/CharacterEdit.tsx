@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React from 'react'
 import CloudDoneIcon from '@mui/icons-material/CloudDone';
 import CloudOffIcon from '@mui/icons-material/CloudOff';
 import SaveIcon from '@mui/icons-material/Save';
@@ -53,13 +53,19 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserC
     setAlignment,
     traits,
     setTraits,
+    idpassiva,
+    setIdpassiva,
+    ultimate,
+    setUltimate,
+    implantes,
+    setImplantes,
     listPersonagemRelacionado,
     setListPersonagemRelacionado,
         itens, setItens,
         skills, setSkills,
         magias, setMagias,
         statusBasico, setStatusBasico,
-        listRaces, setListRaces,
+        listRaces,
     listCities,
     loadingRaces,
     loadingCities,
@@ -77,12 +83,7 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserC
         listItens, handleSelectItem,
     } = useFormUserCharacter(userId, onSave, personagem);
 
-    useEffect(() => {
-      console.log("========= TESTE ============")
-      setListRaces(listRaces.filter((r) => r.idraca === personagem.idraca || r.nome == "Android"));
-    }, [loadingPersonagens])
-        console.log("🚀 ~ CharacterEdit ~ listRaces:", listRaces)
-    console.log("🚀 ~ CharacterEdit ~ selectedRace:", selectedRace)
+    // Debug logs and temporary race-filter removed
 
     const raceImageUrl = React.useMemo(() => 
         selectedRace?.imagem ?? '/assets_dynamic/default.png',
@@ -268,6 +269,12 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserC
                   setTraits={setTraits}
                   nanites={nanites}
                   setNanites={setNanites}
+                  idpassiva={idpassiva}
+                  setIdpassiva={setIdpassiva}
+                  ultimate={ultimate}
+                  setUltimate={setUltimate}
+                  implantes={implantes}
+                  setImplantes={setImplantes}
                   costumes={costumes}
                   setCostumes={setCostumes}
                   extraInformation={extraInformation}

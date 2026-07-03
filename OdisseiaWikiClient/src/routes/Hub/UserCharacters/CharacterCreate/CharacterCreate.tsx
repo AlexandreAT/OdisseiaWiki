@@ -31,6 +31,9 @@ const CharacterCreateComponent = ({ theme, neon, userId, onSave }: UserCharacter
     nanites, setNanites,
     alignment, setAlignment,
     traits, setTraits,
+    idpassiva, setIdpassiva,
+    ultimate, setUltimate,
+    implantes, setImplantes,
     itens, setItens,
     skills, setSkills,
     magias, setMagias,
@@ -115,6 +118,12 @@ const CharacterCreateComponent = ({ theme, neon, userId, onSave }: UserCharacter
           setAlignment={setAlignment}
           traits={traits}
           setTraits={setTraits}
+          idpassiva={idpassiva}
+          setIdpassiva={setIdpassiva}
+          ultimate={ultimate}
+          setUltimate={setUltimate}
+          implantes={implantes}
+          setImplantes={setImplantes}
           itens={itens}
           setItens={setItens}
           skills={skills}

@@ -157,25 +157,31 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
     setAlignment,
     traits,
     setTraits,
+    idpassiva,
+    setIdpassiva,
+    ultimate,
+    setUltimate,
+    implantes,
+    setImplantes,
     tags,
     setTags,
     visivel,
     setVisivel,
+    listPersonagemRelacionado,
+    setListPersonagemRelacionado,
     itens,
     setItens,
     skills,
     setSkills,
     magias,
     setMagias,
-    listPersonagemRelacionado,
-    setListPersonagemRelacionado,
     statusBasico,
     setStatusBasico,
-    listCities,
-    loadingCities,
     listRaces,
     loadingRaces,
     selectedRace,
+    listCities,
+    loadingCities,
     personagens,
     allPersonagens,
     searchTerm,
@@ -311,6 +317,9 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
         setAlignment(payload.alinhamento || '');
         setTraits(Array.isArray(loadedTraits) ? loadedTraits : []);
         setTags(Array.isArray(loadedTags) ? loadedTags : []);
+        setIdpassiva(payload.idpassiva ?? undefined);
+        setUltimate(payload.ultimate || '');
+        setImplantes(Array.isArray(payload.implantes) ? payload.implantes.join(', ') : payload.implantes ?? '');
         setVisivel(Boolean(payload.visivel));
         setItens(Array.isArray(loadedItens) && loadedItens.length > 0
           ? loadedItens
@@ -558,42 +567,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
 
       const galeriaFinal = [...galeriaPersistida, ...galeriaNovasPaths];
 
-      const statusPayload = {
-        status: {
-          vida: Number(statusBasico.vida) || 0,
-          vidaMaxima: Number(statusBasico.vidaMaxima) || 0,
-          estamina: Number(statusBasico.estamina) || 0,
-          estaminaMaxima: Number(statusBasico.estaminaMaxima) || 0,
-          mana: Number(statusBasico.mana) || 0,
-          manaMaxima: Number(statusBasico.manaMaxima) || 0,
-          capacidadeCarga: Number(statusBasico.capacidadeCarga) || 0,
-        },
-        atributos: {
-          principais: {
-            resistencia: Number(atributosPrincipais.resistencia) || 0,
-            agilidade: Number(atributosPrincipais.agilidade) || 0,
-            sabedoria: Number(atributosPrincipais.sabedoria) || 0,
-            precisao: Number(atributosPrincipais.precisao) || 0,
-            forca: Number(atributosPrincipais.forca) || 0,
-          },
-          secundarios: {
-            sanidade: Number(atributosSecundarios.sanidade) || 0,
-            coragem: Number(atributosSecundarios.coragem) || 0,
-            inteligencia: Number(atributosSecundarios.inteligencia) || 0,
-            percepcao: Number(atributosSecundarios.percepcao) || 0,
-            labia: Number(atributosSecundarios.labia) || 0,
-            intimidacao: Number(atributosSecundarios.intimidacao) || 0,
-          },
-        },
-        nivel: Number(level) || 1,
-        xp: Number(xp) || 0,
-        defesas: {
-          armadura: Number(defesas.armadura) || 0,
-          protecao: Number(defesas.protecao) || 0,
-          escudo: Number(defesas.escudo) || 0,
-          outras: Number(defesas.outras) || 0,
-        },
-      };
+
 
       const inventarioMapped = itens.map((item) => ({
         id: item.id ?? generateId(),
@@ -654,17 +628,53 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
         nanites: nanites ? Number(nanites) : undefined,
         alinhamento: alignment,
         tracos: traits,
+        visivel: visivel ?? true,
+        idpassiva,
+        ultimate: ultimate || undefined,
+        implantes: implantes
+          ? implantes.split(',').map((item) => item.trim()).filter(Boolean)
+          : undefined,
         inventarioJson: inventarioMapped,
         skills: skillsMapped,
         magia: magiasMapped,
-        personagemsVinculados: listPersonagemRelacionado
-          .map((personagem) => Number(personagem.id))
-          .filter((id) => Number.isFinite(id)),
-        tags: tags.length ? tags : undefined,
-        visivel,
-        statusJson: statusPayload,
+        personagemsVinculados: listPersonagemRelacionado.map((p) => Number(p)) as any,
+        statusJson: {
+          status: {
+            vida: Number(statusBasico.vida) || 0,
+            vidaMaxima: Number(statusBasico.vidaMaxima) || 0,
+            estamina: Number(statusBasico.estamina) || 0,
+            estaminaMaxima: Number(statusBasico.estaminaMaxima) || 0,
+            mana: Number(statusBasico.mana) || 0,
+            manaMaxima: Number(statusBasico.manaMaxima) || 0,
+            capacidadeCarga: Number(statusBasico.capacidadeCarga) || 0,
+          },
+          atributos: {
+            principais: {
+              resistencia: Number(atributosPrincipais.resistencia) || 0,
+              agilidade: Number(atributosPrincipais.agilidade) || 0,
+              sabedoria: Number(atributosPrincipais.sabedoria) || 0,
+              precisao: Number(atributosPrincipais.precisao) || 0,
+              forca: Number(atributosPrincipais.forca) || 0,
+            },
+            secundarios: {
+              sanidade: Number(atributosSecundarios.sanidade) || 0,
+              coragem: Number(atributosSecundarios.coragem) || 0,
+              inteligencia: Number(atributosSecundarios.inteligencia) || 0,
+              percepcao: Number(atributosSecundarios.percepcao) || 0,
+              labia: Number(atributosSecundarios.labia) || 0,
+              intimidacao: Number(atributosSecundarios.intimidacao) || 0,
+            },
+          },
+          nivel: Number(level) || 1,
+          xp: Number(xp) || 0,
+          defesas: {
+            armadura: Number(defesas.armadura) || 0,
+            protecao: Number(defesas.protecao) || 0,
+            escudo: Number(defesas.escudo) || 0,
+            outras: Number(defesas.outras) || 0,
+          },
+        },
       };
-
       const result = await atualizarPersonagem(characterId, payload);
       if (result?.sucesso === false) {
         toast.error(result.mensagemErro || 'Erro ao atualizar personagem.');
@@ -814,12 +824,18 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
             setTraits={setTraits}
             nanites={nanites}
             setNanites={setNanites}
+            idpassiva={idpassiva}
+            setIdpassiva={setIdpassiva}
+            ultimate={ultimate}
+            setUltimate={setUltimate}
+            implantes={implantes}
+            setImplantes={setImplantes}
             costumes={costumes}
             setCostumes={setCostumes}
             extraInformation={extraInformation}
             setExtraInformation={setExtraInformation}
-                  visivel={visivel}
-                  setVisivel={setVisivel}
+            visivel={visivel}
+            setVisivel={setVisivel}
             listPersonagemRelacionado={listPersonagemRelacionado}
             setListPersonagemRelacionado={setListPersonagemRelacionado}
             personagens={personagens}

@@ -16,6 +16,9 @@ export interface PersonagemPayload {
   inventarioJson: any[];
   skills: any[];
   magia: any[];
+  idpassiva?: number;
+  ultimate?: string;
+  implantes?: string[];
   personagemsVinculados: string[];
   tags?: string[];
   visivel: boolean;
@@ -66,6 +69,9 @@ export interface PersonagemCreatePayload {
   inventarioJson?: any[];
   skills?: any[];
   magia?: any[];
+  idpassiva?: number;
+  ultimate?: string;
+  implantes?: string[];
   personagemsVinculados?: number[];
   tags?: string[];
   visivel: boolean;
@@ -102,6 +108,9 @@ export interface PersonagemUpdatePayload {
   nanites?: number;
   tags?: string[];
   visivel: boolean;
+  idpassiva?: number;
+  ultimate?: string;
+  implantes?: string[];
   statusJson?: {
     status: {
       vida: number;

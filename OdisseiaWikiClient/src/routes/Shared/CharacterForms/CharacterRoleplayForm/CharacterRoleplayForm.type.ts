@@ -31,6 +31,12 @@ export interface CharacterRoleplayFormProps {
   setTraits: (value: string[]) => void;
   nanites: string;
   setNanites: (value: string) => void;
+  idpassiva?: number;
+  setIdpassiva: (value: number | undefined) => void;
+  ultimate: string;
+  setUltimate: (value: string) => void;
+  implantes: string;
+  setImplantes: (value: string) => void;
   costumes: string;
   setCostumes: (value: string) => void;
   extraInformation: string;

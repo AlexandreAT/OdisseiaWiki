@@ -21,6 +21,9 @@ export interface PersonagemJogadorPayload {
   inventarioJson: any[];
   skills: any[];
   magia: any[];
+  idpassiva?: number;
+  ultimate?: string;
+  implantes?: string[];
   personagemsVinculados: string[];
   dataCriacao: string;
   statusJson: {

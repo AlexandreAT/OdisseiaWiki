@@ -43,6 +43,12 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
   setAlignment,
   traits,
   setTraits,
+  idpassiva,
+  setIdpassiva,
+  ultimate,
+  setUltimate,
+  implantes,
+  setImplantes,
   itens,
   setItens,
   skills,
@@ -256,6 +262,31 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
           onChange={(e) => setNanites(e.target.value)}
           width="100%"
           type='number'
+        />
+        <InputText
+          theme={theme}
+          neon={neon}
+          label="Idpassiva"
+          value={String(idpassiva ?? '')}
+          onChange={(e) => setIdpassiva(e.target.value ? Number(e.target.value) : undefined)}
+          width="100%"
+          type='number'
+        />
+        <InputText
+          theme={theme}
+          neon={neon}
+          label="Ultimate"
+          value={ultimate}
+          onChange={(e) => setUltimate(e.target.value)}
+          width="100%"
+        />
+        <InputText
+          theme={theme}
+          neon={neon}
+          label="Implantes"
+          value={implantes}
+          onChange={(e) => setImplantes(e.target.value)}
+          width="100%"
         />
         <TextArea
           theme={theme}
