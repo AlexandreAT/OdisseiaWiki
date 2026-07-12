@@ -6,6 +6,7 @@ import { JSONContent } from '../../../../../../models/Cities';
 import { PontoDeInteresse } from '../../../../../../models/InfoLore';
 import { prepareForAPI } from '../../../../../../utils/richTextHelpers';
 import { infoLoresMock } from '../../../../../../Mock/infolore.mock';
+import { ensureContentCategoryTag, isContentCategoryTag } from '../../../../../../utils/contentCategoryTag';
 
 export const useFormCity = (initialCity?: CidadePayload, contentType?: string) => {
   const [cidadeId] = useState<number | undefined>(initialCity?.idcidade);
@@ -48,8 +49,8 @@ export const useFormCity = (initialCity?: CidadePayload, contentType?: string) =
 
   // Auto-adiciona tag do tipo de conteúdo quando muda
   useEffect(() => {
-    if (contentType && !initialCity) {
-      setTags([contentType]);
+    if (contentType) {
+      setTags(previousTags => ensureContentCategoryTag(previousTags, contentType));
       setTagInput('');
     }
   }, [contentType, initialCity]);
@@ -154,6 +155,7 @@ export const useFormCity = (initialCity?: CidadePayload, contentType?: string) =
   };
 
   const handleRemoveTag = (tagToRemove: string) => {
+    if (isContentCategoryTag(tagToRemove, contentType)) return;
     setTags(prev => prev.filter(tag => tag !== tagToRemove));
   };
 
@@ -202,7 +204,7 @@ export const useFormCity = (initialCity?: CidadePayload, contentType?: string) =
     setGaleriaFiles([]);
     setGaleriaShapes([]);
     setExistingGaleriaUrls([]);
-    setTags([]);
+    setTags(contentType ? [contentType] : []);
     setTagInput('');
     setPontosDeInteresse([]);
     setPontoInteresseSearch('');
@@ -259,7 +261,7 @@ export const useFormCity = (initialCity?: CidadePayload, contentType?: string) =
       Descricao: prepareForAPI(descricao),
       Imagem: imagemPath,
       GaleriaImagem: galeriaPaths,
-      Tags: tags.length > 0 ? tags : undefined,
+      Tags: ensureContentCategoryTag(tags, contentType),
       PontosDeInteresse: pontosDeInteresse.length > 0 ? pontosDeInteresse : undefined,
       Visivel: visivel,
     };

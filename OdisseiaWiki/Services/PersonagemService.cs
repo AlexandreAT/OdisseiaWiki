@@ -52,7 +52,7 @@ namespace OdisseiaWiki.Services
                 Alinhamento = dto.Alinhamento,
                 Tracos = dto.Tracos != null ? JsonSerializer.Serialize(dto.Tracos) : null,
                 Nanites = dto.Nanites?.ToString(),
-                Tags = dto.Tags != null && dto.Tags.Any() ? JsonSerializer.Serialize(dto.Tags) : null,
+                Tags = JsonSerializer.Serialize(ContentCategoryHelper.EnsureCategoryTag(dto.Tags, ContentCategoryHelper.Personagem)),
                 Visivel = dto.Visivel,
                 Implantes = dto.Implantes != null ? JsonSerializer.Serialize(dto.Implantes) : null,
                 Idpassiva = dto.Idpassiva,
@@ -113,7 +113,9 @@ namespace OdisseiaWiki.Services
             personagem.Alinhamento = dto.Alinhamento ?? personagem.Alinhamento;
             personagem.Tracos = dto.Tracos != null ? JsonSerializer.Serialize(dto.Tracos) : personagem.Tracos;
             personagem.Nanites = dto.Nanites?.ToString() ?? personagem.Nanites;
-            personagem.Tags = dto.Tags != null && dto.Tags.Any() ? JsonSerializer.Serialize(dto.Tags) : personagem.Tags;
+            personagem.Tags = JsonSerializer.Serialize(ContentCategoryHelper.EnsureCategoryTag(
+                dto.Tags ?? JsonSafeHelper.DeserializeTags(personagem.Tags),
+                ContentCategoryHelper.Personagem));
             personagem.Implantes = dto.Implantes != null ? JsonSerializer.Serialize(dto.Implantes) : personagem.Implantes;
             personagem.Idpassiva = dto.Idpassiva ?? personagem.Idpassiva;
             personagem.Visivel = dto.Visivel;

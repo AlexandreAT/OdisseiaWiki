@@ -15,6 +15,7 @@ import { salvarPersonagem } from '../../../../../../services/personagensService'
 import { getItens } from '../../../../../../services/itensService';
 import { prepareForAPI } from '../../../../../../utils/richTextHelpers';
 import { TOTAL_STEPS } from '../../../../../../constants';
+import { ensureContentCategoryTag, isContentCategoryTag } from '../../../../../../utils/contentCategoryTag';
 
 const serializeRichText = (value: any): string => {
   if (value === undefined || value === null) return '';
@@ -170,7 +171,7 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
   // Auto-adiciona tag do tipo de conteúdo quando muda
   useEffect(() => {
     if (contentType) {
-      setTags([contentType]);
+      setTags(previousTags => ensureContentCategoryTag(previousTags, contentType));
       setTagInput('');
     }
   }, [contentType]);
@@ -368,8 +369,9 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
   }, [tagInput, tags]);
 
   const handleRemoveTag = useCallback((tagToRemove: string) => {
+    if (isContentCategoryTag(tagToRemove, contentType)) return;
     setTags(prev => prev.filter(tag => tag !== tagToRemove));
-  }, []);
+  }, [contentType]);
 
   const handleGaleriaUpload = useCallback((files: File[], shapes: string[]) => {
     setGaleriaFiles(prev => [...prev, ...files]);
@@ -520,7 +522,7 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
         nanites: nanites ? Number(nanites) : undefined,
         alinhamento: alignment,
         tracos: traits,
-        tags: tags.length > 0 ? tags : undefined,
+        tags: ensureContentCategoryTag(tags, contentType),
         visivel: visivel,
         inventarioJson: inventarioMapped,
         skills: skillMapped,
@@ -554,7 +556,7 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
     } catch (err: any) {
       toast.error(extractErrorMessage(err));
     }
-  }, [avatarUrl, avatarFile, userName, statusBasico, itens, magias, skills, race, city, history, costumes, nanites, alignment, traits, idpassiva, ultimate, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, defesas]);
+  }, [avatarUrl, avatarFile, userName, statusBasico, itens, magias, skills, race, city, history, costumes, nanites, alignment, traits, idpassiva, ultimate, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, defesas, tags, contentType]);
 
   return {
     step, setStep,

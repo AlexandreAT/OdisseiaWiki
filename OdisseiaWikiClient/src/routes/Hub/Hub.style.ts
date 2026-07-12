@@ -51,7 +51,7 @@ export const Title = styled.h1<Props>`
 
 export const ContentController = styled.div<{ collapsed?: boolean }>`
   width: 100%;
-  height: ${({ collapsed }) => (collapsed ? '50px' : '100%')};
+  height: ${({ collapsed }) => (collapsed ? '50px' : 'auto')};
   display: flex;
   flex-direction: row;
   justify-content: center;

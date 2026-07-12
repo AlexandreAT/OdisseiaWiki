@@ -85,9 +85,7 @@ namespace OdisseiaWiki.Services
                     ? JsonSerializer.Serialize(dto.AtributosJson) 
                     : null,
                 IditemBase = dto.IditemBase,
-                Tags = dto.Tags != null && dto.Tags.Any()
-                    ? JsonSerializer.Serialize(dto.Tags)
-                    : null,
+                Tags = JsonSerializer.Serialize(ContentCategoryHelper.EnsureCategoryTag(dto.Tags, ContentCategoryHelper.Item)),
                 Visivel = dto.Visivel,
                 Idpersonagem = dto.Idpersonagem,
                 DataCriacao = DateTime.UtcNow
@@ -134,9 +132,9 @@ namespace OdisseiaWiki.Services
                 ? JsonSerializer.Serialize(dto.AtributosJson)
                 : item.AtributosJson;
             item.IditemBase = dto.IditemBase;
-            item.Tags = dto.Tags != null && dto.Tags.Any()
-                ? JsonSerializer.Serialize(dto.Tags)
-                : item.Tags;
+            item.Tags = JsonSerializer.Serialize(ContentCategoryHelper.EnsureCategoryTag(
+                dto.Tags ?? JsonSafeHelper.DeserializeTags(item.Tags),
+                ContentCategoryHelper.Item));
             item.Visivel = dto.Visivel;
             item.Idpersonagem = dto.Idpersonagem;
 

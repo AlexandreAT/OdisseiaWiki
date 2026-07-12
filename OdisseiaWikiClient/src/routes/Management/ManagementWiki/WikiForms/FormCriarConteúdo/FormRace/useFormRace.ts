@@ -3,6 +3,7 @@ import { RaceFormErrors, UploadResult } from './FormRace.type';
 import { RacaStatus, CreateRacaDto, createRaca, updateRaca, RacaPayload } from '../../../../../../services/racasService';
 import { saveAsset } from '../../../../../../services/assetsService';
 import { ATRIBUTO_OPTIONS } from '../../../../../../constants';
+import { ensureContentCategoryTag, isContentCategoryTag } from '../../../../../../utils/contentCategoryTag';
 
 export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => {
   const [racaId] = useState<number | undefined>(initialRaca?.idraca);
@@ -50,8 +51,8 @@ export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => 
 
   // Auto-adiciona tag do tipo de conteúdo quando muda
   useEffect(() => {
-    if (contentType && !initialRaca) {
-      setTags([contentType]);
+    if (contentType) {
+      setTags(previousTags => ensureContentCategoryTag(previousTags, contentType));
       setTagInput('');
     }
   }, [contentType, initialRaca]);
@@ -183,6 +184,7 @@ export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => 
   };
 
   const handleRemoveTag = (tagToRemove: string) => {
+    if (isContentCategoryTag(tagToRemove, contentType)) return;
     setTags(prev => prev.filter(tag => tag !== tagToRemove));
   };
 

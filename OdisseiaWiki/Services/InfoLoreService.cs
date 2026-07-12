@@ -40,16 +40,14 @@ namespace OdisseiaWiki.Services
         public async Task<ResultInfoLore> CreateAsync(InfoLoreDto dto)
         {
             if (string.IsNullOrWhiteSpace(dto.Titulo))
-                return ResultInfoLore.Fail("O título é obrigatório.");
+                return ResultInfoLore.Fail("O tÃ­tulo Ã© obrigatÃ³rio.");
 
             var infoLore = new Infolore
             {
                 Titulo = dto.Titulo,
                 Conteudo = RichTextHelper.SerializeRichText(dto.Conteudo),
                 Imagem = dto.Imagem,
-                Tags = dto.Tags != null && dto.Tags.Any()
-                    ? JsonSerializer.Serialize(dto.Tags)
-                    : null,
+                Tags = JsonSerializer.Serialize(ContentCategoryHelper.EnsureCategoryTag(dto.Tags, ContentCategoryHelper.InfoLore)),
                 Visivel = dto.Visivel,
                 DataCriacao = DateTime.UtcNow
             };
@@ -62,7 +60,7 @@ namespace OdisseiaWiki.Services
         {
             var infoLore = await _infoLoreRepo.GetByIdAsync(id);
             if (infoLore == null)
-                return ResultInfoLore.Fail($"InfoLore com id {id} não encontrado.");
+                return ResultInfoLore.Fail($"InfoLore com id {id} nÃ£o encontrado.");
 
             if (!string.IsNullOrWhiteSpace(infoLore.Imagem) &&
                 dto.Imagem != null &&
@@ -88,9 +86,9 @@ namespace OdisseiaWiki.Services
                 ? RichTextHelper.SerializeRichText(dto.Conteudo)
                 : infoLore.Conteudo;
             infoLore.Imagem = dto.Imagem ?? infoLore.Imagem;
-            infoLore.Tags = dto.Tags != null && dto.Tags.Any()
-                ? JsonSerializer.Serialize(dto.Tags)
-                : infoLore.Tags;
+            infoLore.Tags = JsonSerializer.Serialize(ContentCategoryHelper.EnsureCategoryTag(
+                dto.Tags ?? JsonSafeHelper.DeserializeTags(infoLore.Tags),
+                ContentCategoryHelper.InfoLore));
             infoLore.Visivel = dto.Visivel;
 
             var atualizado = await _infoLoreRepo.UpdateAsync(infoLore);
@@ -126,7 +124,9 @@ namespace OdisseiaWiki.Services
             try
             {
                 //Tags = JsonSafeHelper.DeserializeTags(i.Tags),
-                var cidades = await _cidadeRepo.SearchAsync(termo);
+                var cidades = ContentCategoryHelper.MatchesCategorySearch(termo, ContentCategoryHelper.Cidade)
+                    ? await _cidadeRepo.GetAllAsync()
+                    : await _cidadeRepo.SearchAsync(termo);
                 result.Cidades = cidades.Select(c => new SearchItemDto
                 {
                     Id = c.Idcidade,
@@ -144,7 +144,9 @@ namespace OdisseiaWiki.Services
 
             try
             {
-                var personagens = await _personagemRepo.SearchAsync(termo);
+                var personagens = ContentCategoryHelper.MatchesCategorySearch(termo, ContentCategoryHelper.Personagem)
+                    ? await _personagemRepo.GetAllAsync()
+                    : await _personagemRepo.SearchAsync(termo);
                 result.Personagens = personagens.Select(p => new SearchItemDto
                 {
                     Id = p.Idpersonagem,
@@ -162,7 +164,9 @@ namespace OdisseiaWiki.Services
 
             try
             {
-                var itens = await _itemRepo.SearchAsync(termo);
+                var itens = ContentCategoryHelper.MatchesCategorySearch(termo, ContentCategoryHelper.Item)
+                    ? await _itemRepo.GetAllAsync()
+                    : await _itemRepo.SearchAsync(termo);
                 result.Itens = itens.Select(i => new SearchItemDto
                 {
                     IdString = i.Iditem,
@@ -180,7 +184,9 @@ namespace OdisseiaWiki.Services
 
             try
             {
-                var infoLores = await _infoLoreRepo.SearchAsync(termo);
+                var infoLores = ContentCategoryHelper.MatchesCategorySearch(termo, ContentCategoryHelper.InfoLore)
+                    ? await _infoLoreRepo.GetAllAsync()
+                    : await _infoLoreRepo.SearchAsync(termo);
                 result.InfoLores = infoLores.Select(il => new SearchItemDto
                 {
                     Id = il.IdinfoLore,
@@ -198,7 +204,9 @@ namespace OdisseiaWiki.Services
 
             try
             {
-                var racas = await _racaRepo.SearchAsync(termo);
+                var racas = ContentCategoryHelper.MatchesCategorySearch(termo, ContentCategoryHelper.Raca)
+                    ? await _racaRepo.GetAllAsync()
+                    : await _racaRepo.SearchAsync(termo);
                 result.Racas = racas.Select(r => new SearchItemDto
                 {
                     Id = r.Idraca,
@@ -216,7 +224,9 @@ namespace OdisseiaWiki.Services
 
             try
             {
-                var pages = await _pageRepo.SearchAsync(termo);
+                var pages = ContentCategoryHelper.MatchesCategorySearch(termo, ContentCategoryHelper.Page)
+                    ? await _pageRepo.GetAllAsync()
+                    : await _pageRepo.SearchAsync(termo);
 
                 result.Pages = pages.Select(p => new SearchItemDto
                 {

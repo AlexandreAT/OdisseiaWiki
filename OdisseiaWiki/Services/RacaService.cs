@@ -37,9 +37,7 @@ namespace OdisseiaWiki.Services
                 GaleriaImagem = dto.GaleriaImagem != null && dto.GaleriaImagem.Any()
                     ? JsonSerializer.Serialize(dto.GaleriaImagem)
                     : null,
-                Tags = dto.Tags != null && dto.Tags.Any()
-                    ? JsonSerializer.Serialize(dto.Tags)
-                    : null,
+                Tags = JsonSerializer.Serialize(ContentCategoryHelper.EnsureCategoryTag(dto.Tags, ContentCategoryHelper.Raca)),
                 Visivel = dto.Visivel,
                 DataCriacao = DateTime.UtcNow
             };
@@ -80,9 +78,9 @@ namespace OdisseiaWiki.Services
             raca.GaleriaImagem = dto.GaleriaImagem != null && dto.GaleriaImagem.Any()
                 ? JsonSerializer.Serialize(dto.GaleriaImagem)
                 : raca.GaleriaImagem;
-            raca.Tags = dto.Tags != null && dto.Tags.Any()
-                ? JsonSerializer.Serialize(dto.Tags)
-                : raca.Tags;
+            raca.Tags = JsonSerializer.Serialize(ContentCategoryHelper.EnsureCategoryTag(
+                dto.Tags ?? JsonSafeHelper.DeserializeTags(raca.Tags),
+                ContentCategoryHelper.Raca));
             raca.Visivel = dto.Visivel;
 
             var atualizada = await _repository.UpdateAsync(raca);

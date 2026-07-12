@@ -173,6 +173,7 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
                 theme={theme}
                 neon={neon}
                 data={tags.map((tag, index) => ({ id: index, nome: tag }))}
+                canDelete={(item) => !contentType || item.nome.localeCompare(contentType, undefined, { sensitivity: 'accent' }) !== 0}
                 onDelete={(id) => {
                   const tagIndex = id as number;
                   const tag = tags[tagIndex];

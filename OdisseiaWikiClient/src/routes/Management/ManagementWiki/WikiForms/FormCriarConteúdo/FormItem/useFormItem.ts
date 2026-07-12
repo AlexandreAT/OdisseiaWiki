@@ -3,6 +3,7 @@ import { ItemTipo, JSONContent } from "../../../../../../models/Itens";
 import { saveAsset } from "../../../../../../services/assetsService";
 import { prepareForAPI } from "../../../../../../utils/richTextHelpers";
 import { salvarItem, ItemPayload } from "../../../../../../services/itensService";
+import { ensureContentCategoryTag, isContentCategoryTag } from '../../../../../../utils/contentCategoryTag';
 
 // Atributos iniciais para cada tipo
 const getEmptyAtributos = (tipo: ItemTipo): any => {
@@ -120,8 +121,8 @@ export const useFormItem = (initialItem?: ItemPayload, contentType?: string) => 
 
   // Auto-adiciona tag do tipo de conteúdo quando muda
   useEffect(() => {
-    if (contentType && !initialItem) {
-      setTags([contentType]);
+    if (contentType) {
+      setTags(previousTags => ensureContentCategoryTag(previousTags, contentType));
       setTagInput('');
     }
   }, [contentType, initialItem]);
@@ -208,6 +209,7 @@ export const useFormItem = (initialItem?: ItemPayload, contentType?: string) => 
   };
 
   const handleRemoveTag = (tag: string) => {
+    if (isContentCategoryTag(tag, contentType)) return;
     setTags(prev => prev.filter(t => t !== tag));
   };
 
@@ -230,7 +232,7 @@ export const useFormItem = (initialItem?: ItemPayload, contentType?: string) => 
 
     setAtributos(getEmptyAtributos("outro"));
 
-    setTags([]);
+    setTags(contentType ? [contentType] : []);
     setTagInput("");
 
     setVisivel(true);
@@ -272,7 +274,7 @@ export const useFormItem = (initialItem?: ItemPayload, contentType?: string) => 
         efeito,
         imagem: imagemPath,
         atributosJson: Object.keys(atributos).length > 0 ? atributos : undefined,
-        tags: tags.length > 0 ? tags : undefined,
+        tags: ensureContentCategoryTag(tags, contentType),
         visivel
       };
 

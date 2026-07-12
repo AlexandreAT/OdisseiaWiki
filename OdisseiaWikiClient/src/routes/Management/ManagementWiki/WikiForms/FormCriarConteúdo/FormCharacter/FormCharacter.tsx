@@ -25,7 +25,7 @@ import { Skills } from '../../../../../../models/Skills';
 import { Item } from '../../../../../../models/Itens';
 import { Magia } from '../../../../../../models/Magias';
 import { TRAITS_OPTIONS, ALIGNMENT_OPTIONS } from '../../formOptions';
-import { getInventarioItems, getProtesesItems, replaceItemSection } from '../../../../../../utils/itemInventorySections';
+import { getInventarioItems, getProtesesItems, getProtesesTableItems, replaceItemSection } from '../../../../../../utils/itemInventorySections';
 //import OrcBack from '../../../../../../assets/racas/orc/OrcBackground.jpeg';
 
 interface FormProps {
@@ -118,7 +118,6 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
   const skillsColumns = React.useMemo(() => createSkillsColumns(theme, neon), [theme, neon]);
   const magiasColumns = React.useMemo(() => createMagiasColumns(theme, neon), [theme, neon]);
   const inventario = getInventarioItems(itens);
-  const proteses = getProtesesItems(itens);
   const updateInventario = (updatedItems: Item[]) => setItens(replaceItemSection(itens, 'inventario', updatedItems));
   const updateProteses = (updatedItems: Item[]) => setItens(
     replaceItemSection(itens, 'proteses', updatedItems.map((item) => ({ ...item, tipo: 'implante' }))),
@@ -393,6 +392,7 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
                 theme={theme}
                 neon={neon}
                 data={tags.map((tag, index) => ({ id: index, nome: tag }))}
+                canDelete={(item) => !contentType || item.nome.localeCompare(contentType, undefined, { sensitivity: 'accent' }) !== 0}
                 onDelete={(id) => {
                   const tagToRemove = tags[id as number];
                   if (tagToRemove) {
@@ -422,7 +422,7 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
           <SectionTable>
             <TableTitle>Próteses</TableTitle>
             <DataTable<Item>
-              data={proteses}
+              data={getProtesesTableItems(itens)}
               onChange={updateProteses}
               columns={itemColumns}
               searchable

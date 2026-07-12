@@ -6,7 +6,7 @@ import { Skills } from '../../../../models/Skills';
 import { BottomContentController, SectionTable, TableTitle } from '../../../Hub/UserCharacters/CharacterCreate/FormUserCharacter/FormUserCharacter.style';
 import { StatusForm } from '../../../Hub/UserCharacters/CharacterCreate/FormUserCharacter/StatusForm/StatusForm';
 import { CharacterSystemFormProps } from './CharacterSystemForm.type';
-import { getInventarioItems, getProtesesItems, replaceItemSection } from '../../../../utils/itemInventorySections';
+import { getInventarioItems, getProtesesItems, getProtesesTableItems, replaceItemSection } from '../../../../utils/itemInventorySections';
 
 export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
   theme,
@@ -41,7 +41,6 @@ export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
   magiasColumns,
 }) => {
   const inventario = getInventarioItems(itens);
-  const proteses = getProtesesItems(itens);
   const updateInventario = (updatedItems: Item[]) => setItens(replaceItemSection(itens, 'inventario', updatedItems));
   const updateProteses = (updatedItems: Item[]) => setItens(
     replaceItemSection(itens, 'proteses', updatedItems.map((item) => ({ ...item, tipo: 'implante' }))),
@@ -98,7 +97,7 @@ export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
         <SectionTable>
           <TableTitle>Próteses</TableTitle>
           <DataTable<Item>
-            data={proteses}
+            data={getProtesesTableItems(itens)}
             onChange={updateProteses}
             columns={itemColumns}
             searchable

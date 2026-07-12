@@ -11,12 +11,14 @@ export const Main = styled.div`
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     max-width: 1100px;
-    height: 100%;
+    width: 100%;
+    height: auto;
     gap: 30px;
     margin-bottom: 20px;
-    padding: 0 80px;
+    padding: 0 80px 40px;
+    box-sizing: border-box;
     z-index: 1;
 `
 

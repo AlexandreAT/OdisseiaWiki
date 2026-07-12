@@ -18,7 +18,7 @@ import { HorizontalList } from '../../../../../../components/Generic/HorizontalL
 import { DataTable } from '../../../../../../components/Generic/DataTable/DataTable';
 import { TRAITS_OPTIONS, ALIGNMENT_OPTIONS } from '../../constants';
 import { BasicInfoFormProps } from './BasicInfoForm.type';
-import { getInventarioItems, getProtesesItems, replaceItemSection } from '../../../../../../utils/itemInventorySections';
+import { getInventarioItems, getProtesesItems, getProtesesTableItems, replaceItemSection } from '../../../../../../utils/itemInventorySections';
 
 export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
   theme,
@@ -80,7 +80,6 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
   magiasColumns,
 }) => {
   const inventario = getInventarioItems(itens);
-  const proteses = getProtesesItems(itens);
   const updateInventario = (updatedItems: Item[]) => setItens(replaceItemSection(itens, 'inventario', updatedItems));
   const updateProteses = (updatedItems: Item[]) => setItens(
     replaceItemSection(itens, 'proteses', updatedItems.map((item) => ({ ...item, tipo: 'implante' }))),
@@ -340,7 +339,7 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
       <SectionTable>
         <TableTitle>Próteses</TableTitle>
         <DataTable<Item>
-          data={proteses}
+          data={getProtesesTableItems(itens)}
           onChange={updateProteses}
           columns={itemColumns}
           searchable

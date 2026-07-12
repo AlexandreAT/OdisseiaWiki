@@ -83,7 +83,7 @@ export const Hub = () => {
                     onIntroComplete={() => setHasPlayedIntro(true)}
                 />
             )}
-            <ClipBox backgroundColor='rgba(0, 0, 15, 0.4)' useClip={false} autoSize zIndex={1} theme={theme} neon={neon} width='1200px' height='100vh' >
+            <ClipBox backgroundColor='rgba(0, 0, 15, 0.4)' useClip={false} autoSize zIndex={1} theme={theme} neon={neon} width='1200px'>
                 <Header><TitleGlitch theme={theme} neon={neon} text='Gerenciar Mesas e Personagens' /></Header>
                 <ContentController collapsed={isCollapsed}>
                     {[{ img: BannerMesa, label: 'Mesas' }, { img: BannerPersonagens, label: 'Personagens' }].map(

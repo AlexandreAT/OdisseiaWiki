@@ -33,9 +33,7 @@ namespace OdisseiaWiki.Services
                 GaleriaImagem = dto.GaleriaImagem != null && dto.GaleriaImagem.Any()
                     ? JsonSerializer.Serialize(dto.GaleriaImagem)
                     : null,
-                Tags = dto.Tags != null && dto.Tags.Any()
-                    ? JsonSerializer.Serialize(dto.Tags)
-                    : null,
+                Tags = JsonSerializer.Serialize(ContentCategoryHelper.EnsureCategoryTag(dto.Tags, ContentCategoryHelper.Cidade)),
                 PontosDeInteresse = dto.PontosDeInteresse != null && dto.PontosDeInteresse.Any()
                     ? JsonSerializer.Serialize(dto.PontosDeInteresse)
                     : null,
@@ -79,9 +77,9 @@ namespace OdisseiaWiki.Services
             cidade.GaleriaImagem = dto.GaleriaImagem != null && dto.GaleriaImagem.Any()
                 ? JsonSerializer.Serialize(dto.GaleriaImagem)
                 : cidade.GaleriaImagem;
-            cidade.Tags = dto.Tags != null && dto.Tags.Any()
-                ? JsonSerializer.Serialize(dto.Tags)
-                : cidade.Tags;
+            cidade.Tags = JsonSerializer.Serialize(ContentCategoryHelper.EnsureCategoryTag(
+                dto.Tags ?? JsonSafeHelper.DeserializeTags(cidade.Tags),
+                ContentCategoryHelper.Cidade));
             cidade.PontosDeInteresse = dto.PontosDeInteresse != null && dto.PontosDeInteresse.Any()
                 ? JsonSerializer.Serialize(dto.PontosDeInteresse)
                 : cidade.PontosDeInteresse;

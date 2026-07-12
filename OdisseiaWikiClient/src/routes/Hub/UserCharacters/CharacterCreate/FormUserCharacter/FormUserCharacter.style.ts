@@ -9,13 +9,16 @@ export const FormController = styled.form<{ marginTop?: string }>`
     display: flex;
     flex-direction: column;
     width: 100%;
-    height: 100%;
+    height: auto;
+    min-height: 0;
     position: relative;
     gap: 20px;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     z-index: 100;
     margin-top: ${({ marginTop }) => marginTop || '20px'};
+    padding-bottom: 40px;
+    box-sizing: border-box;
 `
 
 export const FormEditController = styled.div`

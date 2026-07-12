@@ -219,6 +219,7 @@ export const FormItem = ({ theme, neon, contentType }: FormItemProps) => {
             theme={theme}
             neon={neon}
             data={tags.map((tag, index) => ({ id: index, nome: tag }))}
+            canDelete={(item) => !contentType || item.nome.localeCompare(contentType, undefined, { sensitivity: 'accent' }) !== 0}
             onDelete={(id) => {
               const tagToRemove = tags[id as number];
               if (tagToRemove) {

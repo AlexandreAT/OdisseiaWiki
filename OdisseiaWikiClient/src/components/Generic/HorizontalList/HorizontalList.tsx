@@ -21,11 +21,12 @@ interface Props {
   neon: "on" | "off";
   data: Item[];
   onDelete?: (id: string | number) => void;
+  canDelete?: (item: Item) => boolean;
   width?: string;
 }
 
 export const HorizontalList = forwardRef<HTMLDivElement, Props>(
-  ({ theme, neon, data, onDelete, width }, ref) => {
+  ({ theme, neon, data, onDelete, canDelete, width }, ref) => {
     const scrollRef = useRef<HTMLDivElement>(null);
     const [canScrollLeft, setCanScrollLeft] = useState(false);
     const [canScrollRight, setCanScrollRight] = useState(false);
@@ -87,7 +88,7 @@ export const HorizontalList = forwardRef<HTMLDivElement, Props>(
             {data.map((item) => (
               <ListItem key={item.id} theme={theme} neon={neon}>
                 <ItemName>{item.nome}</ItemName>
-                {onDelete && (
+                {onDelete && (!canDelete || canDelete(item)) && (
                   <DeleteButton
                     type="button"
                     theme={theme}
