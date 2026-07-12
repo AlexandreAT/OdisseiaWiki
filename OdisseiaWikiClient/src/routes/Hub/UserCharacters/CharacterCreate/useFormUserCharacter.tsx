@@ -86,7 +86,6 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
   const [traits, setTraits] = useState<string[]>([]);
   const [idpassiva, setIdpassiva] = useState<number | undefined>(undefined);
   const [ultimate, setUltimate] = useState('');
-  const [implantes, setImplantes] = useState('');
   const [xp, setXp] = useState(0);
   const [level, setLevel] = useState(1);
   const [skills, setSkills] = useState<Skills[]>([
@@ -396,18 +395,12 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
 
   const handleSelectItem = useCallback((item: Item) => {
     setItens(prev => {
-      if (prev.length === 0) return [item];
-
-      const updated = [...prev];
-      updated[updated.length - 1] = {
-        ...updated[updated.length - 1],
+      return [...prev, {
         ...item,
         id: crypto.randomUUID(),
         idItemBase: item.id,
         quantidade: 1,
-      };
-      
-      return updated;
+      }];
     });
   }, []);
 
@@ -524,9 +517,6 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     setTraits(tracos);
     setIdpassiva(personagem.idpassiva ?? undefined);
     setUltimate(personagem.ultimate || '');
-    setImplantes(Array.isArray(personagem.implantes)
-      ? personagem.implantes.join(', ')
-      : personagem.implantes ?? '');
     setCostumes(Array.isArray(costumes) ? costumes[0] || '' : String(costumes || ''));
 
     setStatusBasico({
@@ -704,9 +694,6 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
         tracos: traits,
         idpassiva,
         ultimate: ultimate || undefined,
-        implantes: implantes
-          ? implantes.split(',').map((item) => item.trim()).filter(Boolean)
-          : undefined,
         inventarioJson: inventarioMapped,
         skills: skillMapped,
         magia: magiaMapped,
@@ -745,7 +732,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
       toast.error(err?.response?.data || "Erro ao salvar personagem");
       return false;
     }
-  }, [avatarUrl, avatarFile, galeriaUrls, galeriaPreviewFileMap, userName, statusBasico, itens, magias, skills, race, city, userId, selectedMesa, history, costumes, extraInformation, nanites, alignment, traits, idpassiva, ultimate, implantes, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, defesas, personagem, onSave]);
+  }, [avatarUrl, avatarFile, galeriaUrls, galeriaPreviewFileMap, userName, statusBasico, itens, magias, skills, race, city, userId, selectedMesa, history, costumes, extraInformation, nanites, alignment, traits, idpassiva, ultimate, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, defesas, personagem, onSave]);
 
   // --- submit ---
   const handleSubmit = useCallback(async (e?: React.FormEvent) => {
@@ -803,9 +790,6 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
         tracos: traits,
         idpassiva,
         ultimate: ultimate || undefined,
-        implantes: implantes
-          ? implantes.split(',').map((item) => item.trim()).filter(Boolean)
-          : undefined,
         inventarioJson: inventarioMapped,
         skills: skillMapped,
         magia: magiaMapped,
@@ -834,7 +818,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     } catch (err: any) {
       toast.error(err?.response?.data || "Erro ao salvar personagem");
     }
-  }, [avatarUrl, avatarFile, galeriaUrls, galeriaShapes, galeriaPreviewFileMap, userName, itens, magias, skills, race, city, userId, selectedMesa, history, costumes, extraInformation, nanites, alignment, traits, idpassiva, ultimate, implantes, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, defesas, buildStatusForPayload, onSave]);
+  }, [avatarUrl, avatarFile, galeriaUrls, galeriaShapes, galeriaPreviewFileMap, userName, itens, magias, skills, race, city, userId, selectedMesa, history, costumes, extraInformation, nanites, alignment, traits, idpassiva, ultimate, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, defesas, buildStatusForPayload, onSave]);
 
   return {
     step,
@@ -871,8 +855,6 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     setIdpassiva,
     ultimate,
     setUltimate,
-    implantes,
-    setImplantes,
     itens,
     setItens,
     skills,

@@ -23,7 +23,6 @@ export interface PersonagemJogadorPayload {
   magia: any[];
   idpassiva?: number;
   ultimate?: string;
-  implantes?: string[];
   personagemsVinculados: string[];
   dataCriacao: string;
   statusJson: {

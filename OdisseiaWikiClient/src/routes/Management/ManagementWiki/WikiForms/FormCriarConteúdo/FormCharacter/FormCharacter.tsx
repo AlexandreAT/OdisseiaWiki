@@ -25,6 +25,7 @@ import { Skills } from '../../../../../../models/Skills';
 import { Item } from '../../../../../../models/Itens';
 import { Magia } from '../../../../../../models/Magias';
 import { TRAITS_OPTIONS, ALIGNMENT_OPTIONS } from '../../formOptions';
+import { getInventarioItems, getProtesesItems, replaceItemSection } from '../../../../../../utils/itemInventorySections';
 //import OrcBack from '../../../../../../assets/racas/orc/OrcBackground.jpeg';
 
 interface FormProps {
@@ -53,7 +54,6 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
     traits, setTraits,
     idpassiva, setIdpassiva,
     ultimate, setUltimate,
-    implantes, setImplantes,
     tags,
     tagInput, setTagInput,
     visivel, setVisivel,
@@ -117,6 +117,12 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
   const itemColumns = React.useMemo(() => createItemColumns(theme, neon), [theme, neon]);
   const skillsColumns = React.useMemo(() => createSkillsColumns(theme, neon), [theme, neon]);
   const magiasColumns = React.useMemo(() => createMagiasColumns(theme, neon), [theme, neon]);
+  const inventario = getInventarioItems(itens);
+  const proteses = getProtesesItems(itens);
+  const updateInventario = (updatedItems: Item[]) => setItens(replaceItemSection(itens, 'inventario', updatedItems));
+  const updateProteses = (updatedItems: Item[]) => setItens(
+    replaceItemSection(itens, 'proteses', updatedItems.map((item) => ({ ...item, tipo: 'implante' }))),
+  );
   
                 console.log("🚀 ~ FormCharacter ~ allPersonagens:", allPersonagens)
   return (
@@ -342,14 +348,6 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
               onChange={(e) => setUltimate(e.target.value)}
               width="100%"
             />
-            <InputText
-              theme={theme}
-              neon={neon}
-              label="Implantes"
-              value={implantes}
-              onChange={(e) => setImplantes(e.target.value)}
-              width="100%"
-            />
             {listPersonagemRelacionado.length > 0 && (
               <RelatedCharactersSection fullWidth>
                 <SectionTitle theme={theme} neon={neon}>
@@ -408,14 +406,30 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
           <SectionTable>
             <TableTitle>Inventário</TableTitle>
             <DataTable<Item>
-              data={itens}
-              onChange={setItens}
+              data={inventario}
+              onChange={updateInventario}
               columns={itemColumns}
               searchable
               searchPlaceholder="Pesquisar item..."
-              searchData={listItens}
+              searchData={getInventarioItems(listItens)}
               searchKeys={['nome', 'tipo', 'descricao']}
-              onSelectSearch={handleSelectItem}
+              onSelectSearch={(item) => item.tipo !== 'implante' && handleSelectItem(item)}
+              theme={theme}
+              neon={neon}
+            />
+          </SectionTable>
+
+          <SectionTable>
+            <TableTitle>Próteses</TableTitle>
+            <DataTable<Item>
+              data={proteses}
+              onChange={updateProteses}
+              columns={itemColumns}
+              searchable
+              searchPlaceholder="Pesquisar implante..."
+              searchData={getProtesesItems(listItens)}
+              searchKeys={['nome', 'tipo', 'descricao']}
+              onSelectSearch={(item) => item.tipo === 'implante' && handleSelectItem(item)}
               theme={theme}
               neon={neon}
             />

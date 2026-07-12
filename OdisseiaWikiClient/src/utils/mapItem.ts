@@ -5,7 +5,7 @@ import { ItemPayload } from './../services/itensService';
 function normalizeTipo(payloadTipo: any): ItemTipo {
   // Caso venha número (enum numérico do backend)
   if (typeof payloadTipo === 'number') {
-    const mapNumToString: ItemTipo[] = ['arma','traje','consumiveis','acessorio','outro'];
+    const mapNumToString: ItemTipo[] = ['arma','traje','consumiveis','acessorio','implante','outro'];
     return mapNumToString[payloadTipo] ?? 'outro';
   }
   // Caso venha string: padroniza para lowercase

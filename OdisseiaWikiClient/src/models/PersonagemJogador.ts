@@ -29,7 +29,6 @@ export interface PersonagemJogador {
   inventarioJson?: string;
   idpassiva?: number;
   ultimate?: string;
-  implantes?: string[];
   nanites?: string;
   dataCriacao: string;
   skills?: string;

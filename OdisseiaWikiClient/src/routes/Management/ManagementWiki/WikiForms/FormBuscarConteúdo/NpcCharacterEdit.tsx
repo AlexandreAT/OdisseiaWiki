@@ -161,8 +161,6 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
     setIdpassiva,
     ultimate,
     setUltimate,
-    implantes,
-    setImplantes,
     tags,
     setTags,
     visivel,
@@ -319,7 +317,6 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
         setTags(Array.isArray(loadedTags) ? loadedTags : []);
         setIdpassiva(payload.idpassiva ?? undefined);
         setUltimate(payload.ultimate || '');
-        setImplantes(Array.isArray(payload.implantes) ? payload.implantes.join(', ') : payload.implantes ?? '');
         setVisivel(Boolean(payload.visivel));
         setItens(Array.isArray(loadedItens) && loadedItens.length > 0
           ? loadedItens
@@ -631,9 +628,6 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
         visivel: visivel ?? true,
         idpassiva,
         ultimate: ultimate || undefined,
-        implantes: implantes
-          ? implantes.split(',').map((item) => item.trim()).filter(Boolean)
-          : undefined,
         inventarioJson: inventarioMapped,
         skills: skillsMapped,
         magia: magiasMapped,
@@ -828,8 +822,6 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
             setIdpassiva={setIdpassiva}
             ultimate={ultimate}
             setUltimate={setUltimate}
-            implantes={implantes}
-            setImplantes={setImplantes}
             costumes={costumes}
             setCostumes={setCostumes}
             extraInformation={extraInformation}

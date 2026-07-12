@@ -18,6 +18,7 @@ import { HorizontalList } from '../../../../../../components/Generic/HorizontalL
 import { DataTable } from '../../../../../../components/Generic/DataTable/DataTable';
 import { TRAITS_OPTIONS, ALIGNMENT_OPTIONS } from '../../constants';
 import { BasicInfoFormProps } from './BasicInfoForm.type';
+import { getInventarioItems, getProtesesItems, replaceItemSection } from '../../../../../../utils/itemInventorySections';
 
 export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
   theme,
@@ -47,8 +48,6 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
   setIdpassiva,
   ultimate,
   setUltimate,
-  implantes,
-  setImplantes,
   itens,
   setItens,
   skills,
@@ -80,6 +79,12 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
   skillsColumns,
   magiasColumns,
 }) => {
+  const inventario = getInventarioItems(itens);
+  const proteses = getProtesesItems(itens);
+  const updateInventario = (updatedItems: Item[]) => setItens(replaceItemSection(itens, 'inventario', updatedItems));
+  const updateProteses = (updatedItems: Item[]) => setItens(
+    replaceItemSection(itens, 'proteses', updatedItems.map((item) => ({ ...item, tipo: 'implante' }))),
+  );
   const characterAvatarCropPreset: CropPreset = {
     mode: 'single',
     aspectRatio: 1,
@@ -280,14 +285,6 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
           onChange={(e) => setUltimate(e.target.value)}
           width="100%"
         />
-        <InputText
-          theme={theme}
-          neon={neon}
-          label="Implantes"
-          value={implantes}
-          onChange={(e) => setImplantes(e.target.value)}
-          width="100%"
-        />
         <TextArea
           theme={theme}
           neon={neon}
@@ -327,14 +324,30 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
       <SectionTable>
         <TableTitle>Inventário</TableTitle>
         <DataTable<Item>
-          data={itens}
-          onChange={setItens}
+          data={inventario}
+          onChange={updateInventario}
           columns={itemColumns}
           searchable
           searchPlaceholder="Pesquisar item..."
-          searchData={listItens}
+          searchData={getInventarioItems(listItens)}
           searchKeys={['nome', 'tipo', 'descricao']}
-          onSelectSearch={handleSelectItem}
+          onSelectSearch={(item) => item.tipo !== 'implante' && handleSelectItem(item)}
+          theme={theme}
+          neon={neon}
+        />
+      </SectionTable>
+
+      <SectionTable>
+        <TableTitle>Próteses</TableTitle>
+        <DataTable<Item>
+          data={proteses}
+          onChange={updateProteses}
+          columns={itemColumns}
+          searchable
+          searchPlaceholder="Pesquisar implante..."
+          searchData={getProtesesItems(listItens)}
+          searchKeys={['nome', 'tipo', 'descricao']}
+          onSelectSearch={(item) => item.tipo === 'implante' && handleSelectItem(item)}
           theme={theme}
           neon={neon}
         />

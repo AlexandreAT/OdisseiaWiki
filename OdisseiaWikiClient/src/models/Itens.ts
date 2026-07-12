@@ -1,4 +1,4 @@
-export type ItemTipo = "arma" | "traje" | "consumiveis" | "acessorio" | "outro";
+export type ItemTipo = "arma" | "traje" | "consumiveis" | "acessorio" | "implante" | "outro";
 
 export type JSONContent = {
   type?: string;
@@ -37,6 +37,7 @@ export type ItemAtributos =
   | TrajeAtributos
   | ConsumiveisAtributos
   | AcessorioAtributos
+  | ImplanteAtributos
   | OutrosAtributos;
 
 export interface ArmaAtributos {
@@ -85,20 +86,25 @@ export interface OutrosAtributos {
   duracao?: string;
 }
 
-// FAZER DEPOIS
-export interface ProteseAtributos {
-  danoPorAlcance?: {
-    curta?: number;
-    media?: number;
-    longa?: number;
-    emArea?: number;
-    preciso?: number;
+export interface ImplanteAtributos {
+  parteCorpo?: 'mao' | 'braco' | 'pe' | 'perna' | 'corpo' | 'ocular' | 'outro';
+  lado?: 'direito' | 'esquerdo' | 'ambos' | 'nao-se-aplica';
+  material?: 'simples' | 'carbono' | 'blindada' | 'arcana' | 'titanio' | 'sicmithril' | 'outro';
+  modelo?: string;
+  slotsModificacao?: number;
+  slotsLacrima?: number;
+  necessitaAmputacao?: boolean;
+  bonus?: {
+    vida?: number;
+    mana?: number;
+    estamina?: number;
+    resistencia?: number;
+    forca?: number;
+    agilidade?: number;
+    precisao?: number;
+    sabedoria?: number;
   };
-  municao?: {
-    capacidade: number;
-    atual: number;
-  };
-  ataquesPorTurno?: number;
-  bonus?: string[];
-  especial?: string;
+  especiais?: string[];
+  modificacoes?: Array<{ nome: string; descricao: string }>;
+  lacrimas?: Array<{ nome: string; descricao: string }>;
 }

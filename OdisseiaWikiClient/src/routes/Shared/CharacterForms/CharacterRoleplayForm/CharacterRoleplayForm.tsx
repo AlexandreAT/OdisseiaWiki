@@ -62,8 +62,6 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
   setIdpassiva,
   ultimate,
   setUltimate,
-  implantes,
-  setImplantes,
   personagens,
   allPersonagens,
   searchTerm,
@@ -284,14 +282,6 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
             width="100%"
           />
 
-          <InputText
-            theme={theme}
-            neon={neon}
-            label="Implantes"
-            value={implantes}
-            onChange={(e) => setImplantes(e.target.value)}
-            width="100%"
-          />
         </GridInputs>
 
       <RichTextModal

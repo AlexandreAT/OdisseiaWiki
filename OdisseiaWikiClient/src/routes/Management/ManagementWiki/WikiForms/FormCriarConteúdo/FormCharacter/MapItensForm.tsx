@@ -1,6 +1,10 @@
 import React from 'react';
 import { InputText } from '../../../../../../components/Generic/InputText/InputText';
+import { Select } from '../../../../../../components/Generic/Select/Select';
+import { CheckBox } from '../../../../../../components/Generic/CheckBox/CheckBox';
+import { CyberButton } from '../../../../../../components/Generic/HighlightButton/HighlightButton';
 import { FormItemAtributos } from './FormCharacter.style';
+import { ImplanteAtributos } from '../../../../../../models/Itens';
 
 interface BaseProps {
   theme: 'dark' | 'light';
@@ -128,6 +132,45 @@ export const TrajeAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme
   );
 };
 
+const BONUS_FIELDS = [
+  ['vida', 'Vida'], ['mana', 'Mana'], ['estamina', 'Estamina'], ['resistencia', 'Resistência'],
+  ['forca', 'Força'], ['agilidade', 'Agilidade'], ['precisao', 'Precisão'], ['sabedoria', 'Sabedoria'],
+] as const;
+
+const emptyImplante = (value: ImplanteAtributos | undefined): ImplanteAtributos => ({
+  modelo: '', slotsModificacao: 0, slotsLacrima: 0, necessitaAmputacao: false,
+  bonus: {}, especiais: [], modificacoes: [], lacrimas: [], ...value,
+});
+
+export const ImplanteAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon }) => {
+  const atributos = emptyImplante(value as ImplanteAtributos | undefined);
+  const update = (partial: Partial<ImplanteAtributos>) => onChange({ ...atributos, ...partial });
+  const updateList = (key: 'especiais', index: number, text: string) => {
+    const items = [...(atributos[key] ?? [])];
+    items[index] = text;
+    update({ [key]: items });
+  };
+  const updateDetails = (key: 'modificacoes' | 'lacrimas', index: number, field: 'nome' | 'descricao', text: string) => {
+    const items = [...(atributos[key] ?? [])];
+    items[index] = { ...items[index], [field]: text };
+    update({ [key]: items });
+  };
+
+  return <FormItemAtributos>
+    <Select theme={theme} neon={neon} label="Parte do corpo" value={atributos.parteCorpo ?? ''} onChange={(e) => update({ parteCorpo: e.target.value as ImplanteAtributos['parteCorpo'] })} options={[{ label: 'Mão', value: 'mao' }, { label: 'Braço', value: 'braco' }, { label: 'Pé', value: 'pe' }, { label: 'Perna', value: 'perna' }, { label: 'Corpo', value: 'corpo' }, { label: 'Ocular', value: 'ocular' }, { label: 'Outro', value: 'outro' }]} width="100%" />
+    <Select theme={theme} neon={neon} label="Lado" value={atributos.lado ?? ''} onChange={(e) => update({ lado: e.target.value as ImplanteAtributos['lado'] })} options={[{ label: 'Direito', value: 'direito' }, { label: 'Esquerdo', value: 'esquerdo' }, { label: 'Ambos', value: 'ambos' }, { label: 'Não se aplica', value: 'nao-se-aplica' }]} width="100%" />
+    <Select theme={theme} neon={neon} label="Material" value={atributos.material ?? ''} onChange={(e) => update({ material: e.target.value as ImplanteAtributos['material'] })} options={[{ label: 'Simples', value: 'simples' }, { label: 'Carbono', value: 'carbono' }, { label: 'Blindada', value: 'blindada' }, { label: 'Arcana', value: 'arcana' }, { label: 'Titânio', value: 'titanio' }, { label: 'Sicmithril', value: 'sicmithril' }, { label: 'Outro', value: 'outro' }]} width="100%" />
+    <InputText label="Modelo" theme={theme} neon={neon} value={atributos.modelo ?? ''} onChange={(e) => update({ modelo: e.target.value })} />
+    <InputText label="Slots de modificação" type="number" theme={theme} neon={neon} value={String(atributos.slotsModificacao ?? 0)} onChange={(e) => update({ slotsModificacao: e.target.value === '' ? 0 : Number(e.target.value) })} />
+    <InputText label="Slots de lágrima" type="number" theme={theme} neon={neon} value={String(atributos.slotsLacrima ?? 0)} onChange={(e) => update({ slotsLacrima: e.target.value === '' ? 0 : Number(e.target.value) })} />
+    <CheckBox neon={neon} label="Necessita amputação" checked={atributos.necessitaAmputacao ?? false} onChange={(necessitaAmputacao) => update({ necessitaAmputacao })} />
+    {BONUS_FIELDS.map(([key, label]) => <InputText key={key} label={`Bônus de ${label}`} type="number" theme={theme} neon={neon} value={String(atributos.bonus?.[key] ?? 0)} onChange={(e) => update({ bonus: { ...atributos.bonus, [key]: e.target.value === '' ? 0 : Number(e.target.value) } })} />)}
+    {(atributos.especiais ?? []).map((item, index) => <React.Fragment key={`especial-${index}`}><InputText label={`Efeito especial ${index + 1}`} theme={theme} neon={neon} value={item} onChange={(e) => updateList('especiais', index, e.target.value)} /><CyberButton type="button" theme={theme} neon={neon} text="Remover efeito" onClick={() => update({ especiais: atributos.especiais?.filter((_, i) => i !== index) })} /></React.Fragment>)}
+    <CyberButton type="button" theme={theme} neon={neon} text="Adicionar efeito especial" onClick={() => update({ especiais: [...(atributos.especiais ?? []), ''] })} />
+    {(['modificacoes', 'lacrimas'] as const).map((key) => <React.Fragment key={key}>{(atributos[key] ?? []).map((item, index) => <React.Fragment key={`${key}-${index}`}><InputText label={`${key === 'modificacoes' ? 'Modificação' : 'Lágrima'} ${index + 1}: nome`} theme={theme} neon={neon} value={item.nome} onChange={(e) => updateDetails(key, index, 'nome', e.target.value)} /><InputText label={`${key === 'modificacoes' ? 'Modificação' : 'Lágrima'} ${index + 1}: descrição`} theme={theme} neon={neon} value={item.descricao} onChange={(e) => updateDetails(key, index, 'descricao', e.target.value)} /><CyberButton type="button" theme={theme} neon={neon} text="Remover" onClick={() => update({ [key]: atributos[key]?.filter((_, i) => i !== index) })} /></React.Fragment>)}<CyberButton type="button" theme={theme} neon={neon} text={`Adicionar ${key === 'modificacoes' ? 'modificação' : 'lágrima'}`} onClick={() => update({ [key]: [...(atributos[key] ?? []), { nome: '', descricao: '' }] })} /></React.Fragment>)}
+  </FormItemAtributos>;
+};
+
 export const ConsumiveisAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon }) => (
   <InputText
     label="Duração"
@@ -163,6 +206,7 @@ export const atributosFormMap: Record<string, React.FC<BaseProps>> = {
   traje: TrajeAtributosForm,
   consumiveis: ConsumiveisAtributosForm,
   acessorio: AcessorioAtributosForm,
+  implante: ImplanteAtributosForm,
   outro: OutrosAtributosForm,
 };
 

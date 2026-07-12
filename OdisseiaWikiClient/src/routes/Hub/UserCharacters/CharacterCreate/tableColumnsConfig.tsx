@@ -248,6 +248,7 @@ const baseItemColumns = [
       { label: "Traje", value: "traje" },
       { label: "Consumiveis", value: "consumiveis" },
       { label: "Acessório", value: "acessorio" },
+      { label: "Implante", value: "implante" },
       { label: "Outro", value: "outro" },
     ],
   },

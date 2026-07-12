@@ -34,8 +34,6 @@ export interface BasicInfoFormProps {
   setIdpassiva: (value: number | undefined) => void;
   ultimate: string;
   setUltimate: (value: string) => void;
-  implantes: string;
-  setImplantes: (value: string) => void;
   itens: Item[];
   setItens: (value: Item[]) => void;
   skills: Skills[];

@@ -79,7 +79,6 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
   const [traits, setTraits] = useState<string[]>([]);
   const [idpassiva, setIdpassiva] = useState<number | undefined>(undefined);
   const [ultimate, setUltimate] = useState('');
-  const [implantes, setImplantes] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [visivel, setVisivel] = useState(true);
@@ -330,16 +329,12 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
   const handleSelectItem = useCallback((item: Item) => {
     console.log("🚀 ~ handleSelectItem ~ item:", item)
     setItens(prev => {
-      if (prev.length === 0) return [item];
-
-      const updated = [...prev];
-      updated[updated.length - 1] = {
-        ...updated[updated.length - 1],
+      const updated = [...prev, {
         ...item,
         id: crypto.randomUUID(),
         idItemBase: item.id,
         quantidade: 1,
-      };
+      }];
       console.log("🚀 ~ handleSelectItem ~ updated:", updated)
       return updated;
     });
@@ -559,7 +554,7 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
     } catch (err: any) {
       toast.error(extractErrorMessage(err));
     }
-  }, [avatarUrl, avatarFile, userName, statusBasico, itens, magias, skills, race, city, history, costumes, nanites, alignment, traits, idpassiva, ultimate, implantes, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, defesas]);
+  }, [avatarUrl, avatarFile, userName, statusBasico, itens, magias, skills, race, city, history, costumes, nanites, alignment, traits, idpassiva, ultimate, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, defesas]);
 
   return {
     step, setStep,
@@ -578,7 +573,6 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
     traits, setTraits,
     idpassiva, setIdpassiva,
     ultimate, setUltimate,
-    implantes, setImplantes,
     tags, setTags,
     tagInput, setTagInput,
     visivel, setVisivel,

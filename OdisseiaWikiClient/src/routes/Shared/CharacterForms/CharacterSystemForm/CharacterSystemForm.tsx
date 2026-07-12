@@ -6,6 +6,7 @@ import { Skills } from '../../../../models/Skills';
 import { BottomContentController, SectionTable, TableTitle } from '../../../Hub/UserCharacters/CharacterCreate/FormUserCharacter/FormUserCharacter.style';
 import { StatusForm } from '../../../Hub/UserCharacters/CharacterCreate/FormUserCharacter/StatusForm/StatusForm';
 import { CharacterSystemFormProps } from './CharacterSystemForm.type';
+import { getInventarioItems, getProtesesItems, replaceItemSection } from '../../../../utils/itemInventorySections';
 
 export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
   theme,
@@ -39,6 +40,19 @@ export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
   skillsColumns,
   magiasColumns,
 }) => {
+  const inventario = getInventarioItems(itens);
+  const proteses = getProtesesItems(itens);
+  const updateInventario = (updatedItems: Item[]) => setItens(replaceItemSection(itens, 'inventario', updatedItems));
+  const updateProteses = (updatedItems: Item[]) => setItens(
+    replaceItemSection(itens, 'proteses', updatedItems.map((item) => ({ ...item, tipo: 'implante' }))),
+  );
+  const adicionarItem = (item: Item) => {
+    if (item.tipo !== 'implante') handleSelectItem(item);
+  };
+  const adicionarProtese = (item: Item) => {
+    if (item.tipo === 'implante') handleSelectItem(item);
+  };
+
   return (
     <>
       <StatusForm
@@ -68,14 +82,30 @@ export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
         <SectionTable>
           <TableTitle>Inventário</TableTitle>
           <DataTable<Item>
-            data={itens}
-            onChange={setItens}
+            data={inventario}
+            onChange={updateInventario}
             columns={itemColumns}
             searchable
             searchPlaceholder="Pesquisar item..."
-            searchData={listItens}
+            searchData={getInventarioItems(listItens)}
             searchKeys={['nome', 'tipo', 'descricao']}
-            onSelectSearch={handleSelectItem}
+            onSelectSearch={adicionarItem}
+            theme={theme}
+            neon={neon}
+          />
+        </SectionTable>
+
+        <SectionTable>
+          <TableTitle>Próteses</TableTitle>
+          <DataTable<Item>
+            data={proteses}
+            onChange={updateProteses}
+            columns={itemColumns}
+            searchable
+            searchPlaceholder="Pesquisar implante..."
+            searchData={getProtesesItems(listItens)}
+            searchKeys={['nome', 'tipo', 'descricao']}
+            onSelectSearch={adicionarProtese}
             theme={theme}
             neon={neon}
           />

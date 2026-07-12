@@ -57,8 +57,6 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserC
     setIdpassiva,
     ultimate,
     setUltimate,
-    implantes,
-    setImplantes,
     listPersonagemRelacionado,
     setListPersonagemRelacionado,
         itens, setItens,
@@ -273,8 +271,6 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserC
                   setIdpassiva={setIdpassiva}
                   ultimate={ultimate}
                   setUltimate={setUltimate}
-                  implantes={implantes}
-                  setImplantes={setImplantes}
                   costumes={costumes}
                   setCostumes={setCostumes}
                   extraInformation={extraInformation}
