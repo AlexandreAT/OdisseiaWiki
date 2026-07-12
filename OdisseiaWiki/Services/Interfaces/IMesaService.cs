@@ -7,5 +7,8 @@ namespace OdisseiaWiki.Services.Interfaces
     {
         Task<ResultMesa> CreateAsync(MesaDto dto);
         Task<List<Mesa>> GetAllAsync();
+        Task<Mesa> ObterMesaPadraoAsync();
+        Task<ResultMesa> UpdateAsync(int id, MesaDto dto);
+        Task<bool> DeleteAsync(int id);
     }
 }

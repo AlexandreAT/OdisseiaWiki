@@ -33,5 +33,19 @@ namespace OdisseiaWiki.Controllers
             List<Mesa> mesas = await _service.GetAllAsync();
             return Ok(mesas);
         }
+
+        [HttpPut("{id:int}")]
+        public async Task<IActionResult> Update(int id, [FromBody] MesaDto dto)
+        {
+            var resultado = await _service.UpdateAsync(id, dto);
+            return resultado.Sucesso ? Ok(resultado.Mesa) : BadRequest(resultado.MensagemErro);
+        }
+
+        [HttpDelete("{id:int}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var sucesso = await _service.DeleteAsync(id);
+            return sucesso ? NoContent() : BadRequest("Mesa não encontrada ou protegida pelo sistema.");
+        }
     }
 }

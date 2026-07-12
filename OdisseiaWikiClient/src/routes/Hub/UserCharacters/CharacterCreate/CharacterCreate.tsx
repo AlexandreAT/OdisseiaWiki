@@ -90,6 +90,7 @@ const CharacterCreateComponent = ({ theme, neon, userId, onSave }: UserCharacter
         onChange={e => setSelectedMesa(Number(e.target.value))}
         width="100%"
         disabled={loadingMesas}
+        allowEmptyOption={false}
       />
       
       {selectedMesa && step === 1 && (

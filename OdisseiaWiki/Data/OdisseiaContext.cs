@@ -106,16 +106,21 @@ public partial class OdisseiaContext : DbContext
             entity.ToTable("mesas");
 
             entity.HasIndex(e => e.IdusuarioCriacao, "ID usuario criacao");
+            entity.HasIndex(e => e.CodigoSistema)
+                .IsUnique()
+                .HasDatabaseName("UX_Mesa_CodigoSistema");
 
             entity.Property(e => e.Idmesa)
                 .HasColumnType("int(11)")
                 .HasColumnName("IDMesa");
             entity.Property(e => e.DataCriacao).HasColumnType("datetime");
+            entity.Property(e => e.CodigoSistema).HasMaxLength(50);
             entity.Property(e => e.IdusuarioCriacao)
                 .HasColumnType("int(11)")
                 .HasColumnName("IDUsuarioCriacao");
             entity.Property(e => e.Imagem).HasMaxLength(255);
             entity.Property(e => e.Nome).HasMaxLength(100);
+            entity.Property(e => e.PadraoSistema).HasColumnType("tinyint(1)");
 
             entity.HasOne(d => d.IdusuarioCriacaoNavigation).WithMany(p => p.Mesas)
                 .HasForeignKey(d => d.IdusuarioCriacao)

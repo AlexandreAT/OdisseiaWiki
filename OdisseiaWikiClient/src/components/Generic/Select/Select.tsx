@@ -27,6 +27,7 @@ interface Props {
   height?: string;
   options: Option[];
   disabled?: boolean;
+  allowEmptyOption?: boolean;
 }
 
 export const Select = forwardRef<HTMLSelectElement, Props>(
@@ -46,6 +47,7 @@ export const Select = forwardRef<HTMLSelectElement, Props>(
       height,
       options,
       disabled,
+      allowEmptyOption = true,
     },
     ref
   ) => {
@@ -82,7 +84,7 @@ export const Select = forwardRef<HTMLSelectElement, Props>(
             onBlur={handleBlur}
             disabled={disabled}
           >
-            <option value="" disabled hidden></option>
+            {allowEmptyOption && <option value="" disabled hidden></option>}
             {options.map(opt => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}

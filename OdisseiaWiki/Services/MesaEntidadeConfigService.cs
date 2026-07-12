@@ -4,8 +4,8 @@ using OdisseiaWiki.Dtos;
 using OdisseiaWiki.Enums;
 using OdisseiaWiki.Models;
 using OdisseiaWiki.Repositories.Interfaces;
-using OdisseiaWiki.Services.Helpers;
 using OdisseiaWiki.Services.Interfaces;
+using OdisseiaWiki.Services.Helpers;
 
 namespace OdisseiaWiki.Services;
 
@@ -50,6 +50,9 @@ public class MesaEntidadeConfigService : IMesaEntidadeConfigService
         if (await _mesaRepository.GetByIdAsync(dto.Idmesa) is null)
             return ResultMesaEntidadeConfig.Fail("Mesa não encontrada.");
 
+        if ((await _mesaRepository.GetByCodigoSistemaAsync(SystemMesaConstants.CodigoMesaPadrao))?.Idmesa == dto.Idmesa)
+            return ResultMesaEntidadeConfig.Fail("A mesa padrão não aceita configurações personalizadas.");
+
         if (!await _mesaRepository.IsOwnerAsync(dto.Idmesa, dto.Idusuario))
             return ResultMesaEntidadeConfig.Fail("Usuário sem permissão para configurar esta mesa.");
 
@@ -84,6 +87,9 @@ public class MesaEntidadeConfigService : IMesaEntidadeConfigService
     {
         if (await _mesaRepository.GetByIdAsync(idMesa) is null)
             return ResultMesaEntidadeConfig.Fail("Mesa não encontrada.");
+
+        if ((await _mesaRepository.GetByCodigoSistemaAsync(SystemMesaConstants.CodigoMesaPadrao))?.Idmesa == idMesa)
+            return ResultMesaEntidadeConfig.Fail("A mesa padrão não aceita configurações personalizadas.");
 
         if (!await _mesaRepository.IsOwnerAsync(idMesa, idUsuario))
             return ResultMesaEntidadeConfig.Fail("Usuário sem permissão para configurar esta mesa.");

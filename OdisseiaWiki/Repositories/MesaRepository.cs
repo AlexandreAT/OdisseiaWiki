@@ -22,9 +22,20 @@ namespace OdisseiaWiki.Repositories
         public async Task<Mesa?> GetByIdAsync(int id)
             => await _context.Mesas.FindAsync(id);
 
+        public Task<Mesa?> GetByCodigoSistemaAsync(string codigoSistema)
+            => _context.Mesas.FirstOrDefaultAsync(mesa => mesa.CodigoSistema == codigoSistema);
+
         public Task<bool> IsOwnerAsync(int idMesa, int idUsuario)
             => _context.Mesas.AnyAsync(mesa =>
                 mesa.Idmesa == idMesa && mesa.IdusuarioCriacao == idUsuario);
+
+        public Task<bool> UsuarioPodeUsarMesaAsync(int idMesa, int idUsuario)
+            => _context.Mesas.AnyAsync(mesa =>
+                mesa.Idmesa == idMesa &&
+                (mesa.PadraoSistema ||
+                 mesa.IdusuarioCriacao == idUsuario ||
+                 _context.Mesausuarios.Any(vinculo =>
+                    vinculo.Idmesa == idMesa && vinculo.Idusuario == idUsuario)));
 
         public async Task<List<Mesa>> GetByUsuarioIdAsync(int usuarioId)
         {

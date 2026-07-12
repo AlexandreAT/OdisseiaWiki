@@ -10,16 +10,28 @@ namespace OdisseiaWiki.Services
     public class PersonagemJogadorService : IPersonagemJogadorService
     {
         private readonly IPersonagemJogadorRepository _repository;
+        private readonly IMesaRepository _mesaRepository;
+        private readonly IMesaService _mesaService;
 
-        public PersonagemJogadorService(IPersonagemJogadorRepository repository)
+        public PersonagemJogadorService(
+            IPersonagemJogadorRepository repository,
+            IMesaRepository mesaRepository,
+            IMesaService mesaService)
         {
             _repository = repository;
+            _mesaRepository = mesaRepository;
+            _mesaService = mesaService;
         }
 
         public async Task<ResultPersonagemJogador> CreateAsync(PersonagemJogadorDto personagemDto)
         {
             if (string.IsNullOrWhiteSpace(personagemDto.Nome))
                 return ResultFail("O nome é obrigatório.");
+
+            var validacaoMesa = await ValidarMesaAsync(personagemDto.Idmesa, personagemDto.Idusuario);
+            if (!validacaoMesa.Sucesso)
+                return ResultFail(validacaoMesa.MensagemErro!);
+            personagemDto.Idmesa = validacaoMesa.Idmesa;
 
             if (personagemDto.StatusJson != null)
             {
@@ -74,6 +86,13 @@ namespace OdisseiaWiki.Services
             if (personagem == null)
                 return ResultFail($"PersonagemJogador com id {id} não encontrado.");
 
+            var idUsuario = personagemDto.Idusuario > 0 ? personagemDto.Idusuario : personagem.Idusuario;
+            var validacaoMesa = await ValidarMesaAsync(personagemDto.Idmesa, idUsuario);
+            if (!validacaoMesa.Sucesso)
+                return ResultFail(validacaoMesa.MensagemErro!);
+            personagemDto.Idmesa = validacaoMesa.Idmesa;
+            personagemDto.Idusuario = idUsuario;
+
             personagem = MapDtoToModel(personagemDto, personagem);
             personagem.Idcidade = personagem.Idcidade == 0 ? null : personagem.Idcidade;
 
@@ -88,6 +107,26 @@ namespace OdisseiaWiki.Services
         public async Task<PersonagemJogador?> GetByIdAsync(int id) => await _repository.GetByIdAsync(id);
 
         public async Task<bool> DeleteAsync(int id) => await _repository.DeleteAsync(id);
+
+        private async Task<(bool Sucesso, int Idmesa, string? MensagemErro)> ValidarMesaAsync(int idMesa, int idUsuario)
+        {
+            if (idUsuario <= 0)
+                return (false, 0, "Usuário inválido.");
+
+            if (idMesa <= 0)
+            {
+                var mesaPadrao = await _mesaService.ObterMesaPadraoAsync();
+                return (true, mesaPadrao.Idmesa, null);
+            }
+
+            if (await _mesaRepository.GetByIdAsync(idMesa) is null)
+                return (false, 0, "Mesa não encontrada.");
+
+            if (!await _mesaRepository.UsuarioPodeUsarMesaAsync(idMesa, idUsuario))
+                return (false, 0, "Usuário sem permissão para utilizar esta mesa.");
+
+            return (true, idMesa, null);
+        }
 
         private static PersonagemJogador MapDtoToModel(PersonagemJogadorDto personagemDto, PersonagemJogador? personagem = null)
         {

@@ -301,9 +301,12 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
         try {
           const mesas = await getMesas();
           setListMesas(mesas);
-          const defaultMesa = mesas.find(m => m.idmesa === 1);
-          
-          if (defaultMesa) setSelectedMesa(defaultMesa.idmesa);
+          const mesaAtual = personagem?.idmesa
+            ? mesas.find((mesa) => mesa.idmesa === personagem.idmesa)
+            : undefined;
+          const mesaPadrao = mesas.find((mesa) => mesa.padraoSistema);
+
+          setSelectedMesa(mesaAtual?.idmesa ?? mesaPadrao?.idmesa ?? mesas[0]?.idmesa);
         } catch (err) {
           
         } finally {
@@ -311,7 +314,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
         }
     };
     fetchMesas();
-  }, []);
+  }, [personagem?.idmesa]);
 
   const hasInitializedRef = useRef(false);
   const lastRaceIdRef = useRef<number | undefined>(undefined);
@@ -642,6 +645,11 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
   const handleUpdate = useCallback(async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
 
+    if (!selectedMesa) {
+      toast.error('Selecione uma mesa válida.');
+      return false;
+    }
+
     try {
       let avatarPath = avatarUrl;
 
@@ -737,6 +745,11 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
   // --- submit ---
   const handleSubmit = useCallback(async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+
+    if (!selectedMesa) {
+      toast.error('Selecione uma mesa válida.');
+      return;
+    }
 
     try {
       let avatarPath = avatarUrl;

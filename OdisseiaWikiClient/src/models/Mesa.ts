@@ -3,5 +3,6 @@ export interface Mesa {
   idusuarioCriacao?: number;
   nome: string;
   imagem?: string | null;
+  padraoSistema: boolean;
   dataCriacao: string;
 }
