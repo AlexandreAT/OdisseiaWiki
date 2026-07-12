@@ -1,4 +1,14 @@
 import styled, { keyframes, css } from 'styled-components';
+import {
+  wikiBlockquoteStyle,
+  wikiCodeStyle,
+  wikiHeading1Style,
+  wikiHeading2Style,
+  wikiHeading3Style,
+  wikiLinkStyle,
+  wikiListStyle,
+  wikiParagraphStyle,
+} from '../../../routes/Wiki/shared/WikiTextStyles';
 
 interface Props {
   theme?: 'dark' | 'light';
@@ -97,9 +107,9 @@ export const EditorWrapper = styled.div<Props>`
   .ProseMirror {
     min-height: 80px;
     outline: none;
-    color: var(--deepgrey);
+    color: var(--whitesmoke);
     font-size: 0.9em;
-    font-weight: 600;
+    line-height: 1.8;
 
     > * + * {
       margin-top: 0.75em;
@@ -120,45 +130,44 @@ export const EditorWrapper = styled.div<Props>`
 
     /* Headings */
     h1 {
-      font-size: 2em;
-      font-weight: bold;
-      margin-bottom: 0.5em;
-      color: var(--whitesmoke);
+      ${wikiHeading1Style}
+      margin: 0.6em 0 0.3em;
     }
 
     h2 {
-      font-size: 1.5em;
-      font-weight: bold;
-      margin-bottom: 0.5em;
-      color: var(--whitesmoke);
+      ${wikiHeading2Style}
+      margin: 0.6em 0 0.3em;
     }
 
     h3 {
-      font-size: 1.25em;
-      font-weight: bold;
-      margin-bottom: 0.5em;
+      ${wikiHeading3Style}
+      margin: 0.6em 0 0.3em;
+    }
+
+    h4,
+    h5,
+    h6 {
+      font-family: 'DO Futuristic', sans-serif !important;
+      font-weight: 100;
+      letter-spacing: 1px;
+      margin: 0.6em 0 0.3em;
+      line-height: 1.4;
       color: var(--whitesmoke);
     }
 
-    h4 {
-      font-size: 1.1em;
-      font-weight: bold;
-      margin-bottom: 0.5em;
-      color: var(--whitesmoke);
+    h4 { font-size: 1.1rem !important; }
+    h5 { font-size: 1rem !important; }
+    h6 { font-size: 0.9rem !important; }
+
+    p {
+      ${wikiParagraphStyle}
+      margin: 0 0 12px;
     }
 
     /* Listas */
     ul, ol {
-      padding-left: 1.5em;
+      ${wikiListStyle}
       margin: 0.5em 0;
-    }
-
-    ul {
-      list-style-type: disc;
-    }
-
-    ol {
-      list-style-type: decimal;
     }
 
     li {
@@ -171,31 +180,17 @@ export const EditorWrapper = styled.div<Props>`
 
     /* Links */
     a {
-      color: var(--clearneonBlue);
-      text-decoration: underline;
-      cursor: pointer;
-
-      &:hover {
-        color: var(--clearneonPink);
-      }
+      ${wikiLinkStyle}
     }
 
     /* Code */
     code {
-      background-color: rgba(255, 255, 255, 0.1);
-      padding: 0.2em 0.4em;
-      border-radius: 3px;
-      font-family: monospace;
-      font-size: 0.9em;
+      ${wikiCodeStyle}
     }
 
     /* Blockquote */
     blockquote {
-      border-left: 3px solid var(--clearneonBlue);
-      padding-left: 1em;
-      margin-left: 0;
-      font-style: italic;
-      color: rgba(255, 255, 255, 0.8);
+      ${wikiBlockquoteStyle}
     }
   }
 `;

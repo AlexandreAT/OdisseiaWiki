@@ -4,7 +4,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import { JSONContent } from '../../../models/Characters';
 import { RichTextEditor } from '../RichTextEditor/RichTextEditor';
 import { CyberButton } from '../HighlightButton/HighlightButton';
-import { ConfirmDialog } from '../ConfirmDialog/ConfirmDialog';
+import { FeedbackModal } from '../FeedbackModal';
 import {
   ModalOverlay,
   ModalSheet,
@@ -86,7 +86,7 @@ const RichTextModal: React.FC<RichTextModalProps> = ({
     setHasChanges(true);
   };
 
-  const handleCancel = () => {
+  const handleCloseRequest = () => {
     if (hasChanges) {
       setOpenConfirmCancel(true);
     } else {
@@ -96,6 +96,7 @@ const RichTextModal: React.FC<RichTextModalProps> = ({
 
   const handleConfirmCancel = () => {
     setOpenConfirmCancel(false);
+    setHasChanges(false);
     onClose();
   };
 
@@ -105,7 +106,7 @@ const RichTextModal: React.FC<RichTextModalProps> = ({
 
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) {
-      handleCancel();
+      handleCloseRequest();
     }
   };
 
@@ -116,7 +117,7 @@ const RichTextModal: React.FC<RichTextModalProps> = ({
       <ModalSheet theme={theme} neon={neon}>
         <ModalHeader theme={theme} neon={neon}>
           <ModalTitle theme={theme} neon={neon}>{title}</ModalTitle>
-          <CloseButton theme={theme} neon={neon} onClick={handleCancel} title="Fechar">
+          <CloseButton theme={theme} neon={neon} onClick={handleCloseRequest} title="Fechar">
             <CloseIcon />
           </CloseButton>
         </ModalHeader>
@@ -142,7 +143,7 @@ const RichTextModal: React.FC<RichTextModalProps> = ({
             neon={neon}
             colorType="secondary"
             text="Cancelar"
-            onClick={handleCancel}
+            onClick={handleCloseRequest}
             width="120px"
           />
           <CyberButton
@@ -163,14 +164,15 @@ const RichTextModal: React.FC<RichTextModalProps> = ({
           />
         </ModalFooter>
         
-        <ConfirmDialog
+        <FeedbackModal
           open={openConfirmCancel}
+          type="alert"
           title="Alterações não salvas"
           message="Você tem alterações não salvas. Deseja realmente cancelar?"
-          confirmText="Descartar"
+          continueText="Descartar"
           cancelText="Continuar editando"
-          onConfirm={handleConfirmCancel}
-          onCancel={handleCancelSave}
+          onContinue={handleConfirmCancel}
+          onClose={handleCancelSave}
         />
       </ModalSheet>
     </ModalOverlay>

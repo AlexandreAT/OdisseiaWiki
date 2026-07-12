@@ -1,6 +1,7 @@
 import React from 'react';
 import { JSONContent } from '../../../models/Characters';
 import { isJSONContent, normalizeToJSONContent } from '../../../utils/richTextHelpers';
+import { RichTextDisplayContainer } from './RichTextDisplay.style';
 
 interface RichTextDisplayProps {
   content: JSONContent | string | undefined;
@@ -47,25 +48,25 @@ const renderNode = (node: JSONContent, key?: React.Key): React.ReactNode => {
     case 'paragraph': {
       const attrs = (node.attrs || {}) as any;
       const align = attrs.align || attrs.textAlign || 'left';
-      return <p key={key} style={{ margin: '0 0 12px', textAlign: align }}>{children}</p>;
+      return <p key={key} style={{ textAlign: align }}>{children}</p>;
     }
     case 'heading':
       // level in attrs.level
       const level = (node.attrs && node.attrs.level) || 2;
       const H = `h${Math.min(6, Math.max(1, Number(level)))}` as keyof JSX.IntrinsicElements;
-      return React.createElement(H, { key, style: { margin: '8px 0' } }, children);
+      return React.createElement(H, { key }, children);
     case 'bulletList':
-      return <ul key={key} style={{ margin: '0 0 12px 20px' }}>{children}</ul>;
+      return <ul key={key}>{children}</ul>;
     case 'orderedList':
-      return <ol key={key} style={{ margin: '0 0 12px 20px' }}>{children}</ol>;
+      return <ol key={key}>{children}</ol>;
     case 'listItem':
       return <li key={key}>{children}</li>;
     case 'hardBreak':
       return <br key={key} />;
     case 'blockquote':
-      return <blockquote key={key} style={{ margin: '0 0 12px', paddingLeft: 12, borderLeft: '3px solid rgba(0,0,0,0.1)' }}>{children}</blockquote>;
+      return <blockquote key={key}>{children}</blockquote>;
     case 'codeBlock':
-      return <pre key={key} style={{ background: 'rgba(0,0,0,0.04)', padding: 12, borderRadius: 6, overflow: 'auto' }}>{children}</pre>;
+      return <pre key={key}>{children}</pre>;
     default:
       return <div key={key}>{children}</div>;
   }
@@ -94,8 +95,8 @@ export const RichTextDisplay: React.FC<RichTextDisplayProps> = ({ content, class
   }
 
   return (
-    <div className={className} style={{ ...style }}>
+    <RichTextDisplayContainer className={className} style={style}>
       {renderNode(normalized)}
-    </div>
+    </RichTextDisplayContainer>
   );
 };

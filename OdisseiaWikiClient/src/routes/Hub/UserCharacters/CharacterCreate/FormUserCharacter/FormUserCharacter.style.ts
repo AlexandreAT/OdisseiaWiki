@@ -34,10 +34,11 @@ export const FormHeader = styled.div<Props>`
     flex-direction: row;
     align-items: center;
     justify-content: center;
+    gap: 32px;
 `;
 
 export const HeaderInputs = styled.div<Props>`
-    width: 75%;
+    width: calc(75% - 16px);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -51,7 +52,7 @@ export const HeaderInputs = styled.div<Props>`
 `;
 
 export const HeaderAvatar = styled.div<Props>`
-    width: 25%;
+    width: calc(25% - 16px);
     display: flex;
     align-items: center;
     justify-content: center;
