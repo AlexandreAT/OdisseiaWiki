@@ -37,7 +37,7 @@ namespace OdisseiaWiki
 
             builder.Services.AddScoped<ITokenService, TokenService>();
 
-            // Registrando o repositÛrio
+            // Registrando o reposit√≥rio
             builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
             builder.Services.AddScoped<IPersonagemRepository, PersonagemRepository>();
             builder.Services.AddScoped<IPersonagemJogadorRepository, PersonagemJogadorRepository>();
@@ -45,10 +45,11 @@ namespace OdisseiaWiki
             builder.Services.AddScoped<ICidadeRepository, CidadeRepository>();
             builder.Services.AddScoped<IItemRepository, ItemRepository>();
             builder.Services.AddScoped<IMesaRepository, MesaRepository>();
+            builder.Services.AddScoped<IMesaEntidadeConfigRepository, MesaEntidadeConfigRepository>();
             builder.Services.AddScoped<IInfoLoreRepository, InfoLoreRepository>();
             builder.Services.AddScoped<IPageRepository, PageRepository>();
 
-            // Registrando os serviÁos de domÌnio
+            // Registrando os servi√ßos de dom√≠nio
             builder.Services.AddScoped<IUsuarioService, UsuarioService>();
             builder.Services.AddScoped<IPersonagemService, PersonagemService>();
             builder.Services.AddScoped<IPersonagemJogadorService, PersonagemJogadorService>();
@@ -56,20 +57,21 @@ namespace OdisseiaWiki
             builder.Services.AddScoped<ICidadeService, CidadeService>();
             builder.Services.AddScoped<IItemService, ItemService>();
             builder.Services.AddScoped<IMesaService, MesaService>();
+            builder.Services.AddScoped<IMesaEntidadeConfigService, MesaEntidadeConfigService>();
             builder.Services.AddScoped<IInfoLoreService, InfoLoreService>();
             builder.Services.AddScoped<IPageService, PageService>();
 
-            // --- ConfiguraÁ„o ImgBB: carregar seÁ„o ImgBB do appsettings para IOptions<ImgBBSettings>
+            // --- Configura√ß√£o ImgBB: carregar se√ß√£o ImgBB do appsettings para IOptions<ImgBBSettings>
             builder.Services.Configure<ImgBBSettings>(builder.Configuration.GetSection("ImgBB"));
 
-            // --- Registro dos providers de storage (necess·rios para AssetService)
+            // --- Registro dos providers de storage (necess√°rios para AssetService)
             // Local storage provider (implementa ILocalStorageProvider)
             builder.Services.AddScoped<ILocalStorageProvider, LocalStorageProvider>();
 
             // ImgBB provider via HttpClientFactory + retry policy (Polly)
             builder.Services.AddHttpClient<IImgBBStorageProvider, ImgBBStorageProvider>(client =>
             {
-                // endpoint configurado via ImgBBSettings; aqui podemos definir timeouts padr„o
+                // endpoint configurado via ImgBBSettings; aqui podemos definir timeouts padr√£o
                 client.Timeout = TimeSpan.FromSeconds(30);
             })
             .SetHandlerLifetime(TimeSpan.FromMinutes(5))

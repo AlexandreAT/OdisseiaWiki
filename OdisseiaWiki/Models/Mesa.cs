@@ -25,7 +25,7 @@ public partial class Mesa
 
     public virtual ICollection<PersonagemJogador> PersonagensJogadores { get; set; } = new List<PersonagemJogador>();
 
-    public virtual ICollection<Mesaracaconfig> Mesaracaconfigs { get; set; } = new List<Mesaracaconfig>();
+    public virtual ICollection<MesaEntidadeConfig> MesaEntidadeConfigs { get; set; } = new List<MesaEntidadeConfig>();
 
     public virtual ICollection<Mesausuario> Mesausuarios { get; set; } = new List<Mesausuario>();
 }

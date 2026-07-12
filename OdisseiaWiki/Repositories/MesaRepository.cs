@@ -22,6 +22,10 @@ namespace OdisseiaWiki.Repositories
         public async Task<Mesa?> GetByIdAsync(int id)
             => await _context.Mesas.FindAsync(id);
 
+        public Task<bool> IsOwnerAsync(int idMesa, int idUsuario)
+            => _context.Mesas.AnyAsync(mesa =>
+                mesa.Idmesa == idMesa && mesa.IdusuarioCriacao == idUsuario);
+
         public async Task<List<Mesa>> GetByUsuarioIdAsync(int usuarioId)
         {
             return await _context.Mesas

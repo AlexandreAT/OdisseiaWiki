@@ -211,7 +211,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     const fetchRaces = async () => {
       setLoadingRaces(true);
       try {
-        const result = await getRacas();
+        const result = await getRacas(undefined, selectedMesa);
         if (result.sucesso && result.racas) {
           setListRaces(result.racas);
         } else {
@@ -224,7 +224,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
       }
     };
     fetchRaces();
-  }, []);
+  }, [selectedMesa]);
 
   useEffect(() => {
     const fetchItens = async () => {

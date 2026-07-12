@@ -14,10 +14,12 @@ namespace OdisseiaWiki.Services
     public class RacaService : IRacaService
     {
         private readonly IRacaRepository _repository;
+        private readonly IMesaEntidadeConfigService _mesaEntidadeConfigService;
 
-        public RacaService(IRacaRepository repository)
+        public RacaService(IRacaRepository repository, IMesaEntidadeConfigService mesaEntidadeConfigService)
         {
             _repository = repository;
+            _mesaEntidadeConfigService = mesaEntidadeConfigService;
         }
 
         public async Task<ResultRaca> CreateAsync(RacaDto dto)
@@ -87,19 +89,19 @@ namespace OdisseiaWiki.Services
             return ResultRaca.Ok(MapToDto(atualizada));
         }
 
-        public async Task<ResultRaca> GetAllAsync(bool? visivel = null)
+        public async Task<ResultRaca> GetAllAsync(bool? visivel = null, int? idMesa = null)
         {
             var racas = await _repository.GetAllAsync(visivel);
 
-            var dtos = racas.Select(MapToDto).ToList();
+            var dtos = await Task.WhenAll(racas.Select(raca => MapToDtoAsync(raca, idMesa)));
 
-            return ResultRaca.Ok(dtos);
+            return ResultRaca.Ok(dtos.ToList());
         }
 
-        public async Task<RacaDto?> GetByIdAsync(int id)
+        public async Task<RacaDto?> GetByIdAsync(int id, int? idMesa = null)
         {
             var raca = await _repository.GetByIdAsync(id);
-            return raca != null ? MapToDto(raca) : null;
+            return raca != null ? await MapToDtoAsync(raca, idMesa) : null;
         }
 
         public async Task<bool> DeleteAsync(int id)
@@ -122,6 +124,13 @@ namespace OdisseiaWiki.Services
             Visivel = raca.Visivel,
             DataCriacao = raca.DataCriacao
         };
+
+        private Task<RacaDto> MapToDtoAsync(Raca raca, int? idMesa)
+            => _mesaEntidadeConfigService.ApplyOverrideAsync(
+                idMesa,
+                Enums.MesaEntidadeTipo.Raca,
+                raca.Idraca.ToString(),
+                MapToDto(raca));
 
         public async Task<List<RacaDto>> GetBatchAsync(List<int> ids)
         {

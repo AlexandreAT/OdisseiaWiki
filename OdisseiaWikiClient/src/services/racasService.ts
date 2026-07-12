@@ -49,14 +49,19 @@ export interface ResultRaca {
 }
 
 // READ
-export const getRacas = async (visivel?: boolean): Promise<ResultRacas> => {
-  const params = visivel !== undefined ? { visivel } : {};
+export const getRacas = async (visivel?: boolean, idMesa?: number): Promise<ResultRacas> => {
+  const params = {
+    ...(visivel !== undefined ? { visivel } : {}),
+    ...(idMesa !== undefined ? { idMesa } : {}),
+  };
   const response = await api.get("/racas", { params });
   return response.data;
 };
 
-export const getRacaById = async (id: number): Promise<ResultRaca> => {
-  const response = await api.get(`/racas/${id}`);
+export const getRacaById = async (id: number, idMesa?: number): Promise<ResultRaca> => {
+  const response = await api.get(`/racas/${id}`, {
+    params: idMesa !== undefined ? { idMesa } : {},
+  });
   return response.data;
 };
 

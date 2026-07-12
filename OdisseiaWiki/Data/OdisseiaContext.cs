@@ -23,7 +23,7 @@ public partial class OdisseiaContext : DbContext
 
     public virtual DbSet<Mesa> Mesas { get; set; }
 
-    public virtual DbSet<Mesaracaconfig> Mesaracaconfigs { get; set; }
+    public virtual DbSet<MesaEntidadeConfig> MesaEntidadeConfigs { get; set; }
 
     public virtual DbSet<Mesausuario> Mesausuarios { get; set; }
 
@@ -122,35 +122,32 @@ public partial class OdisseiaContext : DbContext
                 .HasConstraintName("ID usuario criacao");
         });
 
-        modelBuilder.Entity<Mesaracaconfig>(entity =>
+        modelBuilder.Entity<MesaEntidadeConfig>(entity =>
         {
-            entity.HasKey(e => e.IdmesaRacaConfig).HasName("PRIMARY");
+            entity.HasKey(e => e.IdmesaEntidadeConfig).HasName("PRIMARY");
 
-            entity.ToTable("mesaracaconfig");
+            entity.ToTable("mesaentidadeconfig");
 
-            entity.HasIndex(e => e.Idmesa, "ID mesas");
+            entity.HasIndex(e => new { e.Idmesa, e.TipoEntidade, e.Identidade })
+                .IsUnique()
+                .HasDatabaseName("UX_MesaEntidadeConfig_Mesa_Tipo_Entidade");
 
-            entity.HasIndex(e => e.Idraca, "ID raca");
-
-            entity.Property(e => e.IdmesaRacaConfig)
+            entity.Property(e => e.IdmesaEntidadeConfig)
                 .HasColumnType("int(11)")
-                .HasColumnName("IDMesaRacaConfig");
+                .HasColumnName("IDMesaEntidadeConfig");
             entity.Property(e => e.Idmesa)
                 .HasColumnType("int(11)")
                 .HasColumnName("IDMesa");
-            entity.Property(e => e.Idraca)
-                .HasColumnType("int(11)")
-                .HasColumnName("IDRaca");
+            entity.Property(e => e.TipoEntidade).HasConversion<string>().HasMaxLength(50);
+            entity.Property(e => e.Identidade).HasMaxLength(100);
+            entity.Property(e => e.ConfigJson).HasColumnType("json");
+            entity.Property(e => e.DataCriacao).HasColumnType("datetime");
+            entity.Property(e => e.DataAtualizacao).HasColumnType("datetime");
 
-            entity.HasOne(d => d.IdmesaNavigation).WithMany(p => p.Mesaracaconfigs)
+            entity.HasOne(d => d.IdmesaNavigation).WithMany(p => p.MesaEntidadeConfigs)
                 .HasForeignKey(d => d.Idmesa)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("ID mesas");
-
-            entity.HasOne(d => d.IdracaNavigation).WithMany(p => p.Mesaracaconfigs)
-                .HasForeignKey(d => d.Idraca)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("ID raca");
+                .HasConstraintName("FK_MesaEntidadeConfig_Mesa");
         });
 
         modelBuilder.Entity<Mesausuario>(entity =>

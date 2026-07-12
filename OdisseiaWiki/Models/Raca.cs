@@ -28,7 +28,5 @@ public partial class Raca
 
     public DateTime DataCriacao { get; set; } = DateTime.UtcNow;
 
-    public virtual ICollection<Mesaracaconfig> Mesaracaconfigs { get; set; } = new List<Mesaracaconfig>();
-
     public virtual ICollection<Personagen> Personagens { get; set; } = new List<Personagen>();
 }

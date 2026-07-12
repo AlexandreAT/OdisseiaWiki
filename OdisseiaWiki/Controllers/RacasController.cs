@@ -39,9 +39,9 @@ namespace OdisseiaWiki.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll([FromQuery] bool? visivel = null)
+        public async Task<IActionResult> GetAll([FromQuery] bool? visivel = null, [FromQuery] int? idMesa = null)
         {
-            var resultado = await _service.GetAllAsync(visivel);
+            var resultado = await _service.GetAllAsync(visivel, idMesa);
 
             if (!resultado.Sucesso)
                 return BadRequest(resultado.MensagemErro);
@@ -50,9 +50,9 @@ namespace OdisseiaWiki.Controllers
         }
 
         [HttpGet("{id:int}")]
-        public async Task<IActionResult> GetById(int id)
+        public async Task<IActionResult> GetById(int id, [FromQuery] int? idMesa = null)
         {
-            var raca = await _service.GetByIdAsync(id);
+            var raca = await _service.GetByIdAsync(id, idMesa);
 
             return raca is null
                 ? NotFound($"Raça com id {id} não encontrada.")
