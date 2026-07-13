@@ -66,7 +66,7 @@ const Home = () => {
         ]}
       />
       </ScrollRevealBlock>
-      <ScrollRevealBlock variant='infoCarousel'>
+      <ScrollRevealBlock variant='infoCarousel' threshold={0.30}>
       <InfoCarousel
         typeTop='simple'
         typeBottom='city'
@@ -80,7 +80,7 @@ const Home = () => {
         colorScheme='bluePink'
       />
       </ScrollRevealBlock>
-      <ScrollRevealBlock variant='infoCarousel'>
+      <ScrollRevealBlock variant='infoCarousel' threshold={0.45}>
       <InfoCarousel
         typeTop='simple'
         typeBottom='city'
@@ -94,7 +94,7 @@ const Home = () => {
         colorScheme='greenRed'
       />
       </ScrollRevealBlock>
-      <ScrollRevealBlock variant='infoCarousel'>
+      <ScrollRevealBlock variant='infoCarousel' threshold={0.45}>
       <InfoCarousel
         typeTop='simple'
         typeBottom='city'

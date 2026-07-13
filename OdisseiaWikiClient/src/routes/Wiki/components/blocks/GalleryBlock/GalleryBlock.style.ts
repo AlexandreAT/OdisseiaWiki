@@ -71,19 +71,17 @@ export const CarouselViewport = styled.div`
   overflow: hidden;
   scroll-behavior: smooth;
   width: 100%;
-  padding: 14px 4px;
+  padding: 14px 48px;
   border-radius: 8px;
   cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
 
   &:active {
     cursor: grabbing;
   }
 
-  &:has(> ${GalleryItem}:hover) {
-    background-color: #0006;
-  }
-
-  transition: background-color 0.3s ease;
+  scroll-behavior: auto;
 
   > ${GalleryItem} {
     width: 200px;
@@ -94,6 +92,10 @@ export const CarouselViewport = styled.div`
       width: 150px;
       min-width: 150px;
     }
+  }
+
+  @media (max-width: 768px) {
+    padding-inline: 40px;
   }
 
   scrollbar-width: none;
@@ -142,6 +144,7 @@ export const CarouselArrow = styled.button<{ $direction: 'left' | 'right' }>`
 export const GalleryItemImage = styled.img`
   width: 100%;
   object-fit: contain;
+  pointer-events: none;
 `;
 
 export const GalleryItemPlaceholder = styled.div`
@@ -153,6 +156,7 @@ export const GalleryItemPlaceholder = styled.div`
   background: linear-gradient(135deg, #0a3a3a 0%, #1a1a1a 100%);
   color: rgba(255, 255, 255, 0.3);
   font-size: 32px;
+  pointer-events: none;
 `;
 
 export const GalleryCaption = styled.p`

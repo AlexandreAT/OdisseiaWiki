@@ -8,7 +8,6 @@ import {
   LightboxCaption,
   LightboxTopBar,
   LightboxCloseButton,
-  LightboxBottomBar,
   LightboxCounter,
   LightboxNavButton,
   LightboxError,
@@ -70,7 +69,27 @@ export const Lightbox: React.FC<LightboxProps> = ({
   const hasNext = !isSingle && selectedIndex < images.length - 1;
 
   return createPortal(
-    <LightboxOverlay onClick={onClose}>
+    <LightboxOverlay $backgroundImage={currentImage.url} onClick={onClose}>
+      <LightboxCloseButton onClick={onClose} type="button" title="Fechar">
+        <BiX />
+      </LightboxCloseButton>
+
+      {!isSingle && (
+        <LightboxNavButton
+          $side="left"
+          disabled={!hasPrevious}
+          onClick={e => {
+            e.stopPropagation();
+            onPrevious?.();
+          }}
+          type="button"
+          title="Anterior"
+          aria-label="Imagem anterior"
+        >
+          <BiChevronLeft />
+        </LightboxNavButton>
+      )}
+
       <LightboxContent onClick={e => e.stopPropagation()}>
         <LightboxTopBar>
           {!isSingle && (
@@ -78,9 +97,6 @@ export const Lightbox: React.FC<LightboxProps> = ({
               {selectedIndex + 1} / {images.length}
             </LightboxCounter>
           )}
-          <LightboxCloseButton onClick={onClose} type="button" title="Fechar">
-            <BiX />
-          </LightboxCloseButton>
         </LightboxTopBar>
 
         {currentImage.url ? (
@@ -95,29 +111,23 @@ export const Lightbox: React.FC<LightboxProps> = ({
         {currentImage.caption && (
           <LightboxCaption>{currentImage.caption}</LightboxCaption>
         )}
-
-        {!isSingle && (
-          <LightboxBottomBar>
-            <LightboxNavButton
-              onClick={onPrevious}
-              disabled={!hasPrevious}
-              type="button"
-              title="Anterior"
-            >
-              <BiChevronLeft />
-            </LightboxNavButton>
-
-            <LightboxNavButton
-              onClick={onNext}
-              disabled={!hasNext}
-              type="button"
-              title="Próximo"
-            >
-              <BiChevronRight />
-            </LightboxNavButton>
-          </LightboxBottomBar>
-        )}
       </LightboxContent>
+
+      {!isSingle && (
+        <LightboxNavButton
+          $side="right"
+          disabled={!hasNext}
+          onClick={e => {
+            e.stopPropagation();
+            onNext?.();
+          }}
+          type="button"
+          title="Próximo"
+          aria-label="Próxima imagem"
+        >
+          <BiChevronRight />
+        </LightboxNavButton>
+      )}
     </LightboxOverlay>,
     document.body
   );

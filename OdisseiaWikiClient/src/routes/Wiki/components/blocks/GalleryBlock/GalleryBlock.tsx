@@ -23,7 +23,7 @@ export const GalleryBlock: React.FC<GalleryBlockProps> = ({ block, theme: _theme
 
   /* ── drag-to-scroll state ── */
   const viewportRef = useRef<HTMLDivElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
+  const dragPointerId = useRef<number | null>(null);
   const dragStartX = useRef(0);
   const dragScrollLeft = useRef(0);
   const didDrag = useRef(false);
@@ -101,36 +101,28 @@ export const GalleryBlock: React.FC<GalleryBlockProps> = ({ block, theme: _theme
   };
 
   /* ── drag-to-scroll handlers ── */
-  const handleMouseDown = (e: React.MouseEvent) => {
-    const el = viewportRef.current;
-    if (!el) return;
-    setIsDragging(true);
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    const el = e.currentTarget;
+    dragPointerId.current = e.pointerId;
     didDrag.current = false;
-    dragStartX.current = e.pageX - el.offsetLeft;
+    dragStartX.current = e.clientX;
     dragScrollLeft.current = el.scrollLeft;
-    el.style.cursor = 'grabbing';
   };
 
-  const handleMouseUp = () => {
-    setIsDragging(false);
-    const el = viewportRef.current;
-    if (el) el.style.cursor = 'grab';
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging) return;
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (dragPointerId.current !== e.pointerId) return;
+    const distance = e.clientX - dragStartX.current;
+    if (Math.abs(distance) > 3) didDrag.current = true;
+    if (!didDrag.current) return;
     e.preventDefault();
-    const el = viewportRef.current;
-    if (!el) return;
-    const x = e.pageX - el.offsetLeft;
-    const walk = (x - dragStartX.current) * 1.5;
-    el.scrollLeft = dragScrollLeft.current - walk;
-    /* mark as a real drag so the upcoming click is suppressed */
-    didDrag.current = true;
+    el.scrollLeft = dragScrollLeft.current - distance * 1.5;
   };
 
-  const handleMouseLeave = () => {
-    if (isDragging) handleMouseUp();
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (dragPointerId.current !== e.pointerId) return;
+    dragPointerId.current = null;
   };
 
   /* ── render item ── */
@@ -170,10 +162,10 @@ export const GalleryBlock: React.FC<GalleryBlockProps> = ({ block, theme: _theme
 
             <CarouselViewport
               ref={viewportRef}
-              onMouseDown={handleMouseDown}
-              onMouseUp={handleMouseUp}
-              onMouseMove={handleMouseMove}
-              onMouseLeave={handleMouseLeave}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerUp}
               onDragStart={e => e.preventDefault()}
             >
               {imagens.map((imagem: any, index: number) => renderItem(imagem, index))}
