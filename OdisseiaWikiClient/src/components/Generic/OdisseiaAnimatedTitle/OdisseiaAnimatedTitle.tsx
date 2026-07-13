@@ -40,7 +40,10 @@ export const OdisseiaAnimatedTitle = ({ theme, neon }: OdisseiaAnimatedTitleProp
           />
         </filter>
       </defs>
-      <g className="title-reveal">
+      <g>
+        <text className="title-text title-outline" x="0" y="30">
+          Odisseia
+        </text>
         <text
           className="title-text title-fill"
           x="0"

@@ -5,10 +5,24 @@ interface TitleStyleProps {
   neon: 'on' | 'off';
 }
 
-const revealFromLeft = keyframes`
-  0% { clip-path: inset(0 100% 0 0); }
-  99.9% { clip-path: inset(0 0 0 0); }
-  100% { clip-path: none; }
+const drawOutline = keyframes`
+  0% {
+    stroke-dasharray: 0 160;
+    opacity: 1;
+  }
+  92% {
+    stroke-dasharray: 160 0;
+    opacity: 1;
+  }
+  100% {
+    stroke-dasharray: 160 0;
+    opacity: 0;
+  }
+`;
+
+const revealFill = keyframes`
+  0%, 86% { opacity: 0; }
+  100% { opacity: 1; }
 `;
 
 const getTitleColor = ({ theme, neon }: TitleStyleProps) => {
@@ -22,11 +36,6 @@ export const AnimatedTitleSvg = styled.svg<TitleStyleProps>`
   display: block;
   overflow: visible;
 
-  .title-reveal {
-    clip-path: inset(0 100% 0 0);
-    animation: ${revealFromLeft} 2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  }
-
   .title-text {
     font-family: 'DO Futuristic', sans-serif;
     font-size: 30px;
@@ -35,9 +44,21 @@ export const AnimatedTitleSvg = styled.svg<TitleStyleProps>`
     text-anchor: start;
   }
 
+  .title-outline {
+    fill: transparent;
+    stroke: ${getTitleColor};
+    stroke-width: 1px;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 0 160;
+    opacity: 0;
+    animation: ${drawOutline} 3s linear forwards;
+  }
+
   .title-fill {
     fill: ${getTitleColor};
-    opacity: 1;
+    opacity: 0;
+    animation: ${revealFill} 3s ease-out forwards;
   }
 
   @media (max-width: 768px) {
@@ -51,9 +72,16 @@ export const AnimatedTitleSvg = styled.svg<TitleStyleProps>`
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .title-reveal {
+    .title-outline,
+    .title-fill {
       animation: none;
-      clip-path: none;
+    }
+
+    .title-outline {
+      opacity: 0;
+    }
+
+    .title-fill {
       opacity: 1;
     }
   }
