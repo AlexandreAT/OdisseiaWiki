@@ -115,6 +115,7 @@ export const useFormItem = (initialItem?: ItemPayload, contentType?: string) => 
   const [tagInput, setTagInput] = useState("");
 
   const [visivel, setVisivel] = useState(initialItem?.visivel !== false);
+  const [destaque, setDestaque] = useState(initialItem?.destaque === true);
 
   const [nomeError, setNomeError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -236,6 +237,7 @@ export const useFormItem = (initialItem?: ItemPayload, contentType?: string) => 
     setTagInput("");
 
     setVisivel(true);
+    setDestaque(false);
   };
 
   // ------------------------
@@ -275,7 +277,8 @@ export const useFormItem = (initialItem?: ItemPayload, contentType?: string) => 
         imagem: imagemPath,
         atributosJson: Object.keys(atributos).length > 0 ? atributos : undefined,
         tags: ensureContentCategoryTag(tags, contentType),
-        visivel
+        visivel,
+        destaque
       };
 
       let response;
@@ -359,6 +362,8 @@ export const useFormItem = (initialItem?: ItemPayload, contentType?: string) => 
     handleRemoveTag,
     visivel,
     setVisivel,
+    destaque,
+    setDestaque,
     nomeError,
     setNomeError,
     handleSubmit,

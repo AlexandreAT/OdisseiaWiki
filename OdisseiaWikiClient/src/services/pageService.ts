@@ -66,6 +66,7 @@ export const searchPages = async (termo: string) => {
         slug: page.slug,
         coverImage: page.imagem,
         visivel: page.visivel,
+        destaque: page.destaque,
         descricao: page.tags
       };
     });

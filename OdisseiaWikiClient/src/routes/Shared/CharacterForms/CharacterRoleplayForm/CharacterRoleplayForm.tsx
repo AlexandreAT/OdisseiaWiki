@@ -11,6 +11,8 @@ import RichTextModal from '../../../../components/Generic/RichTextModal';
 import { RichTextEditor } from '../../../../components/Generic/RichTextEditor/RichTextEditor';
 import { Search } from '../../../../components/Generic/Search/Search';
 import { Select } from '../../../../components/Generic/Select/Select';
+import { CheckBox } from '../../../../components/Generic/CheckBox/CheckBox';
+import { FeaturedToggle } from '../../../../components/Generic/FeaturedToggle';
 import { ALIGNMENT_OPTIONS, TRAITS_OPTIONS } from '../../../Hub/UserCharacters/CharacterCreate/constants';
 import {
   FormHeader,
@@ -67,6 +69,10 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
   searchTerm,
   loadingPersonagens,
   searchPersonagens,
+  visivel,
+  setVisivel,
+  destaque,
+  setDestaque,
   raceChangeMode = 'default',
 }) => {
   const [historyModalOpen, setHistoryModalOpen] = React.useState(false);
@@ -282,7 +288,19 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
             width="100%"
           />
 
-        </GridInputs>
+      </GridInputs>
+
+      {setVisivel && setDestaque && (
+        <HistoryHeader>
+          <CheckBox
+            neon={neon}
+            label="Personagem visível"
+            checked={visivel}
+            onChange={setVisivel}
+          />
+          <FeaturedToggle featured={destaque ?? false} onChange={setDestaque} />
+        </HistoryHeader>
+      )}
 
       <RichTextModal
         isOpen={historyModalOpen}

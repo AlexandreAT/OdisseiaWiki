@@ -13,6 +13,7 @@
         public string? CoverImage { get; set; }
 
         public bool Visivel { get; set; }
+        public bool Destaque { get; set; }
 
         public DateTime DataCriacao { get; set; }
 

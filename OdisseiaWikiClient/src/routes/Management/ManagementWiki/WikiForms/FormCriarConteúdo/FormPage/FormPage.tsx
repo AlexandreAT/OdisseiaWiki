@@ -7,6 +7,7 @@ import { CyberButton } from '../../../../../../components/Generic/HighlightButto
 import { InputText } from '../../../../../../components/Generic/InputText/InputText';
 import { TextArea } from '../../../../../../components/Generic/TextArea/TextArea';
 import { CheckBox } from '../../../../../../components/Generic/CheckBox/CheckBox';
+import { FeaturedToggle } from '../../../../../../components/Generic/FeaturedToggle';
 import { ImageUploader } from '../../../../../../components/Generic/ImageUploader/ImageUploader';
 import type { CropPreset } from '../../../../../../components/Generic/ImageUploader/types';
 import {
@@ -71,6 +72,8 @@ export const FormPage: React.FC<FormPageProps> = ({
     setCoverImageFile,
     visivel,
     setVisivel,
+    destaque,
+    setDestaque,
 
     blocks,
     addBlock,
@@ -199,6 +202,7 @@ export const FormPage: React.FC<FormPageProps> = ({
             checked={visivel}
             onChange={setVisivel}
           />
+          <FeaturedToggle featured={destaque} onChange={setDestaque} />
         </FullWidthInput>
       </div>
 

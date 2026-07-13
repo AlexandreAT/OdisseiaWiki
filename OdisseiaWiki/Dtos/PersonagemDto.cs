@@ -20,6 +20,7 @@ namespace OdisseiaWiki.Dtos
         public List<int>? Implantes { get; set; }
         public int? Idpassiva { get; set; }
         public bool Visivel { get; set; } = true;
+        public bool Destaque { get; set; } = false;
         public Ultimate? Ultimate { get; set; }
 
         public PersonagemStatus? StatusJson { get; set; }

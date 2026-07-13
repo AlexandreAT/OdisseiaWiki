@@ -5,6 +5,7 @@ import { InputText } from '../../../../../../components/Generic/InputText/InputT
 import { RichTextEditor } from '../../../../../../components/Generic/RichTextEditor/RichTextEditor';
 import { CyberButton } from '../../../../../../components/Generic/HighlightButton/HighlightButton';
 import { CheckBox } from '../../../../../../components/Generic/CheckBox/CheckBox';
+import { FeaturedToggle } from '../../../../../../components/Generic/FeaturedToggle';
 import { ImageUploader } from '../../../../../../components/Generic/ImageUploader/ImageUploader';
 import type { CropPreset } from '../../../../../../components/Generic/ImageUploader/types';
 import { ImageGalleryWithCrop } from '../../../../../../components/Generic/ImageGallery/ImageGalleryWithCrop';
@@ -45,6 +46,7 @@ export const FormCity = ({ theme, neon, initialCity, onSaveSuccess, contentType 
     pontosDeInteresse,
     pontoInteresseSearch,
     visivel,
+    destaque,
     isSubmitting,
     nomeError,
     setNome,
@@ -53,6 +55,7 @@ export const FormCity = ({ theme, neon, initialCity, onSaveSuccess, contentType 
     setTagInput,
     setPontoInteresseSearch,
     setVisivel,
+    setDestaque,
     handleImagemUpload,
     handleGaleriaUpload,
     handleRemoveGaleriaImage,
@@ -223,6 +226,7 @@ export const FormCity = ({ theme, neon, initialCity, onSaveSuccess, contentType 
           checked={visivel}
           onChange={(checked) => setVisivel(checked)}
         />
+        <FeaturedToggle featured={destaque} onChange={setDestaque} />
       </CheckboxSection>
 
       <ImageGalleryWithCrop

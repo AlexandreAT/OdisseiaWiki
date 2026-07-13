@@ -6,6 +6,7 @@ export interface Raca {
   Variantes?: string[];
   Tags?: string[];
   Visivel: boolean;
+  Destaque?: boolean;
   DataCriacao: string;
 }
 

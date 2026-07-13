@@ -39,6 +39,7 @@ namespace OdisseiaWiki.Services
                     : null,
                 Tags = JsonSerializer.Serialize(ContentCategoryHelper.EnsureCategoryTag(dto.Tags, ContentCategoryHelper.Raca)),
                 Visivel = dto.Visivel,
+                Destaque = dto.Destaque,
                 DataCriacao = DateTime.UtcNow
             };
 
@@ -82,6 +83,7 @@ namespace OdisseiaWiki.Services
                 dto.Tags ?? JsonSafeHelper.DeserializeTags(raca.Tags),
                 ContentCategoryHelper.Raca));
             raca.Visivel = dto.Visivel;
+            raca.Destaque = dto.Destaque;
 
             var atualizada = await _repository.UpdateAsync(raca);
             return ResultRaca.Ok(MapToDto(atualizada));
@@ -120,6 +122,7 @@ namespace OdisseiaWiki.Services
                 ? JsonSerializer.Deserialize<List<string>>(raca.Tags)
                 : null,
             Visivel = raca.Visivel,
+            Destaque = raca.Destaque,
             DataCriacao = raca.DataCriacao
         };
 

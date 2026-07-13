@@ -24,6 +24,7 @@ export interface PageDto {
   descricao?: string;
   coverImage?: string;
   visivel: boolean;
+  destaque?: boolean;
   dataCriacao?: string;
 }
 

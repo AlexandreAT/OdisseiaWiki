@@ -21,6 +21,7 @@ export interface PersonagemPayload {
   personagemsVinculados: string[];
   tags?: string[];
   visivel: boolean;
+  destaque?: boolean;
   dataCriacao: string;
   statusJson: {
     status: {
@@ -73,6 +74,7 @@ export interface PersonagemCreatePayload {
   personagemsVinculados?: number[];
   tags?: string[];
   visivel: boolean;
+  destaque?: boolean;
   statusJson?: {
     status: {
       vida: number;
@@ -106,6 +108,7 @@ export interface PersonagemUpdatePayload {
   nanites?: number;
   tags?: string[];
   visivel: boolean;
+  destaque?: boolean;
   idpassiva?: number;
   ultimate?: string;
   statusJson?: {

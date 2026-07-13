@@ -36,6 +36,7 @@ namespace OdisseiaWiki.Services
                     ? JsonSerializer.Deserialize<List<string>>(i.Tags)
                     : null,
                 Visivel = i.Visivel,
+                Destaque = i.Destaque,
                 DataCriacao = i.DataCriacao,
                 Idpersonagem = i.Idpersonagem
             });
@@ -64,6 +65,7 @@ namespace OdisseiaWiki.Services
                     ? JsonSerializer.Deserialize<List<string>>(item.Tags)
                     : null,
                 Visivel = item.Visivel,
+                Destaque = item.Destaque,
                 DataCriacao = item.DataCriacao,
                 Idpersonagem = item.Idpersonagem
             };
@@ -87,6 +89,7 @@ namespace OdisseiaWiki.Services
                 IditemBase = dto.IditemBase,
                 Tags = JsonSerializer.Serialize(ContentCategoryHelper.EnsureCategoryTag(dto.Tags, ContentCategoryHelper.Item)),
                 Visivel = dto.Visivel,
+                Destaque = dto.Destaque,
                 Idpersonagem = dto.Idpersonagem,
                 DataCriacao = DateTime.UtcNow
             };
@@ -136,6 +139,7 @@ namespace OdisseiaWiki.Services
                 dto.Tags ?? JsonSafeHelper.DeserializeTags(item.Tags),
                 ContentCategoryHelper.Item));
             item.Visivel = dto.Visivel;
+            item.Destaque = dto.Destaque;
             item.Idpersonagem = dto.Idpersonagem;
 
             await _repository.UpdateAsync(item);
@@ -173,6 +177,7 @@ namespace OdisseiaWiki.Services
                     ? JsonSerializer.Deserialize<List<string>>(i.Tags)
                     : null,
                 Visivel = i.Visivel,
+                Destaque = i.Destaque,
                 DataCriacao = i.DataCriacao,
                 Idpersonagem = i.Idpersonagem
             }).ToList();

@@ -38,6 +38,7 @@ namespace OdisseiaWiki.Services
                     ? JsonSerializer.Serialize(dto.PontosDeInteresse)
                     : null,
                 Visivel = dto.Visivel,
+                Destaque = dto.Destaque,
                 DataCriacao = DateTime.UtcNow
             };
 
@@ -84,6 +85,7 @@ namespace OdisseiaWiki.Services
                 ? JsonSerializer.Serialize(dto.PontosDeInteresse)
                 : cidade.PontosDeInteresse;
             cidade.Visivel = dto.Visivel;
+            cidade.Destaque = dto.Destaque;
 
             var atualizada = await _repository.UpdateAsync(cidade);
             return ResultCidade.Ok(atualizada);
@@ -109,6 +111,7 @@ namespace OdisseiaWiki.Services
                     ? JsonSerializer.Deserialize<List<PontoDeInteresseDto>>(c.PontosDeInteresse)
                     : null,
                 Visivel = c.Visivel
+                ,Destaque = c.Destaque
             }).ToList();
 
             return ResultCidade.Ok(dtos);
@@ -134,6 +137,7 @@ namespace OdisseiaWiki.Services
                     ? JsonSerializer.Deserialize<List<PontoDeInteresseDto>>(c.PontosDeInteresse)
                     : null,
                 Visivel = c.Visivel,
+                Destaque = c.Destaque,
                 DataCriacao = c.DataCriacao
             }).ToList();
         }

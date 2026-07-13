@@ -16,6 +16,7 @@ namespace OdisseiaWiki.Dtos
         public string? IditemBase { get; set; }
         public List<string>? Tags { get; set; }
         public bool Visivel { get; set; } = true;
+        public bool Destaque { get; set; } = false;
         public int? Idpersonagem { get; set; }
     }
 }

@@ -49,6 +49,7 @@ namespace OdisseiaWiki.Services
                 Imagem = dto.Imagem,
                 Tags = JsonSerializer.Serialize(ContentCategoryHelper.EnsureCategoryTag(dto.Tags, ContentCategoryHelper.InfoLore)),
                 Visivel = dto.Visivel,
+                Destaque = dto.Destaque,
                 DataCriacao = DateTime.UtcNow
             };
 
@@ -90,6 +91,7 @@ namespace OdisseiaWiki.Services
                 dto.Tags ?? JsonSafeHelper.DeserializeTags(infoLore.Tags),
                 ContentCategoryHelper.InfoLore));
             infoLore.Visivel = dto.Visivel;
+            infoLore.Destaque = dto.Destaque;
 
             var atualizado = await _infoLoreRepo.UpdateAsync(infoLore);
             return ResultInfoLore.Ok(MapToDto(atualizado));
@@ -134,6 +136,7 @@ namespace OdisseiaWiki.Services
                     Imagem = c.Imagem,
                     Tags = JsonSafeHelper.DeserializeTags(c.Tags),
                     Visivel = c.Visivel,
+                    Destaque = c.Destaque,
                     TipoEntidade = "Cidade"
                 }).ToList();
             }
@@ -154,6 +157,7 @@ namespace OdisseiaWiki.Services
                     Imagem = p.Imagem,
                     Tags = JsonSafeHelper.DeserializeTags(p.Tags),
                     Visivel = p.Visivel,
+                    Destaque = p.Destaque,
                     TipoEntidade = "Personagem"
                 }).ToList();
             }
@@ -174,6 +178,7 @@ namespace OdisseiaWiki.Services
                     Imagem = i.Imagem,
                     Tags = JsonSafeHelper.DeserializeTags(i.Tags),
                     Visivel = i.Visivel,
+                    Destaque = i.Destaque,
                     TipoEntidade = "Item"
                 }).ToList();
             }
@@ -194,6 +199,7 @@ namespace OdisseiaWiki.Services
                     Imagem = il.Imagem,
                     Tags = JsonSafeHelper.DeserializeTags(il.Tags),
                     Visivel = il.Visivel,
+                    Destaque = il.Destaque,
                     TipoEntidade = "InfoLore"
                 }).ToList();
             }
@@ -214,6 +220,7 @@ namespace OdisseiaWiki.Services
                     Imagem = r.Imagem,
                     Tags = JsonSafeHelper.DeserializeTags(r.Tags),
                     Visivel = r.Visivel,
+                    Destaque = r.Destaque,
                     TipoEntidade = "Raca"
                 }).ToList();
             }
@@ -234,6 +241,7 @@ namespace OdisseiaWiki.Services
                     Nome = p.Titulo,
                     Imagem = p.CoverImage,
                     Visivel = p.Visivel,
+                    Destaque = p.Destaque,
                     Slug = p.Slug,
                     TipoEntidade = "Page"
                 }).ToList();
@@ -256,6 +264,7 @@ namespace OdisseiaWiki.Services
                 ? JsonSerializer.Deserialize<List<string>>(infoLore.Tags)
                 : null,
             Visivel = infoLore.Visivel,
+            Destaque = infoLore.Destaque,
             DataCriacao = infoLore.DataCriacao
         };
     }

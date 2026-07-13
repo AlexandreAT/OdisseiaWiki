@@ -11,6 +11,7 @@ export interface CidadePayload {
   tags?: string[];
   pontosDeInteresse?: PontoDeInteresse[];
   visivel: boolean;
+  destaque?: boolean;
   dataCriacao?: string;
 }
 
@@ -22,6 +23,7 @@ export interface CreateCidadeDto {
   Tags?: string[];
   PontosDeInteresse?: PontoDeInteresse[];
   Visivel: boolean;
+  Destaque?: boolean;
 }
 
 export interface ResultCidades {

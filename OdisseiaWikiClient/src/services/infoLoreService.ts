@@ -9,6 +9,7 @@ export interface InfoLoreDto {
   ordem?: number;
   tags?: string[];
   visivel: boolean;
+  destaque?: boolean;
 }
 
 export interface SearchResultItem {
@@ -18,6 +19,7 @@ export interface SearchResultItem {
   imagem?: string;
   tags?: string[];
   visivel: boolean;
+  destaque?: boolean;
   tipoEntidade: "Cidade" | "Personagem" | "Item" | "InfoLore" | "Raca" | "Page";
 }
 

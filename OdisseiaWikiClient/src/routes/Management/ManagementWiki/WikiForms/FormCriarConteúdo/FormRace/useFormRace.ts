@@ -33,7 +33,8 @@ export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => 
   const [galeriaShapes, setGaleriaShapes] = useState<string[]>(Array(parseGaleriaImagem().length).fill('square'));
   const [tags, setTags] = useState<string[]>(initialRaca?.tags || []);
   const [tagInput, setTagInput] = useState('');
-  const [visivel, setVisivel] = useState(initialRaca?.visivel !== false);
+    const [visivel, setVisivel] = useState(initialRaca?.visivel !== false);
+    const [destaque, setDestaque] = useState(initialRaca?.destaque === true);
 
   // Status
   const [vida, setVida] = useState(initialRaca?.statusJson?.status?.vida || 100);
@@ -268,7 +269,8 @@ export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => 
         Imagem: uploadResult.imagemPath || '',
         GaleriaImagem: uploadResult.galeriaPaths || [],
         Tags: tags,
-        Visivel: visivel,
+          Visivel: visivel,
+          Destaque: destaque,
       };
 
       return dto;
@@ -329,7 +331,8 @@ export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => 
     setAtributoInicial('');
     setPassivas([]);
     setPassivaInput('');
-    setVisivel(true);
+      setVisivel(true);
+      setDestaque(false);
     setErrors({});
     setNomeError('');
     setImagemError('');
@@ -345,6 +348,7 @@ export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => 
     tags,
     tagInput,
     visivel,
+    destaque,
     vida,
     estamina,
     mana,
@@ -362,6 +366,7 @@ export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => 
     setTagInput,
     setPassivaInput,
     setVisivel,
+    setDestaque,
     setVida,
     setEstamina,
     setMana,

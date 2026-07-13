@@ -21,6 +21,7 @@ namespace OdisseiaWiki.Dtos
         public string? Imagem { get; set; }
         public List<string>? Tags { get; set; }
         public bool Visivel { get; set; }
+        public bool Destaque { get; set; }
         public string TipoEntidade { get; set; } = null!; // "Cidade", "Personagem", "Item", "InfoLore", "Raca"
         public string? Slug { get; set; }
     }

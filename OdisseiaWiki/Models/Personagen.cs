@@ -13,4 +13,5 @@ public partial class Personagen : PersonagemBase
     public string? Tags { get; set; }
     
     public bool Visivel { get; set; } = true;
+    public bool Destaque { get; set; } = false;
 }

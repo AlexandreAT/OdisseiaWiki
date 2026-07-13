@@ -83,6 +83,7 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [visivel, setVisivel] = useState(true);
+  const [destaque, setDestaque] = useState(false);
   const [xp, setXp] = useState(0);
   const [level, setLevel] = useState(1);
   // const [capacidadeCarga, setCapacidadeCarga] = useState(0); // TODO: Implementar se necessário
@@ -524,6 +525,7 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
         tracos: traits,
         tags: ensureContentCategoryTag(tags, contentType),
         visivel: visivel,
+        destaque,
         inventarioJson: inventarioMapped,
         skills: skillMapped,
         magia: magiaMapped,
@@ -556,7 +558,7 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
     } catch (err: any) {
       toast.error(extractErrorMessage(err));
     }
-  }, [avatarUrl, avatarFile, userName, statusBasico, itens, magias, skills, race, city, history, costumes, nanites, alignment, traits, idpassiva, ultimate, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, defesas, tags, contentType]);
+  }, [avatarUrl, avatarFile, userName, statusBasico, itens, magias, skills, race, city, history, costumes, nanites, alignment, traits, idpassiva, ultimate, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, defesas, tags, contentType, visivel, destaque]);
 
   return {
     step, setStep,
@@ -578,6 +580,7 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
     tags, setTags,
     tagInput, setTagInput,
     visivel, setVisivel,
+    destaque, setDestaque,
     itens, setItens,
     skills, setSkills,
     magias, setMagias,

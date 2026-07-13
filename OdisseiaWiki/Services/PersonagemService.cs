@@ -54,6 +54,7 @@ namespace OdisseiaWiki.Services
                 Nanites = dto.Nanites?.ToString(),
                 Tags = JsonSerializer.Serialize(ContentCategoryHelper.EnsureCategoryTag(dto.Tags, ContentCategoryHelper.Personagem)),
                 Visivel = dto.Visivel,
+                Destaque = dto.Destaque,
                 Implantes = dto.Implantes != null ? JsonSerializer.Serialize(dto.Implantes) : null,
                 Idpassiva = dto.Idpassiva,
                 Ultimate = dto.Ultimate != null ? JsonSerializer.Serialize(dto.Ultimate) : null,
@@ -119,6 +120,7 @@ namespace OdisseiaWiki.Services
             personagem.Implantes = dto.Implantes != null ? JsonSerializer.Serialize(dto.Implantes) : personagem.Implantes;
             personagem.Idpassiva = dto.Idpassiva ?? personagem.Idpassiva;
             personagem.Visivel = dto.Visivel;
+            personagem.Destaque = dto.Destaque;
 
             var atualizado = await _repository.UpdateAsync(personagem);
             return ResultPersonagem.Ok(atualizado);

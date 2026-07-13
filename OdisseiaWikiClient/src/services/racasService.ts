@@ -24,6 +24,7 @@ export interface RacaPayload {
   galeriaImagem?: string[];
   tags?: string[];
   visivel: boolean;
+  destaque?: boolean;
   dataCriacao?: string;
 }
 
@@ -34,6 +35,7 @@ export interface CreateRacaDto {
   GaleriaImagem?: string[];
   Tags?: string[];
   Visivel: boolean;
+  Destaque?: boolean;
 }
 
 export interface ResultRacas {

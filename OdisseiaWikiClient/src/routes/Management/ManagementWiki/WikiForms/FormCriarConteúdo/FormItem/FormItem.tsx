@@ -1,5 +1,6 @@
 import { Select } from "../../../../../../components/Generic/Select/Select";
 import { CheckBox } from "../../../../../../components/Generic/CheckBox/CheckBox";
+import { FeaturedToggle } from '../../../../../../components/Generic/FeaturedToggle';
 import { RichTextEditor } from "../../../../../../components/Generic/RichTextEditor/RichTextEditor";
 import { ImageUploader } from "../../../../../../components/Generic/ImageUploader/ImageUploader";
 import { CyberButton } from "../../../../../../components/Generic/HighlightButton/HighlightButton";
@@ -61,6 +62,8 @@ export const FormItem = ({ theme, neon, contentType }: FormItemProps) => {
     handleRemoveTag,
     visivel,
     setVisivel,
+    destaque,
+    setDestaque,
     handleSubmit,
     resetForm,
     isSubmitting,
@@ -237,6 +240,7 @@ export const FormItem = ({ theme, neon, contentType }: FormItemProps) => {
           onChange={(v) => setVisivel(v)}
           neon={neon}
         />
+        <FeaturedToggle featured={destaque} onChange={setDestaque} />
       </CheckboxContainer>
 
       <ButtonsContainer theme={theme} neon={neon}>

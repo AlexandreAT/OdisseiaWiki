@@ -41,6 +41,8 @@ export interface CharacterRoleplayFormProps {
   setExtraInformation: (value: string) => void;
   visivel?: boolean;
   setVisivel?: (value: boolean) => void;
+  destaque?: boolean;
+  setDestaque?: (value: boolean) => void;
   listPersonagemRelacionado: { id: number; nome: string }[];
   setListPersonagemRelacionado: React.Dispatch<React.SetStateAction<{ id: number; nome: string }[]>>;
   personagens: any[];

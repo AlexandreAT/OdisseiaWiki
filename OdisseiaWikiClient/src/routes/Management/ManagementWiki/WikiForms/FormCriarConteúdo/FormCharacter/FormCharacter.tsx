@@ -13,6 +13,7 @@ import { BiSearchAlt } from 'react-icons/bi';
 import { MdOutlineOpenInFull } from 'react-icons/md';
 import { CheckSelect } from '../../../../../../components/Generic/CheckSelect/CheckSelect';
 import { CheckBox } from '../../../../../../components/Generic/CheckBox/CheckBox';
+import { FeaturedToggle } from '../../../../../../components/Generic/FeaturedToggle';
 import { DataTable } from '../../../../../../components/Generic/DataTable/DataTable';
 import { HorizontalList } from '../../../../../../components/Generic/HorizontalList/HorizontalList';
 import { StatusInput } from '../../../../../../components/Generic/StatusInput/StatusInput';
@@ -57,6 +58,7 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
     tags,
     tagInput, setTagInput,
     visivel, setVisivel,
+    destaque, setDestaque,
     itens, setItens,
     skills, setSkills,
     magias, setMagias,
@@ -464,6 +466,7 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
               checked={visivel}
               onChange={(checked) => setVisivel(checked)}
             />
+            <FeaturedToggle featured={destaque} onChange={setDestaque} />
           </CheckboxSection>
 
           <ImageGalleryWithCrop

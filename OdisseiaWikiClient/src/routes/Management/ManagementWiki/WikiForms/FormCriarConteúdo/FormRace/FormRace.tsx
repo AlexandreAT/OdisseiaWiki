@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { InputText } from '../../../../../../components/Generic/InputText/InputText';
 import { Select } from '../../../../../../components/Generic/Select/Select';
 import { CheckBox } from '../../../../../../components/Generic/CheckBox/CheckBox';
+import { FeaturedToggle } from '../../../../../../components/Generic/FeaturedToggle';
 import { ImageUploader } from '../../../../../../components/Generic/ImageUploader/ImageUploader';
 import type { CropPreset } from '../../../../../../components/Generic/ImageUploader/types';
 import { HorizontalList } from '../../../../../../components/Generic/HorizontalList/HorizontalList';
@@ -47,6 +48,7 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
     tags,
     tagInput,
     visivel,
+    destaque,
     vida,
     estamina,
     mana,
@@ -63,6 +65,7 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
     setTagInput,
     setPassivaInput,
     setVisivel,
+    setDestaque,
     setVida,
     setEstamina,
     setMana,
@@ -309,6 +312,7 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
           checked={visivel}
           onChange={(checked) => setVisivel(checked)}
         />
+        <FeaturedToggle featured={destaque} onChange={setDestaque} />
       </CheckboxSection>
 
       <ImageGalleryWithCrop

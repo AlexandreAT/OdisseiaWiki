@@ -24,5 +24,6 @@ export interface CidadeDto {
   Tags?: string[];
   PontosDeInteresse?: PontoDeInteresse[];
   Visivel: boolean;
+  Destaque?: boolean;
   DataCriacao?: string;
 }

@@ -39,7 +39,8 @@ export const useFormCity = (initialCity?: CidadePayload, contentType?: string) =
   const [tagInput, setTagInput] = useState('');
   const [pontosDeInteresse, setPontosDeInteresse] = useState<PontoDeInteresse[]>(initialCity?.pontosDeInteresse || []);
   const [pontoInteresseSearch, setPontoInteresseSearch] = useState('');
-  const [visivel, setVisivel] = useState(initialCity?.visivel !== false);
+    const [visivel, setVisivel] = useState(initialCity?.visivel !== false);
+    const [destaque, setDestaque] = useState(initialCity?.destaque === true);
 
   const [errors, setErrors] = useState<CityFormErrors>({});
   const [nomeError, setNomeError] = useState('');
@@ -208,7 +209,8 @@ export const useFormCity = (initialCity?: CidadePayload, contentType?: string) =
     setTagInput('');
     setPontosDeInteresse([]);
     setPontoInteresseSearch('');
-    setVisivel(true);
+      setVisivel(true);
+      setDestaque(false);
     setErrors({});
     setNomeError('');
     setImagemError('');
@@ -263,7 +265,8 @@ export const useFormCity = (initialCity?: CidadePayload, contentType?: string) =
       GaleriaImagem: galeriaPaths,
       Tags: ensureContentCategoryTag(tags, contentType),
       PontosDeInteresse: pontosDeInteresse.length > 0 ? pontosDeInteresse : undefined,
-      Visivel: visivel,
+        Visivel: visivel,
+        Destaque: destaque,
     };
 
     return dto;
@@ -335,7 +338,8 @@ export const useFormCity = (initialCity?: CidadePayload, contentType?: string) =
     tagInput,
     pontosDeInteresse,
     pontoInteresseSearch,
-    visivel,
+      visivel,
+      destaque,
     
     isSubmitting,
     errors,
@@ -347,7 +351,8 @@ export const useFormCity = (initialCity?: CidadePayload, contentType?: string) =
     setDescricao,
     setTagInput,
     setPontoInteresseSearch,
-    setVisivel,
+      setVisivel,
+      setDestaque,
     handleImagemUpload,
     handleGaleriaUpload,
     handleRemoveGaleriaImage,

@@ -27,6 +27,7 @@ export interface Item {
   atributos?: ItemAtributos | Record<string, any>;
   tags?: string[];
   visivel?: boolean;
+  destaque?: boolean;
   dataCriacao?: string;
   idPersonagem?: number;
 }

@@ -165,6 +165,8 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
     setTags,
     visivel,
     setVisivel,
+    destaque,
+    setDestaque,
     listPersonagemRelacionado,
     setListPersonagemRelacionado,
     itens,
@@ -318,6 +320,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
         setIdpassiva(payload.idpassiva ?? undefined);
         setUltimate(payload.ultimate || '');
         setVisivel(Boolean(payload.visivel));
+        setDestaque(Boolean(payload.destaque));
         setItens(Array.isArray(loadedItens) && loadedItens.length > 0
           ? loadedItens
           : [{ nome: '', descricao: '', quantidade: 0, peso: 0, tipo: 'outro' } as any]);
@@ -626,6 +629,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
         alinhamento: alignment,
         tracos: traits,
         visivel: visivel ?? true,
+        destaque: destaque ?? false,
         idpassiva,
         ultimate: ultimate || undefined,
         inventarioJson: inventarioMapped,
@@ -828,6 +832,8 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
             setExtraInformation={setExtraInformation}
             visivel={visivel}
             setVisivel={setVisivel}
+            destaque={destaque}
+            setDestaque={setDestaque}
             listPersonagemRelacionado={listPersonagemRelacionado}
             setListPersonagemRelacionado={setListPersonagemRelacionado}
             personagens={personagens}

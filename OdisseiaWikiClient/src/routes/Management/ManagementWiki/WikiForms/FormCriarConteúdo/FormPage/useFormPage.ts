@@ -67,6 +67,7 @@ export const useFormPage = ({
   const [coverImageUrl, setCoverImageUrl] = useState(initialPage?.coverImage || '');
   const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
   const [visivel, setVisivel] = useState(initialPage?.visivel ?? true);
+  const [destaque, setDestaque] = useState(initialPage?.destaque ?? false);
 
   // --- Blocos ---
   const [blocks, setBlocks] = useState<PageBlock[]>(
@@ -90,6 +91,7 @@ export const useFormPage = ({
       setDescricao(initialPage.descricao || '');
       setCoverImageUrl(initialPage.coverImage || '');
       setVisivel(initialPage.visivel ?? true);
+      setDestaque(initialPage.destaque ?? false);
     }
   }, [initialPage]);
 
@@ -237,6 +239,7 @@ export const useFormPage = ({
         descricao,
         coverImage: coverImagePath || undefined,
         visivel,
+        destaque,
         dataCriacao: initialPage?.dataCriacao,
       };
 
@@ -258,7 +261,7 @@ export const useFormPage = ({
     } catch (err: any) {
       toast.error(extractErrorMessage(err));
     }
-  }, [validateForm, coverImageUrl, coverImageFile, slug, titulo, descricao, visivel, blocks, pageId, initialPage?.dataCriacao]);
+  }, [validateForm, coverImageUrl, coverImageFile, slug, titulo, descricao, visivel, destaque, blocks, pageId, initialPage?.dataCriacao]);
 
   return {
     // Dados da página
@@ -274,6 +277,8 @@ export const useFormPage = ({
     setCoverImageFile,
     visivel,
     setVisivel,
+    destaque,
+    setDestaque,
     generateSlug,
 
     // Blocos

@@ -31,6 +31,7 @@ export interface Personagem {
     Nanites?: number;
     Tags?: string[];
     Visivel: boolean;
+    Destaque?: boolean;
     DataCriacao: string;
     Skills?: Skills[];
     Magia?: Magia[];

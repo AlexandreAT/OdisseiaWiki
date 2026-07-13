@@ -29,6 +29,7 @@ namespace OdisseiaWiki.Services
                 Descricao = dto.Page.Descricao,
                 CoverImage = dto.Page.CoverImage,
                 Visivel = dto.Page.Visivel,
+                Destaque = dto.Page.Destaque,
                 DataCriacao = DateTime.UtcNow
             };
 
@@ -67,6 +68,7 @@ namespace OdisseiaWiki.Services
                 Nome = p.Titulo,
                 Imagem = p.CoverImage,
                 Visivel = p.Visivel,
+                Destaque = p.Destaque,
                 Slug = p.Slug,
                 TipoEntidade = "Page"
             }).ToList();
@@ -96,6 +98,7 @@ namespace OdisseiaWiki.Services
             page.Descricao = dto.Page.Descricao;
             page.CoverImage = dto.Page.CoverImage;
             page.Visivel = dto.Page.Visivel;
+            page.Destaque = dto.Page.Destaque;
 
             page.Blocks.Clear();
 
@@ -132,6 +135,7 @@ namespace OdisseiaWiki.Services
                 Descricao = page.Descricao,
                 CoverImage = page.CoverImage,
                 Visivel = page.Visivel,
+                Destaque = page.Destaque,
                 DataCriacao = page.DataCriacao,
                 Blocks = page.Blocks
                     .OrderBy(b => b.Ordem)

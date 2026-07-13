@@ -15,6 +15,7 @@ export interface ItemPayload {
   idpersonagem?: number;
   tags?: string[];
   visivel?: boolean;
+  destaque?: boolean;
   dataCriacao?: string;
 }
 

@@ -25,5 +25,6 @@ export interface Cidade {
   Tags?: string[];
   PontosDeInteresse?: PontoDeInteresseRef[];
   Visivel: boolean;
+  Destaque?: boolean;
   DataCriacao: string;
 }
