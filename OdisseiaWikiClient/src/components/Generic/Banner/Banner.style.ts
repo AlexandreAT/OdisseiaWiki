@@ -7,12 +7,12 @@ interface Props {
 }
 
 const ContainerBanner = styled.div<Props>`
-    height: 80vh;
+    height: calc(100svh - clamp(64px, 5vw, 76px));
     width: 100%;
     padding: 4% 2% 4% 0px;
     background-image: url(${props => props.image});
     background-size: cover;
-    background-position: center;
+    background-position: center bottom;
     background-repeat: no-repeat;
     border: 2px solid var(--black);
     border-radius: 10px;
@@ -31,12 +31,8 @@ const ContainerBanner = styled.div<Props>`
         `};
     `};
 
-    @media (min-width: 1600px) and (max-width: 3600px) {
-        margin-top: -70px;
-    };
-
     @media (max-width: 768px) {
-        height: 50vh;
+        height: calc(100svh - 6vw);
     };
 
     @media (max-width: 550px) {
@@ -111,12 +107,12 @@ const Title = styled.h1<Props>`
 
     ${props => props.theme === 'light' && `
         color: var(--deepneonViolet) !important;
-        text-shadow: 0px 0px 5px var(--clearneonViolet);    
+        text-shadow: 0px 0px 5px var(--clearneonViolet);
     `};
 
     ${props => props.neon === 'on' && `
         color: var(--clearneonBlue) !important;
-        text-shadow: 1.5px 1.5px 5px var(--clearneonPink);    
+        text-shadow: 1.5px 1.5px 5px var(--clearneonPink);
         ${props.theme === 'light' && `
             color: var(--neonViolet) !important;
             text-shadow: 1.5px 1.5px 5px var(--clearneonViolet);

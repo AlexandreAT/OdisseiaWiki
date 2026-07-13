@@ -1,35 +1,42 @@
 import { ContainerBanner, BannerEfect, BannerContent, BannerText, Title, Paragraph } from './Banner.style';
 import { useSelector } from 'react-redux'
-import bannerImage from '../../../assets/BannerHome.jpg';
-import bannerImageLight from '../../../assets/BannerHomeLight.jpg';
+import { TextScramble } from '../TextScramble';
+import { OdisseiaAnimatedTitle } from '../OdisseiaAnimatedTitle';
 
 interface Props {
     title: string;
     subtitle?: string;
-    imageSrc?: string;
+    imageSrc: string;
     paragraph: string[];
+    textAnimationDuration?: number;
 }
 
-export const Banner = ({ title, imageSrc, paragraph }: Props) => {
+export const Banner = ({
+    title,
+    imageSrc,
+    paragraph,
+    textAnimationDuration,
+}: Props) => {
     const { theme, neon } = useSelector((state: any) => state.themesReducer);
-    
-    if(!imageSrc){
-        if(theme === 'dark'){
-            imageSrc = bannerImage;
-        }
-        else{
-            imageSrc = bannerImageLight;
-        }
-    }
 
     return (
         <ContainerBanner theme={theme} neon={neon} image={imageSrc}>
             <BannerEfect theme={theme} neon={neon}/>
             <BannerContent theme={theme} neon={neon}>
-                <Title theme={theme} neon={neon}>{title}</Title>
+                {title === 'Odisseia' ? (
+                    <OdisseiaAnimatedTitle theme={theme} neon={neon} />
+                ) : (
+                    <Title theme={theme} neon={neon}>{title}</Title>
+                )}
                 <BannerText>
                     {paragraph.map((text, index) => (
-                        <Paragraph key={index} theme={theme} neon={neon}>{text}</Paragraph>
+                        <Paragraph key={index} theme={theme} neon={neon}>
+                            <TextScramble
+                                text={text}
+                                duration={textAnimationDuration}
+                                startDelay={index * 350}
+                            />
+                        </Paragraph>
                     ))}
                 </BannerText>
             </BannerContent>

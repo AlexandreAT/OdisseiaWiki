@@ -1,4 +1,5 @@
-import { Main } from './Home.style';
+import { HomeContent, Main } from './Home.style';
+import { useSelector } from 'react-redux';
 import { InfoBlock } from '../../components/InfoComponents/InfoBlock/InfoBlock';
 import { Banner } from '../../components/Generic/Banner/Banner';
 import { InfoCarousel } from '../../components/InfoComponents/InfoCarousel/InfoCarousel';
@@ -7,8 +8,12 @@ import { cidadesMock } from '../../Mock/cities.mock';
 
 import BannerCampaing from '../../assets/Banner Campanha.png';
 import BannerAbout from '../../assets/Banner Sobre.jpg';
+import bannerImage from '../../assets/BannerHome.jpg';
+import bannerImageLight from '../../assets/BannerHomeLight.jpg';
 
 const Home = () => {
+  const { theme } = useSelector((state: any) => state.themesReducer);
+  const homeBannerImage = theme === 'dark' ? bannerImage : bannerImageLight;
 
   const charactersCards = personagensMock.map((p) => ({
     name: p.Nome,
@@ -25,14 +30,17 @@ const Home = () => {
   }));
 
   return (
-    <Main>
+    <Main $backgroundImage={homeBannerImage}>
       <Banner
         title='Odisseia'
+        imageSrc={homeBannerImage}
         paragraph={[
           "Descubra um universo repleto de diversidade e tensões, onde a tecnologia encontra a magia em uma fusão única.",
           "Em Odisseia, explore a complexidade de um mundo onde mitologia e ciência se entrelaçam, moldando o destino das raças.",
         ]}
+        textAnimationDuration={2000}
       />
+      <HomeContent>
       <InfoBlock
         title='Sobre o universo'
         imageSrc={BannerCampaing} imageAlt='Banner - Sobre' imagePosition='left'
@@ -89,6 +97,7 @@ const Home = () => {
         listBottom={citiesCards}
         colorScheme='violetYellow'
       />
+      </HomeContent>
     </Main>
   )
 }
