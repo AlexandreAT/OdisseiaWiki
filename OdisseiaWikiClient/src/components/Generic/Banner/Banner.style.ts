@@ -71,7 +71,7 @@ const BannerContent = styled.div<Props>`
     transition: all 0.3s ease-in-out;
 
     ${props => props.theme === 'dark' && `
-        background: linear-gradient(90deg, var(--black) 20%, rgba(77,238,234,0) 100%);
+        background: linear-gradient(90deg, var(--black-blue) 20%, rgba(77,238,234,0) 100%);
     `};
 
     ${props => props.theme === 'light' && `
@@ -83,7 +83,7 @@ const BannerContent = styled.div<Props>`
         padding: 15px 2px 15px 28px;
         width: 347px;
         ${props => props.theme === 'dark' && `
-            background: linear-gradient(90deg, var(--black) 40%, rgba(77,238,234,0) 100%);
+            background: linear-gradient(90deg, var(--black-blue) 40%, rgba(77,238,234,0) 100%);
         `};
     
         ${props => props.theme === 'light' && `

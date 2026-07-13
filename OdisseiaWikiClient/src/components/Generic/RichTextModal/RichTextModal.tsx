@@ -27,6 +27,9 @@ export interface RichTextModalProps {
   neon?: 'on' | 'off';
 }
 
+const formatCyberpunkTitle = (value: string) =>
+  value.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
 const RichTextModal: React.FC<RichTextModalProps> = ({
   isOpen,
   onClose,
@@ -116,7 +119,7 @@ const RichTextModal: React.FC<RichTextModalProps> = ({
     <ModalOverlay onClick={handleOverlayClick}>
       <ModalSheet theme={theme} neon={neon}>
         <ModalHeader theme={theme} neon={neon}>
-          <ModalTitle theme={theme} neon={neon}>{title}</ModalTitle>
+          <ModalTitle theme={theme} neon={neon}>{formatCyberpunkTitle(title)}</ModalTitle>
           <CloseButton theme={theme} neon={neon} onClick={handleCloseRequest} title="Fechar">
             <CloseIcon />
           </CloseButton>

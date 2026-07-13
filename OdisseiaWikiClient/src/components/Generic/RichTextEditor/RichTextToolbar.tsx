@@ -1,4 +1,5 @@
 import { Editor } from '@tiptap/react';
+import { useEffect, useReducer } from 'react';
 import {
   ToolbarContainer,
   ToolbarButton,
@@ -13,6 +14,22 @@ interface RichTextToolbarProps {
 }
 
 export const RichTextToolbar = ({ editor, theme, neon }: RichTextToolbarProps) => {
+  const [, refreshToolbar] = useReducer((value: number) => value + 1, 0);
+
+  useEffect(() => {
+    const refresh = () => refreshToolbar();
+
+    editor.on('selectionUpdate', refresh);
+    editor.on('transaction', refresh);
+    editor.on('update', refresh);
+
+    return () => {
+      editor.off('selectionUpdate', refresh);
+      editor.off('transaction', refresh);
+      editor.off('update', refresh);
+    };
+  }, [editor]);
+
   if (!editor) return null;
 
   return (

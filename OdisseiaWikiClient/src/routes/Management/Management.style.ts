@@ -48,7 +48,9 @@ export const Options = styled.div<Props>`
     width: 100%;
     height: 100%;
     background-color: ${({ theme }) =>
-        theme === 'light' ? 'var(--black)' : 'var(--black-blue)'};
+        theme === 'light' ? 'rgba(255, 255, 255, 0.48)' : 'rgba(0, 8, 18, 0.48)'};
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border-right: 2px solid
         ${({ theme, neon }) =>  
             neon === 'on'
@@ -157,7 +159,9 @@ export const ToggleSidebarButton = styled.button<ToggleSidebarButtonProps>`
                 : 'var(--lightGrey)'};
     border-left: none;
     background-color: ${({ theme }) =>
-        theme === 'light' ? 'var(--black)' : 'var(--black-blue)'};
+        theme === 'light' ? 'rgba(255, 255, 255, 0.58)' : 'rgba(0, 8, 18, 0.58)'};
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     color: ${({ theme, neon }) =>
         neon === 'on'
             ? theme === 'dark'

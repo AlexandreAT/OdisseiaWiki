@@ -12,6 +12,9 @@ export const SidebarWrapper = styled.aside<{ $expanded: boolean; $headerExpanded
   left: 0;
   transition: width 0.3s ease-in-out, top 0.3s ease-in-out;
   z-index: 10;
+  background-color: rgba(0, 8, 18, 0.48);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 
   @media (max-width: 1024px) {
     max-height: auto;

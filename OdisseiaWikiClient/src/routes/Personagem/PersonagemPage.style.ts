@@ -473,7 +473,7 @@ export const HistoryModalOverlay = styled.div`
 `;
 
 export const HistoryModalSheet = styled.div<{ theme: 'dark' | 'light'; neon: 'on' | 'off' }>`
-  background: ${({ theme }) => theme === 'dark' ? 'var(--lightBlack)' : 'var(--whitesmoke)'};
+  background: ${({ theme }) => theme === 'dark' ? 'var(--black-blue)' : 'var(--whitesmoke)'};
   border: 2px solid ${({ theme, neon }) =>
     theme === "dark"
       ? neon === "on" ? "var(--clearneonBlue)" : "var(--lightBlack)"
@@ -482,7 +482,7 @@ export const HistoryModalSheet = styled.div<{ theme: 'dark' | 'light'; neon: 'on
   border-radius: 8px;
   width: 100%;
   max-width: 900px;
-  max-height: 90vh;
+  max-height: calc(100vh - 80px);
   display: flex;
   flex-direction: column;
   box-shadow: 0 10px 40px var(--blackTransp);
@@ -508,13 +508,14 @@ export const HistoryModalHeader = styled.div<{ theme: 'dark' | 'light'; neon: 'o
 
 export const HistoryModalTitle = styled.h2<{ theme: 'dark' | 'light'; neon: 'on' | 'off' }>`
   margin: 0;
-  color: ${({ theme, neon }) =>
-    theme === "dark"
-      ? neon === "on" ? "var(--clearneonBlue)" : "var(--clearWhite)"
-      : neon === "on" ? "var(--neonViolet)" : "var(--deepgray)"
-  };
-  font-size: 1.5rem;
-  font-weight: 600;
+  font-family: 'Cyberpunk Is Not Dead', sans-serif;
+  font-size: 18px;
+  font-weight: 100;
+  letter-spacing: 3px;
+  color: var(--black) !important;
+  text-shadow: ${({ theme }) => theme === 'dark'
+    ? '-1px -1px 0 var(--neonBlue), -1px 1px 0 var(--neonBlue), 1px -1px 0 var(--neonBlue), 1px 1px 0 var(--neonBlue)'
+    : '-1px -1px 0 var(--neonPink), -1px 1px 0 var(--neonPink), 1px -1px 0 var(--neonPink), 1px 1px 0 var(--neonPink)'};
 `;
 
 export const HistoryModalClose = styled.button<{ theme: 'dark' | 'light'; neon: 'on' | 'off' }>`
@@ -548,10 +549,12 @@ export const HistoryModalClose = styled.button<{ theme: 'dark' | 'light'; neon: 
 `;
 
 export const HistoryModalContent = styled.div<{ theme: 'dark' | 'light'; neon: 'on' | 'off' }>`
-  flex: 1;
+  flex: 0 1 auto;
+  min-height: 0;
   overflow-y: auto;
   padding: 24px;
-  color: ${({ theme }) => theme === 'dark' ? 'var(--clearWhite)' : 'var(--deepgray)'};
+  color: ${({ theme }) => theme === 'dark' ? 'var(--whitesmoke)' : 'var(--deepgray)'};
+  background: ${({ theme }) => theme === 'dark' ? 'var(--black-blue)' : 'var(--whitesmoke)'};
 
   .ProseMirror {
     outline: none;
@@ -560,19 +563,19 @@ export const HistoryModalContent = styled.div<{ theme: 'dark' | 'light'; neon: '
 
     p {
       ${wikiParagraphStyle}
-      color: ${({ theme }) => theme === 'dark' ? 'var(--clearWhite)' : 'var(--deepgray)'};
+      color: ${({ theme }) => theme === 'dark' ? 'var(--whitesmoke)' : 'var(--deepgray)'};
     }
     h1 {
       ${wikiHeading1Style}
-      color: ${({ theme }) => theme === 'dark' ? 'var(--clearWhite)' : 'var(--deepgray)'};
+      color: ${({ theme }) => theme === 'dark' ? 'var(--whitesmoke)' : 'var(--deepgray)'};
     }
     h2 {
       ${wikiHeading2Style}
-      color: ${({ theme }) => theme === 'dark' ? 'var(--clearWhite)' : 'var(--deepgray)'};
+      color: ${({ theme }) => theme === 'dark' ? 'var(--whitesmoke)' : 'var(--deepgray)'};
     }
     h3 {
       ${wikiHeading3Style}
-      color: ${({ theme }) => theme === 'dark' ? 'var(--clearWhite)' : 'var(--deepgray)'};
+      color: ${({ theme }) => theme === 'dark' ? 'var(--whitesmoke)' : 'var(--deepgray)'};
     }
     ul, ol {
       ${wikiListStyle}
@@ -607,7 +610,7 @@ export const HistoryModalContent = styled.div<{ theme: 'dark' | 'light'; neon: '
   &::-webkit-scrollbar-thumb:hover {
     background: ${({ theme, neon }) =>
       theme === "dark"
-        ? neon === "on" ? "var(--neonBlue)" : "var(--clearWhite)"
+        ? neon === "on" ? "var(--neonBlue)" : "var(--whitesmoke)"
         : neon === "on" ? "var(--deepneonViolet)" : "var(--deepgray)"
     };
   }

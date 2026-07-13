@@ -42,11 +42,12 @@ const Header = styled.header<Props>`
     border-bottom-left-radius: 10px;
     z-index: 5;
 
-    ${props => props.theme === 'dark' ? `
-        background-color: var(--black-blue);
-    ` : `
-        background-color: var(--black);
-    `};
+    background-color: ${({ theme }) =>
+        theme === 'dark' ? 'rgba(0, 8, 18, 0.58)' : 'rgba(255, 255, 255, 0.58)'};
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid ${({ theme }) =>
+        theme === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)'};
 
     transition: all 0.3s ease-in-out;
 `;
@@ -64,7 +65,7 @@ const Body = styled.body<Props>`
     height: 100%;
 
     ${props => props.theme === 'dark' ? `
-        background-color: var(--black);
+        background-color: var(--black-blue);
     ` : `
         background-image: linear-gradient(to right top, #fdddaa, #fde1b3, #fde6bc, #feeac6, #feeecf, #f5f0d1, #edf2d5, #e6f3da, #d2f2e1, #c2f0ec, #bbebf8, #c1e4ff, #b6dbfd, #b1d6fb, #a7cdf9, #a1c8f9, #9bc4f8, #87b9f9);
     `};

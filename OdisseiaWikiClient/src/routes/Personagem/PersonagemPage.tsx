@@ -404,7 +404,7 @@ const PersonagemPage: React.FC = () => {
           <HistoryModalOverlay onClick={(e) => { if (e.target === e.currentTarget) setHistoryModalOpen(false); }}>
             <HistoryModalSheet theme={theme} neon={neon}>
               <HistoryModalHeader theme={theme} neon={neon}>
-                <HistoryModalTitle theme={theme} neon={neon}>História</HistoryModalTitle>
+                <HistoryModalTitle theme={theme} neon={neon}>Historia</HistoryModalTitle>
                 <HistoryModalClose theme={theme} neon={neon} onClick={() => setHistoryModalOpen(false)} title="Fechar">
                   <CloseIcon />
                 </HistoryModalClose>

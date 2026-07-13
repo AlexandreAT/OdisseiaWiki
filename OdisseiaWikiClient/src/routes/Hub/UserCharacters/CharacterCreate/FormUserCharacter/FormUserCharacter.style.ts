@@ -94,6 +94,33 @@ export const RelatedCharactersSection = styled.div`
   gap: 10px;
 `;
 
+export const HistoryEditorHeader = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+`;
+
+export const ExpandHistoryButton = styled.button<Props>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 2px solid ${({ theme, neon }) =>
+    theme === 'dark'
+      ? neon === 'on' ? 'var(--clearneonBlue)' : 'var(--lightBlack)'
+      : neon === 'on' ? 'var(--neonViolet)' : 'var(--lightGrey)'};
+  border-radius: 6px;
+  cursor: pointer;
+  background: ${({ theme }) => theme === 'dark' ? 'var(--black-blue)' : 'var(--clearWhite)'};
+  color: ${({ theme, neon }) =>
+    theme === 'dark'
+      ? neon === 'on' ? 'var(--clearneonBlue)' : 'var(--clearWhite)'
+      : neon === 'on' ? 'var(--neonViolet)' : 'var(--deepgray)'};
+
+  .icon { font-size: 18px; }
+`;
+
 export const SectionTitle = styled.h2<Props>`
   font-family: 'DO Futuristic', sans-serif;
   font-weight: 100;

@@ -19,7 +19,9 @@ export const WikiHeaderWrapper = styled.div<{ $isExpanded: boolean }>`
       ? '100px'
       : '0px'};
   overflow: hidden;
-  background-color: #1a1a1a;
+  background-color: rgba(0, 8, 18, 0.58);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-bottom: ${props =>
     props.$isExpanded
       ? '1px solid #333'

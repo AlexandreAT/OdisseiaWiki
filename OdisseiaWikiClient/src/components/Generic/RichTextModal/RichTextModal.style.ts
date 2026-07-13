@@ -33,7 +33,7 @@ export const ModalSheet = styled.div<ThemeProps>`
   border-radius: 8px;
   width: 100%;
   max-width: 1200px;
-  max-height: 90vh;
+  max-height: calc(100vh - 80px);
   display: flex;
   flex-direction: column;
   box-shadow: 0 10px 40px var(--blackTransp);
@@ -69,17 +69,14 @@ export const ModalHeader = styled.div<ThemeProps>`
 
 export const ModalTitle = styled.h2<ThemeProps>`
   margin: 0;
-  color: ${({ theme, neon }) =>
-    theme === "dark"
-      ? neon === "on"
-        ? "var(--clearneonBlue)"
-        : "var(--clearWhite)"
-      : neon === "on"
-        ? "var(--neonViolet)"
-        : "var(--deepgray)"
-  };
-  font-size: 1.5rem;
-  font-weight: 600;
+  font-family: 'Cyberpunk Is Not Dead', sans-serif;
+  font-size: 18px;
+  font-weight: 100;
+  letter-spacing: 3px;
+  color: var(--black) !important;
+  text-shadow: ${({ theme }) => theme === 'dark'
+    ? '-1px -1px 0 var(--neonBlue), -1px 1px 0 var(--neonBlue), 1px -1px 0 var(--neonBlue), 1px 1px 0 var(--neonBlue)'
+    : '-1px -1px 0 var(--neonPink), -1px 1px 0 var(--neonPink), 1px -1px 0 var(--neonPink), 1px 1px 0 var(--neonPink)'};
 `;
 
 export const CloseButton = styled.button<ThemeProps>`
@@ -119,7 +116,8 @@ export const CloseButton = styled.button<ThemeProps>`
 `;
 
 export const ModalContent = styled.div<ThemeProps>`
-  flex: 1;
+  flex: 0 1 auto;
+  min-height: 0;
   overflow-y: auto;
   padding: 24px;
   
