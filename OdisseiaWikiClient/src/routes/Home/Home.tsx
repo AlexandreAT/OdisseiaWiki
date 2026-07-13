@@ -8,8 +8,9 @@ import { cidadesMock } from '../../Mock/cities.mock';
 
 import BannerCampaing from '../../assets/Banner Campanha.png';
 import BannerAbout from '../../assets/Banner Sobre.jpg';
-import bannerImage from '../../assets/BannerHome.jpg';
+import bannerImage from '../../assets/BannerHome3.jpg';
 import bannerImageLight from '../../assets/BannerHomeLight.jpg';
+import { ScrollRevealBlock } from '../../components/Generic/ScrollRevealBlock';
 
 const Home = () => {
   const { theme } = useSelector((state: any) => state.themesReducer);
@@ -41,6 +42,7 @@ const Home = () => {
         textAnimationDuration={2000}
       />
       <HomeContent>
+      <ScrollRevealBlock variant='infoBlock'>
       <InfoBlock
         title='Sobre o universo'
         imageSrc={BannerCampaing} imageAlt='Banner - Sobre' imagePosition='left'
@@ -52,6 +54,8 @@ const Home = () => {
           "Lorem ipsum dolor sit amet consectetur adipisicing elit. Quae qui nulla rerum doloremque sapiente ea eveniet, molestias aut impedit provident rem eaque, quod accusamus eligendi aliquid maiores dicta blanditiis harum."
         ]}
       />
+      </ScrollRevealBlock>
+      <ScrollRevealBlock variant='infoBlock'>
       <InfoBlock
         title='Campanha do RPG'
         subtitle='Insurgência'
@@ -61,6 +65,8 @@ const Home = () => {
           "Lorem ipsum dolor sit, amet consectetur adipisicing elit. Quaerat a nihil, vero, nisi id libero ab minima vel quia accusantium soluta ratione, nulla consectetur cupiditate inventore optio sed tempore porro. Lorem ipsum dolor sit amet consectetur adipisicing elit. Vero maiores neque iste similique officiis aliquam adipisci reiciendis voluptas quod mollitia, porro dolorem dolorum, eligendi dolore. Iure quia maxime dolore quaerat. Lorem ipsum dolor, sit amet consectetur adipisicing elit. Asperiores fuga labore praesentium numquam! Repellendus esse, dolore optio fuga excepturi unde incidunt neque, amet magnam fugiat asperiores quae sequi nostrum. Quasi!"
         ]}
       />
+      </ScrollRevealBlock>
+      <ScrollRevealBlock variant='infoCarousel'>
       <InfoCarousel
         typeTop='simple'
         typeBottom='city'
@@ -73,6 +79,8 @@ const Home = () => {
         listBottom={citiesCards}
         colorScheme='bluePink'
       />
+      </ScrollRevealBlock>
+      <ScrollRevealBlock variant='infoCarousel'>
       <InfoCarousel
         typeTop='simple'
         typeBottom='city'
@@ -85,6 +93,8 @@ const Home = () => {
         listBottom={citiesCards}
         colorScheme='greenRed'
       />
+      </ScrollRevealBlock>
+      <ScrollRevealBlock variant='infoCarousel'>
       <InfoCarousel
         typeTop='simple'
         typeBottom='city'
@@ -97,6 +107,7 @@ const Home = () => {
         listBottom={citiesCards}
         colorScheme='violetYellow'
       />
+      </ScrollRevealBlock>
       </HomeContent>
     </Main>
   )

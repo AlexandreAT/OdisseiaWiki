@@ -17,6 +17,7 @@ import {
 import { WikiBlockRenderer } from '../blocks';
 
 import TitleGlitch from '../../../../components/Generic/TitleGlitch/TitleGlitch';
+import { ScrollRevealBlock } from '../../../../components/Generic/ScrollRevealBlock';
 
 export const WikiContent: React.FC<WikiContentProps> = ({
   page,
@@ -103,15 +104,17 @@ export const WikiContent: React.FC<WikiContentProps> = ({
         {sortedBlocks.length > 0 ? (
           sortedBlocks.map((block, index) => (
             <WikiBlockWrapper
-              key={block.tempId || index}
+              key={`${page.slug}-${block.tempId || index}`}
               id={`wiki-block-${index}`}
             >
-              <WikiBlockRenderer
-                block={block}
-                blockIndex={index}
-                theme={theme}
-                neon={neon}
-              />
+              <ScrollRevealBlock variant="wikiBlock">
+                <WikiBlockRenderer
+                  block={block}
+                  blockIndex={index}
+                  theme={theme}
+                  neon={neon}
+                />
+              </ScrollRevealBlock>
             </WikiBlockWrapper>
           ))
         ) : (
