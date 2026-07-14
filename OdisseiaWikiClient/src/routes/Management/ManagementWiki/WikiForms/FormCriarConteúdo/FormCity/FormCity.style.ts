@@ -1,4 +1,5 @@
 import styled from "styled-components";
+import { managementEntityToolbarResponsive } from '../../ManagementEntityToolbar.style';
 
 interface Props {
   theme: 'dark' | 'light';
@@ -14,6 +15,8 @@ export const FormController = styled.form`
   align-items: center;
   justify-content: center;
   z-index: 100;
+  min-width: 0;
+  max-width: 100%;
 `;
 
 export const FormHeader = styled.div`
@@ -48,6 +51,10 @@ export const ImageSection = styled.div`
   justify-content: flex-start;
   gap: 15px;
 
+  @media (max-width: 1100px) {
+    width: clamp(220px, 28vw, 280px);
+  }
+
   @media (max-width: 768px) {
     width: 100%;
   }
@@ -67,6 +74,8 @@ export const MainImageContainer = styled.div<{ hasImage: boolean }>`
     hasImage ? 'transparent' : 'var(--lightGrey)'};
   cursor: pointer;
   transition: all 0.3s ease;
+  max-width: 100%;
+  box-sizing: border-box;
 
   &:hover {
     border-color: var(--neonBlue);
@@ -224,6 +233,16 @@ export const ButtonsContainer = styled.div`
   gap: 20px;
   width: 100%;
   margin-top: 20px;
+  flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    > * {
+      flex: 1 1 160px;
+      max-width: 100%;
+    }
+  }
+
+  ${managementEntityToolbarResponsive}
 `;
 
 export const HiddenInput = styled.input`

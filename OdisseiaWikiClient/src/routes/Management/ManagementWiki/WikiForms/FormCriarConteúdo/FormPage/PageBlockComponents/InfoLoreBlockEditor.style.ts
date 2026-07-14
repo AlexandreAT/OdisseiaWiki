@@ -9,6 +9,8 @@ export const Container = styled.div`
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
+  max-width: 100%;
 `;
 
 export const InfoContainer = styled.div<ThemeProps>`
@@ -19,6 +21,8 @@ export const InfoContainer = styled.div<ThemeProps>`
   padding: 12px;
   border-radius: 8px;
   background-color: ${props => (props.$isDark ? '#1a1a1a' : '#f5f5f5')};
+  min-width: 0;
+  box-sizing: border-box;
 `;
 
 export const InfoDisplay = styled.div<ThemeProps>`
@@ -31,6 +35,11 @@ export const InfoDisplay = styled.div<ThemeProps>`
 export const InfoContent = styled.div`
   display: flex;
   gap: 12px;
+  min-width: 0;
+
+  @media (max-width: 480px) {
+    flex-direction: column;
+  }
 `;
 
 export const InfoImage = styled.img`
@@ -42,6 +51,8 @@ export const InfoImage = styled.img`
 
 export const InfoDetails = styled.div`
   flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
 `;
 
 export const InfoTitle = styled.p`

@@ -26,6 +26,8 @@ export const CheckListDropdown = styled.div<DropdownProps>`
   border: 2px solid var(--black-blue);
   border-radius: 7px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  max-width: min(100%, calc(100vw - 24px));
+  box-sizing: border-box;
 
   ${({ theme, neon }) =>
     neon === 'on' &&
@@ -57,6 +59,11 @@ export const CheckDisplay = styled.div<DisplayProps & { height?: string }>`
   border: 2px solid var(--black-blue);
   box-shadow: 0 0 1px 1px rgba(50,50,50,0.8);
   transition: border 0.2s, box-shadow 0.2s;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
 
   ${({ focus, theme, neon }) =>
     focus &&

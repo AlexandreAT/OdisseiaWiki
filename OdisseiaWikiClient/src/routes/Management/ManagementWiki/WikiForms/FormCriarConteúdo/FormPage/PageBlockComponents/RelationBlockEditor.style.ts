@@ -9,6 +9,8 @@ export const Container = styled.div`
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
+  max-width: 100%;
 `;
 
 export const RelationContainer = styled.div`
@@ -27,6 +29,12 @@ export const AddReferenceRow = styled.div`
   background-color: rgba(0, 0, 0, 0.15);
   border-radius: 8px;
   border: 1px dashed rgba(255, 255, 255, 0.15);
+  min-width: 0;
+
+  > * {
+    min-width: 0;
+    max-width: 100%;
+  }
 `;
 
 export const EntityDisplay = styled.div<ThemeProps>`
@@ -40,6 +48,12 @@ export const EntityContent = styled.div`
   display: flex;
   gap: 12px;
   align-items: center;
+  min-width: 0;
+
+  @media (max-width: 480px) {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 `;
 
 export const EntityImage = styled.img<{ $entityType?: string }>`
@@ -54,6 +68,8 @@ export const EntityImage = styled.img<{ $entityType?: string }>`
 
 export const EntityDetails = styled.div`
   flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
 `;
 
 export const EntityName = styled.p`
@@ -102,6 +118,8 @@ export const ReferenceHeader = styled.div`
   justify-content: space-between;
   gap: 8px;
   padding: 0 4px;
+  min-width: 0;
+  flex-wrap: wrap;
 `;
 
 export const ReferenceOrderButtons = styled.div`

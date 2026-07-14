@@ -7,8 +7,8 @@ export const SidebarWrapper = styled.aside<{ $expanded: boolean; $headerExpanded
   width: ${props => (props.$expanded ? '180px' : '0px')};
   border-right: 1px solid #333;
   height: 100%;
-  position: fixed;
-  top: ${props => (props.$headerExpanded ? '167px' : '100px')};
+  position: sticky;
+  top: ${props => (props.$headerExpanded ? '156px' : '84px')};
   left: 0;
   transition: width 0.3s ease-in-out, top 0.3s ease-in-out;
   z-index: 10;
@@ -16,13 +16,25 @@ export const SidebarWrapper = styled.aside<{ $expanded: boolean; $headerExpanded
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 
-  @media (max-width: 1024px) {
-    max-height: auto;
-    width: 100%;
-    border-right: none;
-    border-bottom: 1px solid #333;
-    position: static;
-    top: auto;
+  box-sizing: border-box;
+
+  @media (max-width: 1100px) {
+    width: ${props => (props.$expanded ? '110px' : '0px')};
+    top: ${props => (props.$headerExpanded ? '131px' : '66px')};
+
+  }
+
+  @media (max-width: 768px) {
+    position: fixed;
+    width: ${props => (props.$expanded ? 'min(72vw, 240px)' : '0px')};
+    height: ${props => (props.$headerExpanded ? 'calc(100dvh - 115px)' : 'calc(100dvh - 54px)')};
+    top: ${props => (props.$headerExpanded ? '115px' : '54px')};
+    max-height: none;
+    overflow: visible;
+    border-right: ${props => (props.$expanded ? '1px solid #333' : 'none')};
+    background-color: rgba(0, 8, 18, 0.97);
+    box-shadow: ${props => (props.$expanded ? '8px 0 24px rgba(0, 0, 0, 0.45)' : 'none')};
+    z-index: 30;
   }
 
   /* Scrollbar styling */
@@ -51,6 +63,8 @@ export const SidebarContent = styled.div`
   padding: 0;
   flex: 1;
   overflow-y: auto;
+  min-width: 0;
+  max-height: 100%;
 `;
 
 export const SectionWrapper = styled.div`
@@ -80,6 +94,13 @@ export const SectionHeader = styled.button`
   cursor: pointer;
   user-select: none;
   transition: all 0.2s ease;
+  min-width: 0;
+  box-sizing: border-box;
+
+  span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
 
   &:hover {
     background-color: rgba(0, 212, 255, 0.05);
@@ -94,6 +115,11 @@ export const SectionHeader = styled.button`
 
   &[aria-expanded='true'] svg {
     transform: rotate(180deg);
+  }
+
+  @media (max-width: 1100px) {
+    padding: 10px 8px;
+    font-size: 11px;
   }
 `;
 
@@ -137,6 +163,11 @@ export const SectionItem = styled.button<SectionItemProps>`
 
   &:active {
     transform: translateX(2px);
+  }
+
+  @media (max-width: 1100px) {
+    padding: 8px 7px 8px 10px;
+    font-size: 10px;
   }
 `;
 
@@ -191,5 +222,16 @@ export const ToggleSidebarButton = styled.button<{ $isExpanded: boolean }>`
 
   &:active {
     transform: scale(0.95);
+  }
+
+  @media (max-width: 768px) {
+    right: -36px;
+    top: 8px;
+    width: 36px;
+    height: 36px;
+    border: 1px solid #333;
+    border-radius: 4px;
+    background-color: rgba(0, 8, 18, 0.96);
+    z-index: 45;
   }
 `;

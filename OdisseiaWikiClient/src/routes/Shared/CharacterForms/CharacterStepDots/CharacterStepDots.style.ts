@@ -10,12 +10,35 @@ export const StepDotsAnchor = styled.div<{ right?: string }>`
   top: 24px;
   right: ${({ right }) => right || '-46px'};
   z-index: 12;
+
+  @media (max-width: 768px) {
+    position: static;
+    width: 100%;
+    max-width: 100%;
+    padding: 4px 2px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    box-sizing: border-box;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
 `;
 
 export const StepDotsContainer = styled.div`
   display: flex;
   align-items: center;
   gap: 10px;
+
+  @media (max-width: 768px) {
+    width: max-content;
+    min-width: 100%;
+    justify-content: flex-start;
+    gap: 8px;
+  }
 `;
 
 export const StepDot = styled.button<ThemeProps & { active: boolean }>`
@@ -54,5 +77,11 @@ export const StepDot = styled.button<ThemeProps & { active: boolean }>`
 
   &:hover {
     transform: scale(1.04);
+  }
+
+  @media (max-width: 768px) {
+    flex: 0 0 auto;
+    width: 24px;
+    height: 24px;
   }
 `;

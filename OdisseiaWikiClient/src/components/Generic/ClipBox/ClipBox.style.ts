@@ -43,6 +43,16 @@ export const ClipController = styled.div<Props & { autoSize?: boolean }>`
     align-items: center;
     justify-content: center;
     z-index: ${({ zIndex }) => (zIndex !== undefined ? zIndex : -2)};
+    min-width: 0;
+    box-sizing: border-box;
+
+    @media (max-width: 1100px) {
+      max-width: 100%;
+    }
+
+    @media (max-width: 768px) {
+      padding: ${({ autoSize }) => (autoSize ? '10px' : '0')};
+    }
 `;
 
 const getInnerSize = (calcSize?: string, offset = '20px', fallback = '800px') => {
@@ -126,6 +136,14 @@ export const ContentContainer = styled.div<Props & { autoSize?: boolean }>`
     enableClip === false ? 'none' : 'polygon(0 0, 100% 0, 100% 100%, 15% 100%, 0% 75%, 0 100%)'};
   z-index: 1;
   padding: 20px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+
+  @media (max-width: 768px) {
+    width: ${({ autoSize }) => autoSize ? '100%' : 'min(100%, calc(100% - 10px))'};
+    padding: 12px;
+  }
 
   &::before {
     content: '';

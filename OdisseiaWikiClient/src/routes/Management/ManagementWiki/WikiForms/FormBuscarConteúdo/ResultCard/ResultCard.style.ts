@@ -37,6 +37,17 @@ export const CardContainer = styled.div<StyledCardProps>`
       : 'none'};
 
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    min-height: 0;
+    max-height: none;
+    padding: 10px;
+    gap: 8px;
+  }
 
   &:hover {
     transform: translateY(-4px);
@@ -56,6 +67,8 @@ export const CardHeader = styled.div`
   justify-content: space-between;
   gap: 8px;
   width: 100%;
+  min-width: 0;
+  flex-wrap: wrap;
 `;
 
 export const CardImage = styled.div<{ imageUrl?: string }>`
@@ -70,6 +83,10 @@ export const CardImage = styled.div<{ imageUrl?: string }>`
   background-position: center;
   background-repeat: no-repeat;
   flex-shrink: 0;
+
+  @media (max-width: 768px) {
+    height: 96px;
+  }
 `;
 
 export const CardTitle = styled.h3<StyledCardProps>`
@@ -80,6 +97,13 @@ export const CardTitle = styled.h3<StyledCardProps>`
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
+
+  @media (max-width: 768px) {
+    font-size: 15px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
   
   color: ${({ theme, neon }) =>
     neon === 'on'
@@ -109,6 +133,12 @@ export const EntityBadge = styled.span<StyledCardProps>`
   
   color: ${({ theme }) =>
     theme === 'light' ? 'var(--white)' : 'var(--black)'};
+
+  @media (max-width: 768px) {
+    padding: 3px 7px;
+    font-size: 10px;
+    white-space: normal;
+  }
 `;
 
 export const CardContent = styled.div`
@@ -173,6 +203,11 @@ export const CardActions = styled.div`
   flex-direction: row;
   gap: 8px;
   margin-top: auto;
+  flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    gap: 6px;
+  }
 `;
 
 export const ActionButton = styled.button<StyledCardProps>`
@@ -197,6 +232,11 @@ export const ActionButton = styled.button<StyledCardProps>`
   color: ${({ theme }) =>
     theme === 'light' ? 'var(--white)' : 'var(--black)'};
 
+  @media (max-width: 768px) {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+
   &:hover {
     opacity: 0.8;
     transform: scale(1.02);
@@ -211,6 +251,7 @@ export const InfoText = styled.p<StyledCardProps>`
   font-size: 13px;
   margin: 0;
   line-height: 1.4;
+  overflow-wrap: anywhere;
   
   color: ${({ theme }) =>
     theme === 'light' ? 'var(--darkgray)' : 'var(--lightgray)'};

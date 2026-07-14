@@ -1,4 +1,5 @@
 import styled from "styled-components";
+import { managementEntityToolbarResponsive } from '../../ManagementEntityToolbar.style';
 
 interface Props {
   theme: 'dark' | 'light';
@@ -14,6 +15,8 @@ export const FormController = styled.form`
   align-items: center;
   justify-content: center;
   z-index: 100;
+  min-width: 0;
+  max-width: 100%;
 `;
 
 export const FormHeader = styled.div`
@@ -48,6 +51,10 @@ export const ImageSection = styled.div`
   justify-content: flex-start;
   gap: 15px;
 
+  @media (max-width: 1100px) {
+    width: clamp(220px, 28vw, 280px);
+  }
+
   @media (max-width: 768px) {
     width: 100%;
   }
@@ -70,6 +77,9 @@ export const StatusSection = styled.div<Props>`
     props.theme === 'light' ? 'var(--lightgray)' : 'var(--clearblack)'};
 
   transition: border-color 0.3s ease, background-color 0.3s ease;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 `;
 
 export const StatusTitle = styled.h3<Props>`
@@ -88,7 +98,7 @@ export const StatusTitle = styled.h3<Props>`
 
 export const StatusGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 15px;
 
   @media (max-width: 768px) {
@@ -167,6 +177,12 @@ export const AddPassivaContainer = styled.div`
   flex-direction: row;
   gap: 10px;
   align-items: flex-end;
+  min-width: 0;
+
+  @media (max-width: 480px) {
+    flex-direction: column;
+    align-items: stretch;
+  }
 `;
 
 export const TagsSection = styled.div`
@@ -195,6 +211,8 @@ export const ButtonsContainer = styled.div`
     flex-direction: column;
     width: 100%;
   }
+
+  ${managementEntityToolbarResponsive}
 `;
 
 export const ErrorText = styled.span<Props>`

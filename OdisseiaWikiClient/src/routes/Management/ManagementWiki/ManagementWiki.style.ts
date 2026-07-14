@@ -14,6 +14,9 @@ export const ManagementContainer = styled.div`
     align-items: center;
     justify-content: center;
     padding-top: 20px;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
 `;
 
 export const ButtonDiv = styled.div`
@@ -27,6 +30,11 @@ export const ButtonDiv = styled.div`
     border-top-right-radius: 5px;
     border-top-left-radius: 5px;
     overflow: hidden;
+    max-width: 100%;
+
+    @media (max-width: 480px) {
+        width: min(250px, 100%);
+    }
 `
 
 export const ButtonForm = styled.button<Props>`
@@ -84,6 +92,31 @@ export const BoxContent = styled.div<Props>`
     }
 
     z-index: 200;
+
+    @media (max-width: 1100px) {
+        width: 150px;
+        height: 150px;
+        gap: 10px;
+
+        .icon {
+            font-size: 38px;
+        }
+    }
+
+    @media (max-width: 768px) {
+        width: min(140px, 42vw);
+        height: 120px;
+        gap: 8px;
+
+        .icon {
+            font-size: 32px;
+        }
+
+        .label {
+            font-size: 12px;
+            overflow-wrap: anywhere;
+        }
+    }
 `;
 
 export const Button = styled.button<Props>`

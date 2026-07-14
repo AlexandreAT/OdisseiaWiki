@@ -30,6 +30,13 @@ export const ContentController = styled.div<Props>`
     align-items: flex-start;
     width: ${({ width }) => width || `100%`};
     ${({ height }) => height && `height: ${height};`}
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+
+    @media (max-width: 768px) {
+        width: 100%;
+    }
 `
 
 export const LoginLabel = styled.label<Props>`
@@ -56,6 +63,9 @@ export const LoginInput = styled.input<Props>`
     color: var(--deepgrey);
     transition: background-color 0.2s, border 0.2s;
     box-shadow: 0 0 1px 1px rgba(50, 50, 50, 0.8);
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
 
     &:focus {
         background-color: var(--black-blue);

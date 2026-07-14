@@ -6,15 +6,21 @@ export const GalleryBlockContainer = styled.div`
   gap: 16px;
   width: 100%;
   align-items: center;
+  min-width: 0;
+  max-width: 100%;
 `;
 
 export const GalleryItem = styled.button`
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   flex: 0 0 auto;
   width: 100%;
-  aspect-ratio: 1 / 1;
+  max-width: 100%;
+  min-width: 0;
+  align-self: start;
+  box-sizing: border-box;
   padding: 0;
   border: 2px solid #333;
   border-radius: 8px;
@@ -42,6 +48,12 @@ export const GalleryGrid = styled.div`
   max-width: 1100px;
   padding: 14px;
   border-radius: 8px;
+  min-width: 0;
+  box-sizing: border-box;
+
+  @media (max-width: 1100px) {
+    width: 90%;
+  }
 
   &:has(> ${GalleryItem}:hover) {
     background-color: #0006;
@@ -50,8 +62,13 @@ export const GalleryGrid = styled.div`
   transition: background-color 0.3s ease;
 
   @media (max-width: 768px) {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
+  }
+
+  @media (max-width: 480px) {
+    grid-template-columns: minmax(0, 1fr);
   }
 `;
 
@@ -63,6 +80,7 @@ export const CarouselWrapper = styled.div`
   align-items: center;
   width: 100%;
   max-width: 1100px;
+  min-width: 0;
 `;
 
 export const CarouselViewport = styled.div`
@@ -76,6 +94,9 @@ export const CarouselViewport = styled.div`
   cursor: grab;
   touch-action: pan-y;
   user-select: none;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 
   &:active {
     cursor: grabbing;
@@ -86,7 +107,6 @@ export const CarouselViewport = styled.div`
   > ${GalleryItem} {
     width: 200px;
     min-width: 200px;
-    aspect-ratio: 1 / 1;
 
     @media (max-width: 768px) {
       width: 150px;
@@ -142,7 +162,10 @@ export const CarouselArrow = styled.button<{ $direction: 'left' | 'right' }>`
 `;
 
 export const GalleryItemImage = styled.img`
+  display: block;
   width: 100%;
+  max-width: 100%;
+  aspect-ratio: 1 / 1;
   object-fit: contain;
   pointer-events: none;
 `;
@@ -152,7 +175,7 @@ export const GalleryItemPlaceholder = styled.div`
   align-items: center;
   justify-content: center;
   width: 100%;
-  height: 100%;
+  aspect-ratio: 1 / 1;
   background: linear-gradient(135deg, #0a3a3a 0%, #1a1a1a 100%);
   color: rgba(255, 255, 255, 0.3);
   font-size: 32px;
@@ -160,11 +183,19 @@ export const GalleryItemPlaceholder = styled.div`
 `;
 
 export const GalleryCaption = styled.p`
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   margin: 0;
+  padding: 6px 8px 8px;
   font-size: 12px;
   color: rgba(255, 255, 255, 0.6);
   font-style: italic;
   text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+  align-self: stretch;
 `;
 
 export const ErrorMessage = styled.div`

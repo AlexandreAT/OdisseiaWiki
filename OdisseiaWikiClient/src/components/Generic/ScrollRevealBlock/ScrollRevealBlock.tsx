@@ -8,7 +8,12 @@ export const ScrollRevealBlock = ({
   threshold = 0.6,
   rootMargin,
 }: ScrollRevealBlockProps) => {
-  const revealRef = useScrollReveal<HTMLElement>({ rootMargin, threshold });
+  const resolvedThreshold = variant === 'wikiBlock'
+    && typeof window !== 'undefined'
+    && window.matchMedia('(max-width: 768px)').matches
+    ? 0.15
+    : threshold;
+  const revealRef = useScrollReveal<HTMLElement>({ rootMargin, threshold: resolvedThreshold });
 
   return (
     <ScrollRevealSection ref={revealRef} $variant={variant}>

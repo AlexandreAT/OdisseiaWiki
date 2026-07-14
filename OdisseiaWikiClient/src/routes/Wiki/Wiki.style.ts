@@ -8,6 +8,9 @@ export const WikiPageContainer = styled.div<{
   min-height: 100vh;
   isolation: isolate;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 
   &::before {
     content: '';

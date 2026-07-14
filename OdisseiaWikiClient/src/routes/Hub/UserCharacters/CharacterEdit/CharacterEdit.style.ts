@@ -14,6 +14,18 @@ export const FloatingActions = styled.div`
   align-items: center;
   gap: 8px;
   z-index: 12000;
+
+  @media (max-width: 1100px) {
+    position: static;
+    width: 100%;
+    flex-direction: row;
+    justify-content: flex-end;
+    order: -1;
+  }
+
+  @media (max-width: 768px) {
+    gap: 6px;
+  }
 `;
 
 export const SyncIconBadge = styled.div<ThemeProps & { synced: boolean }>`
@@ -41,6 +53,15 @@ export const SyncIconBadge = styled.div<ThemeProps & { synced: boolean }>`
 
   .icon {
     font-size: 19px;
+  }
+
+  @media (max-width: 768px) {
+    width: 34px;
+    height: 34px;
+
+    .icon {
+      font-size: 17px;
+    }
   }
 `;
 
@@ -90,5 +111,15 @@ export const FloatingSaveButton = styled.button<ThemeProps>`
 
   .icon {
     font-size: 18px;
+  }
+
+  @media (max-width: 768px) {
+    width: 40px;
+    height: 40px;
+    padding: 7px;
+
+    .icon {
+      font-size: 17px;
+    }
   }
 `;

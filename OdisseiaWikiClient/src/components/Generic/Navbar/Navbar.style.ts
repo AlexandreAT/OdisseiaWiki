@@ -16,6 +16,7 @@ const ContainerNavbar = styled.div<Props>`
     border-radius: 10px;
     position: relative;
     z-index: 40;
+    box-sizing: border-box;
 
     ${ props => props.theme === 'dark' ? `
         border-color: var(--grey);
@@ -33,14 +34,22 @@ const ContainerNavbar = styled.div<Props>`
         box-shadow: 0px 0px 10px 2px var(--clearneonViolet), inset 0px 0px 10px 2px var(--clearneonViolet);
     `};
 
+    @media (max-width: 1100px) {
+        gap: 10px;
+        padding: 12px;
+    };
+
     @media (max-width: 768px) {
-        padding: 10px;
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        height: 54px;
+        padding: 8px 12px;
+        gap: 8px;
     };
 
     @media (max-width: 480px) {
-        justify-content: space-between;
-        padding: 0px;
-        gap: 8px;
+        padding: 6px 8px;
+        gap: 6px;
     };
 
     transition: all 0.3s ease-in-out;
@@ -49,9 +58,18 @@ const ContainerNavbar = styled.div<Props>`
 const ContainerLogo = styled.div`
     width: 25%;
     display: flex;
+    min-width: 0;
+
+    @media (max-width: 1100px) {
+        width: 28%;
+    };
+
+    @media (max-width: 768px) {
+        width: auto;
+    };
     
     @media (max-width: 480px) {
-        width: 10%;
+        width: auto;
     };
 `
 
@@ -61,47 +79,51 @@ const Options = styled.div<Props>`
     width: 50%;
     justify-content: center;
     align-items: center;
+    min-width: 0;
 
-    @media (max-width: 900px) {
+    @media (max-width: 1100px) {
         gap: 8px;
+        width: 48%;
     };
 
-    @media (max-width: 480px) {
+    @media (max-width: 768px) {
         display: flex;
-        flex-direction: row;
-        align-items: center;
-        height: 35px;
-        gap: 10px;
-        overflow-x: auto;
-        margin: 0 8px;
-        padding: 6px 0 0;
+        width: 100%;
+        min-width: 0;
+        gap: 8px;
         justify-content: flex-start;
-        width: 80%;
+    };
+`;
+
+export const NavigationLinks = styled.nav`
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    min-width: 0;
+
+    @media (max-width: 1100px) {
+        gap: 8px;
+    }
+
+    @media (max-width: 768px) {
+        flex: 1;
+        justify-content: flex-start;
+        gap: 12px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        white-space: nowrap;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
 
         &::-webkit-scrollbar {
-            height: 3px; 
+            display: none;
+        }
 
-            ${props => props.neon === 'on' && `
-                height: 2px;     
-            `};
-        };
-
-        &::-webkit-scrollbar-track {
-            background: transparent; 
-        };
-
-        &::-webkit-scrollbar-thumb {
-            background: transparent;
-            border-radius: 10px;
-        };
-
-        &:hover::-webkit-scrollbar-thumb {
-            background: var(--neonBlue);
-            ${ props => props.theme === 'light' && `
-                background: var(--clearneonViolet) !important;
-            `};
-        };
-    };
+        > .link {
+            flex-shrink: 0;
+        }
+    }
 `;
 
 const SpanOption = styled.div<Props>`
@@ -128,7 +150,8 @@ const SpanOption = styled.div<Props>`
     `};
 
     @media (max-width: 768px) {
-        font-size: 13px;
+        font-size: 11px;
+        white-space: nowrap;
     };
 
     transition: all 0.3s ease-in-out;
@@ -141,13 +164,17 @@ const ContainerTheme = styled.div`
     justify-content: end;
     width: 25%;
 
-    @media (max-width: 900px) {
+    @media (max-width: 1100px) {
         gap: 5px;
+        width: 24%;
+    };
+    @media (max-width: 768px) {
+        width: auto;
     };
     @media (max-width: 480px) {
         gap: 3px;
-        margin: 5px 10px 0px 0px;
-        width: 10%;
+        margin: 0;
+        width: auto;
     };
 `;
 
@@ -158,7 +185,12 @@ export const AvatarCotroller = styled.div`
     height: 100%;
     position: relative;
     z-index: 9999;
+
+    @media (max-width: 768px) {
+        justify-content: flex-start;
+    }
 `
+
 
 export const Avatar = styled.div<Props>`
     width: 32px;

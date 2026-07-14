@@ -11,6 +11,13 @@ export const Main = styled.div`
   width: 100%;
   gap: 20px;
   padding: 20px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+
+  @media (max-width: 768px) {
+    padding: 12px 0;
+  }
 `;
 
 export const SearchHeader = styled.div`
@@ -26,6 +33,12 @@ export const SearchInputContainer = styled.div`
   gap: 12px;
   align-items: flex-end;
   width: 100%;
+  min-width: 0;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: stretch;
+  }
 `;
 
 export const FilterContainer = styled.div`
@@ -34,6 +47,17 @@ export const FilterContainer = styled.div`
   gap: 12px;
   align-items: center;
   flex-wrap: wrap;
+  min-width: 0;
+
+  @media (max-width: 480px) {
+    align-items: stretch;
+
+    > button {
+      flex: 1 1 calc(50% - 6px);
+      min-width: 0;
+      white-space: normal;
+    }
+  }
 `;
 
 export const FilterButton = styled.button<StyledProps & { active: boolean }>`
@@ -103,6 +127,9 @@ export const ResultsInfo = styled.div<StyledProps>`
   
   color: ${({ theme }) =>
     theme === 'light' ? 'var(--black)' : 'var(--whitesmoke)'};
+  gap: 10px;
+  min-width: 0;
+  flex-wrap: wrap;
 `;
 
 export const ResultsText = styled.span`
@@ -116,6 +143,11 @@ export const ResultsGrid = styled.div`
   gap: 20px;
   width: 100%;
   justify-items: center;
+  min-width: 0;
+
+  @media (max-width: 768px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
 `;
 
 export const EmptyState = styled.div<StyledProps>`

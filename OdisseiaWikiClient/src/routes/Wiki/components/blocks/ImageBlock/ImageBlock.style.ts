@@ -17,6 +17,7 @@ export const ImageBlockContainer = styled.div`
   align-items: center;
   gap: 12px;
   width: 100%;
+  min-width: 0;
 `;
 
 /* Clearfix container that wraps the floated image + text */
@@ -25,6 +26,17 @@ export const ImageWithTextContainer = styled.div`
   max-width: 1100px;
   background-color: #0006;
   border-radius: 10px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+
+  @media (max-width: 1100px) {
+    width: 90%;
+  }
+
+  @media (max-width: 768px) {
+    width: 100%;
+  }
 
   &::after {
     content: '';
@@ -37,6 +49,8 @@ export const TextSide = styled.div`
   padding: 0 16px;
   margin: 0;
   border-radius: 10px;
+  min-width: 0;
+  overflow-wrap: anywhere;
 
   h1 {
     ${wikiHeading1Style}
@@ -95,6 +109,12 @@ export const ImageContent = styled.div<ImageFloatProps>`
   border: 2px solid transparent;
   transition: border-color 0.2s ease, scale 0.2s ease, box-shadow 0.2s ease;
 
+  @media (max-width: 768px) {
+    float: none;
+    margin: 0 0 14px;
+    width: 100%;
+  }
+
   &:hover {
     border-color: var(--clearneonBlue);
     box-shadow: 0 0 10px 1px var(--black-blue);
@@ -113,6 +133,12 @@ export const StyledImage = styled.img`
   max-width: 100%;
   display: block;
   cursor: pointer;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    height: auto;
+    max-height: 320px;
+  }
 `;
 
 export const ImageWrapper = styled.div`
@@ -142,10 +168,15 @@ export const ImageCaption = styled.p`
 `;
 
 export const TextContent = styled.div`
+  min-width: 0;
+  overflow-wrap: anywhere;
+
   .ProseMirror {
     outline: none;
     padding: 0;
     background-color: transparent;
+    min-width: 0;
+    overflow-wrap: anywhere;
 
     p {
       ${wikiParagraphStyle}

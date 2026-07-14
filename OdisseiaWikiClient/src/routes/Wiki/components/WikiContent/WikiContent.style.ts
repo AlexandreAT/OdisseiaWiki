@@ -15,6 +15,8 @@ export const WikiPageHeaderSection = styled.section<{
   isolation: isolate;
 
   border-bottom: 1px solid #333;
+  min-width: 0;
+  max-width: 100%;
   
   ${props => props.$coverImage ? `
     background-image: url(${props.$coverImage});
@@ -34,6 +36,11 @@ export const WikiPageHeaderSection = styled.section<{
 
     pointer-events: none;
   }
+
+  @media (max-width: 768px) {
+    height: auto;
+    min-height: clamp(360px, 65vh, 620px);
+  }
 `;
 
 export const ContentHeader = styled.div`
@@ -45,6 +52,9 @@ export const ContentHeader = styled.div`
     flex-direction: column;
     justify-content: center;
     padding-left: 50px;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
 
     &::before {
     content: '';
@@ -73,6 +83,16 @@ export const ContentHeader = styled.div`
     z-index: -1;
     pointer-events: none;
   }
+
+  @media (max-width: 1100px) {
+    width: 80%;
+    padding-left: 32px;
+  }
+
+  @media (max-width: 768px) {
+    width: 100%;
+    padding: 24px 18px;
+  }
 `
 
 export const PageCoverImage = styled.img`
@@ -87,6 +107,11 @@ export const PageTitle = styled.h1`
   letter-spacing: -0.5px;
   position: relative;
   z-index: 2;
+  overflow-wrap: anywhere;
+
+  @media (max-width: 480px) {
+    font-size: 26px;
+  }
 `;
 
 export const PageDescription = styled.p`
@@ -96,6 +121,7 @@ export const PageDescription = styled.p`
   line-height: 1.6;
   position: relative;
   z-index: 2;
+  overflow-wrap: anywhere;
 `;
 
 export const PageMeta = styled.div`
@@ -106,6 +132,9 @@ export const PageMeta = styled.div`
   opacity: 0.7;
   position: relative;
   z-index: 2;
+  flex-wrap: wrap;
+  min-width: 0;
+  overflow-wrap: anywhere;
 `;
 
 export const WikiBlocksSection = styled.section`
@@ -113,10 +142,25 @@ export const WikiBlocksSection = styled.section`
   flex-direction: column;
   gap: 0;
   padding: 0;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
 `;
 
 export const WikiBlockWrapper = styled.div`
   display: flex;
   flex-direction: column;
   padding: 24px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+
+  @media (max-width: 768px) {
+    padding: 16px 12px;
+  }
+
+  @media (max-width: 480px) {
+    padding-inline: 8px;
+  }
 `;

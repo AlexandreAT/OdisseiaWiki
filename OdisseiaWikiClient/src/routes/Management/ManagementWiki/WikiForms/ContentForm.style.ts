@@ -29,4 +29,22 @@ export const FormContainer = styled.div<Props>`
             ? '0 0 12px var(--clearneonViolet)'
             : '0 0 12px var(--clearneonPink)'
             : 'none'};
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+
+    @media (max-width: 1100px) {
+        width: 96%;
+        padding: 20px;
+    }
+
+    @media (max-width: 768px) {
+        width: 100%;
+        min-height: 0;
+        padding: 16px;
+    }
+
+    @media (max-width: 480px) {
+        padding: 12px 8px;
+    }
 `

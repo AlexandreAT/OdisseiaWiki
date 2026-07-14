@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { useSearchParams } from 'react-router-dom';
 import { WikiContainerProps } from './types';
@@ -18,7 +18,9 @@ import { usePageContent, useWikiSearch } from '../../hooks';
 export const WikiContainer: React.FC<WikiContainerProps> = () => {
   const { theme } = useSelector((state: any) => state.themesReducer);
   const [searchParams] = useSearchParams();
-  const [sidebarExpanded, setSidebarExpanded] = useState(true);
+  const [sidebarExpanded, setSidebarExpanded] = useState(() => (
+    typeof window === 'undefined' || window.innerWidth > 768
+  ));
   const [headerExpanded, setHeaderExpanded] = useState(true);
   
   const isDark = theme === 'dark';
@@ -35,6 +37,15 @@ export const WikiContainer: React.FC<WikiContainerProps> = () => {
     setHeaderExpanded(expanded);
   };
 
+  useEffect(() => {
+    const collapseMobileSidebar = () => {
+      if (window.innerWidth <= 768) setSidebarExpanded(false);
+    };
+
+    window.addEventListener('resize', collapseMobileSidebar);
+    return () => window.removeEventListener('resize', collapseMobileSidebar);
+  }, []);
+
   return (
     <WikiContainerWrapper $isDark={isDark}>
       <WikiHeader onSearch={handleSearch} onToggle={handleHeaderToggle} isExpanded={headerExpanded} />
@@ -42,7 +53,7 @@ export const WikiContainer: React.FC<WikiContainerProps> = () => {
       <WikiContentArea $isDark={isDark}>
         {!isSearching && <WikiSidebar page={page} onToggle={handleSidebarToggle} headerExpanded={headerExpanded} sidebarExpanded={sidebarExpanded} />}
         
-        <WikiMainSection $isDark={isDark} $sidebarExpanded={sidebarExpanded} $headerExpanded={headerExpanded}>
+        <WikiMainSection $isDark={isDark} $sidebarExpanded={!isSearching && sidebarExpanded} $headerExpanded={headerExpanded}>
           {isSearching ? (
             <>
               {searchLoading && (

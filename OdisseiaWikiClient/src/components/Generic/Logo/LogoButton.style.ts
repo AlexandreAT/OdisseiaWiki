@@ -11,18 +11,34 @@ export const Logo = styled.div`
     align-items: center;
     justify-content: center;
     gap: 1rem;
+
+    @media (max-width: 1100px) {
+        gap: 10px;
+    };
+
+    @media (max-width: 768px) {
+        justify-content: flex-start;
+
+        .linkTitle {
+            display: none;
+        }
+    };
     
     @media (max-width: 480px) {
-        margin: 8px 0px 6px 8px;
+        margin: 0;
         .linkTitle{
             display: none;
         };
-        padding-top: 3px;
+        padding-top: 0;
     };
 `;
 
 export const LogoImg = styled.img`
     width: 50px;
+
+    @media (max-width: 1100px) {
+        width: 40px;
+    };
 
     @media (max-width: 900px) {
         width: 35px;
@@ -33,7 +49,7 @@ export const LogoImg = styled.img`
     };
 
     @media (max-width: 480px) {
-        width: 18px;
+        width: 28px;
     };
 `;
 

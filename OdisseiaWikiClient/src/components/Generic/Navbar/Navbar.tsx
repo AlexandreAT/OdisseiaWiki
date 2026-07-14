@@ -15,13 +15,14 @@ export const Navbar = () => {
     const { theme, neon } = useSelector((state: RootState) => state.themesReducer);
     const usuario = localStorage.getItem('usuario');
     const usuarioObj = usuario ? JSON.parse(usuario) : null;
-    
+
+
     return (
         <ContainerNavbar theme={theme} neon={neon}>
             <ContainerLogo>
                 <LogoButton theme={theme} neon={neon} />
             </ContainerLogo>
-            <Options theme={theme} neon={neon}>
+            <Options id="main-navigation" theme={theme} neon={neon}>
                 <NavbarLinks theme={theme} neon={neon} usuario={usuarioObj} />
             </Options>
             <ContainerTheme>

@@ -16,9 +16,13 @@ export const InfoLoreBlockContainer = styled.div`
   background: linear-gradient(135deg, rgba(0, 212, 255, 0.05) 0%, rgba(0, 100, 100, 0.05) 100%);
   border: 1px solid rgba(0, 212, 255, 0.1);
   border-radius: 8px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 
   @media (max-width: 768px) {
     flex-direction: column;
+    padding: 14px;
   }
 `;
 
@@ -59,6 +63,7 @@ export const InfoLoreContent = styled.div`
   gap: 12px;
   flex: 1;
   min-width: 0;
+  overflow-wrap: anywhere;
 
   p {
     ${wikiParagraphStyle}
@@ -96,6 +101,7 @@ export const InfoLoreDescription = styled.p`
   color: rgba(255, 255, 255, 0.8);
   line-height: 1.6;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
 `;
 
 export const ErrorMessage = styled.div`

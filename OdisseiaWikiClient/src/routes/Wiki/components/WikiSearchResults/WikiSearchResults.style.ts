@@ -5,6 +5,14 @@ export const SearchResultsContainer = styled.section`
   flex-direction: column;
   gap: 16px;
   padding: 32px 24px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+
+  @media (max-width: 768px) {
+    padding: 24px 12px;
+  }
 `;
 
 export const SearchResultsHeader = styled.div`
@@ -41,6 +49,7 @@ export const SearchResultsGrid = styled.div`
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   gap: 16px;
   width: 100%;
+  min-width: 0;
 
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
@@ -59,6 +68,10 @@ export const ResultCard = styled.button`
   overflow: hidden;
   transition: all 0.3s ease;
   text-align: left;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 
   &:hover {
     border-color: #00d4ff;
@@ -84,6 +97,7 @@ export const ResultCardContent = styled.div`
   gap: 8px;
   padding: 12px;
   flex: 1;
+  min-width: 0;
 `;
 
 export const ResultCardTitle = styled.h3`
@@ -96,6 +110,7 @@ export const ResultCardTitle = styled.h3`
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+  overflow-wrap: anywhere;
 `;
 
 export const ResultCardDescription = styled.p`
@@ -108,6 +123,7 @@ export const ResultCardDescription = styled.p`
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   line-height: 1.4;
+  overflow-wrap: anywhere;
 `;
 
 export const ResultCardPlaceholder = styled.div`

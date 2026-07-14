@@ -20,6 +20,20 @@ export const Main = styled.div`
     padding: 0 80px 40px;
     box-sizing: border-box;
     z-index: 1;
+    min-width: 0;
+
+    @media (max-width: 1100px) {
+      padding-inline: 40px;
+    }
+
+    @media (max-width: 768px) {
+      padding: 0 16px 32px;
+      gap: 20px;
+    }
+
+    @media (max-width: 480px) {
+      padding-inline: 4px;
+    }
 `
 
 export const Title = styled.h2<Props>`
@@ -57,6 +71,7 @@ export const ListController = styled.div`
   flex-wrap: wrap;
   justify-content: center;
   gap: 30px;
+  min-width: 0;
 `;
 
 export const ButtonDiv = styled.div<Props>`
@@ -82,6 +97,13 @@ export const BackButtonDiv = styled.div<Props>`
     top: 55px;
     left: 0px;
     z-index: 10;
+
+    @media (max-width: 1100px) {
+      position: static;
+      display: flex;
+      align-self: flex-start;
+      width: 100%;
+    }
 
     .icon{
         fill: ${({ theme, neon }) => theme === "dark" 
@@ -123,6 +145,16 @@ export const StyledIconButton = styled(IconButton)<Props>`
     font-size: 32px;
 
     transition: all 0.3s ease;
+  }
+
+  @media (max-width: 768px) {
+    width: 44px;
+    height: 44px;
+    padding: 7px;
+
+    .icon {
+      font-size: 24px;
+    }
   }
 
   &:hover {
@@ -190,6 +222,12 @@ export const CharacterCard = styled.button`
   }
 
   background-color: var(--clearblack);
+  max-width: 100%;
+  box-sizing: border-box;
+
+  @media (max-width: 480px) {
+    width: min(250px, 100%);
+  }
 `;
 
 export const CardRight = styled.div`

@@ -4,7 +4,7 @@ import { TextField, IconButton } from "@mui/material";
 import { Add, Delete } from "@mui/icons-material";
 import { Search } from "../Search/Search";
 import { BiSearchAlt } from "react-icons/bi";
-import { DataTableContainer } from "./DataTable.style";
+import { DataTableContainer, TableScrollContainer } from "./DataTable.style";
 import { Select } from "../Select/Select";
 import { CheckSelect } from "../CheckSelect/CheckSelect";
 
@@ -259,20 +259,23 @@ function DataTableComponent<T extends { [key: string]: any }>({
           onSelectSuggestion={handleSelectSuggestion}
         />
       )}
-      <MUIDataTable
-        title=""
-        data={tableData}
-        columns={[...muiColumns, actionsColumn]}
-        options={{
-          search: false,
-          filter: false,
-          download: false,
-          print: false,
-          viewColumns: false,
-          selectableRows: "none",
-          pagination: false,
-        }}
-      />
+      <TableScrollContainer>
+        <MUIDataTable
+          title=""
+          data={tableData}
+          columns={[...muiColumns, actionsColumn]}
+          options={{
+            search: false,
+            filter: false,
+            download: false,
+            print: false,
+            viewColumns: false,
+            selectableRows: "none",
+            pagination: false,
+            responsive: "standard",
+          }}
+        />
+      </TableScrollContainer>
     </DataTableContainer>
   );
 }

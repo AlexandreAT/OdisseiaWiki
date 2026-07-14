@@ -1,5 +1,5 @@
 import { useSelector } from 'react-redux';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { MainContainer, MainContent, Options, OptionsController, OptionButton, ContainerContent, ToggleSidebarButton } from './Management.style';
@@ -16,7 +16,18 @@ const OPTIONS = [
 export const Management = () => {
     const { theme, neon } = useSelector((state: any) => state.themesReducer);
     const [selected, setSelected] = useState<string>('wiki');
-    const [sidebarExpanded, setSidebarExpanded] = useState<boolean>(true);
+    const [sidebarExpanded, setSidebarExpanded] = useState<boolean>(() => (
+        typeof window === 'undefined' || window.innerWidth > 768
+    ));
+
+    useEffect(() => {
+        const collapseMobileSidebar = () => {
+            if (window.innerWidth <= 768) setSidebarExpanded(false);
+        };
+
+        window.addEventListener('resize', collapseMobileSidebar);
+        return () => window.removeEventListener('resize', collapseMobileSidebar);
+    }, []);
     const renderContent = () => {
         switch (selected) {
             case 'wiki':
@@ -44,6 +55,8 @@ export const Management = () => {
                 expanded={sidebarExpanded}
                 onClick={() => setSidebarExpanded(!sidebarExpanded)}
                 title={sidebarExpanded ? 'Retrair sidebar' : 'Expandir sidebar'}
+                aria-label={sidebarExpanded ? 'Fechar menu de gerenciamento' : 'Abrir menu de gerenciamento'}
+                aria-expanded={sidebarExpanded}
             >
                 {sidebarExpanded ? <ChevronLeftIcon /> : <ChevronRightIcon />}
             </ToggleSidebarButton>
@@ -55,7 +68,10 @@ export const Management = () => {
                             <OptionButton
                                 key={option.key}
                                 selected={selected === option.key}
-                                onClick={() => setSelected(option.key)}
+                                onClick={() => {
+                                    setSelected(option.key);
+                                    if (window.innerWidth <= 768) setSidebarExpanded(false);
+                                }}
                                 theme={theme}
                                 neon={neon}
                             >

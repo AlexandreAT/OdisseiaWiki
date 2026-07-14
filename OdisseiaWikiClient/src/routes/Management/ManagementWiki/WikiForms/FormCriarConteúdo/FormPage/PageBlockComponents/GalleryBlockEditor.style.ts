@@ -9,6 +9,8 @@ export const Container = styled.div`
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-width: 0;
+  max-width: 100%;
 `;
 
 export const AspectRatioSelector = styled.div`
@@ -48,6 +50,9 @@ export const GalleryContainer = styled.div<ThemeProps>`
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 `;
 
 export const GalleryGrid = styled.div`
@@ -55,6 +60,11 @@ export const GalleryGrid = styled.div`
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 12px;
   width: 100%;
+  min-width: 0;
+
+  @media (max-width: 480px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 `;
 
 export const ImageItem = styled.div<ThemeProps>`

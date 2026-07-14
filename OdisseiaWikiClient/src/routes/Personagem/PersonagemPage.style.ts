@@ -16,6 +16,11 @@ export const PageController = styled.div`
   width: 100%;
   max-width: 100vw;
   padding-top: 24px;
+
+  @media (max-width: 1100px) {
+    min-width: 0;
+    box-sizing: border-box;
+  }
 `
 
 export const BackgroundVideo = styled.video`
@@ -41,6 +46,21 @@ export const PageContainer = styled.div`
   align-items: flex-start;
   position: relative;
   z-index: 1;
+
+  @media (max-width: 1100px) {
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  @media (max-width: 768px) {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  @media (max-width: 480px) {
+    padding: 10px;
+  }
 `;
 
 export const TopSection = styled.div`
@@ -49,14 +69,35 @@ export const TopSection = styled.div`
     flex-direction: row;
     gap: 12px;
     padding: 0 15px 25px;
+
+    @media (max-width: 1100px) {
+      flex-direction: column;
+      min-width: 0;
+      box-sizing: border-box;
+    }
+
+    @media (max-width: 768px) {
+      padding: 0 0 20px;
+      gap: 24px;
+    }
 `;
 
 export const BottomInfoLeft = styled.div`
   width: 35%;
+  min-width: 0;
+
+  @media (max-width: 1100px) {
+    width: 100%;
+  }
 `
 
 export const BottomInfoRight = styled.div`
   width: 65%;
+  min-width: 0;
+
+  @media (max-width: 1100px) {
+    width: 100%;
+  }
 `
 
 export const BottomSection = styled.div`
@@ -65,12 +106,48 @@ export const BottomSection = styled.div`
     flex-direction: row;
     gap: 25px;
     padding: 0 25px;
+
+    @media (max-width: 1100px) {
+      display: grid;
+      grid-template-columns: minmax(0, 38fr) minmax(0, 62fr);
+      min-width: 0;
+      box-sizing: border-box;
+    }
+
+    @media (max-width: 768px) {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 20px;
+      padding: 0;
+    }
 `;
 
 export const AvatarDivController = styled.div`
     display: flex;
     width: 50%;
     gap: 25px;
+
+    @media (max-width: 1100px) {
+      width: 100%;
+      min-width: 0;
+      align-items: stretch;
+
+      > :last-child {
+        flex: 1;
+        min-width: 0;
+        max-width: none;
+      }
+    }
+
+    @media (max-width: 768px) {
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+
+      > :last-child {
+        width: 100%;
+        flex: none;
+      }
+    }
 `;
 
 export const AvatarWrapper = styled.div`
@@ -79,6 +156,30 @@ export const AvatarWrapper = styled.div`
     display: flex;
     align-items: center;
     justify-content: center;
+
+    @media (max-width: 1100px) {
+      --avatar-size: clamp(180px, 20vw, 210px);
+      flex: 0 0 var(--avatar-size);
+      width: var(--avatar-size);
+      min-width: var(--avatar-size);
+      min-height: var(--avatar-size);
+
+      > button {
+        width: var(--avatar-size) !important;
+        height: var(--avatar-size) !important;
+        transform: none;
+      }
+
+      .iconAvatar {
+        width: 100%;
+        height: 100%;
+      }
+    }
+
+    @media (max-width: 768px) {
+      --avatar-size: clamp(150px, 48vw, 200px);
+      flex-basis: var(--avatar-size);
+    }
 `;
 
 export const MetaRow = styled.div`
@@ -90,6 +191,7 @@ export const Sections = styled.div`
   flex-direction: column;
   gap: 12px;
   width: 100%;
+  min-width: 0;
 `;
 
 export const CardContent = styled.div<{ gap?: number, maxWidth?: string, maxHeight?: string, neon: 'on' | 'off'; $color?: string }>`
@@ -103,6 +205,8 @@ export const CardContent = styled.div<{ gap?: number, maxWidth?: string, maxHeig
   position: relative;
   z-index: 2;
   background: rgba(0, 0, 10, 0.65);
+  min-width: 0;
+  box-sizing: border-box;
   box-shadow: ${({ neon, $color }) => neon === 'on' ? `inset 0 0 20px ${$color ?? 'var(--neonBlue)'}` : 'none'};
   clip-path: polygon(
     12px 0, calc(100% - 12px) 0, 100% 12px,
@@ -381,6 +485,7 @@ export const InfoList = styled.div`
   gap: 6px;
   color: var(--muted, #cfcfcf);
   align-items: flex-start;
+  min-width: 0;
 `;
 
 export const InfoItem = styled.div`
@@ -388,6 +493,8 @@ export const InfoItem = styled.div`
   line-height: 1.6;
   color: var(--muted, #cfcfcf);
   display: inline;
+  min-width: 0;
+  overflow-wrap: anywhere;
 `;
 
 export const PersonagemRichText = styled.div`
@@ -395,6 +502,8 @@ export const PersonagemRichText = styled.div`
   z-index: 1;
   width: 100%;
   box-sizing: border-box;
+  min-width: 0;
+  overflow-wrap: anywhere;
   .ProseMirror {
     outline: none;
     padding: 0;
@@ -640,6 +749,7 @@ export const HeaderStatusController = styled.div`
     gap: 8px;
     align-items: center;
     justify-content: flex-start;
+    min-width: 0;
 `;
 
 export const MetaContent = styled.div`
@@ -647,6 +757,13 @@ export const MetaContent = styled.div`
   font-size: 13px;
   display: flex;
   flex-direction: column;
+  min-width: 0;
+
+  > * {
+    min-width: 0;
+    flex-wrap: wrap;
+    overflow-wrap: anywhere;
+  }
 `;
 
 export const SectionSpacer = styled.div<{ size?: number }>`
@@ -661,12 +778,20 @@ export const SatusDivController = styled.div`
     width: 50%;
     align-items: center;
     justify-content: center;
+
+    @media (max-width: 1100px) {
+      width: 100%;
+      min-width: 0;
+      align-items: stretch;
+    }
 `;
 
 export const StatusController = styled.div`
     display: flex;
     flex-direction: column;
     gap: 12px;
+    width: 100%;
+    min-width: 0;
 `
 
 export const StatusList = styled.div`
@@ -676,6 +801,15 @@ export const StatusList = styled.div`
     width: 100%;
     align-items: center;
     justify-content: center;
+
+    @media (max-width: 1100px) {
+      gap: 16px;
+    }
+
+    @media (max-width: 768px) {
+      order: 1;
+      gap: 12px;
+    }
 `;
 
 export const StatusHeader = styled.div`
@@ -683,6 +817,17 @@ export const StatusHeader = styled.div`
     flex-direction: row;
     width: 100%;
     gap: 32px;
+
+    @media (max-width: 1100px) {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    @media (max-width: 768px) {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 12px;
+    }
 `
 
 export const StatusDiv = styled.div`
@@ -694,6 +839,22 @@ export const StatusDiv = styled.div`
   position: relative;
   z-index: 2;
   background: rgba(0, 0, 10, 0.65);
+  box-sizing: border-box;
+
+  > :last-child {
+    flex: 1;
+    min-width: 0;
+  }
+
+  @media (max-width: 1100px) {
+    width: 100%;
+    min-width: 0;
+  }
+
+  @media (max-width: 768px) {
+    --mask-icon-size: 46px;
+    padding: 10px 12px;
+  }
   clip-path: polygon(
     10px 0, calc(100% - 10px) 0, 100% 10px,
     100% calc(100% - 10px), calc(100% - 10px) 100%,
@@ -734,6 +895,11 @@ export const StatusBarWrapper = styled.div`
   border-radius: 0;
   overflow: hidden;
   margin-top: 6px;
+
+  @media (max-width: 1100px) {
+    width: 100%;
+    min-width: 0;
+  }
 `;
 
 export const StatusBarFill = styled.div<{ $color: string; $pct: number }>`
@@ -748,19 +914,24 @@ export const FlexRow = styled.div<{ gap?: number; alignItems?: string }>`
   display: flex;
   gap: ${({ gap }) => gap ?? 12}px;
   align-items: ${({ alignItems }) => alignItems ?? 'center'};
+  min-width: 0;
 `;
 
 export const MutedText = styled.div<{ padding?: string }>`
   font-size: 13px;
   color: var(--muted, #cfcfcf);
   ${({ padding }) => padding ? `padding: ${padding};` : ''}
+  min-width: 0;
+  overflow-wrap: anywhere;
 `;
 
 export const BoldLabel = styled.div<{ $color?: string }>`
   color: ${({ $color }) => $color ?? 'var(--neonBlue)'};
   font-family: "Orbitron", sans-serif;
   display: block;
-  font-size: 16px;
+  font-size: 15px;
+  min-width: 0;
+  overflow-wrap: anywhere;
 `;
 
 export const InfoSpan = styled.span`
@@ -805,6 +976,55 @@ export const GalleryToggle = styled.div`
 
 export const GalleryContent = styled.div`
   padding: 0 32px 24px;
+  min-width: 0;
+  box-sizing: border-box;
+
+  @media (max-width: 768px) {
+    padding: 0 8px 16px;
+
+    /* GalleryBlock renders either a grid or a carousel. Both become a
+       predictable two-column gallery in the character page on mobile. */
+    > div > div {
+      width: 100%;
+      max-width: none;
+      min-width: 0;
+      box-sizing: border-box;
+    }
+
+    > div > div:not(:has(> button[aria-label="Anterior"])) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      padding: 8px;
+    }
+
+    > div > div:has(> button[aria-label="Anterior"]) > button {
+      display: none;
+    }
+
+    > div > div:has(> button[aria-label="Anterior"]) > div {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      width: 100%;
+      padding: 8px;
+      overflow: visible;
+      box-sizing: border-box;
+
+      > button {
+        width: 100%;
+        min-width: 0;
+      }
+    }
+  }
+
+  @media (max-width: 480px) {
+    padding-inline: 0;
+
+    > div > div:not(:has(> button[aria-label="Anterior"])),
+    > div > div:has(> button[aria-label="Anterior"]) > div {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
 `;
 
 export const SkillItem = styled.div`
@@ -816,9 +1036,10 @@ export const Spacer = styled.div<{ height?: number }>`
 `;
 
 export const MaskIcon = styled.div<{ src: string; color?: string; size?: number }>`
-  width: ${({ size }) => size ?? 64}px;
-  height: ${({ size }) => size ?? 64}px;
+  width: var(--mask-icon-size, ${({ size }) => size ?? 64}px);
+  height: var(--mask-icon-size, ${({ size }) => size ?? 64}px);
   display: inline-block;
+  flex-shrink: 0;
   background-color: ${({ color }) => color ?? 'currentColor'};
   -webkit-mask-image: ${({ src }) => `url("${src}")`};
   -webkit-mask-repeat: no-repeat;
@@ -835,6 +1056,7 @@ export const ItemRow = styled.div<{ $clickable?: boolean; $color?: string; $clea
   flex-direction: row;
   gap: 12px;
   align-items: flex-start;
+  padding-right: 10px;
   height: 50px;
   overflow: hidden;
   box-sizing: border-box;
@@ -842,6 +1064,14 @@ export const ItemRow = styled.div<{ $clickable?: boolean; $color?: string; $clea
   margin-bottom: 8px;
   cursor: ${({ $clickable }) => $clickable ? 'pointer' : 'default'};
   transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+
+  * {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
 
   &:hover {
     border-color: ${({ $color }) => $color ?? 'var(--neonBlue)'};
@@ -854,6 +1084,7 @@ export const FlexFill = styled.div`
   flex: 1;
   min-width: 0;
   overflow: hidden;
+  margin-left: 5px;
 `;
 
 export const InfoControllers = styled.div`
@@ -861,6 +1092,7 @@ export const InfoControllers = styled.div`
   flex-direction: column;
   width: 100%;
   gap: 8px;
+  min-width: 0;
 `;
 
 export const TitleDiv = styled.div`
@@ -876,6 +1108,8 @@ export const TagItem = styled.span`
   margin: 2px 4px 2px 0;
   font-size: 13px;
   color: var(--text, #eaeaea);
+  max-width: 100%;
+  overflow-wrap: anywhere;
 `;
 
 export const TagList = styled.div`
@@ -905,6 +1139,11 @@ export const StoryWithImage = styled.div<{ cityImage?: string | null }>`
     display: flex;
     padding-right: 0;
   ` : ''}
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    min-width: 0;
+  }
 `;
 
 export const StoryImage = styled.img<{ src?: string }>`
@@ -919,6 +1158,15 @@ export const StoryImage = styled.img<{ src?: string }>`
   flex-shrink: 0;
   mask-image: linear-gradient(to right, transparent, black 20%, black 80%, transparent);
   -webkit-mask-image: linear-gradient(to right, transparent, black 50%, black 100%, transparent);
+
+  @media (max-width: 768px) {
+    width: 100%;
+    max-height: 240px;
+    margin-top: 12px;
+    object-fit: cover;
+    mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
+    -webkit-mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
+  }
 `;
 
 export const HexagonHud = styled.div`
@@ -927,6 +1175,11 @@ export const HexagonHud = styled.div`
   height: 85px;
   align-self: center;
   margin-top: 12px;
+
+  @media (max-width: 768px) {
+    order: -1;
+    margin: 0 auto 8px;
+  }
 `;
 
 export const HexagonBackground = styled.div`
@@ -997,15 +1250,20 @@ export const SectionRow = styled.div`
     grid-column: 1 / -1;
   }
 
-  @media (max-width: 767px) {
+  > * {
+    min-width: 0;
+  }
+
+  @media (max-width: 768px) {
     grid-template-columns: minmax(0, 1fr);
-    gap: 0;
+    gap: 12px;
   }
 `;
 
 export const InventoryList = styled.div`
   display: flex;
   flex-direction: column;
+  min-width: 0;
 `;
 
 export const ViewMoreButton = styled.button<{ $color: string }>`

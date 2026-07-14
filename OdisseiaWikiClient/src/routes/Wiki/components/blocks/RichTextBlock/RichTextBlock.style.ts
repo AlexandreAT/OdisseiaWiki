@@ -15,6 +15,7 @@ export const DivController = styled.section`
   flex-direction: column;
   align-items: center;
   width: 100%;
+  min-width: 0;
 `
 
 export const RichTextBlockContainer = styled.div`
@@ -24,11 +25,28 @@ export const RichTextBlockContainer = styled.div`
   line-height: 1.8;
   width: 65%;
   min-width: 900px;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
+
+  @media (max-width: 1100px) {
+    width: min(100%, 900px);
+    min-width: 0;
+  }
+
+  @media (max-width: 768px) {
+    width: 100%;
+  }
 
   .ProseMirror {
     outline: none;
     padding: 0;
     background-color: transparent;
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-wrap: anywhere;
 
     p {
       ${wikiParagraphStyle}
@@ -72,6 +90,7 @@ export const RichTextBlockContainer = styled.div`
 
     code {
       ${wikiCodeStyle}
+      overflow-wrap: anywhere;
     }
 
     pre {
@@ -79,6 +98,8 @@ export const RichTextBlockContainer = styled.div`
       padding: 12px;
       border-radius: 4px;
       overflow-x: auto;
+      max-width: 100%;
+      box-sizing: border-box;
       margin: 1em 0;
 
       code {
@@ -115,6 +136,14 @@ export const RichTextBlockContainer = styled.div`
       margin: 1em 0;
       width: 100%;
 
+      @media (max-width: 768px) {
+        display: block;
+        max-width: 100%;
+        overflow-x: auto;
+        white-space: nowrap;
+        -webkit-overflow-scrolling: touch;
+      }
+
       th,
       td {
         border: 1px solid #333;
@@ -134,6 +163,8 @@ export const RichTextBlockContainer = styled.div`
 
     a {
       ${wikiLinkStyle}
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
 
     img {
@@ -141,6 +172,16 @@ export const RichTextBlockContainer = styled.div`
       height: auto;
       border-radius: 4px;
       margin: 1em 0;
+    }
+
+    iframe,
+    video,
+    embed,
+    object {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
     }
 
     .mention {

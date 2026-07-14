@@ -32,6 +32,13 @@ export const ContentController = styled.div<Props>`
   align-items: flex-start;
   width: ${({ width }) => width || `100%`};
   ${({ height }) => height && `height: ${height};`}
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+
+  @media (max-width: 768px) {
+    width: 100%;
+  }
 `;
 
 export const Label = styled.label<Props>`
@@ -68,6 +75,9 @@ export const CustomSelect = styled.select<Props>`
   background-position: right 10px top 50%;
   background-size: 16px 16px;
   cursor: ${({ disabled }) => (disabled ? 'not-allowed' : 'pointer')};
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 
   &:focus {
     background-color: var(--black-blue);

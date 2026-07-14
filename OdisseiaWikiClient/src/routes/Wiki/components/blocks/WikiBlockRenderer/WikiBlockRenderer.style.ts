@@ -5,6 +5,9 @@ export const BlockRendererContainer = styled.div`
   flex-direction: column;
   gap: 0;
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 `;
 
 export const UnknownBlockMessage = styled.div`

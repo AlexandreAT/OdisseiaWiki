@@ -1,4 +1,5 @@
 import styled from 'styled-components';
+import { managementEntityToolbarResponsive } from '../../ManagementEntityToolbar.style';
 
 interface Props {
   theme?: 'dark' | 'light';
@@ -30,6 +31,19 @@ export const FormController = styled.form<Props>`
       : neon === 'on'
       ? 'rgba(200, 100, 200, 0.1)'
       : 'rgba(0, 0, 0, 0.05)'};
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+
+  @media (max-width: 1100px) {
+    padding: 22px;
+    gap: 24px;
+  }
+
+  @media (max-width: 768px) {
+    padding: 14px;
+    gap: 20px;
+  }
 `;
 
 export const FormHeader = styled.div<Props>`
@@ -44,6 +58,7 @@ export const GridInputsRow = styled.div`
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 20px;
   width: 100%;
+  min-width: 0;
 
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
@@ -85,6 +100,13 @@ export const AtributosSection = styled.div<Props>`
       : neon === 'on'
       ? 'var(--neonViolet)'
       : 'var(--lightGrey)'};
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+
+  @media (max-width: 768px) {
+    padding: 14px;
+  }
 `;
 
 export const AtributosGrid = styled.div`
@@ -117,6 +139,8 @@ export const ButtonsContainer = styled.div<Props>`
   @media (max-width: 768px) {
     flex-direction: column-reverse;
   }
+
+  ${managementEntityToolbarResponsive}
 `;
 
 export const LabelInfoBox = styled.div<Props>`
@@ -200,6 +224,11 @@ export const TagsInputContainer = styled.div`
   align-items: flex-start;
   width: 100%;
   margin-bottom: 5px;
+  min-width: 0;
+
+  @media (max-width: 480px) {
+    flex-direction: column;
+  }
 `;
 
 export const TagsList = styled.div`

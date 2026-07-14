@@ -19,6 +19,8 @@ export const MainContainer = styled.div`
     flex-direction: column;
     align-items: center;
     padding-top: 20px;
+    min-width: 0;
+    max-width: 100%;
 `
 
 export const Header = styled.div<Props>`
@@ -26,6 +28,13 @@ export const Header = styled.div<Props>`
     padding-top: 10px;
     margin: 0 35px;
     text-align: center;
+    max-width: 100%;
+    box-sizing: border-box;
+
+    @media (max-width: 768px) {
+      margin: 0;
+      padding-inline: 8px;
+    }
 `
 
 export const Title = styled.h1<Props>`
@@ -58,6 +67,36 @@ export const ContentController = styled.div<{ collapsed?: boolean }>`
   align-items: center;
   gap: 50px;
   padding: ${({ collapsed }) => (collapsed ? '0' : '20px 20px 50px')};
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+
+  @media (max-width: 1100px) {
+    display: grid;
+    grid-template-columns: ${({ collapsed }) => collapsed
+      ? 'repeat(2, 60px)'
+      : 'repeat(2, minmax(0, 1fr))'};
+    width: min(100%, 720px);
+    gap: 18px;
+
+    > div {
+      width: 100%;
+      height: ${({ collapsed }) => collapsed ? '60px' : '220px'};
+    }
+  }
+
+  @media (max-width: 768px) {
+    grid-template-columns: ${({ collapsed }) => collapsed
+      ? 'repeat(2, 60px)'
+      : 'minmax(0, 1fr)'};
+    gap: ${({ collapsed }) => collapsed ? '12px' : '18px'};
+    padding: ${({ collapsed }) => collapsed ? '0' : '12px 8px 30px'};
+
+    > div {
+      width: ${({ collapsed }) => collapsed ? '60px' : 'min(100%, 300px)'};
+      height: ${({ collapsed }) => collapsed ? '60px' : '170px'};
+    }
+  }
 `
 
 export const Content = styled.div`
@@ -66,6 +105,16 @@ export const Content = styled.div`
     justify-content: center;
     width: 350px;
     height: 400px;
+    max-width: 100%;
+
+    @media (max-width: 1100px) {
+      width: 100%;
+      height: 220px;
+    }
+
+    @media (max-width: 768px) {
+      height: 170px;
+    }
 `
 
 export const ClipButton = styled.button<Props>`

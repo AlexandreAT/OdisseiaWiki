@@ -6,7 +6,9 @@ export const WikiContainerWrapper = styled.div<WikiLayoutProps>`
   flex-direction: column;
   width: 100%;
   height: 100%;
-  overflow: hidden;
+  overflow: visible;
+  min-width: 0;
+  max-width: 100%;
 `;
 
 export const WikiContentArea = styled.div<WikiLayoutProps>`
@@ -14,7 +16,9 @@ export const WikiContentArea = styled.div<WikiLayoutProps>`
   flex: 1;
   width: 100%;
   min-height: 0;
-  overflow: hidden;
+  overflow: visible;
+  min-width: 0;
+  max-width: 100%;
 `;
 
 export const WikiMainSection = styled.div<
@@ -25,10 +29,21 @@ export const WikiMainSection = styled.div<
   flex: 1;
   min-width: 0;
   min-height: 0;
-  overflow-y: auto;
-  margin-left: ${props => (props.$sidebarExpanded ? '180px' : '0px')};
-  padding-top: ${props => (props.$headerExpanded ? '76px' : '0px')};
+  overflow: visible;
+  margin-left: 0;
+  padding-top: 0;
   transition: margin-left 0.3s ease-in-out, padding-top 0.3s ease-in-out;
+  max-width: 100%;
+
+  @media (max-width: 1100px) {
+    margin-left: 0;
+  }
+
+  @media (max-width: 768px) {
+    width: 100%;
+    margin-left: 0;
+    padding-top: 0;
+  }
 `;
 
 export const ErrorContainer = styled.div<WikiLayoutProps>`

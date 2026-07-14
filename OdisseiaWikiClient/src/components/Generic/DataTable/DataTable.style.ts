@@ -11,6 +11,9 @@ export const DataTableContainer = styled.div<Props>`
     display: flex;
     flex-direction: column;
     gap: 10px;
+    min-width: 0;
+    max-width: 100%;
+    overflow: visible;
 
     .MuiPaper-root .icon{
         fill: ${({ theme, neon }) => theme === "dark" 
@@ -35,7 +38,13 @@ export const DataTableContainer = styled.div<Props>`
     border: 1px solid
       ${({ theme }) => (theme === "dark" ? "var(--black)" : "var(--clearblack)")};
     box-shadow: 0 0 5px rgba(0,0,0,0.3);
-    overflow: hidden;
+    overflow: visible;
+    min-width: 0;
+    max-width: none;
+
+    > div {
+      max-width: 100%;
+    }
 
     ${({ neon, theme }) =>
       neon === "on" &&
@@ -129,5 +138,59 @@ export const DataTableContainer = styled.div<Props>`
         box-shadow: 0 0 8px
           ${theme === "dark" ? "var(--neonBlue)" : "var(--neonViolet)"};
       `}
+  }
+
+  @media (max-width: 768px) {
+    && thead .MuiTableRow-root .MuiTableCell-head,
+    && tbody .MuiTableCell-body {
+      padding: 8px;
+      white-space: nowrap;
+    }
+  }
+`;
+
+export const TableScrollContainer = styled.div`
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+
+  > .MuiPaper-root {
+    width: max-content;
+    min-width: 100%;
+  }
+
+  .MuiTableContainer-root {
+    overflow: visible;
+  }
+
+  .MuiTable-root {
+    width: 100%;
+    min-width: 760px;
+    table-layout: auto;
+  }
+
+  tr {
+    display: table-row;
+  }
+
+  th,
+  td {
+    display: table-cell;
+    min-width: 120px;
+    vertical-align: middle;
+  }
+
+  th:last-child,
+  td:last-child {
+    min-width: 72px;
+  }
+
+  @media (max-width: 480px) {
+    .MuiTable-root {
+      min-width: 680px;
+    }
   }
 `;

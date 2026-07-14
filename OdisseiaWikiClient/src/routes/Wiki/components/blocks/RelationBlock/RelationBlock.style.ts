@@ -7,6 +7,8 @@ export const RelationBlockContainer = styled.div`
   width: 100%;
   align-items: center;
   margin-top: 15px;
+  min-width: 0;
+  max-width: 100%;
 `;
 
 export const RelationTypeGroup = styled.div`
@@ -14,6 +16,16 @@ export const RelationTypeGroup = styled.div`
   flex-direction: column;
   gap: 12px;
   width: 75%;
+  min-width: 0;
+  max-width: 100%;
+
+  @media (max-width: 1100px) {
+    width: 88%;
+  }
+
+  @media (max-width: 768px) {
+    width: 100%;
+  }
 `;
 
 export const RelationTypeGroupHeader = styled.div`
@@ -50,6 +62,9 @@ export const RelationItemsGrid = styled.div`
   overflow-x: auto;
   padding: 3px;
   -webkit-overflow-scrolling: touch;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 
   /* Make children not wrap so it behaves like a horizontal carousel */
   white-space: nowrap;
@@ -76,6 +91,8 @@ export const CarouselViewport = styled.div`
   padding: 8px 4px;
   border-radius: 8px;
   cursor: grab;
+  min-width: 0;
+  max-width: 100%;
 
   &:active {
     cursor: grabbing;
@@ -140,6 +157,12 @@ export const RelationCard = styled.button`
   overflow: hidden;
   transition: all 0.22s ease;
   text-align: left;
+  box-sizing: border-box;
+
+  @media (max-width: 480px) {
+    min-width: min(160px, calc(100vw - 40px));
+    max-width: calc(100vw - 40px);
+  }
 
   &:disabled {
     cursor: not-allowed;
@@ -199,6 +222,7 @@ export const RelationCardTitle = styled.h5`
   text-overflow: ellipsis;
   white-space: nowrap;
   display: block;
+  overflow-wrap: anywhere;
 `;
 
 export const RelationCardType = styled.span`

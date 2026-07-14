@@ -1,8 +1,19 @@
 import styled from 'styled-components';
 
 export const DivController = styled.section`
-  position: relative;
-  z-index: 2;
+  position: sticky;
+  top: 84px;
+  z-index: 20;
+  width: 100%;
+  min-width: 0;
+
+  @media (max-width: 1100px) {
+    top: 66px;
+  }
+
+  @media (max-width: 768px) {
+    top: 54px;
+  }
 `
 
 export const WikiHeaderWrapper = styled.div<{ $isExpanded: boolean }>`
@@ -26,12 +37,29 @@ export const WikiHeaderWrapper = styled.div<{ $isExpanded: boolean }>`
     props.$isExpanded
       ? '1px solid #333'
       : 'none'};
-  position: fixed;
-  top: 94px;
+  position: relative;
+  box-sizing: border-box;
   z-index: 5;
   transition:
     max-height 0.3s ease-in-out,
     padding 0.3s ease-in-out;
+
+  form {
+    flex: 1;
+    width: 100%;
+    min-width: 0;
+    max-width: 400px;
+  }
+
+  @media (max-width: 1100px) {
+    gap: 12px;
+    padding: ${props => props.$isExpanded ? '12px 18px' : '0 18px'};
+  }
+
+  @media (max-width: 768px) {
+    gap: 8px;
+    padding: ${props => props.$isExpanded ? '10px 12px' : '0 12px'};
+  }
 `;
 
 export const HomeButton = styled.button`
@@ -69,6 +97,8 @@ export const SearchInputWrapper = styled.div`
   border-radius: 4px;
   padding: 8px 12px;
   transition: all 0.2s ease;
+  min-width: 0;
+  box-sizing: border-box;
 
   &:focus-within {
     border-color: #00d4ff;
@@ -84,6 +114,8 @@ export const SearchInput = styled.input`
   font-size: 14px;
   outline: none;
   padding: 0;
+  min-width: 0;
+  width: 100%;
 
   &::placeholder {
     color: rgba(255, 255, 255, 0.5);
@@ -105,12 +137,9 @@ export const ToggleHeaderButton = styled.button<{ $isExpanded: boolean }>`
   align-items: center;
   justify-content: center;
 
-  position: fixed;
+  position: absolute;
 
-  top: ${props =>
-    props.$isExpanded
-      ? '165px'
-      : '94px'};
+  top: 100%;
 
   right: 14px;
 
@@ -151,5 +180,9 @@ export const ToggleHeaderButton = styled.button<{ $isExpanded: boolean }>`
   &:hover {
     background-color: rgba(0, 212, 255, 0.05);
     color: #00d4ff;
+  }
+
+  @media (max-width: 768px) {
+    right: 8px;
   }
 `;

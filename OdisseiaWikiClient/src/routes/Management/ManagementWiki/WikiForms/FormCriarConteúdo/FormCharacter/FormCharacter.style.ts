@@ -1,4 +1,5 @@
 import styled from "styled-components";
+import { managementEntityToolbarResponsive } from '../../ManagementEntityToolbar.style';
 
 interface Props {
     theme?: 'dark' | 'light';
@@ -14,6 +15,13 @@ export const FormController = styled.form`
     align-items: center;
     justify-content: center;
     z-index: 100;
+    min-width: 0;
+    max-width: 100%;
+
+    > * {
+        min-width: 0;
+        max-width: 100%;
+    }
 `
 
 export const FormHeader = styled.div<Props>`
@@ -21,6 +29,13 @@ export const FormHeader = styled.div<Props>`
     display: flex;
     flex-direction: row;
     justify-content: space-between;
+    gap: 20px;
+    min-width: 0;
+
+    @media (max-width: 768px) {
+        flex-direction: column-reverse;
+        align-items: center;
+    }
 `;
 
 export const HeaderInputs = styled.div<Props>`
@@ -29,8 +44,14 @@ export const HeaderInputs = styled.div<Props>`
     flex-direction: column;
     align-items: center;
     gap: 10px;
+    min-width: 0;
+
+    @media (max-width: 1100px) {
+        width: calc(100% - 230px);
+    }
 
     @media (max-width: 768px) {
+        width: 100%;
         flex-direction: column;
         gap: 10px;
     }
@@ -39,6 +60,12 @@ export const HeaderInputs = styled.div<Props>`
 export const HeaderAvatar = styled.div<Props>`
     width: 18%;
     display: flex;
+    min-width: 0;
+
+    @media (max-width: 1100px) {
+        width: 210px;
+        justify-content: center;
+    }
 
     @media (max-width: 768px) {
         width: 100%;
@@ -49,7 +76,7 @@ export const HeaderAvatar = styled.div<Props>`
 export const GridInputs = styled.div`
   width: 100%;
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 15px;
   
   @media (max-width: 768px) {
@@ -62,6 +89,9 @@ export const SectionTable = styled.div`
     flex-direction: column;
     width: 100%;
     gap: 10px;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
 `
 
 export const TableTitle = styled.h2`
@@ -92,6 +122,41 @@ export const NavegationButtons = styled.div`
     flex-direction: row;
     align-items: center;
     gap: 20px;
+    flex-wrap: wrap;
+
+    @media (max-width: 1100px) {
+        order: -1;
+        position: static;
+        width: 100%;
+        justify-content: center;
+        padding: 10px;
+        border-radius: 8px;
+        background: rgba(0, 8, 18, 0.78);
+        box-sizing: border-box;
+    }
+
+    @media (max-width: 768px) {
+        gap: 8px;
+        padding: 6px;
+
+        > div {
+            width: 155px !important;
+            height: 51px !important;
+
+            > div,
+            > button {
+                width: 140px !important;
+                height: 38px !important;
+            }
+
+            > button {
+                padding-inline: 8px;
+                font-size: 10px;
+            }
+        }
+    }
+
+    ${managementEntityToolbarResponsive}
 `
 
 export const SectionStatus = styled.div<Props>`
@@ -101,6 +166,11 @@ export const SectionStatus = styled.div<Props>`
     justify-content: space-around;
     width: 100%;
     gap: 15px;
+    min-width: 0;
+
+    @media (max-width: 768px) {
+        flex-direction: column;
+    }
 `
 
 export const StatusHeader = styled.div<Props>`
@@ -119,6 +189,17 @@ export const HeaderInfo = styled.div<Props>`
     justify-content: center;
     gap: 50px;
     width: 100%;
+    min-width: 0;
+    flex-wrap: wrap;
+
+    @media (max-width: 768px) {
+        gap: 14px;
+        align-items: stretch;
+
+        > * {
+            flex: 1 1 120px;
+        }
+    }
 `
 
 export const InfoController = styled.div`
@@ -136,6 +217,12 @@ export const StatusContent = styled.div<Props>`
     justify-content: space-between;
     margin: 20px 0;
     width: 100%;
+    gap: 15px;
+    min-width: 0;
+
+    @media (max-width: 768px) {
+        flex-direction: column;
+    }
 `
 
 export const StatusContentCenter = styled.div`
@@ -145,6 +232,11 @@ export const StatusContentCenter = styled.div`
     justify-content: flex-start;
     width: 60%;
     gap: 10px;
+    min-width: 0;
+
+    @media (max-width: 768px) {
+        width: 100%;
+    }
 `
 
 export const StatusDefesaController = styled.div<Props>`
@@ -183,6 +275,8 @@ export const StatusDefesaDiv = styled.div<Props>`
     justify-content: space-between;
     width: 100%;
     gap: 30px;
+    min-width: 0;
+    flex-wrap: wrap;
 `
 
 export const StatusImageDiv = styled.div`
@@ -232,6 +326,20 @@ export const AvatarController = styled.div<{ hasImage: boolean }>`
   min-height: ${({ hasImage }) => (hasImage ? "250px" : "215px")};
   width: ${({ hasImage }) => (hasImage ? "250px" : "215px")};
   height: ${({ hasImage }) => (hasImage ? "250px" : "215px")};
+
+  @media (max-width: 1100px) {
+    min-width: clamp(170px, 20vw, 210px);
+    min-height: clamp(170px, 20vw, 210px);
+    width: clamp(170px, 20vw, 210px);
+    height: clamp(170px, 20vw, 210px);
+  }
+
+  @media (max-width: 768px) {
+    min-width: clamp(150px, 48vw, 200px);
+    min-height: clamp(150px, 48vw, 200px);
+    width: clamp(150px, 48vw, 200px);
+    height: clamp(150px, 48vw, 200px);
+  }
 `;
 
 export const AtributeController = styled.div`
@@ -267,6 +375,15 @@ export const StatusAtributosDiv = styled.div<Props>`
                 ? "var(--neonViolet)"
                 : "var(--lightGrey)"
         };
+
+    @media (max-width: 768px) {
+        width: 100%;
+        height: auto;
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 14px;
+    }
 `
 
 export const LabelStatus = styled.h2<{ width?: string }>`
@@ -290,6 +407,11 @@ export const TagInputContainer = styled.div`
   gap: 10px;
   align-items: flex-start;
   width: 100%;
+  min-width: 0;
+
+  @media (max-width: 480px) {
+    flex-direction: column;
+  }
 `;
 
 export const TagsList = styled.div`

@@ -3,6 +3,7 @@ import { UseScrollRevealOptions } from './useScrollReveal.types';
 
 const DEFAULT_ENTER_CLASS = 'sr-entered';
 const DEFAULT_EXIT_CLASS = 'sr-exited';
+const INITIAL_VISIBLE_CLASS = 'sr-initial-visible';
 const DEFAULT_THRESHOLD = 0.4;
 
 const normalizeThresholds = (threshold: number | number[]) => {
@@ -54,6 +55,18 @@ export const useScrollReveal = <T extends HTMLElement = HTMLElement>({
       return;
     }
 
+    const initialRect = element.getBoundingClientRect();
+    const initiallyVisibleHeight = Math.max(
+      0,
+      Math.min(initialRect.bottom, window.innerHeight) - Math.max(initialRect.top, 0),
+    );
+    const initialVisibleRatio = initiallyVisibleHeight / elementHeight;
+
+    if (initialVisibleRatio >= enterThreshold) {
+      element.classList.add(INITIAL_VISIBLE_CLASS);
+      showWithoutAnimation();
+    }
+
     const observer = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting && entry.intersectionRatio >= enterThreshold) {
         element.classList.remove(exitClass);
@@ -63,6 +76,7 @@ export const useScrollReveal = <T extends HTMLElement = HTMLElement>({
       }
 
       if (!entry.isIntersecting && hasEnteredRef.current) {
+        element.classList.remove(INITIAL_VISIBLE_CLASS);
         element.classList.remove(enterClass);
         element.classList.add(exitClass);
       }

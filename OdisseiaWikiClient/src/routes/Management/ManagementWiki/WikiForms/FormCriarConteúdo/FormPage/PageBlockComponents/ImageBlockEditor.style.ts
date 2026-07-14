@@ -9,6 +9,8 @@ export const Container = styled.div`
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-width: 0;
+  max-width: 100%;
 `;
 
 export const SectionLabel = styled.label`
@@ -78,6 +80,7 @@ export const RichTextSection = styled.div`
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
 `;
 
 export const PreviewContainer = styled.div<ThemeProps>`
@@ -89,6 +92,9 @@ export const PreviewContainer = styled.div<ThemeProps>`
   border-radius: 8px;
   background-color: ${props => (props.$isDark ? '#1a1a1a' : '#f5f5f5')};
   border: 1px solid ${props => (props.$isDark ? '#333' : '#ddd')};
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 `;
 
 export const ImagePreview = styled.img`

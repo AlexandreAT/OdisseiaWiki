@@ -53,6 +53,39 @@ export const PerfilDropdown = styled.div<{ themeMode?: 'dark' | 'light' }>`
     from { opacity: 0; transform: translateY(-10px);}
     to { opacity: 1; transform: translateY(0);}
   }
+
+  @media (max-width: 768px) {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    right: auto;
+    width: min(150px, calc(100vw - 24px));
+    min-width: 0;
+    margin: 0;
+    transform: translateX(-50%);
+    padding: 7px 0;
+    gap: 3px;
+    box-sizing: border-box;
+    animation: none;
+
+    &::before {
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-left-width: 8px;
+      border-right-width: 8px;
+      border-bottom-width: 10px;
+    }
+
+    &::after {
+      top: -8px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-left-width: 7px;
+      border-right-width: 7px;
+      border-bottom-width: 8px;
+    }
+  }
 `;
 
 export const PerfilOption = styled(Link)<{ themeMode?: 'dark' | 'light' }>`
@@ -67,6 +100,13 @@ export const PerfilOption = styled(Link)<{ themeMode?: 'dark' | 'light' }>`
         ? 'var(--clearneonViolet)'
         : 'var(--clearneonBlue)'};
     color: var(--black-blue);
+  }
+
+  @media (max-width: 768px) {
+    padding: 7px 12px;
+    font-size: 0.75rem;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
   }
 `;
 
@@ -85,5 +125,11 @@ export const PerfilButton = styled.button<{ themeMode?: 'dark' | 'light' }>`
         ? 'var(--clearneonViolet)'
         : 'var(--clearneonBlue)'};
     color: var(--black-blue);
+  }
+
+  @media (max-width: 768px) {
+    padding: 7px 12px;
+    font-size: 0.75rem;
+    line-height: 1.25;
   }
 `;

@@ -26,6 +26,8 @@ export const MainContainer = styled.div`
     min-height: 100vh;
     display: flex;
     flex-direction: row;
+    min-width: 0;
+    max-width: 100%;
 `
 
 export const OptionsController = styled.div<OptionsControllerProps>`
@@ -37,6 +39,20 @@ export const OptionsController = styled.div<OptionsControllerProps>`
     transition: width 0.3s ease-in-out;
     z-index: 0;
     overflow: hidden;
+    box-sizing: border-box;
+
+    @media (max-width: 1100px) {
+        width: ${props => props.expanded ? '88px' : '0px'};
+    }
+
+    @media (max-width: 768px) {
+        top: 54px;
+        width: ${props => props.expanded ? 'min(64vw, 200px)' : '0px'};
+        height: calc(100dvh - 54px);
+        z-index: 30;
+        background-color: rgba(0, 8, 18, 0.97);
+        box-shadow: ${props => props.expanded ? '8px 0 24px rgba(0, 0, 0, 0.45)' : 'none'};
+    }
 `
 
 export const Options = styled.div<Props>`
@@ -68,6 +84,20 @@ export const Options = styled.div<Props>`
     font-family: 'Cyberpunk Is Not Dead', sans-serif;
     font-size: 15px;
     transition: all 0.3s ease-in-out;
+    box-sizing: border-box;
+
+    @media (max-width: 1100px) {
+        padding-top: 64px;
+        gap: 6px;
+        font-size: 12px;
+    }
+
+    @media (max-width: 768px) {
+        padding-top: 48px;
+        gap: 4px;
+        font-size: 11px;
+        align-items: stretch;
+    }
 `
 
 export const MainContent = styled.div<MainContentProps>`
@@ -79,6 +109,24 @@ export const MainContent = styled.div<MainContentProps>`
     display: flex;
     flex-direction: column;
     transition: margin-left 0.3s ease-in-out;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+
+    @media (max-width: 1100px) {
+        margin-left: ${props => props.sidebarExpanded ? '88px' : '0px'};
+        padding: 16px;
+    }
+
+    @media (max-width: 768px) {
+        width: 100%;
+        margin-left: 0;
+        padding: 12px;
+    }
+
+    @media (max-width: 480px) {
+        padding: 8px;
+    }
 `
 
 export const OptionButton = styled.button<OptionButtonProps>`
@@ -110,6 +158,21 @@ export const OptionButton = styled.button<OptionButtonProps>`
     transition: background 0.2s, color 0.2s;
     outline: none;
     letter-spacing: 1px;
+    overflow-wrap: anywhere;
+
+    @media (max-width: 1100px) {
+        width: 94%;
+        padding: 7px 2px;
+        font-size: 12px;
+        letter-spacing: 0;
+    }
+
+    @media (max-width: 768px) {
+        width: calc(100% - 20px);
+        margin-inline: 10px;
+        padding: 6px 4px;
+        font-size: 11px;
+    }
 
     ${({ selected, theme, neon }) => !selected && neon === 'on' && `
         text-shadow: ${
@@ -141,6 +204,8 @@ export const ContainerContent = styled.div`
     width: 100%;
     height: 100%;
     z-index: 0;
+    min-width: 0;
+    max-width: 100%;
 `
 
 export const ToggleSidebarButton = styled.button<ToggleSidebarButtonProps>`
@@ -201,5 +266,28 @@ export const ToggleSidebarButton = styled.button<ToggleSidebarButtonProps>`
         width: 24px;
         height: 24px;
         pointer-events: none;
+    }
+
+    @media (max-width: 1100px) {
+        left: ${props => props.expanded ? '88px' : '0px'};
+        width: 34px;
+        height: 34px;
+    }
+
+    @media (max-width: 768px) {
+        top: 70px;
+        left: ${props => props.expanded ? 'min(64vw, 200px)' : '0px'};
+        width: 32px;
+        height: 32px;
+        border-left: 1px solid ${({ theme, neon }) => neon === 'on'
+            ? theme === 'dark' ? 'var(--clearneonBlue)' : 'var(--clearneonViolet)'
+            : 'var(--grey)'};
+        border-radius: 0 8px 8px 0;
+        z-index: 35;
+
+        svg {
+            width: 19px;
+            height: 19px;
+        }
     }
 `

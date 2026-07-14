@@ -34,6 +34,14 @@ export const ContentController = styled.div<Props>`
   align-items: flex-start;
   width: ${({ width }) => width || `100%`};
   ${({ height }) => height && `height: ${height};`}
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    grid-column: 1 / -1;
+  }
 
   ${({ fullWidth }) =>
     fullWidth &&
@@ -62,6 +70,9 @@ export const TextAreaField = styled.textarea<Props>`
   transition: background-color 0.2s, border 0.2s;
   box-shadow: 0 0 1px 1px rgba(50, 50, 50, 0.8);
   resize: ${({ resize }) => resize || 'vertical'};
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 
   &:focus {
     background-color: var(--black-blue);

@@ -41,6 +41,8 @@ const Header = styled.header<Props>`
     border-bottom-right-radius: 10px;
     border-bottom-left-radius: 10px;
     z-index: 5;
+    max-width: 100vw;
+    box-sizing: border-box;
 
     background-color: ${({ theme }) =>
         theme === 'dark' ? 'rgba(0, 8, 18, 0.58)' : 'rgba(255, 255, 255, 0.58)'};
@@ -59,7 +61,7 @@ const Body = styled.body<Props>`
     padding: ${props =>
         props.isLoginPage
             ? '0px'
-            : 'clamp(64px, 5vw, 76px) 0px 4rem'};
+            : '84px 0 4rem'};
     width: 100%;
     min-height: 100vh;
     height: 100%;
@@ -71,7 +73,11 @@ const Body = styled.body<Props>`
     `};
 
     @media (max-width: 768px) {
-        padding: 6% 0px 4rem;
+        padding: 54px 0 4rem;
+    };
+
+    @media (min-width: 769px) and (max-width: 1100px) {
+        padding-top: 66px;
     };
 
     transition: all 0.3s ease-in-out;

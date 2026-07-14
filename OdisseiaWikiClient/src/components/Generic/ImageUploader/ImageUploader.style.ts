@@ -27,6 +27,13 @@ export const UploaderController = styled.div<{ width?: string }>`
   flex-direction: column;
   width: ${({ width }) => width || '100%'};
   gap: 10px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+
+  @media (max-width: 768px) {
+    width: 100%;
+  }
 `;
 
 export const UploaderLabel = styled.label<Props>`
@@ -54,6 +61,12 @@ export const ImageContainer = styled.div<ContainerProps>`
     hasImage ? 'transparent' : 'var(--lightGrey)'};
   cursor: pointer;
   transition: all 0.3s ease;
+  min-width: 0;
+  box-sizing: border-box;
+
+  @media (max-width: 768px) {
+    width: min(100%, 240px);
+  }
 
   &:hover {
     border-color: ${({ neon }) =>

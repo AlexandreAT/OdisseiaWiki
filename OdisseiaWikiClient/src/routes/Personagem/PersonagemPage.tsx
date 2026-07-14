@@ -280,7 +280,14 @@ const PersonagemPage: React.FC = () => {
   const nome = getField(personagem, ['nome', 'Nome']) || 'Sem nome';
   const imagem = getField(personagem, ['imagem', 'Imagem', 'imagemUrl', 'ImagemUrl']) as string | undefined;
   const historia = getField(personagem, ['historia', 'Historia']) as any | undefined;
-  const alinhamento = getField(personagem, ['alinhamento', 'Alinhamento', 'alignment']);
+  const alinhamentoRaw = getField(personagem, ['alinhamento', 'Alinhamento', 'alignment']);
+
+  const alinhamento = alinhamentoRaw
+    ? String(alinhamentoRaw)
+        .split('_')
+        .map(palavra => palavra.charAt(0).toUpperCase() + palavra.slice(1))
+        .join(' e ')
+    : null;
 
   const costumes = (personagem as any)?.costumes;
   const costumesList = Array.isArray(costumes) && costumes.length > 0 ? costumes : null;
@@ -379,7 +386,7 @@ const PersonagemPage: React.FC = () => {
                         <AvatarIcon theme={theme} neon={neon} initialImage={imagem ? normalizeImagePath(imagem) : ''} size={250} clickable={false} />
                     </AvatarWrapper>
 
-                    <CardContent maxWidth='300px' neon={neon}>
+                    <CardContent maxWidth='320px' neon={neon}>
                       <HudCornerEl $position="top-left" $neon={neon === 'on'} />
                       <HudCornerEl $position="top-right" $neon={neon === 'on'} />
                       <HudCornerEl $position="bottom-left" $neon={neon === 'on'} />

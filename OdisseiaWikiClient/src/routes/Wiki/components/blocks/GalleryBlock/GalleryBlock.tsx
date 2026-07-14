@@ -9,6 +9,7 @@ import {
   GalleryItem,
   GalleryItemImage,
   GalleryItemPlaceholder,
+  GalleryCaption,
   CarouselWrapper,
   CarouselViewport,
   CarouselArrow,
@@ -143,6 +144,7 @@ export const GalleryBlock: React.FC<GalleryBlockProps> = ({ block, theme: _theme
           <BiImage />
         </GalleryItemPlaceholder>
       )}
+      {imagem.legenda && <GalleryCaption>{imagem.legenda}</GalleryCaption>}
     </GalleryItem>
   );
 

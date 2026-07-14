@@ -47,6 +47,9 @@ export const ContentController = styled.div<Props>`
   align-items: flex-start;
   width: ${({ width }) => width || `100%`};
   ${({ height }) => height && `height: ${height};`}
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 
   ${({ fullWidth }) =>
     fullWidth &&
@@ -59,6 +62,8 @@ export const EditorContainer = styled.div<Props>`
   position: relative;
   width: 100%;
   height: 100%;
+  min-width: 0;
+  max-width: 100%;
 `;
 
 export const EditorWrapper = styled.div<Props>`
@@ -74,6 +79,10 @@ export const EditorWrapper = styled.div<Props>`
   box-shadow: 0 0 1px 1px rgba(50, 50, 50, 0.8);
   ${({ height }) => height ? 'overflow-y: auto;' : 'overflow-y: visible;'}
   resize: vertical;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
 
   ${({ focus, theme, neon, typeStyle }) =>
     focus && css`
@@ -250,11 +259,18 @@ export const ToolbarContainer = styled.div<Props>`
       : neon === 'on'
       ? getPink(typeStyle)
       : 'var(--black-blue)'};
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: auto;
 `;
 
 export const ToolbarGroup = styled.div`
   display: flex;
   gap: 2px;
+  flex-wrap: wrap;
+  min-width: 0;
 `;
 
 export const ToolbarButton = styled.button<Props & { active?: boolean }>`

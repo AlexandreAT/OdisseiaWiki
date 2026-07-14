@@ -10,6 +10,7 @@ export const LightboxOverlay = styled.div<{ $backgroundImage?: string }>`
   padding: 16px;
   isolation: isolate;
   overflow: hidden;
+  box-sizing: border-box;
 
   &::before,
   &::after {
@@ -55,6 +56,12 @@ export const LightboxContent = styled.div`
   padding: 16px;
   position: relative;
   z-index: 1;
+  box-sizing: border-box;
+
+  @media (max-width: 480px) {
+    max-width: calc(100vw - 16px);
+    padding: 10px;
+  }
 `;
 
 export const LightboxImage = styled.img`
@@ -64,6 +71,11 @@ export const LightboxImage = styled.img`
   min-height: 0;
   object-fit: contain;
   border-radius: 8px;
+  width: auto;
+
+  @media (max-width: 480px) {
+    max-width: calc(100vw - 38px);
+  }
 `;
 
 export const LightboxCaption = styled.p`

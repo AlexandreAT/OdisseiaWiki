@@ -45,6 +45,7 @@ export const WikiSidebar: React.FC<WikiSidebarInternalProps> = ({ page, onToggle
 
   const handleBlockClick = (blockIndex: number) => {
     scrollToBlock(blockIndex);
+    if (window.innerWidth <= 768) setSidebarExpanded(false);
   };
 
   const handleToggleSidebar = () => {
@@ -62,6 +63,7 @@ export const WikiSidebar: React.FC<WikiSidebarInternalProps> = ({ page, onToggle
           onClick={handleToggleSidebar}
           title={sidebarExpanded ? 'Esconder sidebar' : 'Mostrar sidebar'}
           $isExpanded={sidebarExpanded}
+          aria-label={sidebarExpanded ? 'Fechar navegação da Wiki' : 'Abrir navegação da Wiki'}
         >
           <BiChevronLeft />
         </ToggleSidebarButton>
@@ -78,6 +80,7 @@ export const WikiSidebar: React.FC<WikiSidebarInternalProps> = ({ page, onToggle
         onClick={handleToggleSidebar}
         title={sidebarExpanded ? 'Esconder sidebar' : 'Mostrar sidebar'}
         $isExpanded={sidebarExpanded}
+        aria-label={sidebarExpanded ? 'Fechar navegação da Wiki' : 'Abrir navegação da Wiki'}
       >
         <BiChevronLeft />
       </ToggleSidebarButton>

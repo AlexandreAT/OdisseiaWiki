@@ -1,4 +1,5 @@
 import styled from 'styled-components';
+import { managementEntityToolbarResponsive } from '../../ManagementEntityToolbar.style';
 
 interface ThemeProps {
   $isDark?: boolean;
@@ -9,6 +10,8 @@ export const FormPageContainer = styled.form`
   flex-direction: column;
   gap: 24px;
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
 `;
 
 export const SectionHeader = styled.div<ThemeProps>`
@@ -28,7 +31,7 @@ export const SectionTitle = styled.h2`
 
 export const GridInputs = styled.div`
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
   width: 100%;
 
@@ -40,6 +43,7 @@ export const GridInputs = styled.div`
 export const FullWidthInput = styled.div`
 margin-top: 12px;
   grid-column: 1 / -1;
+  min-width: 0;
 `;
 
 
@@ -52,6 +56,13 @@ export const BlocksContainer = styled.div<ThemeProps>`
   border-radius: 8px;
   border: 1px solid ${props => (props.$isDark ? '#333' : '#ddd')};
   background-color: ${props => (props.$isDark ? '#0a0a0a' : '#fafafa')};
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+
+  @media (max-width: 768px) {
+    padding: 10px;
+  }
 `;
 
 export const BlockItem = styled.div<{ isDragging?: boolean; $isDark?: boolean }>`
@@ -63,6 +74,13 @@ export const BlockItem = styled.div<{ isDragging?: boolean; $isDark?: boolean }>
   border: 2px solid ${props => (props.isDragging ? '#007bff' : props.$isDark ? '#333' : '#ddd')};
   background-color: ${props => (props.$isDark ? '#1a1a1a' : '#fff')};
   transition: all 0.3s ease;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+
+  @media (max-width: 480px) {
+    padding: 10px;
+  }
 
   &:hover {
     border-color: #007bff;
@@ -75,6 +93,8 @@ export const BlockHeader = styled.div`
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  min-width: 0;
+  flex-wrap: wrap;
 `;
 
 export const BlockTitle = styled.div`
@@ -82,6 +102,8 @@ export const BlockTitle = styled.div`
   align-items: center;
   gap: 12px;
   flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
 
   h3 {
     margin: 0;
@@ -99,6 +121,7 @@ export const BlockActions = styled.div`
   display: flex;
   gap: 8px;
   align-items: center;
+  flex-wrap: wrap;
 `;
 
 export const IconButton = styled.button<{ danger?: boolean }>`
@@ -132,6 +155,8 @@ export const BlockContent = styled.div`
   flex-direction: column;
   gap: 12px;
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
 `;
 
 export const AddBlockContainer = styled.div`
@@ -145,6 +170,11 @@ export const BlockTypeSelector = styled.div`
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 8px;
   width: 100%;
+  min-width: 0;
+
+  @media (max-width: 480px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 `;
 
 export const BlockTypeButton = styled.button<{ active?: boolean }>`
@@ -170,6 +200,16 @@ export const ActionButtonsContainer = styled.div<ThemeProps>`
   margin-top: 24px;
   padding-top: 24px;
   border-top: 1px solid ${props => (props.$isDark ? '#333' : '#ddd')};
+  flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    > * {
+      flex: 1 1 160px;
+      max-width: 100%;
+    }
+  }
+
+  ${managementEntityToolbarResponsive}
 `;
 
 export const EmptyBlocksMessage = styled.div`
