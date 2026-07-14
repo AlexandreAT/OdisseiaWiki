@@ -382,6 +382,7 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
           data={magias}
           onChange={setMagias}
           columns={magiasColumns}
+          showEmptyRow
           theme={theme}
           neon={neon}
         />
@@ -393,6 +394,7 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
           data={skills}
           onChange={setSkills}
           columns={skillsColumns}
+          showEmptyRow
           theme={theme}
           neon={neon}
         />

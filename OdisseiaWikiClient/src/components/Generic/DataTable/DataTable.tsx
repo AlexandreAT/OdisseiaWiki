@@ -19,6 +19,7 @@ interface DataTableProps<T> {
   searchData?: T[];
   onSelectSearch?: (item: T) => void;
   searchKeys?: (keyof T)[];
+  showEmptyRow?: boolean;
 }
 
 interface ColumnConfig<T> {
@@ -112,13 +113,26 @@ function DataTableComponent<T extends { [key: string]: any }>({
   neon,
   searchData,
   onSelectSearch,
-  searchKeys
+  searchKeys,
+  showEmptyRow = false,
 }: DataTableProps<T>) {
   const [search, setSearch] = useState("");
   
 
   const dataRef = useRef(data);
   dataRef.current = data;
+
+  const createEmptyRow = useCallback(() => columns.reduce((acc, col) => {
+    (acc as any)[col.key] = col.inputType === "number" ? 0 : "";
+    return acc;
+  }, {} as T), [columns]);
+
+  const tableData = useMemo(
+    () => data.length === 0 && showEmptyRow ? [createEmptyRow()] : data,
+    [data, showEmptyRow, createEmptyRow],
+  );
+  const tableDataRef = useRef(tableData);
+  tableDataRef.current = tableData;
 
 
   const updateValue = useCallback((rowIndex: number, key: keyof T, value: any) => {
@@ -137,18 +151,14 @@ function DataTableComponent<T extends { [key: string]: any }>({
         inputs[currentIndex + 1].focus();
       } else {
       
-        const emptyRow = columns.reduce((acc, col) => {
-          (acc as any)[col.key] = col.inputType === "number" ? 0 : "";
-          return acc;
-        }, {} as T);
-        onChange([...dataRef.current, emptyRow]);
+        onChange([...dataRef.current, createEmptyRow()]);
       }
     }
-  }, [columns, onChange]);
+  }, [createEmptyRow, onChange]);
 
 
   const renderCell = useCallback((col: ColumnConfig<T>, rowIndex: number) => {
-    const row = data[rowIndex];
+    const row = tableDataRef.current[rowIndex];
     const value = row[col.key];
 
     if (col.customRender) {
@@ -167,7 +177,7 @@ function DataTableComponent<T extends { [key: string]: any }>({
         onEnter={handleEnter}
       />
     );
-  }, [data, theme, neon, updateValue, handleEnter]);
+  }, [theme, neon, updateValue, handleEnter]);
 
 
   const muiColumns = useMemo(() => columns.map((col) => ({
@@ -188,12 +198,8 @@ function DataTableComponent<T extends { [key: string]: any }>({
   })), [columns, renderCell]);
 
   const handleAddRow = useCallback(() => {
-    const emptyRow = columns.reduce((acc, col) => {
-      (acc as any)[col.key] = col.inputType === "number" ? 0 : "";
-      return acc;
-    }, {} as T);
-    onChange([...dataRef.current, emptyRow]);
-  }, [columns, onChange]);
+    onChange([...dataRef.current, createEmptyRow()]);
+  }, [createEmptyRow, onChange]);
 
   const handleRemoveRow = useCallback((index: number) => {
     const updated = dataRef.current.filter((_, i) => i !== index);
@@ -226,7 +232,7 @@ function DataTableComponent<T extends { [key: string]: any }>({
       filter: false,
       sort: false,
       customBodyRenderLite: (dataIndex: number) => {
-        const isLastRow = dataIndex === data.length - 1;
+        const isLastRow = dataIndex === tableData.length - 1;
         return (
           <IconButton
             onClick={() => isLastRow ? handleAddRow() : handleRemoveRow(dataIndex)}
@@ -236,7 +242,7 @@ function DataTableComponent<T extends { [key: string]: any }>({
         );
       },
     },
-  }), [data.length, handleAddRow, handleRemoveRow]);
+  }), [tableData.length, handleAddRow, handleRemoveRow]);
 
   return (
     <DataTableContainer theme={theme} neon={neon}>
@@ -255,7 +261,7 @@ function DataTableComponent<T extends { [key: string]: any }>({
       )}
       <MUIDataTable
         title=""
-        data={data}
+        data={tableData}
         columns={[...muiColumns, actionsColumn]}
         options={{
           search: false,

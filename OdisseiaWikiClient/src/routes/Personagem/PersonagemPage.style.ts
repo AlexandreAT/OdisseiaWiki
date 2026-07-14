@@ -993,6 +993,10 @@ export const SectionRow = styled.div`
   gap: 24px;
   width: 100%;
 
+  > :only-child {
+    grid-column: 1 / -1;
+  }
+
   @media (max-width: 767px) {
     grid-template-columns: minmax(0, 1fr);
     gap: 0;
@@ -1117,12 +1121,8 @@ export const ContentTab = styled.button<{ $active: boolean; $color: string }>`
 
 export const SkillGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
-
-  @media (max-width: 1080px) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  @media (max-width: 767px) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  @media (max-width: 480px) { grid-template-columns: minmax(0, 1fr); }
 `;
 
 export const NpcSkillCard = styled.article<{ $color: string }>`
@@ -1226,32 +1226,49 @@ export const ItemDescriptionPreview = styled.div`
   }
 `;
 
-export const ItemDescriptionLayout = styled.div`
+export const ItemDescriptionLayout = styled.div<{ $withoutMedia?: boolean }>`
   display: flow-root;
 
-  > :first-child {
-    float: right;
-    margin: 0 0 16px 24px;
-  }
-
-  @media (max-width: 767px) {
+  ${({ $withoutMedia }) => !$withoutMedia && `
     > :first-child {
-      float: none;
-      display: flex;
-      margin: 0 0 16px;
+      float: right;
+      margin: 0 0 16px 24px;
     }
-  }
+
+    @media (max-width: 767px) {
+      > :first-child {
+        float: none;
+        display: flex;
+        margin: 0 0 16px;
+      }
+    }
+  `}
 `;
 
 export const ItemDetailsBody = styled.div`
   min-width: 0;
 `;
 
-export const DetailAttributes = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+export const DetailAttributes = styled.div<{ $inline?: boolean }>`
+  display: ${({ $inline }) => $inline ? 'flex' : 'grid'};
+  grid-template-columns: ${({ $inline }) => $inline ? 'none' : 'repeat(auto-fit, minmax(120px, 1fr))'};
+  flex-wrap: ${({ $inline }) => $inline ? 'wrap' : 'nowrap'};
+  justify-content: flex-start;
+  align-items: flex-start;
   gap: 10px;
   margin-top: 16px;
+
+  ${({ $inline }) => $inline && `
+    > div {
+      flex: 1 1 140px;
+      min-width: 140px;
+      max-width: 100%;
+    }
+
+    > .detail-special {
+      flex: 1 1 100%;
+    }
+  `}
 `;
 
 export const DetailTextPair = styled.div`

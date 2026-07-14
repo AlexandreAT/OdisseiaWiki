@@ -87,18 +87,14 @@ const InventarioItem: React.FC<InventarioItemProps> = ({ item, itemBaseImage, on
   );
 };
 
-const ImplantItem: React.FC<{ item: Item; onOpenDescription?: (item: Item) => void }> = ({ item, onOpenDescription }) => {
+const ImplantItem: React.FC<{ item: Item; itemBaseImage?: string; onOpenDescription?: (item: Item) => void }> = ({ item, itemBaseImage, onOpenDescription }) => {
   const attributes = item.atributos as { material?: string; modificacoes?: Array<{ nome: string }>; lacrimas?: Array<{ nome: string }> } | undefined;
   const mods = [...(attributes?.modificacoes ?? []), ...(attributes?.lacrimas ?? [])];
-  const imagem = getItemImage(item);
-  const details = [
-    item.descricao,
-    attributes?.material && `Material: ${attributes.material}`,
-    mods.length > 0 && `Modificacoes: ${mods.map((mod) => mod.nome).join(', ')}`,
-  ].filter(Boolean).join('\n\n');
+  const imagem = getItemImage(item, itemBaseImage ? { imagem: itemBaseImage } : undefined);
+  const hasDetails = Boolean(item.descricao || Object.values((attributes ?? {}) as Record<string, unknown>).some((value) => value !== undefined && value !== null && value !== '' && value !== false));
 
   return (
-    <ItemRow $clickable={Boolean(onOpenDescription && details)} $color="var(--neonPurple)" $clearColor="var(--clearneonPurple)" onClick={() => onOpenDescription && details && onOpenDescription({ ...item, descricao: details })}>
+    <ItemRow $clickable={Boolean(onOpenDescription && hasDetails)} $color="var(--neonPurple)" $clearColor="var(--clearneonPurple)" onClick={() => onOpenDescription && hasDetails && onOpenDescription(item)}>
       {imagem ? <ItemThumb $color="var(--neonPurple)" $clearColor="var(--clearneonPurple)" src={normalizeImagePath(imagem)} alt={item.nome} /> : <ItemPlaceholder $color="var(--neonPurple)" $clearColor="var(--clearneonPurple)" aria-label="Implante sem imagem"><Inventory2OutlinedIcon /></ItemPlaceholder>}
       <FlexFill>
       <BoldLabel $color="var(--neonPurple)">{item.nome || 'Implante sem nome'}</BoldLabel>
@@ -117,17 +113,21 @@ type AbilityItemProps = {
   onOpenDescription?: (item: Item) => void;
 };
 
+const getAbilityEffect = (ability: any) => (
+  ability?.efeito
+  ?? ability?.atributos?.__efeitoRichText
+  ?? ability?.atributos?.efeitoRichText
+);
+
 const AbilityItem: React.FC<AbilityItemProps> = ({ ability, index, type, color, onOpenDescription }) => {
-  const description = ability.descricao ?? ability.efeito;
-  const readableDescription = typeof description === 'string' ? description : 'Sem descricao registrada.';
+  const effect = getAbilityEffect(ability);
   const clearColor = type === 'skills' ? 'var(--clearneonCyan)' : 'var(--clearneonPurple)';
 
   return (
-    <ItemRow $clickable={Boolean(onOpenDescription)} $color={color} $clearColor={clearColor} onClick={() => onOpenDescription?.({ ...ability, descricao: ability.descricao ?? ability.efeito ?? '', tipo: 'outro', quantidade: 1 })}>
+    <ItemRow $clickable={Boolean(onOpenDescription)} $color={color} $clearColor={clearColor} onClick={() => onOpenDescription?.({ ...ability, __detailType: 'ability', descricao: '', tipo: 'outro', quantidade: 1 } as Item)}>
       <FlexFill>
       <BoldLabel $color={color}>{ability.nome ?? ability.titulo ?? `${type === 'skills' ? 'Skill' : 'Magia'} ${index + 1}`}</BoldLabel>
-      <ItemDescriptionPreview>{readableDescription}</ItemDescriptionPreview>
-      {(ability.custo || ability.nivel || ability.tipo) && <MutedText>{[ability.tipo, ability.custo && `Custo: ${ability.custo}`, ability.nivel && `Nivel: ${ability.nivel}`].filter(Boolean).join(' • ')}</MutedText>}
+      {effect ? <ItemDescriptionPreview><RichTextDisplay content={effect} /></ItemDescriptionPreview> : <ItemDescriptionPreview>Sem efeito registrado.</ItemDescriptionPreview>}
       </FlexFill>
     </ItemRow>
   );
@@ -339,9 +339,24 @@ const PersonagemPage: React.FC = () => {
     ? getItemImage(selectedInventoryItem, selectedInventoryItem.idItemBase ? { imagem: itemBaseImages[selectedInventoryItem.idItemBase] } : undefined)
     : undefined;
   const selectedDescription = selectedInventoryItem?.descricao;
-  const selectedEffect = selectedInventoryItem?.efeito;
+  const isSelectedAbility = (selectedInventoryItem as any)?.__detailType === 'ability';
+  const selectedEffect = isSelectedAbility
+    ? getAbilityEffect(selectedInventoryItem)
+    : selectedInventoryItem?.efeito;
   const selectedSpecial = (selectedInventoryItem?.atributos as any)?.especial ?? (selectedInventoryItem?.atributos as any)?.especiais?.filter(Boolean).join(', ');
   const selectedAttributeEntries = getAttributeEntries(selectedInventoryItem?.atributos as Record<string, any> | undefined);
+  const selectedAbilityEntries = isSelectedAbility ? [
+    Array.isArray((selectedInventoryItem as any)?.elemento) && (selectedInventoryItem as any).elemento.length > 0
+      ? { label: 'Elemento', value: (selectedInventoryItem as any).elemento.join(', ') }
+      : null,
+    (selectedInventoryItem as any)?.custo !== undefined && (selectedInventoryItem as any).custo !== ''
+      ? { label: 'Custo', value: String((selectedInventoryItem as any).custo) }
+      : null,
+    (selectedInventoryItem as any)?.nivel !== undefined && (selectedInventoryItem as any).nivel !== ''
+      ? { label: 'Nivel', value: String((selectedInventoryItem as any).nivel) }
+      : null,
+  ].filter((entry): entry is { label: string; value: string } => entry !== null) : [];
+  const detailAttributeEntries = [...selectedAttributeEntries, ...selectedAbilityEntries];
 
                 console.log("🚀 ~ PersonagemPage ~ visibleAbilities:", visibleAbilities)
   return (
@@ -635,23 +650,24 @@ const PersonagemPage: React.FC = () => {
                 </HistoryModalClose>
               </HistoryModalHeader>
               <HistoryModalContent theme={theme} neon={neon}>
-                <ItemDescriptionLayout>
-                  {selectedInventoryItemImage ? (
+                <ItemDescriptionLayout $withoutMedia={isSelectedAbility}>
+                  {!isSelectedAbility && (selectedInventoryItemImage ? (
                     <ItemThumb $size={200} src={normalizeImagePath(selectedInventoryItemImage)} alt={selectedInventoryItem.nome} />
                   ) : (
                     <ItemPlaceholder $size={200} aria-label="Item sem imagem"><Inventory2OutlinedIcon /></ItemPlaceholder>
-                  )}
+                  ))}
                   <ItemDetailsBody>
                     {selectedDescription && <div className="ProseMirror"><RichTextDisplay content={selectedDescription} /></div>}
-                    {(selectedAttributeEntries.length > 0 || selectedSpecial) && (
-                      <DetailAttributes>
-                        {selectedAttributeEntries.map((entry) => <DetailAttribute key={`${entry.label}-${entry.value}`}><span>{entry.label}</span><strong>{entry.value}</strong></DetailAttribute>)}
+                    {isSelectedAbility && selectedEffect && <DetailText><BoldLabel>EFEITO</BoldLabel><RichTextDisplay content={selectedEffect} /></DetailText>}
+                    {(detailAttributeEntries.length > 0 || selectedSpecial) && (
+                      <DetailAttributes $inline={isSelectedAbility}>
+                        {detailAttributeEntries.map((entry) => <DetailAttribute key={`${entry.label}-${entry.value}`}><span>{entry.label}</span><strong>{entry.value}</strong></DetailAttribute>)}
                         {selectedSpecial && <DetailAttribute className="detail-special"><span>Especial</span><strong>{selectedSpecial}</strong></DetailAttribute>}
                       </DetailAttributes>
                     )}
                   </ItemDetailsBody>
                 </ItemDescriptionLayout>
-                {selectedEffect && selectedEffect !== selectedDescription && (
+                {!isSelectedAbility && selectedEffect && selectedEffect !== selectedDescription && (
                   <DetailTextPair>
                     {selectedEffect && selectedEffect !== selectedDescription && <DetailText><BoldLabel>EFEITO</BoldLabel><RichTextDisplay content={selectedEffect} /></DetailText>}
                   </DetailTextPair>
@@ -687,7 +703,7 @@ const PersonagemPage: React.FC = () => {
             color="var(--neonPurple)"
             emptyMessage="Sem proteses ou implantes"
             onClose={() => setListModal(null)}
-            renderItem={(item, index) => <ImplantItem key={item.id ?? `${item.nome}-${index}`} item={item} onOpenDescription={setSelectedInventoryItem} />}
+            renderItem={(item, index) => <ImplantItem key={item.id ?? `${item.nome}-${index}`} item={item} itemBaseImage={item.idItemBase ? itemBaseImages[item.idItemBase] : undefined} onOpenDescription={setSelectedInventoryItem} />}
           />
         )}
 
@@ -726,7 +742,7 @@ const PersonagemPage: React.FC = () => {
         </ScrollRevealBlock>
 
         <SectionRow>
-          <ScrollRevealBlock variant="personagemCard" threshold={0.4}>
+          {inventoryItems.length > 0 && <ScrollRevealBlock variant="personagemCard" threshold={0.4}>
             <SectionSpacer>
               <HudContentSection title="INVENTARIO" theme={theme} neon={neon} color="var(--neonBlue)" clearColor="var(--clearneonBlue)">
                 <FlexRow gap={12} alignItems="center">
@@ -747,15 +763,15 @@ const PersonagemPage: React.FC = () => {
                 </> : <MutedText>Sem itens</MutedText>}
               </HudContentSection>
             </SectionSpacer>
-          </ScrollRevealBlock>
+          </ScrollRevealBlock>}
 
-          <ScrollRevealBlock variant="personagemCard" threshold={0.4}>
+          {implantItems.length > 0 && <ScrollRevealBlock variant="personagemCard" threshold={0.4}>
             <SectionSpacer>
               <HudContentSection title="PROTESES / IMPLANTES" theme={theme} neon={neon} color="var(--neonPurple)" clearColor="var(--clearneonPurple)">
                 {implantItems.length > 0 ? <>
                 <ImplantGrid>
                   {visibleImplantItems.map((item, index) => {
-                    return <ImplantItem key={item.id ?? `${item.nome}-${index}`} item={item} onOpenDescription={setSelectedInventoryItem} />;
+                    return <ImplantItem key={item.id ?? `${item.nome}-${index}`} item={item} itemBaseImage={item.idItemBase ? itemBaseImages[item.idItemBase] : undefined} onOpenDescription={setSelectedInventoryItem} />;
 
                     /*
                     return (
@@ -776,11 +792,11 @@ const PersonagemPage: React.FC = () => {
                 </> : <MutedText>Sem proteses ou implantes</MutedText>}
               </HudContentSection>
             </SectionSpacer>
-          </ScrollRevealBlock>
+          </ScrollRevealBlock>}
         </SectionRow>
 
         <SectionRow>
-        <ScrollRevealBlock variant="personagemCard" threshold={0.4}>
+        {skills.length > 0 && <ScrollRevealBlock variant="personagemCard" threshold={0.4}>
           <SectionSpacer>
             <HudContentSection title="SKILLS" theme={theme} neon={neon} color="var(--neonCyan)" clearColor="var(--clearneonCyan)">
               {skills.length > 0 ? <>
@@ -807,9 +823,9 @@ const PersonagemPage: React.FC = () => {
               </> : <MutedText>Sem skills</MutedText>}
             </HudContentSection>
           </SectionSpacer>
-        </ScrollRevealBlock>
+        </ScrollRevealBlock>}
 
-        <ScrollRevealBlock variant="personagemCard" threshold={0.4}>
+        {magias.length > 0 && <ScrollRevealBlock variant="personagemCard" threshold={0.4}>
           <SectionSpacer>
             <HudContentSection title="MAGIAS" theme={theme} neon={neon} color="var(--neonPurple)" clearColor="var(--clearneonPurple)">
               {magias.length > 0 ? <>
@@ -824,12 +840,12 @@ const PersonagemPage: React.FC = () => {
               </> : <MutedText>Sem magias</MutedText>}
             </HudContentSection>
           </SectionSpacer>
-        </ScrollRevealBlock>
+        </ScrollRevealBlock>}
 
         </SectionRow>
 
         <AbilityPair>
-          <ScrollRevealBlock variant="personagemCard" threshold={0.4}>
+          {passiva && <ScrollRevealBlock variant="personagemCard" threshold={0.4}>
             <SectionSpacer>
               <HudContentSection title="PASSIVA" theme={theme} neon={neon} color="var(--neonGreen)" clearColor="var(--clearneonGreen)">
                 {passiva ? <AbilityCard>
@@ -838,9 +854,9 @@ const PersonagemPage: React.FC = () => {
                 </AbilityCard> : <MutedText>Sem passiva</MutedText>}
               </HudContentSection>
             </SectionSpacer>
-          </ScrollRevealBlock>
+          </ScrollRevealBlock>}
 
-          <ScrollRevealBlock variant="personagemCard" threshold={0.4}>
+          {ultimate && <ScrollRevealBlock variant="personagemCard" threshold={0.4}>
             <SectionSpacer>
               <HudContentSection title="ULTIMATE" theme={theme} neon={neon} color="var(--neonOrange)" clearColor="var(--clearneonOrange)">
                 {ultimate ? <AbilityCard>
@@ -850,7 +866,7 @@ const PersonagemPage: React.FC = () => {
                 </AbilityCard> : <MutedText>Sem ultimate</MutedText>}
               </HudContentSection>
             </SectionSpacer>
-          </ScrollRevealBlock>
+          </ScrollRevealBlock>}
         </AbilityPair>
 
         </Sections>

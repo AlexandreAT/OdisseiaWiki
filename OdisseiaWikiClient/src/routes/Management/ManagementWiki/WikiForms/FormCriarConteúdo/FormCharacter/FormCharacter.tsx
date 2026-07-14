@@ -444,6 +444,7 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
               data={magias}
               onChange={setMagias}
               columns={magiasColumns}
+              showEmptyRow
               theme={theme}
               neon={neon}
             />
@@ -455,6 +456,7 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
               data={skills}
               onChange={setSkills}
               columns={skillsColumns}
+              showEmptyRow
               theme={theme}
               neon={neon}
             />

@@ -37,6 +37,20 @@ const getEmptyAtributos = (tipo: ItemTipo): any => {
         slot: "",
         duracao: ""
       };
+    case "implante":
+      return {
+        parteCorpo: undefined,
+        lado: undefined,
+        material: undefined,
+        modelo: "",
+        slotsModificacao: 0,
+        slotsLacrima: 0,
+        necessitaAmputacao: false,
+        bonus: {},
+        especiais: [],
+        modificacoes: [],
+        lacrimas: [],
+      };
     default:
       return {
         especial: "",

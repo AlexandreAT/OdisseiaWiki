@@ -6,6 +6,7 @@
         Traje,
         Consumiveis,
         Acessorio,
+        Implante,
         Outro
     }
 }

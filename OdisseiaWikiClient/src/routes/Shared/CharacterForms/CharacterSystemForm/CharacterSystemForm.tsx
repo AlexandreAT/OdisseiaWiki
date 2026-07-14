@@ -116,6 +116,7 @@ export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
             data={magias}
             onChange={setMagias}
             columns={magiasColumns}
+            showEmptyRow
             theme={theme}
             neon={neon}
           />
@@ -127,6 +128,7 @@ export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
             data={skills}
             onChange={setSkills}
             columns={skillsColumns}
+            showEmptyRow
             theme={theme}
             neon={neon}
           />

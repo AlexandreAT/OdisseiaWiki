@@ -36,6 +36,7 @@ export const ITEM_TIPO_OPTIONS: { value: ItemTipo; label: string }[] = [
   { value: 'traje', label: 'Traje' },
   { value: 'consumiveis', label: 'Consumível' },
   { value: 'acessorio', label: 'Acessório' },
+  { value: 'implante', label: 'Prótese / Implante' },
   { value: 'outro', label: 'Outro' },
 ];
 
