@@ -117,6 +117,7 @@ export const FormItem = ({ theme, neon, contentType }: FormItemProps) => {
             error={!!nomeError}
             errorMessage={nomeError}
             onFocus={() => setNomeError('')}
+            required
             width="100%"
           />
 
@@ -127,6 +128,7 @@ export const FormItem = ({ theme, neon, contentType }: FormItemProps) => {
             theme={theme}
             neon={neon}
             options={ITEM_TIPO_OPTIONS}
+            required
             width="100%"
           />
         </GridInputsRow>

@@ -16,13 +16,20 @@ export const ModalOverlay = styled.div`
   justify-content: center;
   align-items: center;
   z-index: 10000;
+  padding: 20px;
+
+  @media (max-width: 767px) {
+    padding: 0;
+  }
 `;
 
-export const ModalContainer = styled.div<{ theme: 'light' | 'dark'; neon: 'on' | 'off' }>`
+export const ModalContainer = styled.div<{ theme: 'light' | 'dark'; neon: 'on' | 'off'; $width?: string }>`
   background: ${({ theme }) => (theme === 'dark' ? 'var(--deepgray)' : 'var(--whitesmoke)')};
   border-radius: 8px;
-  width: 500px;
+  width: ${({ $width }) => $width ?? '500px'};
   max-width: 95%;
+  max-height: 90vh;
+  overflow: hidden;
   box-shadow: 0 0 10px var(--blackTransp);
   display: flex;
   flex-direction: column;
@@ -33,8 +40,19 @@ export const ModalContainer = styled.div<{ theme: 'light' | 'dark'; neon: 'on' |
         : "var(--lightBlack)"
       : neon === "on"
         ? "var(--neonViolet)"
-        : "var(--lightGrey)"
+      : "var(--lightGrey)"
   };
+
+  @media (max-width: 767px) {
+    width: 100vw;
+    max-width: 100vw;
+    max-height: calc(100vh - 16px);
+    border-radius: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
 `;
 
 export const ModalHeaderContainer = styled.div<ThemeProps>`
@@ -85,12 +103,21 @@ export const ModalHeaderContainer = styled.div<ThemeProps>`
     svg {
       font-size: 1.5rem;
     }
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
   }
 `;
 
 export const ModalContentContainer = styled.div`
   padding: 16px;
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+
+  &::-webkit-scrollbar { width: 8px; }
+  &::-webkit-scrollbar-thumb { background: var(--neonBlue); }
 `;
 
 export const ModalFooterContainer = styled.div<ThemeProps>`

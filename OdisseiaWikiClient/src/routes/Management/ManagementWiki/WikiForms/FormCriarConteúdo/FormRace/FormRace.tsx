@@ -159,6 +159,7 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
             width="100%"
             error={!!nomeError}
             errorMessage={nomeError}
+            required
           />
 
           <TagsSection>

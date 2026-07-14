@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 
-export type ScrollRevealVariant = 'infoBlock' | 'infoCarousel' | 'wikiBlock';
+export type ScrollRevealVariant = 'infoBlock' | 'infoCarousel' | 'wikiBlock' | 'personagemCard';
 
 export interface ScrollRevealBlockProps {
   children: ReactNode;

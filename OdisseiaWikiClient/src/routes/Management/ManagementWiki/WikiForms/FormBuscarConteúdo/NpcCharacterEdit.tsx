@@ -14,6 +14,7 @@ import { FormController, FormEditController, NavegationButtons } from '../../../
 import { saveAsset } from '../../../../../services/assetsService';
 import { atualizarPersonagem, getPersonagemById, getPersonagens, PersonagemPayload, PersonagemUpdatePayload } from '../../../../../services/personagensService';
 import { normalizeToJSONContent, prepareForAPI } from '../../../../../utils/richTextHelpers';
+import { normalizeCharacterStatusExtras } from '../../../../../utils/characterStatus';
 import { useFormCharacter } from '../FormCriarConteúdo/FormCharacter/useFormCharacter';
 
 interface NpcCharacterEditProps {
@@ -197,6 +198,8 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
     setAtributosSecundarios,
     defesas,
     setDefesas,
+    statusExtras,
+    setStatusExtras,
     listItens,
     handleSelectItem,
     avatarFile,
@@ -260,6 +263,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
           xp: 0,
           defesas: { armadura: 0, protecao: 0, escudo: 0, outras: 0 },
         });
+        setStatusExtras(normalizeCharacterStatusExtras(status));
 
         const loadedTraits = parseJson<string[] | string>(payload.tracos, []);
         const loadedCostumes = parseJson<string[] | string>(payload.costumes, []);
@@ -324,12 +328,8 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
         setItens(Array.isArray(loadedItens) && loadedItens.length > 0
           ? loadedItens
           : [{ nome: '', descricao: '', quantidade: 0, peso: 0, tipo: 'outro' } as any]);
-        setSkills(Array.isArray(loadedSkills) && loadedSkills.length > 0
-          ? loadedSkills
-          : [{ nome: '', tipo: 'suporte', elemento: ['normal'], nivel: 1 } as any]);
-        setMagias(Array.isArray(loadedMagias) && loadedMagias.length > 0
-          ? loadedMagias
-          : [{ nome: '', tipo: 'suporte', elemento: ['fogo'] } as any]);
+        setSkills(Array.isArray(loadedSkills) ? loadedSkills.filter((skill) => Boolean(skill?.nome?.trim())) : []);
+        setMagias(Array.isArray(loadedMagias) ? loadedMagias.filter((magia) => Boolean(magia?.nome?.trim())) : []);
         setListPersonagemRelacionado(relatedList);
         setStatusBasico({
           vida: status.status?.vida ?? 0,
@@ -579,10 +579,12 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
           ? Number(item.peso)
           : undefined,
         descricao: serializeRichText(item.descricao),
+        efeito: item.efeito ?? undefined,
+        imagem: item.imagem ?? undefined,
         atributos: item.atributos ?? {},
       }));
 
-      const skillsMapped = skills.map((skill) => {
+      const skillsMapped = skills.filter((skill) => Boolean(skill.nome?.trim())).map((skill) => {
         const serializedEffect = serializeRichText((skill as any).efeito);
 
         return {
@@ -600,7 +602,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
         };
       });
 
-      const magiasMapped = magias.map((magia) => {
+      const magiasMapped = magias.filter((magia) => Boolean(magia.nome?.trim())).map((magia) => {
         const serializedEffect = serializeRichText((magia as any).efeito);
 
         return {
@@ -665,6 +667,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
           },
           nivel: Number(level) || 1,
           xp: Number(xp) || 0,
+          ...statusExtras,
           defesas: {
             armadura: Number(defesas.armadura) || 0,
             protecao: Number(defesas.protecao) || 0,
@@ -713,6 +716,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
     skills,
     snapshot,
     statusBasico,
+    statusExtras,
     tags,
     traits,
     userName,

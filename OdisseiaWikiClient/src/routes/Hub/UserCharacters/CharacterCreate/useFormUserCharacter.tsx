@@ -19,6 +19,7 @@ import { PersonagemJogador, PersonagemStatus } from '../../../../models/Personag
 import { TOTAL_STEPS } from './constants';
 import { mapInventoryForPayload, mapMagiasForPayload, mapSkillsForPayload } from './helpers';
 import { normalizeToJSONContent, prepareForAPI } from '../../../../utils/richTextHelpers';
+import { CharacterStatusExtras, DEFAULT_CHARACTER_STATUS_EXTRAS, normalizeCharacterStatusExtras } from '../../../../utils/characterStatus';
 
 const parseJson = <T,>(value: unknown, fallback: T): T => {
   if (value === undefined || value === null) return fallback;
@@ -88,6 +89,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
   const [ultimate, setUltimate] = useState('');
   const [xp, setXp] = useState(0);
   const [level, setLevel] = useState(1);
+  const [statusExtras, setStatusExtras] = useState<CharacterStatusExtras>(DEFAULT_CHARACTER_STATUS_EXTRAS);
   const [skills, setSkills] = useState<Skills[]>([
     { nome: "", tipo: "suporte", elemento: ["normal"], nivel: 1,  }
   ])
@@ -444,6 +446,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
       xp: 0,
       defesas: { armadura: 0, protecao: 0, escudo: 0, outras: 0 },
     });
+    setStatusExtras(normalizeCharacterStatusExtras(status));
 
     const tracosRaw = parseJson<string[] | string>(personagem.tracos, []);
     const costumesRaw = parseJson<string[] | string>(personagem.costumes, []);
@@ -645,6 +648,11 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
   const handleUpdate = useCallback(async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
 
+    if (!validateStepOne()) {
+      setStep(1);
+      return false;
+    }
+
     if (!selectedMesa) {
       toast.error('Selecione uma mesa válida.');
       return false;
@@ -715,6 +723,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
           },
           nivel: level,
           xp: xp,
+          ...statusExtras,
           defesas: defesas,
         },
       };
@@ -740,11 +749,16 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
       toast.error(err?.response?.data || "Erro ao salvar personagem");
       return false;
     }
-  }, [avatarUrl, avatarFile, galeriaUrls, galeriaPreviewFileMap, userName, statusBasico, itens, magias, skills, race, city, userId, selectedMesa, history, costumes, extraInformation, nanites, alignment, traits, idpassiva, ultimate, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, defesas, personagem, onSave]);
+  }, [avatarUrl, avatarFile, galeriaUrls, galeriaPreviewFileMap, userName, statusBasico, itens, magias, skills, race, city, userId, selectedMesa, history, costumes, extraInformation, nanites, alignment, traits, idpassiva, ultimate, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, statusExtras, defesas, personagem, onSave, validateStepOne]);
 
   // --- submit ---
   const handleSubmit = useCallback(async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+
+    if (!validateStepOne()) {
+      setStep(1);
+      return;
+    }
 
     if (!selectedMesa) {
       toast.error('Selecione uma mesa válida.');
@@ -816,6 +830,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
           },
           nivel: level,
           xp: xp,
+          ...statusExtras,
           defesas: defesas,
         },
       };
@@ -831,7 +846,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     } catch (err: any) {
       toast.error(err?.response?.data || "Erro ao salvar personagem");
     }
-  }, [avatarUrl, avatarFile, galeriaUrls, galeriaShapes, galeriaPreviewFileMap, userName, itens, magias, skills, race, city, userId, selectedMesa, history, costumes, extraInformation, nanites, alignment, traits, idpassiva, ultimate, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, defesas, buildStatusForPayload, onSave]);
+  }, [avatarUrl, avatarFile, galeriaUrls, galeriaShapes, galeriaPreviewFileMap, userName, itens, magias, skills, race, city, userId, selectedMesa, history, costumes, extraInformation, nanites, alignment, traits, idpassiva, ultimate, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, statusExtras, defesas, buildStatusForPayload, onSave, validateStepOne]);
 
   return {
     step,

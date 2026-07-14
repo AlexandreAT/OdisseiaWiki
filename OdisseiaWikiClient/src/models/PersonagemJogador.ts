@@ -43,6 +43,11 @@ export interface PersonagemStatus {
   atributos: Atributos;
   nivel: number;
   xp: number;
+  pontos?: number;
+  pontosAtributo?: number;
+  pontosSkill?: number;
+  pontosUltimate?: number;
+  condicioes?: string[];
   defesas: Defesas;
 }
 

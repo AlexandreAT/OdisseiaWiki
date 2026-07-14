@@ -5,14 +5,16 @@ interface Props {
   neon: 'on' | 'off';
   text: string;
   fontSize?: string;
+  colorOverride?: string;
 } 
 
-const TitleGlitch = ({ theme, neon, text, fontSize }: Props) => {
+const TitleGlitch = ({ theme, neon, text, fontSize, colorOverride }: Props) => {
   return (
     <Title
       theme={theme}
       neon={neon}
       $fontSize={fontSize}
+      $colorOverride={colorOverride}
     >
       {text}
     </Title>

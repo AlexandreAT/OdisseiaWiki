@@ -45,6 +45,16 @@ const zoomOut = keyframes`
   to { opacity: 0; transform: translateY(8px) scale(0.96); }
 `;
 
+const personagemCardFragments = css`
+  &.sr-entered > * {
+    animation: ${fadeSlideIn} 0.4s ease-out;
+  }
+
+  &.sr-exited > * {
+    animation: ${fadeSlideOut} 0.4s ease-in both;
+  }
+`;
+
 const titleFragment = css`
   & > * > h2 {
     opacity: 0;
@@ -152,6 +162,7 @@ export const ScrollRevealSection = styled.section<ScrollRevealSectionProps>`
   ${({ $variant }) => {
     if ($variant === 'infoBlock') return infoBlockFragments;
     if ($variant === 'infoCarousel') return infoCarouselFragments;
+    if ($variant === 'personagemCard') return personagemCardFragments;
     return wikiBlockFragments;
   }}
 

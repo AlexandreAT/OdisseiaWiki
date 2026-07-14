@@ -125,6 +125,7 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
             onFocus={() => setRaceError(false)}
             error={raceError}
             errorMessage={errors.race}
+            required
             width="100%"
             disabled={loadingRaces}
           />

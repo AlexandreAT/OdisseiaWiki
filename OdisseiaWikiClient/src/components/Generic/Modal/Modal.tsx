@@ -1,11 +1,11 @@
-import React, { memo, useCallback, useEffect, useState } from 'react'
+import React, { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom';
 import CloseIcon from '@mui/icons-material/Close';
 import { ModalContainer, ModalContentContainer, ModalFooterContainer, ModalHeaderContainer, ModalOverlay } from './Modal.style';
 import { CyberButton } from '../HighlightButton/HighlightButton';
 
 interface ModalProps {
-  title: string;
+  title: React.ReactNode;
   theme?: 'light' | 'dark';
   neon?: 'on' | 'off';
   children?: React.ReactNode;
@@ -13,6 +13,7 @@ interface ModalProps {
   showFooter?: boolean;
   onClose?: () => void;
   onSubmit?: () => void;
+  width?: string;
 }
 
 const ModalComponent = ({
@@ -23,9 +24,11 @@ const ModalComponent = ({
     footer,
     showFooter = true,
     onClose,
-    onSubmit
+    onSubmit,
+    width
 }: ModalProps) => {
     const [modalRoot, setModalRoot] = useState<HTMLElement | null>(null);
+    const closeButtonRef = useRef<HTMLButtonElement>(null);
 
     useEffect(() => {
         // Busca ou cria o elemento modal-root
@@ -46,14 +49,25 @@ const ModalComponent = ({
         onSubmit?.();
     }, [onSubmit]);
 
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') handleDefaultClose();
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        closeButtonRef.current?.focus();
+
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [handleDefaultClose]);
+
     if (!modalRoot) return null;
 
     const modalContent = (
-        <ModalOverlay>
-            <ModalContainer theme={theme} neon={neon}>
+        <ModalOverlay onClick={(event) => { if (event.target === event.currentTarget) handleDefaultClose(); }}>
+            <ModalContainer theme={theme} neon={neon} $width={width} role="dialog" aria-modal="true" aria-label={typeof title === 'string' ? title : undefined}>
                 <ModalHeaderContainer theme={theme} neon={neon}>
                     <span>{title}</span>
-                    <button onClick={handleDefaultClose} title="Fechar"><CloseIcon /></button>
+                    <button ref={closeButtonRef} onClick={handleDefaultClose} title="Fechar" aria-label="Fechar modal"><CloseIcon /></button>
                 </ModalHeaderContainer>
 
                 <ModalContentContainer>

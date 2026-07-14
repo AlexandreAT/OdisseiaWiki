@@ -16,6 +16,7 @@ import { getItens } from '../../../../../../services/itensService';
 import { prepareForAPI } from '../../../../../../utils/richTextHelpers';
 import { TOTAL_STEPS } from '../../../../../../constants';
 import { ensureContentCategoryTag, isContentCategoryTag } from '../../../../../../utils/contentCategoryTag';
+import { CharacterStatusExtras, DEFAULT_CHARACTER_STATUS_EXTRAS } from '../../../../../../utils/characterStatus';
 
 const serializeRichText = (value: any): string => {
   if (value === undefined || value === null) return '';
@@ -86,13 +87,10 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
   const [destaque, setDestaque] = useState(false);
   const [xp, setXp] = useState(0);
   const [level, setLevel] = useState(1);
+  const [statusExtras, setStatusExtras] = useState<CharacterStatusExtras>(DEFAULT_CHARACTER_STATUS_EXTRAS);
   // const [capacidadeCarga, setCapacidadeCarga] = useState(0); // TODO: Implementar se necessário
-  const [skills, setSkills] = useState<Skills[]>([
-    { nome: "", tipo: "suporte", elemento: ["normal"], nivel: 1,  }
-  ])
-  const [magias, setMagias] = useState<Magia[]>([
-    { nome: "", tipo: "suporte", elemento: ["fogo"] },
-  ]);
+  const [skills, setSkills] = useState<Skills[]>([]);
+  const [magias, setMagias] = useState<Magia[]>([]);
   const [itens, setItens] = useState<Item[]>([
     { nome: "", descricao: "", quantidade: 0, peso: 0, tipo: "outro" },
   ]);
@@ -439,6 +437,11 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
   const handleSubmit = useCallback(async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
 
+    if (!validateStepOne()) {
+      setStep(1);
+      return;
+    }
+
     try {
       let avatarPath = avatarUrl;
 
@@ -478,7 +481,7 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
       }));
       console.log("🚀 ~ handleSubmit ~ inventarioMapped:", inventarioMapped)
 
-      const magiaMapped: Magia[] = magias.map((magia) => {
+      const magiaMapped: Magia[] = magias.filter((magia) => Boolean(magia.nome?.trim())).map((magia) => {
         const serializedEffect = serializeRichText((magia as any).efeito);
 
         return {
@@ -495,7 +498,7 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
       };
       });
 
-      const skillMapped: Skills[] = skills.map((skill) => {
+      const skillMapped: Skills[] = skills.filter((skill) => Boolean(skill.nome?.trim())).map((skill) => {
         const serializedEffect = serializeRichText((skill as any).efeito);
 
         return {
@@ -538,6 +541,7 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
           },
           nivel: level,
           xp: xp,
+          ...statusExtras,
           defesas: defesas,
         },
       };
@@ -558,7 +562,7 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
     } catch (err: any) {
       toast.error(extractErrorMessage(err));
     }
-  }, [avatarUrl, avatarFile, userName, statusBasico, itens, magias, skills, race, city, history, costumes, nanites, alignment, traits, idpassiva, ultimate, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, defesas, tags, contentType, visivel, destaque]);
+  }, [avatarUrl, avatarFile, userName, statusBasico, itens, magias, skills, race, city, history, costumes, nanites, alignment, traits, idpassiva, ultimate, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, statusExtras, defesas, tags, contentType, visivel, destaque, validateStepOne]);
 
   return {
     step, setStep,
@@ -590,6 +594,7 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
     isLastStep,
     xp, setXp,
     level, setLevel,
+    statusExtras, setStatusExtras,
     atributosPrincipais, setAtributosPrincipais,
     atributosSecundarios, setAtributosSecundarios,
     defesas, setDefesas,

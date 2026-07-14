@@ -41,6 +41,11 @@ export interface PersonagemJogadorPayload {
     };
     nivel: number;
     xp: number;
+    pontos: number;
+    pontosAtributo: number;
+    pontosSkill: number;
+    pontosUltimate: number;
+    condicioes: string[];
     defesas: Record<string, number>;
   };
 }

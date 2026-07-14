@@ -1,4 +1,4 @@
-import { useState, forwardRef, useCallback } from 'react';
+import { useState, forwardRef, useCallback, useEffect, useRef } from 'react';
 import { ContentController, LoginLabel, LoginInput, LoginLabelSpan, SpanError } from './InputText.style';
 
 interface Props {
@@ -6,7 +6,7 @@ interface Props {
     neon: 'on' | 'off';
     label: string;
     type?: string;
-    value?: string;
+    value?: string | number;
     onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
     onFocus?: (e: React.FocusEvent<HTMLInputElement>) => void;
     error?: boolean;
@@ -34,6 +34,14 @@ export const InputText = forwardRef<HTMLInputElement, Props>(
     height
   }, ref) => {
     const [focus, setFocus] = useState(false);
+    const controllerRef = useRef<HTMLDivElement>(null);
+    const hasValue = value !== '' && value !== null && value !== undefined;
+
+    useEffect(() => {
+      if (!error) return;
+
+      controllerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, [error]);
 
     const handleFocus = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
       setFocus(true);
@@ -45,7 +53,7 @@ export const InputText = forwardRef<HTMLInputElement, Props>(
     }, []);
 
     return (
-      <ContentController width={width}>
+      <ContentController ref={controllerRef} width={width}>
         <LoginLabel width={width} height={height}>
           <LoginInput
               theme={theme}
@@ -62,7 +70,7 @@ export const InputText = forwardRef<HTMLInputElement, Props>(
               width={width}
               height={height}
           />
-          <LoginLabelSpan active={focus || !!value}>{label}</LoginLabelSpan>
+          <LoginLabelSpan active={focus || hasValue}>{label}</LoginLabelSpan>
         </LoginLabel>
         {error && errorMessage && <SpanError>{errorMessage}</SpanError>}
       </ContentController>

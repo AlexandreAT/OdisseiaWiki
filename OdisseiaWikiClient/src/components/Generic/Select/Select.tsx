@@ -1,4 +1,4 @@
-import { useState, forwardRef, useEffect, useCallback } from 'react';
+import { useState, forwardRef, useEffect, useCallback, useRef } from 'react';
 import {
   ContentController,
   Label,
@@ -52,10 +52,17 @@ export const Select = forwardRef<HTMLSelectElement, Props>(
     ref
   ) => {
     const [focus, setFocus] = useState(false);
+    const controllerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
       if (value) setFocus(true);
     }, [value]);
+
+    useEffect(() => {
+      if (!error) return;
+
+      controllerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, [error]);
 
     const handleFocus = useCallback((e: React.FocusEvent<HTMLSelectElement>) => {
       setFocus(true);
@@ -67,7 +74,7 @@ export const Select = forwardRef<HTMLSelectElement, Props>(
     }, [value]);
 
     return (
-      <ContentController width={width}>
+      <ContentController ref={controllerRef} width={width}>
         <Label width={width} height={height}>
           <CustomSelect
             theme={theme}

@@ -32,15 +32,18 @@ export const Title = styled.h1<{
   theme: 'dark' | 'light';
   neon: 'on' | 'off';
   $fontSize?: string;
+  $colorOverride?: string;
 }>`
     font-family: 'Cyberpunk Is Not Dead', sans-serif;
     font-size: ${props => props.$fontSize || '2rem'};
     color: var(--black) !important;
-    text-shadow: ${({theme}) => theme === 'dark'
+    text-shadow: ${({theme, $colorOverride}) => $colorOverride
+        ? `-1px -1px 0px ${$colorOverride}, -1px 1px 0px ${$colorOverride}, 1px -1px 0px ${$colorOverride}, 1px 1px 0px ${$colorOverride}`
+        : theme === 'dark'
         ? `-1px -1px 0px var(--neonBlue), -1px 1px 0px var(--neonBlue), 1px -1px 0px var(--neonBlue), 1px 1px 0px var(--neonBlue)`
         : `-1px -1px 0px var(--neonPink), -1px 1px 0px var(--neonPink), 1px -1px 0px var(--neonPink), 1px 1px 0px var(--neonPink)`};
     letter-spacing: 3px;
-    ${({ neon, theme }) => neon === 'on' && css`
+    ${({ neon, theme, $colorOverride }) => neon === 'on' && !$colorOverride && css`
       animation: ${theme === 'dark' ? neonBlinkBlue : neonBlinkPink} 12s infinite linear;
     `}
 `;

@@ -89,9 +89,10 @@ export const Sections = styled.div`
   display: flex;
   flex-direction: column;
   gap: 12px;
+  width: 100%;
 `;
 
-export const CardContent = styled.div<{ gap?: number, maxWidth?: string, maxHeight?: string, neon: 'on' | 'off' }>`
+export const CardContent = styled.div<{ gap?: number, maxWidth?: string, maxHeight?: string, neon: 'on' | 'off'; $color?: string }>`
   padding: 16px;
   width: 100%;
   max-width: ${({ maxWidth }) => maxWidth || 'none'};
@@ -102,7 +103,7 @@ export const CardContent = styled.div<{ gap?: number, maxWidth?: string, maxHeig
   position: relative;
   z-index: 2;
   background: rgba(0, 0, 10, 0.65);
-  box-shadow: ${({ neon }) => neon === 'on' ? 'inset 0 0 20px var(--clearneonBlue)' : 'none'};
+  box-shadow: ${({ neon, $color }) => neon === 'on' ? `inset 0 0 20px ${$color ?? 'var(--neonBlue)'}` : 'none'};
   clip-path: polygon(
     12px 0, calc(100% - 12px) 0, 100% 12px,
     100% calc(100% - 12px), calc(100% - 12px) 100%,
@@ -446,14 +447,21 @@ export const HistoryWrapper = styled.div`
   cursor: pointer;
   border-bottom-left-radius: 10px;
 
+  .ProseMirror {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 8;
+  }
+
   &::after {
     content: '';
     position: absolute;
     bottom: 0;
-    left: 0;
     right: 0;
-    height: 50px;
-    background: linear-gradient(transparent, var(--black-blue, #0a0a1a));
+    width: 64px;
+    height: 38px;
+    background: linear-gradient(90deg, transparent, var(--black-blue, #0a0a1a) 55%);
     pointer-events: none;
   }
 `;
@@ -491,6 +499,16 @@ export const HistoryModalSheet = styled.div<{ theme: 'dark' | 'light'; neon: 'on
   @keyframes slideIn {
     from { opacity: 0; transform: translateY(-20px); }
     to { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 767px) {
+    max-width: 100vw;
+    max-height: calc(100vh - 16px);
+    border-radius: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
   }
 `;
 
@@ -632,6 +650,7 @@ export const MetaContent = styled.div`
 `;
 
 export const SectionSpacer = styled.div<{ size?: number }>`
+  width: 100%;
   margin-top: ${({ size }) => (size !== undefined ? `${size}px` : '16px')};
 `;
 
@@ -737,10 +756,10 @@ export const MutedText = styled.div<{ padding?: string }>`
   ${({ padding }) => padding ? `padding: ${padding};` : ''}
 `;
 
-export const BoldLabel = styled.div`
-  color: var(--neonBlue);
+export const BoldLabel = styled.div<{ $color?: string }>`
+  color: ${({ $color }) => $color ?? 'var(--neonBlue)'};
   font-family: "Orbitron", sans-serif;
-  display: inline;
+  display: block;
   font-size: 16px;
 `;
 
@@ -749,18 +768,35 @@ export const InfoSpan = styled.span`
   font-size: 13px;
 `
 
-export const ItemThumb = styled.img`
-  width: 48px;
-  height: 48px;
+export const ItemThumb = styled.img<{ $size?: number; $color?: string; $clearColor?: string }>`
+  width: ${({ $size }) => $size ?? 48}px;
+  height: ${({ $size }) => $size ?? 48}px;
   object-fit: cover;
   border-radius: 0;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  border: 1px solid ${({ $color }) => $color ?? 'var(--neonBlue)'};
+  box-shadow: 0 0 8px ${({ $color }) => $color ?? 'var(--neonBlue)'};
 `;
 
-export const ItemPlaceholder = styled.div`
-  width: 48px;
-  height: 48px;
-  background: rgba(255,255,255,0.04);
+export const ItemPlaceholder = styled.div<{ $size?: number; $color?: string; $clearColor?: string }>`
+  width: ${({ $size }) => $size ?? 48}px;
+  height: ${({ $size }) => $size ?? 48}px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: rgba(0, 0, 20, 0.7);
+  box-sizing: border-box;
+  border: 1px solid ${({ $color }) => $color ?? 'var(--neonBlue)'};
+  color: ${({ $color }) => $color ?? 'var(--neonBlue)'};
+  box-shadow: 0 0 8px ${({ $color }) => $color ?? 'var(--neonBlue)'};
   border-radius: 0;
+
+  svg {
+    font-size: ${({ $size }) => Math.max(24, Math.round(($size ?? 48) * 0.48))}px;
+    color: inherit;
+  }
 `;
 
 export const GalleryToggle = styled.div`
@@ -768,7 +804,7 @@ export const GalleryToggle = styled.div`
 `;
 
 export const GalleryContent = styled.div`
-  padding: 0 12px 12px 12px;
+  padding: 0 32px 24px;
 `;
 
 export const SkillItem = styled.div`
@@ -794,15 +830,30 @@ export const MaskIcon = styled.div<{ src: string; color?: string; size?: number 
   mask-position: center;
 `;
 
-export const ItemRow = styled.div`
+export const ItemRow = styled.div<{ $clickable?: boolean; $color?: string; $clearColor?: string }>`
   display: flex;
+  flex-direction: row;
   gap: 12px;
-  align-items: center;
+  align-items: flex-start;
+  height: 50px;
+  overflow: hidden;
+  box-sizing: border-box;
+  border: 1px solid transparent;
   margin-bottom: 8px;
+  cursor: ${({ $clickable }) => $clickable ? 'pointer' : 'default'};
+  transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+
+  &:hover {
+    border-color: ${({ $color }) => $color ?? 'var(--neonBlue)'};
+    background: rgba(0, 184, 255, 0.08);
+    box-shadow: 0 0 10px ${({ $color }) => $color ?? 'var(--neonBlue)'};
+  }
 `;
 
 export const FlexFill = styled.div`
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
 `;
 
 export const InfoControllers = styled.div`
@@ -934,4 +985,318 @@ export const HexagonValue = styled.div`
   color: var(--clearneonBlue);
   line-height: 1;
   font-family: "Orbitron", sans-serif;
+`;
+
+export const SectionRow = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  width: 100%;
+
+  @media (max-width: 767px) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+`;
+
+export const InventoryList = styled.div`
+  display: flex;
+  flex-direction: column;
+`;
+
+export const ViewMoreButton = styled.button<{ $color: string }>`
+  align-self: center;
+  margin-top: 4px;
+  padding: 6px 10px;
+  border: 0;
+  background: transparent;
+  color: ${({ $color }) => $color};
+  cursor: pointer;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 12px;
+
+  &:hover { text-shadow: 0 0 8px ${({ $color }) => $color}; }
+`;
+
+export const LoadBar = styled.div`
+  flex: 1;
+  height: 8px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.1);
+`;
+
+export const LoadProgress = styled.div<{ $pct: number; $color: string }>`
+  width: ${({ $pct }) => `${Math.max(0, Math.min(100, $pct))}%`};
+  height: 100%;
+  background: ${({ $color }) => $color};
+  box-shadow: 0 0 8px ${({ $color }) => $color};
+  transition: width 250ms ease;
+`;
+
+export const ImplantGrid = styled.div`
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+`;
+
+export const ImplantCard = styled.article`
+  position: relative;
+  height: 48px;
+  overflow: hidden;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  grid-template-rows: min-content min-content;
+  column-gap: 12px;
+  background: rgba(157, 78, 221, 0.08);
+  border: 1px solid var(--neonPurple);
+
+  &::before {
+    content: '';
+    grid-row: 1 / -1;
+    width: 48px;
+    height: 48px;
+    box-sizing: border-box;
+    border: 1px solid var(--neonPurple);
+    box-shadow: 0 0 8px var(--clearneonPurple);
+  }
+
+  ${BoldLabel} {
+    color: var(--neonPurple);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &:hover { box-shadow: 0 0 10px var(--clearneonPurple); }
+`;
+
+export const ImplantMaterial = styled.span`
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: fit-content;
+  padding: 2px 6px;
+  color: var(--clearneonPurple);
+  border: 1px solid var(--neonPurple);
+  font-family: 'Orbitron', sans-serif;
+  font-size: 11px;
+  text-transform: uppercase;
+`;
+
+export const ImplantMods = styled.div`
+  display: none;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  color: var(--lightGrey);
+  font-size: 12px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+
+  span { color: var(--clearneonPurple); }
+`;
+
+export const ContentTabs = styled.div`
+  display: flex;
+  gap: 8px;
+`;
+
+export const ContentTab = styled.button<{ $active: boolean; $color: string }>`
+  padding: 8px 14px;
+  border: 1px solid ${({ $color }) => $color};
+  background: ${({ $active, $color }) => $active ? $color : 'rgba(0, 0, 10, 0.35)'};
+  color: ${({ $active }) => $active ? 'var(--black)' : 'var(--whitesmoke)'};
+  cursor: pointer;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 12px;
+  transition: box-shadow 180ms ease, background 180ms ease;
+
+  &:hover { box-shadow: 0 0 10px ${({ $color }) => $color}; }
+`;
+
+export const SkillGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+
+  @media (max-width: 1080px) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  @media (max-width: 767px) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  @media (max-width: 480px) { grid-template-columns: minmax(0, 1fr); }
+`;
+
+export const NpcSkillCard = styled.article<{ $color: string }>`
+  height: 48px;
+  overflow: hidden;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  grid-template-rows: min-content min-content;
+  column-gap: 12px;
+  border: 1px solid ${({ $color }) => $color};
+  background: rgba(0, 0, 10, 0.42);
+  transition: transform 180ms ease, box-shadow 180ms ease;
+
+  &::before {
+    content: '';
+    grid-row: 1 / -1;
+    width: 48px;
+    height: 48px;
+    box-sizing: border-box;
+    border: 1px solid ${({ $color }) => $color};
+    box-shadow: 0 0 8px ${({ $color }) => $color};
+  }
+
+  ${BoldLabel} {
+    color: ${({ $color }) => $color};
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &:hover {
+    transform: none;
+    box-shadow: 0 0 14px ${({ $color }) => $color};
+  }
+`;
+
+export const AbilityDescription = styled.p`
+  color: var(--whitesmoke);
+  font-size: 13px;
+  line-height: 1.5;
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  white-space: pre-wrap;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+`;
+
+export const AbilityPair = styled(SectionRow)``;
+
+export const AbilityCard = styled.article`
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`;
+
+export const CooldownBar = styled.div`
+  width: 100%;
+  height: 8px;
+  margin-top: auto;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.1);
+`;
+
+export const CooldownFill = styled.div<{ $pct: number }>`
+  width: ${({ $pct }) => `${Math.max(0, Math.min(100, $pct))}%`};
+  height: 100%;
+  background: var(--neonOrange);
+  box-shadow: 0 0 8px var(--clearneonOrange);
+`;
+
+export const ItemDescriptionPreview = styled.div`
+  position: relative;
+  max-height: 24px;
+  overflow: hidden;
+  color: var(--muted, #cfcfcf);
+
+  & > div {
+    display: -webkit-box;
+    margin: 0;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  p {
+    margin: 0;
+  }
+
+  &::after {
+    content: '…';
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    padding-left: 8px;
+    color: var(--whitesmoke);
+    background: transparent;
+    pointer-events: none;
+  }
+`;
+
+export const ItemDescriptionLayout = styled.div`
+  display: flow-root;
+
+  > :first-child {
+    float: right;
+    margin: 0 0 16px 24px;
+  }
+
+  @media (max-width: 767px) {
+    > :first-child {
+      float: none;
+      display: flex;
+      margin: 0 0 16px;
+    }
+  }
+`;
+
+export const ItemDetailsBody = styled.div`
+  min-width: 0;
+`;
+
+export const DetailAttributes = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+`;
+
+export const DetailTextPair = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+
+  @media (max-width: 767px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+`;
+
+export const DetailText = styled.div`
+  min-width: 0;
+  padding: 10px;
+  background: rgba(0, 0, 10, 0.32);
+  border-left: 2px solid var(--neonBlue);
+`;
+
+export const DetailAttribute = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  border-left: 2px solid var(--neonBlue);
+  background: rgba(0, 0, 10, 0.32);
+
+  span { color: var(--muted, #cfcfcf); font-size: 11px; }
+  strong { color: var(--whitesmoke); font-size: 13px; }
+
+  &.detail-special { grid-column: 1 / -1; }
+`;
+
+export const ItemDescriptionImage = styled.img`
+  width: 200px;
+  max-width: 100%;
+  height: auto;
+  max-height: 300px;
+  object-fit: contain;
+  border: 1px solid var(--neonBlue);
+  box-shadow: 0 0 10px var(--clearneonBlue);
+
+  @media (max-width: 767px) {
+    width: 100%;
+    max-height: 240px;
+  }
 `;

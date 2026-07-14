@@ -154,6 +154,7 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
                 onFocus={() => setRaceError(false)}
                 error={raceError}
                 errorMessage={errors.race}
+                required
                 width="100%"
                 disabled={loadingRaces}
               />

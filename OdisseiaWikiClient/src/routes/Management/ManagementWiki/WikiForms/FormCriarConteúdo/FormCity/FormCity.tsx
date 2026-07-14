@@ -129,6 +129,7 @@ export const FormCity = ({ theme, neon, initialCity, onSaveSuccess, contentType 
             width="100%"
             error={!!nomeError}
             errorMessage={nomeError}
+            required
           />
           <TagsSection>
         <InputText
