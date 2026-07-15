@@ -16,6 +16,7 @@ import { atualizarPersonagem, getPersonagemById, getPersonagens, PersonagemPaylo
 import { normalizeToJSONContent, prepareForAPI } from '../../../../../utils/richTextHelpers';
 import { normalizeCharacterStatusExtras } from '../../../../../utils/characterStatus';
 import { useFormCharacter } from '../FormCriarConteúdo/FormCharacter/useFormCharacter';
+import { EditHeader } from './EditFormStyles';
 
 interface NpcCharacterEditProps {
   theme: 'dark' | 'light';
@@ -143,6 +144,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
     setUserName,
     race,
     setRace,
+    handleRaceChange,
     city,
     setCity,
     avatarUrl,
@@ -760,6 +762,19 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
         rightPosition='30px'
       />
 
+      <EditHeader theme={theme} neon={neon}>
+        <h2>Editando: {userName || 'Personagem'}</h2>
+        <CyberButton
+          type="button"
+          onClick={onBack}
+          theme={theme}
+          neon={neon}
+          colorType="secondary"
+          text="Voltar"
+          width="120px"
+        />
+      </EditHeader>
+
       <FormEditController>
         {editStep === 1 && (
           <CharacterSystemForm
@@ -798,12 +813,13 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
 
         {editStep === 2 && (
           <CharacterRoleplayForm
+            raceChangeMode="all"
             theme={theme}
             neon={neon}
             userName={userName}
             setUserName={setUserName}
             race={race}
-            setRace={setRace}
+            setRace={handleRaceChange}
             city={city}
             setCity={setCity}
             selectedRace={selectedRace}
@@ -845,7 +861,6 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
             searchTerm={searchTerm}
             loadingPersonagens={loadingPersonagens}
             searchPersonagens={searchPersonagens}
-            raceChangeMode="current-or-android"
           />
         )}
       </FormEditController>

@@ -20,7 +20,7 @@ const Login = () => {
           <ThemeNeonButtons />
         </HeaderLogo>
         <ContainerContent>
-          <ClipBox theme={theme} neon={neon}>
+          <ClipBox theme={theme} neon={neon} mobileAutoHeight useClip={false}>
             {isRegistering ? (
               <RegisterField theme={theme} neon={neon} onBackToLogin={() => setIsRegistering(false)} />
             ) : (

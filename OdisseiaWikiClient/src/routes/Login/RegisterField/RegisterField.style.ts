@@ -15,6 +15,15 @@ export const Form = styled.form<Props>`
     flex-direction: column;
     align-items: center;
     gap: 8px;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+
+    @media (max-width: 768px) {
+        width: 100%;
+        height: auto;
+        gap: 6px;
+    }
 `;
 
 export const InputsController = styled.div<Props>`
@@ -23,6 +32,12 @@ export const InputsController = styled.div<Props>`
     justify-content: center;
     gap: 25px;
     width: 100%;
+
+    @media (max-width: 768px) {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
 `
 
 export const ContainerInputs = styled.div<Props>`
@@ -31,6 +46,12 @@ export const ContainerInputs = styled.div<Props>`
     display: flex;
     flex-direction: column;
     gap: 15px;
+
+    @media (max-width: 768px) {
+        flex: none;
+        width: 100%;
+        gap: 7px;
+    }
 `
 
 export const ContainerAvatar = styled.div<Props>`
@@ -42,6 +63,23 @@ export const ContainerAvatar = styled.div<Props>`
     justify-content: center;
     gap: 18px;
     height: 100%;
+
+    @media (max-width: 768px) {
+        flex: none;
+        width: 100%;
+        height: auto;
+        gap: 8px;
+
+        > button {
+            width: 72px;
+            height: 72px;
+        }
+
+        > button svg {
+            width: 72px;
+            height: 72px;
+        }
+    }
 `
 
 export const SpanError = styled.span`
@@ -56,4 +94,13 @@ export const ContainerButtons = styled.div<Props>`
     align-items: center;
     justify-content: center;
     gap: 30px;
+
+    @media (max-width: 768px) {
+        gap: 8px;
+        flex-wrap: wrap;
+
+        > div {
+            width: min(100%, 165px) !important;
+        }
+    }
 `

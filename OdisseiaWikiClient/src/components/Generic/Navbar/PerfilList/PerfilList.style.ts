@@ -1,7 +1,12 @@
 import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 
-export const PerfilDropdown = styled.div<{ themeMode?: 'dark' | 'light' }>`
+export const PerfilDropdown = styled.div<{
+  themeMode?: 'dark' | 'light';
+  $mobileLeft?: number;
+  $mobileTop?: number;
+  $mobileAnchorX?: number;
+}>`
   position: absolute;
   top: 50px;
   left: -20px;
@@ -55,14 +60,14 @@ export const PerfilDropdown = styled.div<{ themeMode?: 'dark' | 'light' }>`
   }
 
   @media (max-width: 768px) {
-    position: absolute;
-    top: calc(100% + 8px);
-    left: 50%;
+    position: fixed;
+    top: ${({ $mobileTop }) => `${$mobileTop ?? 62}px`};
+    left: ${({ $mobileLeft }) => `${$mobileLeft ?? 12}px`};
     right: auto;
     width: min(150px, calc(100vw - 24px));
     min-width: 0;
     margin: 0;
-    transform: translateX(-50%);
+    transform: none;
     padding: 7px 0;
     gap: 3px;
     box-sizing: border-box;
@@ -70,7 +75,7 @@ export const PerfilDropdown = styled.div<{ themeMode?: 'dark' | 'light' }>`
 
     &::before {
       top: -10px;
-      left: 50%;
+      left: ${({ $mobileAnchorX }) => `${$mobileAnchorX ?? 75}px`};
       transform: translateX(-50%);
       border-left-width: 8px;
       border-right-width: 8px;
@@ -79,7 +84,7 @@ export const PerfilDropdown = styled.div<{ themeMode?: 'dark' | 'light' }>`
 
     &::after {
       top: -8px;
-      left: 50%;
+      left: ${({ $mobileAnchorX }) => `${$mobileAnchorX ?? 75}px`};
       transform: translateX(-50%);
       border-left-width: 7px;
       border-right-width: 7px;

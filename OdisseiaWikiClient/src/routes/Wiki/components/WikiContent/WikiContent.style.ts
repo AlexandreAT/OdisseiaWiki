@@ -109,8 +109,15 @@ export const PageTitle = styled.h1`
   z-index: 2;
   overflow-wrap: anywhere;
 
-  @media (max-width: 480px) {
-    font-size: 26px;
+  @media (max-width: 768px) {
+    font-size: clamp(20px, 6vw, 28px);
+    line-height: 1.15;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    text-align: center;
+    letter-spacing: 1px;
   }
 `;
 

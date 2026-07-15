@@ -5,12 +5,13 @@ export const SidebarWrapper = styled.aside<{ $expanded: boolean; $headerExpanded
   display: flex;
   flex-direction: column;
   width: ${props => (props.$expanded ? '180px' : '0px')};
-  border-right: 1px solid #333;
-  height: 100%;
-  position: sticky;
-  top: ${props => (props.$headerExpanded ? '156px' : '84px')};
+  border-right: ${props => (props.$expanded ? '1px solid #333' : 'none')};
+  height: auto;
+  min-height: 100%;
+  align-self: stretch;
+  position: relative;
   left: 0;
-  transition: width 0.3s ease-in-out, top 0.3s ease-in-out;
+  transition: width 0.3s ease-in-out;
   z-index: 10;
   background-color: rgba(0, 8, 18, 0.48);
   backdrop-filter: blur(12px);
@@ -20,8 +21,6 @@ export const SidebarWrapper = styled.aside<{ $expanded: boolean; $headerExpanded
 
   @media (max-width: 1100px) {
     width: ${props => (props.$expanded ? '110px' : '0px')};
-    top: ${props => (props.$headerExpanded ? '131px' : '66px')};
-
   }
 
   @media (max-width: 768px) {
@@ -30,6 +29,8 @@ export const SidebarWrapper = styled.aside<{ $expanded: boolean; $headerExpanded
     height: ${props => (props.$headerExpanded ? 'calc(100dvh - 115px)' : 'calc(100dvh - 54px)')};
     top: ${props => (props.$headerExpanded ? '115px' : '54px')};
     max-height: none;
+    min-height: 0;
+    align-self: auto;
     overflow: visible;
     border-right: ${props => (props.$expanded ? '1px solid #333' : 'none')};
     background-color: rgba(0, 8, 18, 0.97);
@@ -233,5 +234,27 @@ export const ToggleSidebarButton = styled.button<{ $isExpanded: boolean }>`
     border-radius: 4px;
     background-color: rgba(0, 8, 18, 0.96);
     z-index: 45;
+  }
+`;
+
+export const SidebarInner = styled.div<{ $headerExpanded: boolean }>`
+  position: sticky;
+  top: ${props => (props.$headerExpanded ? '157px' : '85px')};
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: ${props => (props.$headerExpanded ? 'calc(100vh - 157px)' : 'calc(100vh - 85px)')};
+  min-width: 0;
+  transition: top 0.3s ease-in-out, height 0.3s ease-in-out;
+
+  @media (max-width: 1100px) {
+    top: ${props => (props.$headerExpanded ? '131px' : '66px')};
+    height: ${props => (props.$headerExpanded ? 'calc(100vh - 131px)' : 'calc(100vh - 66px)')};
+  }
+
+  @media (max-width: 768px) {
+    position: relative;
+    top: 0;
+    height: 100%;
   }
 `;

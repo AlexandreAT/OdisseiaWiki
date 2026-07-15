@@ -87,20 +87,23 @@ export const ContentController = styled.div<{ collapsed?: boolean }>`
 
   @media (max-width: 768px) {
     grid-template-columns: ${({ collapsed }) => collapsed
-      ? 'repeat(2, 60px)'
+      ? 'repeat(2, 46px)'
       : 'minmax(0, 1fr)'};
     gap: ${({ collapsed }) => collapsed ? '12px' : '18px'};
     padding: ${({ collapsed }) => collapsed ? '0' : '12px 8px 30px'};
+    width: ${({ collapsed }) => collapsed ? '100%' : 'min(100%, 340px)'};
+    justify-items: center;
 
     > div {
-      width: ${({ collapsed }) => collapsed ? '60px' : 'min(100%, 300px)'};
-      height: ${({ collapsed }) => collapsed ? '60px' : '170px'};
+      width: ${({ collapsed }) => collapsed ? '46px' : 'min(100%, 300px)'};
+      height: ${({ collapsed }) => collapsed ? '46px' : '170px'};
     }
   }
 `
 
-export const Content = styled.div`
+export const Content = styled.div<{ collapsed?: boolean }>`
     display: row;
+    position: ${({ collapsed }) => collapsed ? 'static' : 'relative'};
     align-items: center;
     justify-content: center;
     width: 350px;
@@ -117,6 +120,39 @@ export const Content = styled.div`
     }
 `
 
+export const DisabledFeatureOverlay = styled.div`
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.48);
+  cursor: not-allowed;
+`;
+
+export const ProductionBanner = styled.div`
+  width: 145%;
+  padding: 10px 12px;
+  transform: rotate(-12deg);
+  background: repeating-linear-gradient(
+    135deg,
+    var(--neonYellow) 0 20px,
+    var(--deepneonYellow) 20px 30px
+  );
+  color: var(--black) !important;
+  font-family: 'DO Futuristic', sans-serif;
+  font-size: clamp(12px, 2vw, 18px);
+  font-weight: 900;
+  letter-spacing: 2px;
+  text-align: center;
+  text-shadow: none;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.45);
+  box-sizing: border-box;
+`;
+
 export const ClipButton = styled.button<Props>`
     position: relative;
     width: 100%;
@@ -129,6 +165,10 @@ export const ClipButton = styled.button<Props>`
     border-radius: 10px;
     border: 2px solid var(--grey);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+
+    &:disabled {
+        cursor: not-allowed;
+    }
 
     &::before {
         content: '';
@@ -215,6 +255,13 @@ export const ClipButtonAnimated = styled(ClipButton)<SmallButtonProps>`
   z-index: 5;
   transition: all 0.5s ease;
 
+  &:disabled {
+    ${({ collapsed }) => collapsed && `
+      opacity: 0.52;
+      filter: grayscale(0.7);
+    `}
+  }
+
   ${({ collapsed, index }) =>
     collapsed &&
     (index === 0
@@ -260,4 +307,51 @@ export const ClipButtonAnimated = styled(ClipButton)<SmallButtonProps>`
             : 'var(--clearneonYellow)'
         };
     `}
+
+  @media (max-width: 768px) {
+    ${({ collapsed }) => collapsed && `
+      width: 46px;
+      height: 46px;
+
+      span {
+        font-size: 0.62rem;
+      }
+    `}
+
+    ${({ collapsed, index }) => collapsed && index === 0 && `
+      display: none;
+    `}
+  }
+`;
+
+export const MobileCollapsedBackButton = styled.button<Props>`
+  display: none;
+
+  @media (max-width: 768px) {
+    position: absolute;
+    top: 80px;
+    left: 20px;
+    z-index: 6;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    padding: 0;
+    border: 2px solid ${({ theme, neon }) =>
+      theme === 'dark'
+        ? neon === 'on' ? 'var(--clearneonBlue)' : 'var(--neonBlue)'
+        : neon === 'on' ? 'var(--clearneonViolet)' : 'var(--neonViolet)'};
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.45);
+    color: ${({ theme, neon }) =>
+      theme === 'dark'
+        ? neon === 'on' ? 'var(--clearneonBlue)' : 'var(--neonBlue)'
+        : neon === 'on' ? 'var(--clearneonViolet)' : 'var(--neonViolet)'};
+    cursor: pointer;
+
+    svg {
+      font-size: 22px;
+    }
+  }
 `;

@@ -1,4 +1,13 @@
-import { ContainerBanner, BannerEfect, BannerContent, BannerText, Title, Paragraph } from './Banner.style';
+import {
+    ContainerBanner,
+    BannerBackground,
+    BannerEfect,
+    BannerContent,
+    BannerRevealItem,
+    BannerText,
+    Title,
+    Paragraph,
+} from './Banner.style';
 import { useSelector } from 'react-redux'
 import { TextScramble } from '../TextScramble';
 import { OdisseiaAnimatedTitle } from '../OdisseiaAnimatedTitle';
@@ -21,22 +30,27 @@ export const Banner = ({
 
     return (
         <ContainerBanner theme={theme} neon={neon} image={imageSrc}>
+            <BannerBackground theme={theme} neon={neon} image={imageSrc} />
             <BannerEfect theme={theme} neon={neon}/>
             <BannerContent theme={theme} neon={neon}>
-                {title === 'Odisseia' ? (
-                    <OdisseiaAnimatedTitle theme={theme} neon={neon} />
-                ) : (
-                    <Title theme={theme} neon={neon}>{title}</Title>
-                )}
+                <BannerRevealItem $delay={350}>
+                    {title === 'Odisseia' ? (
+                        <OdisseiaAnimatedTitle theme={theme} neon={neon} />
+                    ) : (
+                        <Title theme={theme} neon={neon}>{title}</Title>
+                    )}
+                </BannerRevealItem>
                 <BannerText>
                     {paragraph.map((text, index) => (
-                        <Paragraph key={index} theme={theme} neon={neon}>
-                            <TextScramble
-                                text={text}
-                                duration={textAnimationDuration}
-                                startDelay={index * 350}
-                            />
-                        </Paragraph>
+                        <BannerRevealItem key={index} $delay={850 + index * 500}>
+                            <Paragraph theme={theme} neon={neon}>
+                                <TextScramble
+                                    text={text}
+                                    duration={textAnimationDuration}
+                                    startDelay={index * 350}
+                                />
+                            </Paragraph>
+                        </BannerRevealItem>
                     ))}
                 </BannerText>
             </BannerContent>

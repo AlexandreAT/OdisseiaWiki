@@ -43,10 +43,13 @@ export const CardContainer = styled.div<StyledCardProps>`
 
   @media (max-width: 768px) {
     width: 100%;
+    max-width: none;
+    justify-self: stretch;
     min-height: 0;
     max-height: none;
-    padding: 10px;
-    gap: 8px;
+    padding: 6px;
+    gap: 5px;
+    border-width: 1px;
   }
 
   &:hover {
@@ -69,6 +72,11 @@ export const CardHeader = styled.div`
   width: 100%;
   min-width: 0;
   flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    align-items: flex-start;
+    gap: 4px;
+  }
 `;
 
 export const CardImage = styled.div<{ imageUrl?: string }>`
@@ -85,7 +93,8 @@ export const CardImage = styled.div<{ imageUrl?: string }>`
   flex-shrink: 0;
 
   @media (max-width: 768px) {
-    height: 96px;
+    height: auto;
+    aspect-ratio: 4 / 3;
   }
 `;
 
@@ -100,9 +109,14 @@ export const CardTitle = styled.h3<StyledCardProps>`
   min-width: 0;
 
   @media (max-width: 768px) {
-    font-size: 15px;
+    display: -webkit-box;
+    flex-basis: 100%;
+    font-size: 11px;
+    line-height: 1.2;
     white-space: normal;
     overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
   }
   
   color: ${({ theme, neon }) =>
@@ -135,9 +149,11 @@ export const EntityBadge = styled.span<StyledCardProps>`
     theme === 'light' ? 'var(--white)' : 'var(--black)'};
 
   @media (max-width: 768px) {
-    padding: 3px 7px;
-    font-size: 10px;
+    max-width: 100%;
+    padding: 2px 4px;
+    font-size: 8px;
     white-space: normal;
+    overflow-wrap: anywhere;
   }
 `;
 
@@ -147,6 +163,10 @@ export const CardContent = styled.div`
   gap: 8px;
   flex: 1;
   overflow: hidden;
+
+  @media (max-width: 768px) {
+    gap: 4px;
+  }
 `;
 
 export const TagsContainer = styled.div`
@@ -155,6 +175,11 @@ export const TagsContainer = styled.div`
   gap: 6px;
   max-height: 60px;
   overflow-y: auto;
+
+  @media (max-width: 768px) {
+    gap: 3px;
+    max-height: 38px;
+  }
   
   &::-webkit-scrollbar {
     width: 4px;
@@ -181,6 +206,14 @@ export const Tag = styled.span<StyledCardProps>`
   
   color: ${({ theme }) =>
     theme === 'light' ? 'var(--black)' : 'var(--whitesmoke)'};
+
+  @media (max-width: 768px) {
+    max-width: 100%;
+    padding: 2px 4px;
+    overflow: hidden;
+    font-size: 8px;
+    text-overflow: ellipsis;
+  }
 `;
 
 export const VisibilityIndicator = styled.div<StyledCardProps & { visivel: boolean }>`
@@ -196,6 +229,13 @@ export const VisibilityIndicator = styled.div<StyledCardProps & { visivel: boole
   
   box-shadow: 0 0 6px ${({ visivel }) =>
     visivel ? 'var(--success)' : 'var(--error)'};
+
+  @media (max-width: 768px) {
+    top: 6px;
+    right: 6px;
+    width: 8px;
+    height: 8px;
+  }
 `;
 
 export const CardActions = styled.div`
@@ -206,7 +246,7 @@ export const CardActions = styled.div`
   flex-wrap: wrap;
 
   @media (max-width: 768px) {
-    gap: 6px;
+    gap: 4px;
   }
 `;
 
@@ -233,8 +273,9 @@ export const ActionButton = styled.button<StyledCardProps>`
     theme === 'light' ? 'var(--white)' : 'var(--black)'};
 
   @media (max-width: 768px) {
-    padding: 6px 8px;
-    font-size: 12px;
+    min-width: 0;
+    padding: 4px 3px;
+    font-size: 9px;
   }
 
   &:hover {
@@ -255,4 +296,13 @@ export const InfoText = styled.p<StyledCardProps>`
   
   color: ${({ theme }) =>
     theme === 'light' ? 'var(--darkgray)' : 'var(--lightgray)'};
+
+  @media (max-width: 768px) {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 9px;
+    line-height: 1.25;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
 `;

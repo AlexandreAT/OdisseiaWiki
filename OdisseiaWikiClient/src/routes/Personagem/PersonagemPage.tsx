@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { usePersonagem } from './usePersonagem';
-import { PageContainer, TopSection, BottomSection, AvatarWrapper, MetaRow, Sections, CardContent, SubHeading, InfoList, InfoItem, MetaContent, SectionSpacer, AvatarDivController, SatusDivController, StatusList, StatusDiv, HeaderStatusController, StatusController, StatusHeader, StatusBarWrapper, StatusBarFill, InfoControllers, TitleDiv, TagItem, TagList, RelatedLink, HistoryWrapper, HistoryModalOverlay, HistoryModalSheet, HistoryModalHeader, HistoryModalTitle, HistoryModalClose, HistoryModalContent, InfoSpan, BottomInfoLeft, BottomInfoRight, StoryWithImage, StoryImage, HudCornerEl, HudTopLine, HudBottomLine, HudLeftLine, HudRightLine, StatusTopLine, StatusBottomLine, StatusLeftLine, StatusRightLine, BackgroundVideoContainer, BackgroundVideo, BackgroundOverlay, HexagonHud, HexagonBackground, HexagonBorder, HexagonContent, HexagonValue, PageController, SectionRow, InventoryList, LoadBar, LoadProgress, ImplantGrid, ImplantMods, SkillGrid, AbilityDescription, AbilityPair, AbilityCard, CooldownBar, CooldownFill, ItemDescriptionPreview, ItemDescriptionLayout, ItemDetailsBody, ViewMoreButton, DetailAttributes, DetailAttribute, DetailTextPair, DetailText } from './PersonagemPage.style';
+import { PageContainer, TopSection, BottomSection, AvatarWrapper, MetaRow, Sections, CardContent, InfoList, InfoItem, MetaContent, SectionSpacer, AvatarDivController, SatusDivController, StatusList, StatusDiv, HeaderStatusController, StatusController, StatusHeader, StatusBarWrapper, StatusBarFill, InfoControllers, TitleDiv, TagItem, TagList, RelatedLink, HistoryWrapper, HistoryModalOverlay, HistoryModalSheet, HistoryModalHeader, HistoryModalTitle, HistoryModalClose, HistoryModalContent, InfoSpan, BottomInfoLeft, BottomInfoRight, StoryWithImage, StoryImage, HudCornerEl, HudTopLine, HudBottomLine, HudLeftLine, HudRightLine, StatusTopLine, StatusBottomLine, StatusLeftLine, StatusRightLine, BackgroundVideoContainer, BackgroundVideo, BackgroundOverlay, HexagonHud, HexagonBackground, HexagonBorder, HexagonContent, HexagonValue, PageController, SectionRow, InventoryList, LoadBar, LoadProgress, ImplantGrid, ImplantMods, SkillGrid, AbilityDescription, AbilityPair, AbilityCard, CooldownBar, CooldownFill, ItemDescriptionPreview, ItemDescriptionLayout, ItemDetailsBody, ViewMoreButton, DetailAttributes, DetailAttribute, DetailTextPair, DetailText, ItemDescriptionImage } from './PersonagemPage.style';
 import { PersonagemRichText, FlexRow, MutedText, BoldLabel, ItemThumb, ItemPlaceholder, GalleryToggle, GalleryContent, MaskIcon, ItemRow, FlexFill } from './PersonagemPage.style';
 import glassHeart from '../../assets/svg/glass-heart.svg';
 import rollingEnergy from '../../assets/svg/rolling-energy.svg';
@@ -33,6 +33,8 @@ import { getItemImage } from '../../utils/getItemImage';
 import { ColorScheme, getColorVars } from '../../utils/getColorVars';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import { ListModal } from '../../components/Generic/ListModal';
+import { BiChevronDown } from 'react-icons/bi';
+import { DEFAULT_MAX_CHARACTER_LEVEL, getDefaultXpRequiredForLevel } from '../../utils/characterProgression';
 
 const detailLabels: Record<string, string> = {
   curta: 'Dano Curto',
@@ -278,6 +280,13 @@ const PersonagemPage: React.FC = () => {
   if (!personagem) return <div>Personagem não encontrado</div>;
 
   const nome = getField(personagem, ['nome', 'Nome']) || 'Sem nome';
+  const currentLevel = Math.max(1, Math.trunc(Number((personagem as any)?.statusJson?.nivel) || 1));
+  const currentXp = Math.max(0, Number((personagem as any)?.statusJson?.xp) || 0);
+  const isMaximumLevel = currentLevel >= DEFAULT_MAX_CHARACTER_LEVEL;
+  const xpRequiredForNextLevel = getDefaultXpRequiredForLevel(currentLevel);
+  const xpPercentage = isMaximumLevel
+    ? 100
+    : Math.round((currentXp / xpRequiredForNextLevel) * 100);
   const imagem = getField(personagem, ['imagem', 'Imagem', 'imagemUrl', 'ImagemUrl']) as string | undefined;
   const historia = getField(personagem, ['historia', 'Historia']) as any | undefined;
   const alinhamentoRaw = getField(personagem, ['alinhamento', 'Alinhamento', 'alignment']);
@@ -436,7 +445,7 @@ const PersonagemPage: React.FC = () => {
                                   <div>
                                     <BoldLabel>Vida</BoldLabel>
                                     <MutedText>{(personagem as any)?.statusJson?.status?.vida ?? '—'} / {(personagem as any)?.statusJson?.status?.vidaMaxima ?? '—'}</MutedText>
-                                    <StatusBarWrapper>
+                                    <StatusBarWrapper $color="var(--neonRed)">
                                       <StatusBarFill $color={'var(--neonRed)'} $pct={Math.round(((Number((personagem as any)?.statusJson?.status?.vida) || 0) / (Number((personagem as any)?.statusJson?.status?.vidaMaxima) || 1)) * 100)} />
                                     </StatusBarWrapper>
                                   </div>
@@ -452,7 +461,7 @@ const PersonagemPage: React.FC = () => {
                                   <div>
                                     <BoldLabel>Mana</BoldLabel>
                                     <MutedText>{(personagem as any)?.statusJson?.status?.mana ?? '—'} / {(personagem as any)?.statusJson?.status?.manaMaxima ?? '—'}</MutedText>
-                                    <StatusBarWrapper>
+                                    <StatusBarWrapper $color="var(--neonBlue)">
                                       <StatusBarFill $color={'var(--neonBlue)'} $pct={Math.round(((Number((personagem as any)?.statusJson?.status?.mana) || 0) / (Number((personagem as any)?.statusJson?.status?.manaMaxima) || 1)) * 100)} />
                                     </StatusBarWrapper>
                                   </div>
@@ -471,7 +480,7 @@ const PersonagemPage: React.FC = () => {
                                   <div>
                                     <BoldLabel>Estamina</BoldLabel>
                                     <MutedText>{(personagem as any)?.statusJson?.status?.estamina ?? '—'} / {(personagem as any)?.statusJson?.status?.estaminaMaxima ?? '—'}</MutedText>
-                                    <StatusBarWrapper>
+                                    <StatusBarWrapper $color="var(--neonGreen)">
                                       <StatusBarFill $color={'var(--neonGreen)'} $pct={Math.round(((Number((personagem as any)?.statusJson?.status?.estamina) || 0) / (Number((personagem as any)?.statusJson?.status?.estaminaMaxima) || 1)) * 100)} />
                                     </StatusBarWrapper>
                                   </div>
@@ -486,9 +495,9 @@ const PersonagemPage: React.FC = () => {
                                   <MaskIcon src={upgrade} color={'var(--neonYellow)'} size={64} />
                                   <div>
                                     <BoldLabel>Xp</BoldLabel>
-                                    <MutedText>{(personagem as any)?.statusJson?.nivel ?? (personagem as any)?.statusJson?.nivel ?? '—'} / {(personagem as any)?.statusJson?.xp ?? '—'}</MutedText>
-                                    <StatusBarWrapper>
-                                      <StatusBarFill $color={'var(--neonYellow)'} $pct={Math.round(((Number((personagem as any)?.statusJson?.xp) || 0) / (Number(((personagem as any)?.statusJson?.nivel) || 1)) * 100))} />
+                                    <MutedText>{isMaximumLevel ? `Nível máximo · ${currentXp} XP` : `${currentXp} / ${xpRequiredForNextLevel}`}</MutedText>
+                                    <StatusBarWrapper $color="var(--neonYellow)">
+                                      <StatusBarFill $color={'var(--neonYellow)'} $pct={xpPercentage} />
                                     </StatusBarWrapper>
                                   </div>
                                 </StatusDiv>
@@ -498,7 +507,7 @@ const PersonagemPage: React.FC = () => {
                           <HexagonBackground />
                           <HexagonContent>
                             <BoldLabel>Nível</BoldLabel>
-                            <HexagonValue>{(personagem as any)?.statusJson?.nivel ?? '—'}</HexagonValue>
+                            <HexagonValue>{currentLevel}</HexagonValue>
                           </HexagonContent>
                           <HexagonBorder $neon={neon === 'on'} />
                         </HexagonHud>
@@ -657,12 +666,10 @@ const PersonagemPage: React.FC = () => {
                 </HistoryModalClose>
               </HistoryModalHeader>
               <HistoryModalContent theme={theme} neon={neon}>
-                <ItemDescriptionLayout $withoutMedia={isSelectedAbility}>
-                  {!isSelectedAbility && (selectedInventoryItemImage ? (
-                    <ItemThumb $size={200} src={normalizeImagePath(selectedInventoryItemImage)} alt={selectedInventoryItem.nome} />
-                  ) : (
-                    <ItemPlaceholder $size={200} aria-label="Item sem imagem"><Inventory2OutlinedIcon /></ItemPlaceholder>
-                  ))}
+                <ItemDescriptionLayout $withoutMedia={isSelectedAbility || !selectedInventoryItemImage}>
+                  {!isSelectedAbility && selectedInventoryItemImage && (
+                    <ItemDescriptionImage src={normalizeImagePath(selectedInventoryItemImage)} alt={selectedInventoryItem.nome} />
+                  )}
                   <ItemDetailsBody>
                     {selectedDescription && <div className="ProseMirror"><RichTextDisplay content={selectedDescription} /></div>}
                     {isSelectedAbility && selectedEffect && <DetailText><BoldLabel>EFEITO</BoldLabel><RichTextDisplay content={selectedEffect} /></DetailText>}
@@ -729,8 +736,15 @@ const PersonagemPage: React.FC = () => {
         <ScrollRevealBlock variant="personagemCard" threshold={0.4}>
           <SectionSpacer>
             <HudContentSection title="GALERIA" theme={theme} neon={neon} color="var(--neonBlue)" clearColor="var(--clearneonBlue)">
-              <GalleryToggle onClick={() => setGalleryOpen((isOpen) => !isOpen)}>
-                <SubHeading>{galleryOpen ? 'GALERIA ▾' : 'GALERIA ▸'}</SubHeading>
+              <GalleryToggle
+                type="button"
+                onClick={() => setGalleryOpen((isOpen) => !isOpen)}
+                aria-expanded={galleryOpen}
+                aria-label={galleryOpen ? 'Recolher galeria' : 'Expandir galeria'}
+                title={galleryOpen ? 'Recolher galeria' : 'Expandir galeria'}
+              >
+                <span>{galleryOpen ? 'Ocultar' : 'Mostrar'}</span>
+                <BiChevronDown />
               </GalleryToggle>
               {galleryOpen && (
                 <GalleryContent>

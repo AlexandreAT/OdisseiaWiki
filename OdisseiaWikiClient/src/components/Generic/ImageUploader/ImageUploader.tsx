@@ -24,6 +24,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   onCancel,
   accept = 'image/*',
   label,
+  mobileSize = 'compact',
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [imageUrl, setImageUrl] = useState<string | undefined>(initialImage);
@@ -134,6 +135,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         hasImage={!!imageUrl}
         aspectRatio={getAspectRatio()}
         shape={cropPreset.shape}
+        $mobileSize={mobileSize}
         onClick={handleContainerClick}
       >
         {imageUrl ? (

@@ -31,6 +31,23 @@ const TextContainer = styled(motion.div)`
   max-width: 80%;
   line-height: 1.4;
   overflow: hidden;
+
+  @media (max-width: 1100px) {
+    font-size: clamp(1.75rem, 4vw, 2.15rem) !important;
+    letter-spacing: 2px;
+    padding: 24px 32px;
+  }
+
+  @media (max-width: 768px) {
+    width: calc(100% - 32px);
+    max-width: none;
+    font-size: clamp(1.25rem, 6vw, 1.65rem) !important;
+    line-height: 1.25;
+    letter-spacing: 1px;
+    padding: 16px;
+    box-sizing: border-box;
+    overflow-wrap: anywhere;
+  }
 `;
 
 const GradientBackground = styled.div<ContainerProps>`
@@ -56,6 +73,10 @@ const TextContent = styled.div`
   z-index: 1;
   font-family: 'DO Futuristic', sans-serif !important;
   font-size: 2.5rem !important;
+
+  @media (max-width: 1100px) {
+    font-size: inherit !important;
+  }
 `;
 
 export const TypedText: React.FC<TypedTextProps> = ({ 

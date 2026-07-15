@@ -31,7 +31,10 @@ export const GalleryGrid = styled.div`
   justify-content: flex-start;
   
   @media (max-width: 768px) {
-    gap: 12px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    align-items: start;
   }
 `;
 
@@ -48,6 +51,18 @@ export const GalleryImageContainer = styled.div<{ shape?: 'square' | 'circle' | 
   align-items: center;
   justify-content: center;
 
+  @media (max-width: 768px) {
+    width: 100%;
+    max-width: none;
+    height: auto;
+    max-height: none;
+    aspect-ratio: 1;
+
+    img {
+      object-fit: cover;
+    }
+  }
+
   &:hover {
     border-color: var(--neonBlue);
     box-shadow: 0 0 10px rgba(0, 200, 255, 0.3);
@@ -58,6 +73,12 @@ export const GalleryImageContainer = styled.div<{ shape?: 'square' | 'circle' | 
     height: 100%;
     object-fit: contain;
     object-position: center;
+  }
+
+  @media (max-width: 768px) {
+    img {
+      object-fit: cover;
+    }
   }
 `;
 
@@ -99,6 +120,15 @@ export const RemoveImageButton = styled.button<Props>`
     width: 100%;
     height: 100%;
   }
+
+  @media (max-width: 768px) {
+    top: 3px;
+    right: 3px;
+    width: 18px;
+    height: 18px;
+    font-size: 15px;
+    opacity: 1;
+  }
 `;
 
 export const AddGalleryImageButton = styled.button<Props>`
@@ -116,6 +146,21 @@ export const AddGalleryImageButton = styled.button<Props>`
   cursor: pointer;
   transition: all 0.3s ease;
   font-size: 14px;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    max-width: none;
+    height: auto;
+    max-height: none;
+    aspect-ratio: 1;
+    gap: 4px;
+    font-size: 10px;
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+  }
 
   svg {
     width: 32px;
@@ -137,6 +182,13 @@ export const AddGalleryImageButton = styled.button<Props>`
 
   &:active {
     transform: scale(0.98);
+  }
+
+  @media (max-width: 768px) {
+    svg {
+      width: 20px;
+      height: 20px;
+    }
   }
 `;
 

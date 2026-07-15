@@ -143,6 +143,7 @@ export const ImageBlockEditor: React.FC<ImageBlockEditorProps> = ({
           onChange={handleTextoChange}
           minHeight="150px"
           placeholder="Escreva o texto que aparecerá ao lado da imagem..."
+          expandable
         />
       </RichTextSection>
 

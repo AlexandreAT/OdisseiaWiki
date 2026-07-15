@@ -2,7 +2,7 @@ import React from 'react'
 import { Item } from '../../../../../../models/Itens';
 import { Skills } from '../../../../../../models/Skills';
 import { Magia } from '../../../../../../models/Magias';
-import { ExpandHistoryButton, FormHeader, GridInputs, HeaderAvatar, HeaderInputs, HistoryEditorHeader, RelatedCharactersSection, SectionStatus, SectionTable, SectionTitle, TableTitle } from '../FormUserCharacter.style';
+import { FormHeader, GridInputs, HeaderAvatar, HeaderInputs, RelatedCharactersSection, SectionStatus, SectionTable, SectionTitle, TableTitle } from '../FormUserCharacter.style';
 import { InputText } from '../../../../../../components/Generic/InputText/InputText';
 import { Select } from '../../../../../../components/Generic/Select/Select';
 import { ImageUploader } from '../../../../../../components/Generic/ImageUploader/ImageUploader';
@@ -16,8 +16,6 @@ import { BiSearchAlt } from 'react-icons/bi';
 import toast from 'react-hot-toast';
 import { HorizontalList } from '../../../../../../components/Generic/HorizontalList/HorizontalList';
 import { DataTable } from '../../../../../../components/Generic/DataTable/DataTable';
-import RichTextModal from '../../../../../../components/Generic/RichTextModal';
-import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import { TRAITS_OPTIONS, ALIGNMENT_OPTIONS } from '../../constants';
 import { BasicInfoFormProps } from './BasicInfoForm.type';
 import { getInventarioItems, getProtesesItems, getProtesesTableItems, replaceItemSection } from '../../../../../../utils/itemInventorySections';
@@ -81,7 +79,6 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
   skillsColumns,
   magiasColumns,
 }) => {
-  const [historyModalOpen, setHistoryModalOpen] = React.useState(false);
   const inventario = getInventarioItems(itens);
   const updateInventario = (updatedItems: Item[]) => setItens(replaceItemSection(itens, 'inventario', updatedItems));
   const updateProteses = (updatedItems: Item[]) => setItens(
@@ -149,6 +146,7 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
             initialImage={avatarUrl}
             onImageCropped={handleCharacterAvatarUpload}
             cropPreset={characterAvatarCropPreset}
+            mobileSize="main"
           />
         </HeaderAvatar>
       </FormHeader>
@@ -206,17 +204,6 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
         </SectionStatus>
       )}
 
-      <HistoryEditorHeader>
-        <ExpandHistoryButton
-          type="button"
-          theme={theme}
-          neon={neon}
-          onClick={() => setHistoryModalOpen(true)}
-          title="Expandir história"
-        >
-          <OpenInFullIcon className="icon" />
-        </ExpandHistoryButton>
-      </HistoryEditorHeader>
       <RichTextEditor
         theme={theme}
         neon={neon}
@@ -225,16 +212,7 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
         onChange={setHistory}
         minHeight="150px"
         placeholder="Escreva a história do personagem..."
-      />
-      <RichTextModal
-        isOpen={historyModalOpen}
-        onClose={() => setHistoryModalOpen(false)}
-        onSave={setHistory}
-        initialContent={history}
-        title="Editar História"
-        placeholder="Escreva a história do personagem..."
-        theme={theme}
-        neon={neon}
+        expandable
       />
 
       <GridInputs>

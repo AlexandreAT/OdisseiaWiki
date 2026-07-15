@@ -143,8 +143,19 @@ export const DataTableContainer = styled.div<Props>`
   @media (max-width: 768px) {
     && thead .MuiTableRow-root .MuiTableCell-head,
     && tbody .MuiTableCell-body {
-      padding: 8px;
+      padding: 5px 6px;
       white-space: nowrap;
+    }
+
+    && thead .MuiTableRow-root .MuiTableCell-head .tss-1akey0g-MUIDataTableHeadCell-data,
+    && .MuiInputBase-input {
+      font-size: 11px;
+    }
+
+    && .MuiIconButton-root {
+      width: 30px;
+      height: 30px;
+      padding: 5px;
     }
   }
 `;
@@ -190,7 +201,7 @@ export const TableScrollContainer = styled.div`
 
   @media (max-width: 480px) {
     .MuiTable-root {
-      min-width: 680px;
+      min-width: 620px;
     }
   }
 `;

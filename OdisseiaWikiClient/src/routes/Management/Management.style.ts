@@ -43,14 +43,20 @@ export const OptionsController = styled.div<OptionsControllerProps>`
 
     @media (max-width: 1100px) {
         width: ${props => props.expanded ? '88px' : '0px'};
+        z-index: 30;
     }
 
     @media (max-width: 768px) {
         top: 54px;
-        width: ${props => props.expanded ? 'min(64vw, 200px)' : '0px'};
+        width: ${props => props.expanded ? 'min(42vw, 150px)' : '0px'};
+        max-width: 150px;
+        min-width: 0;
         height: calc(100dvh - 54px);
         z-index: 30;
-        background-color: rgba(0, 8, 18, 0.97);
+        overflow-y: auto;
+        background: rgba(0, 0, 15, 0.72);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
         box-shadow: ${props => props.expanded ? '8px 0 24px rgba(0, 0, 0, 0.45)' : 'none'};
     }
 `
@@ -93,10 +99,11 @@ export const Options = styled.div<Props>`
     }
 
     @media (max-width: 768px) {
-        padding-top: 48px;
+        padding: 48px 4px 12px;
         gap: 4px;
         font-size: 11px;
         align-items: stretch;
+        background: rgba(0, 0, 15, 0.72);
     }
 `
 
@@ -114,7 +121,7 @@ export const MainContent = styled.div<MainContentProps>`
     box-sizing: border-box;
 
     @media (max-width: 1100px) {
-        margin-left: ${props => props.sidebarExpanded ? '88px' : '0px'};
+        margin-left: 0;
         padding: 16px;
     }
 
@@ -272,11 +279,12 @@ export const ToggleSidebarButton = styled.button<ToggleSidebarButtonProps>`
         left: ${props => props.expanded ? '88px' : '0px'};
         width: 34px;
         height: 34px;
+        z-index: 35;
     }
 
     @media (max-width: 768px) {
         top: 70px;
-        left: ${props => props.expanded ? 'min(64vw, 200px)' : '0px'};
+        left: ${props => props.expanded ? 'min(42vw, 150px)' : '0px'};
         width: 32px;
         height: 32px;
         border-left: 1px solid ${({ theme, neon }) => neon === 'on'

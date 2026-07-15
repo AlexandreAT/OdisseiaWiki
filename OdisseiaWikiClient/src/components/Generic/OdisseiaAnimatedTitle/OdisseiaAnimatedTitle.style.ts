@@ -31,8 +31,8 @@ const getTitleColor = ({ theme, neon }: TitleStyleProps) => {
 };
 
 export const AnimatedTitleSvg = styled.svg<TitleStyleProps>`
-  width: 240px;
-  height: 38px;
+  width: clamp(240px, 22vw, 340px);
+  height: clamp(38px, 3.5vw, 54px);
   display: block;
   overflow: visible;
 
@@ -62,13 +62,13 @@ export const AnimatedTitleSvg = styled.svg<TitleStyleProps>`
   }
 
   @media (max-width: 768px) {
-    width: 200px;
-    height: 32px;
+    width: 220px;
+    height: 35px;
   }
 
   @media (max-width: 480px) {
-    width: 160px;
-    height: 26px;
+    width: 190px;
+    height: 30px;
   }
 
   @media (prefers-reduced-motion: reduce) {

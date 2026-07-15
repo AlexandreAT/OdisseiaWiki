@@ -36,7 +36,7 @@ export const Main = styled.div`
     }
 `
 
-export const Title = styled.h2<Props>`
+export const Title = styled.h2<Props & { $editMode?: boolean }>`
     font-family: 'DO Futuristic', sans-serif;
     font-weight: 100;
     letter-spacing: 3px;
@@ -62,6 +62,10 @@ export const Title = styled.h2<Props>`
                 text-shadow: 1.5px 1.5px 5px var(--clearneonPink);
             `
     };
+
+    @media (max-width: 768px) {
+      ${({ $editMode }) => $editMode && `margin-top: 14px;`}
+    }
     
 `
 
@@ -72,6 +76,13 @@ export const ListController = styled.div`
   justify-content: center;
   gap: 30px;
   min-width: 0;
+
+  @media (max-width: 768px) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    justify-content: stretch;
+    gap: 10px;
+  }
 `;
 
 export const ButtonDiv = styled.div<Props>`
@@ -103,6 +114,10 @@ export const BackButtonDiv = styled.div<Props>`
       display: flex;
       align-self: flex-start;
       width: 100%;
+    }
+
+    @media (max-width: 768px) {
+      display: none;
     }
 
     .icon{
@@ -148,12 +163,12 @@ export const StyledIconButton = styled(IconButton)<Props>`
   }
 
   @media (max-width: 768px) {
-    width: 44px;
-    height: 44px;
-    padding: 7px;
+    width: 40px;
+    height: 40px;
+    padding: 5px;
 
     .icon {
-      font-size: 24px;
+      font-size: 22px;
     }
   }
 
@@ -226,7 +241,14 @@ export const CharacterCard = styled.button`
   box-sizing: border-box;
 
   @media (max-width: 480px) {
-    width: min(250px, 100%);
+    width: 100%;
+  }
+
+  @media (max-width: 768px) {
+    width: 100%;
+    height: 238px;
+    gap: 2px;
+    padding: 4px;
   }
 `;
 
@@ -238,6 +260,13 @@ export const CardRight = styled.div`
   align-items: center;
   gap: 15px;
   padding: 5px;
+
+  @media (max-width: 768px) {
+    width: 55%;
+    gap: 6px;
+    padding: 3px;
+    min-width: 0;
+  }
 `
 
 export const CardLeft = styled.div`
@@ -249,6 +278,13 @@ export const CardLeft = styled.div`
   justify-content: flex-start;
   gap: 15px;
   padding: 10px 0;
+
+  @media (max-width: 768px) {
+    width: 45%;
+    gap: 8px;
+    padding: 6px 0;
+    min-width: 0;
+  }
 `
 
 export const CharacterImage = styled.img<Props>`
@@ -257,6 +293,11 @@ export const CharacterImage = styled.img<Props>`
   object-fit: cover;
   border: 2px solid transparent;
   transition: all 0.3s ease;
+
+  @media (max-width: 768px) {
+    width: clamp(52px, 16vw, 66px);
+    max-width: 100%;
+  }
 
   &:hover {
     box-shadow: 0 0 10px 1px ${({ theme, neon }) =>
@@ -279,6 +320,12 @@ export const CharacterInfos = styled.div`
   width: 100%;
   height: 100%;
   gap: 8px;
+
+  @media (max-width: 768px) {
+    margin-top: 4px;
+    gap: 4px;
+    min-width: 0;
+  }
 `
 
 export const CharacterLabel = styled.p`
@@ -288,6 +335,13 @@ export const CharacterLabel = styled.p`
   text-shadow: 1px 1px 3px black;
   word-wrap: break-word;
   max-width: 100%;
+
+  @media (max-width: 768px) {
+    margin: 0;
+    font-size: 0.58rem;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
 `
 
 export const CharacterName = styled.span`
@@ -301,4 +355,16 @@ export const CharacterName = styled.span`
   text-shadow: 1px 1px 3px black;
   word-wrap: break-word;
   max-width: 100%;
+
+  @media (max-width: 768px) {
+    margin-top: 2px;
+    font-size: 0.68rem;
+    line-height: 1.2;
+    letter-spacing: 0.5px;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+  }
 `;

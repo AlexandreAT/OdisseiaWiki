@@ -29,6 +29,7 @@ export const RichTextBlockEditor: React.FC<RichTextBlockEditorProps> = ({
         onChange={onUpdate}
         minHeight="200px"
         placeholder="Escreva o conteúdo do bloco..."
+        expandable
       />
     </Container>
   );

@@ -6,6 +6,7 @@ export const WikiContainerWrapper = styled.div<WikiLayoutProps>`
   flex-direction: column;
   width: 100%;
   height: 100%;
+  min-height: 100vh;
   overflow: visible;
   min-width: 0;
   max-width: 100%;
@@ -19,6 +20,7 @@ export const WikiContentArea = styled.div<WikiLayoutProps>`
   overflow: visible;
   min-width: 0;
   max-width: 100%;
+  align-items: stretch;
 `;
 
 export const WikiMainSection = styled.div<

@@ -326,6 +326,7 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
           placeholder="Descreva os detalhes do item..."
           minHeight="200px"
           fullWidth
+          expandable
         />
       </RichTextSection>
 
@@ -339,6 +340,7 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
           initialImage={imagemUrl}
           onImageCropped={handleItemImageUpload}
           cropPreset={itemImageCropPreset}
+          mobileSize="main"
         />
       </ImageSection>
 

@@ -8,7 +8,7 @@ interface ThemeProps {
 export const FloatingActions = styled.div`
   position: fixed;
   right: 18px;
-  bottom: 28px;
+  bottom: 84px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -16,15 +16,20 @@ export const FloatingActions = styled.div`
   z-index: 12000;
 
   @media (max-width: 1100px) {
-    position: static;
-    width: 100%;
-    flex-direction: row;
-    justify-content: flex-end;
-    order: -1;
+    right: 10px;
+    top: auto;
+    bottom: 78px;
+    width: auto;
+    flex-direction: column;
+    justify-content: flex-start;
+    order: initial;
+    z-index: 12000;
   }
 
   @media (max-width: 768px) {
     gap: 6px;
+    right: max(8px, env(safe-area-inset-right));
+    bottom: max(72px, calc(env(safe-area-inset-bottom) + 64px));
   }
 `;
 

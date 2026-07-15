@@ -7,16 +7,16 @@ interface ThemeProps {
 
 export const ModalOverlay = styled.div`
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
   background-color: rgba(0, 0, 0, 0.9);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 10000;
   padding: 20px;
+  box-sizing: border-box;
 
   @media (max-width: 767px) {
     padding: 0;
@@ -46,8 +46,18 @@ export const ModalContainer = styled.div<{ theme: 'light' | 'dark'; neon: 'on' |
   @media (max-width: 767px) {
     width: 100vw;
     max-width: 100vw;
-    max-height: calc(100vh - 16px);
+    height: 100dvh;
+    max-height: 100dvh;
+    margin: 0;
     border-radius: 0;
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -118,6 +128,11 @@ export const ModalContentContainer = styled.div`
 
   &::-webkit-scrollbar { width: 8px; }
   &::-webkit-scrollbar-thumb { background: var(--neonBlue); }
+
+  @media (max-width: 767px) {
+    padding: 10px;
+    overscroll-behavior: contain;
+  }
 `;
 
 export const ModalFooterContainer = styled.div<ThemeProps>`

@@ -14,6 +14,7 @@ interface Props {
   backgroundColor?: string;
   maxHeight?: string;
   maxWidth?: string;
+  $mobileAutoHeight?: boolean;
 }
 
 const getBlue = (type?: 'primary' | 'secondary') => type === 'secondary' ? 'var(--clearneonPink)' : 'var(--clearneonBlue)';
@@ -52,6 +53,10 @@ export const ClipController = styled.div<Props & { autoSize?: boolean }>`
 
     @media (max-width: 768px) {
       padding: ${({ autoSize }) => (autoSize ? '10px' : '0')};
+      ${({ $mobileAutoHeight }) => $mobileAutoHeight && `
+        height: auto;
+        max-height: none;
+      `}
     }
 `;
 
@@ -76,6 +81,13 @@ export const BoxShadow = styled.div<Props & { autoSize?: boolean }>`
       : 'none'};
   position: absolute;
   z-index: 0;
+
+  @media (max-width: 768px) {
+    ${({ $mobileAutoHeight }) => $mobileAutoHeight && `
+      width: calc(100% - 20px);
+      height: calc(100% - 20px);
+    `}
+  }
 `;
 
 export const ClipBorder = styled.div<Props & { autoSize?: boolean }>`
@@ -96,6 +108,13 @@ export const ClipBorder = styled.div<Props & { autoSize?: boolean }>`
   border-radius: ${({ borderRadius }) => borderRadius || '8px'};
   z-index: -1;
   clip-path: polygon(0 75%, 15% 100%, 14.5% 100%, 0 76%);
+
+  @media (max-width: 768px) {
+    ${({ $mobileAutoHeight }) => $mobileAutoHeight && `
+      width: calc(100% - 20px);
+      height: calc(100% - 20px);
+    `}
+  }
 `;
 
 export const ClipBorderTop = styled.div<Props & { autoSize?: boolean }>`
@@ -143,6 +162,10 @@ export const ContentContainer = styled.div<Props & { autoSize?: boolean }>`
   @media (max-width: 768px) {
     width: ${({ autoSize }) => autoSize ? '100%' : 'min(100%, calc(100% - 10px))'};
     padding: 12px;
+    ${({ $mobileAutoHeight }) => $mobileAutoHeight && `
+      height: auto;
+      min-height: 0;
+    `}
   }
 
   &::before {

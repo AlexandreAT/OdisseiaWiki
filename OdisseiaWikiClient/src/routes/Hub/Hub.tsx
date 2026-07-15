@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { ContentController, MainContainer, Content, ButtonSpan, Header, ClipButtonAnimated } from './Hub.style';
+import { ContentController, MainContainer, Content, ButtonSpan, Header, ClipButtonAnimated, DisabledFeatureOverlay, ProductionBanner, MobileCollapsedBackButton } from './Hub.style';
+import { ArrowBack } from '@mui/icons-material';
 import { ClipBox } from '../../components/Generic/ClipBox/ClipBox';
 import BannerMesa from '../../assets/Banner Mesa.jpeg';
 import BannerPersonagens from '../../assets/Banner Personagens.jpeg';
@@ -35,6 +36,11 @@ export const Hub = () => {
     const handleClick = (type: 'mesas' | 'personagens') => {
         setSelected(type);
         setIsCollapsed(true);
+    };
+
+    const handleBackToSelection = () => {
+        setSelected('');
+        setIsCollapsed(false);
     };
 
     const getBackgroundType = (): BackgroundType | null => {
@@ -88,7 +94,7 @@ export const Hub = () => {
                 <ContentController collapsed={isCollapsed}>
                     {[{ img: BannerMesa, label: 'Mesas' }, { img: BannerPersonagens, label: 'Personagens' }].map(
                         (btn, i) => (
-                        <Content key={btn.label}>
+                        <Content key={btn.label} collapsed={isCollapsed}>
                             <ClipButtonAnimated
                                 img={btn.img}
                                 theme={theme}
@@ -96,10 +102,30 @@ export const Hub = () => {
                                 collapsed={isCollapsed}
                                 active={selected === btn.label.toLowerCase()}
                                 index={i}
+                                disabled={btn.label === 'Mesas'}
                                 onClick={() => handleClick(btn.label.toLowerCase() as 'mesas' | 'personagens')}
                             >
                                <ButtonSpan theme={theme} neon={neon}>{btn.label}</ButtonSpan>
                             </ClipButtonAnimated>
+                            {btn.label === 'Mesas' && isCollapsed && selected === 'personagens' && (
+                                <MobileCollapsedBackButton
+                                    type="button"
+                                    theme={theme}
+                                    neon={neon}
+                                    aria-label="Voltar para Mesas e Personagens"
+                                    onClick={handleBackToSelection}
+                                >
+                                    <ArrowBack />
+                                </MobileCollapsedBackButton>
+                            )}
+                            {btn.label === 'Mesas' && !isCollapsed && (
+                                <DisabledFeatureOverlay
+                                    role="status"
+                                    aria-label="Mesas: funcionalidade em produção"
+                                >
+                                    <ProductionBanner>EM PRODUÇÃO</ProductionBanner>
+                                </DisabledFeatureOverlay>
+                            )}
                         </Content>
                         )
                     )}

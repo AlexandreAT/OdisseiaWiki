@@ -97,6 +97,23 @@ const RichTextModal: React.FC<RichTextModalProps> = ({
     }
   };
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') handleCloseRequest();
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isOpen, hasChanges]);
+
   const handleConfirmCancel = () => {
     setOpenConfirmCancel(false);
     setHasChanges(false);
@@ -136,6 +153,7 @@ const RichTextModal: React.FC<RichTextModalProps> = ({
               placeholder={placeholder}
               fullWidth
               minHeight="300px"
+              expandable={false}
             />
           </EditorWrapper>
         </ModalContent>

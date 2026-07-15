@@ -1,5 +1,5 @@
 import { mapToItem } from './../../../../utils/mapItem';
-import { getRacas, RacaPayload } from './../../../../services/racasService';
+import { getRacas, normalizeRacaStatus, resolveRacaCharacterStatus, RacaPayload, RacaStatus } from './../../../../services/racasService';
 import { CidadePayload, getCidades } from './../../../../services/cidadesService';
 import { saveAsset } from './../../../../services/assetsService';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -189,6 +189,13 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     listRaces.find(r => r.idraca === race), 
     [listRaces, race]
   );
+  const selectedRaceStatus = useMemo(
+    () => normalizeRacaStatus(
+      selectedRace?.statusJson
+      ?? (selectedRace as (RacaPayload & { StatusJson?: unknown }) | undefined)?.StatusJson
+    ),
+    [selectedRace]
+  );
 
   useEffect(() => {
     const fetchCities = async () => {
@@ -321,16 +328,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
   const hasInitializedRef = useRef(false);
   const lastRaceIdRef = useRef<number | undefined>(undefined);
 
-  useEffect(() => {
-    // Não resetar atributos se estamos editando um personagem existente
-    if (personagem || !selectedRace?.statusJson) return;
-    
-    // Evita re-executar se a raça não mudou
-    if (lastRaceIdRef.current === selectedRace.idraca && hasInitializedRef.current) return;
-    
-    lastRaceIdRef.current = selectedRace.idraca;
-    hasInitializedRef.current = true;
-
+  const applyRaceDefaults = useCallback((raceStatus: RacaStatus) => {
     const basePrincipais: Principais = {
       resistencia: 0,
       agilidade: 0,
@@ -338,14 +336,14 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
       precisao: 0,
       forca: 0,
     };
-
-    const key = selectedRace.statusJson.atributoInicial
+    const key = raceStatus.atributoInicial
       ?.trim()
-      ?.toLowerCase() as keyof Principais;
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') as keyof Principais;
 
     if (key && key in basePrincipais) basePrincipais[key] = 1;
     setAtributosPrincipais(basePrincipais);
-
     setAtributosSecundarios({
       sanidade: 0,
       coragem: 0,
@@ -355,16 +353,33 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
       intimidacao: 0,
     });
 
-    setStatusBasico({
-      vida: selectedRace.statusJson.status.vida,
-      vidaMaxima: selectedRace.statusJson.status.vidaMaxima ?? selectedRace.statusJson.status.vida,
-      estamina: selectedRace.statusJson.status.estamina,
-      estaminaMaxima: selectedRace.statusJson.status.estaminaMaxima ?? selectedRace.statusJson.status.estamina,
-      mana: selectedRace.statusJson.status.mana,
-      manaMaxima: selectedRace.statusJson.status.manaMaxima ?? selectedRace.statusJson.status.mana,
-      capacidadeCarga: selectedRace.statusJson.status.capacidadeCarga ?? 0,
-    });    
-  }, [selectedRace?.idraca, selectedRace?.statusJson, personagem]);
+    const initialStatus = resolveRacaCharacterStatus(raceStatus);
+    if (initialStatus) setStatusBasico(initialStatus);
+  }, []);
+
+  const handleRaceChange = useCallback((raceId: number) => {
+    setRace(raceId);
+    const nextRace = listRaces.find(item => item.idraca === raceId);
+    const nextRaceStatus = normalizeRacaStatus(
+      nextRace?.statusJson
+      ?? (nextRace as (RacaPayload & { StatusJson?: unknown }) | undefined)?.StatusJson
+    );
+
+    if (nextRaceStatus) applyRaceDefaults(nextRaceStatus);
+  }, [applyRaceDefaults, listRaces]);
+
+  useEffect(() => {
+    // Não resetar atributos se estamos editando um personagem existente
+    if (personagem || !selectedRace || !selectedRaceStatus) return;
+
+    // Evita re-executar se a raça não mudou
+    if (lastRaceIdRef.current === selectedRace.idraca && hasInitializedRef.current) return;
+
+    lastRaceIdRef.current = selectedRace.idraca;
+    hasInitializedRef.current = true;
+
+    applyRaceDefaults(selectedRaceStatus);
+  }, [selectedRace?.idraca, selectedRaceStatus, personagem, applyRaceDefaults]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -857,6 +872,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     setUserName,
     race,
     setRace,
+    handleRaceChange,
     city,
     setCity,
     avatarUrl,

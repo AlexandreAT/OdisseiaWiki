@@ -7,11 +7,11 @@ interface ThemeProps {
 
 export const StepDotsAnchor = styled.div<{ right?: string }>`
   position: absolute;
-  top: 24px;
+  top: 140px;
   right: ${({ right }) => right || '-46px'};
   z-index: 12;
 
-  @media (max-width: 768px) {
+  @media (max-width: 1100px) {
     position: static;
     width: 100%;
     max-width: 100%;
@@ -26,6 +26,10 @@ export const StepDotsAnchor = styled.div<{ right?: string }>`
       display: none;
     }
   }
+
+  @media (max-width: 768px) {
+    display: none;
+  }
 `;
 
 export const StepDotsContainer = styled.div`
@@ -33,7 +37,7 @@ export const StepDotsContainer = styled.div`
   align-items: center;
   gap: 10px;
 
-  @media (max-width: 768px) {
+  @media (max-width: 1100px) {
     width: max-content;
     min-width: 100%;
     justify-content: flex-start;
@@ -79,9 +83,9 @@ export const StepDot = styled.button<ThemeProps & { active: boolean }>`
     transform: scale(1.04);
   }
 
-  @media (max-width: 768px) {
+  @media (max-width: 1100px) {
     flex: 0 0 auto;
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
   }
 `;

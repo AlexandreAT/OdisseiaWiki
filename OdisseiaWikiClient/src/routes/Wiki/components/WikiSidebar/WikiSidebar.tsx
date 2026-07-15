@@ -4,6 +4,7 @@ import { useSidebarNavigation } from '../../hooks';
 import { WikiSidebarProps } from './types';
 import {
   SidebarWrapper,
+  SidebarInner,
   SidebarContent,
   SectionWrapper,
   SectionHeader,
@@ -59,6 +60,26 @@ export const WikiSidebar: React.FC<WikiSidebarInternalProps> = ({ page, onToggle
   if (!page || sections.length === 0) {
     return (
       <SidebarWrapper $expanded={sidebarExpanded} $headerExpanded={headerExpanded}>
+        <SidebarInner $headerExpanded={headerExpanded}>
+          <ToggleSidebarButton
+            onClick={handleToggleSidebar}
+            title={sidebarExpanded ? 'Esconder sidebar' : 'Mostrar sidebar'}
+            $isExpanded={sidebarExpanded}
+            aria-label={sidebarExpanded ? 'Fechar navegação da Wiki' : 'Abrir navegação da Wiki'}
+          >
+            <BiChevronLeft />
+          </ToggleSidebarButton>
+          <EmptySidebarMessage>
+            <p>Nenhuma navegação disponível para esta página</p>
+          </EmptySidebarMessage>
+        </SidebarInner>
+      </SidebarWrapper>
+    );
+  }
+
+  return (
+    <SidebarWrapper $expanded={sidebarExpanded} $headerExpanded={headerExpanded}>
+      <SidebarInner $headerExpanded={headerExpanded}>
         <ToggleSidebarButton
           onClick={handleToggleSidebar}
           title={sidebarExpanded ? 'Esconder sidebar' : 'Mostrar sidebar'}
@@ -67,52 +88,36 @@ export const WikiSidebar: React.FC<WikiSidebarInternalProps> = ({ page, onToggle
         >
           <BiChevronLeft />
         </ToggleSidebarButton>
-        <EmptySidebarMessage>
-          <p>Nenhuma navegação disponível para esta página</p>
-        </EmptySidebarMessage>
-      </SidebarWrapper>
-    );
-  }
 
-  return (
-    <SidebarWrapper $expanded={sidebarExpanded} $headerExpanded={headerExpanded}>
-      <ToggleSidebarButton
-        onClick={handleToggleSidebar}
-        title={sidebarExpanded ? 'Esconder sidebar' : 'Mostrar sidebar'}
-        $isExpanded={sidebarExpanded}
-        aria-label={sidebarExpanded ? 'Fechar navegação da Wiki' : 'Abrir navegação da Wiki'}
-      >
-        <BiChevronLeft />
-      </ToggleSidebarButton>
+        {sidebarExpanded && (
+          <SidebarContent>
+            {sections.map(section => (
+              <SectionWrapper key={section.title}>
+                <SectionHeader
+                  onClick={() => toggleSection(section.title)}
+                  aria-expanded={expandedSections.has(section.title)}
+                >
+                  <span>{section.title}</span>
+                  <BiChevronDown />
+                </SectionHeader>
 
-      {sidebarExpanded && (
-        <SidebarContent>
-          {sections.map(section => (
-            <SectionWrapper key={section.title}>
-              <SectionHeader
-                onClick={() => toggleSection(section.title)}
-                aria-expanded={expandedSections.has(section.title)}
-              >
-                <span>{section.title}</span>
-                <BiChevronDown />
-              </SectionHeader>
-
-              <SectionItems $expanded={expandedSections.has(section.title)}>
-                {section.blocks.map(block => (
-                  <SectionItemContainer key={block.id}>
-                    <SectionItem
-                      onClick={() => handleBlockClick(block.blockIndex)}
-                      title={block.title}
-                    >
-                      {block.title}
-                    </SectionItem>
-                  </SectionItemContainer>
-                ))}
-              </SectionItems>
-            </SectionWrapper>
-          ))}
-        </SidebarContent>
-      )}
+                <SectionItems $expanded={expandedSections.has(section.title)}>
+                  {section.blocks.map(block => (
+                    <SectionItemContainer key={block.id}>
+                      <SectionItem
+                        onClick={() => handleBlockClick(block.blockIndex)}
+                        title={block.title}
+                      >
+                        {block.title}
+                      </SectionItem>
+                    </SectionItemContainer>
+                  ))}
+                </SectionItems>
+              </SectionWrapper>
+            ))}
+          </SidebarContent>
+        )}
+      </SidebarInner>
     </SidebarWrapper>
   );
 };

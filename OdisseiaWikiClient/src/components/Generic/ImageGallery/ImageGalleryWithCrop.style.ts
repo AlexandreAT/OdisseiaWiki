@@ -36,6 +36,13 @@ export const ImagesGrid = styled.div`
   gap: 15px;
   width: 100%;
   align-items: flex-start;
+
+  @media (max-width: 768px) {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    align-items: start;
+  }
 `;
 
 export const ImageItem = styled.div<ImageItemProps>`
@@ -55,6 +62,20 @@ export const ImageItem = styled.div<ImageItemProps>`
   justify-content: center;
   flex-shrink: 0;
 
+  @media (max-width: 768px) {
+    width: 100%;
+    max-width: none;
+    height: auto;
+    max-height: none;
+    aspect-ratio: ${({ shape }) => shape === 'rectangle' ? '16 / 9' : '1'};
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+
   &:hover {
     border-color: transparent;
     box-shadow: 0 0 10px rgba(0, 200, 255, 0.3);
@@ -66,10 +87,23 @@ export const ImageItem = styled.div<ImageItemProps>`
     object-fit: contain;
     object-position: center;
   }
+
+  @media (max-width: 768px) {
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
 `;
 
 export const RectangleImageItem = styled(ImageItem)`
   width: 267px;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    max-width: none;
+  }
 `;
 
 export const AddButton = styled.button`
@@ -90,6 +124,21 @@ export const AddButton = styled.button`
   padding: 0;
   flex-shrink: 0;
 
+  @media (max-width: 768px) {
+    width: 100%;
+    max-width: none;
+    height: auto;
+    max-height: none;
+    aspect-ratio: 1;
+    gap: 4px;
+    font-size: 10px;
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+  }
+
   svg {
     width: 32px;
     height: 32px;
@@ -107,6 +156,13 @@ export const AddButton = styled.button`
 
   &:active {
     transform: scale(0.98);
+  }
+
+  @media (max-width: 768px) {
+    svg {
+      width: 20px;
+      height: 20px;
+    }
   }
 `;
 
@@ -135,6 +191,15 @@ export const ShapeSelectorModal = styled.div<Props>`
   flex-direction: column;
   gap: 15px;
   min-width: 300px;
+
+  @media (max-width: 768px) {
+    width: calc(100vw - 24px);
+    min-width: 0;
+    max-height: calc(100dvh - 24px);
+    padding: 16px;
+    overflow-y: auto;
+    box-sizing: border-box;
+  }
 `;
 
 export const ShapeSelectorTitle = styled.h3<Props>`

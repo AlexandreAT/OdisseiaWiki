@@ -21,7 +21,7 @@ const CharacterCreateComponent = ({ theme, neon, userId, onSave }: UserCharacter
     handlePrev, isFirstStep, isLastStep,
     setStep,
     userName, setUserName,
-    race, setRace,
+    race, handleRaceChange,
     city, setCity,
     avatarUrl, setAvatarUrl,
     setAvatarFile,
@@ -100,7 +100,7 @@ const CharacterCreateComponent = ({ theme, neon, userId, onSave }: UserCharacter
           userName={userName}
           setUserName={setUserName}
           race={race}
-          setRace={setRace}
+          setRace={handleRaceChange}
           city={city}
           setCity={setCity}
           avatarUrl={avatarUrl}

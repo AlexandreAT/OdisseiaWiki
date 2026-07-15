@@ -7,6 +7,7 @@ interface ThemeProps {
 
 export const EditHeader = styled.div<ThemeProps>`
   display: flex;
+  width: 100%;
   align-items: center;
   justify-content: space-between;
   padding: 20px;
@@ -23,13 +24,49 @@ export const EditHeader = styled.div<ThemeProps>`
     margin: 0;
     color: ${props => props.theme === 'dark' ? '#fff' : '#000'};
     font-size: 20px;
+    font-family: 'Cyberpunk Is Not Dead', sans-serif;
+    font-weight: 100;
+    letter-spacing: 2px;
     overflow-wrap: anywhere;
   }
 
   @media (max-width: 768px) {
-    align-items: stretch;
-    flex-direction: column;
-    padding: 14px;
+    min-height: 42px;
+    align-items: center;
+    flex-direction: row;
+    padding: 4px 6px;
+    gap: 6px;
+    margin-bottom: 12px;
+
+    h2 {
+      flex: 1 1 auto;
+      min-width: 0;
+      max-width: 100%;
+      font-size: clamp(10px, 3vw, 12px);
+      line-height: 1.15;
+      letter-spacing: 0.15px;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      text-align: left;
+    }
+
+    > div {
+      flex: 0 0 74px;
+      width: 74px !important;
+      height: 36px !important;
+    }
+
+    > div > div,
+    > div > button {
+      width: 64px !important;
+      height: 30px !important;
+    }
+
+    > div > button {
+      padding-inline: 4px;
+      font-size: 9px;
+    }
   }
 `;
 

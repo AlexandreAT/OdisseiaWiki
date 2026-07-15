@@ -196,6 +196,7 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
             initialImage={imagemUrl}
             onImageCropped={handleRaceImageUpload}
             cropPreset={raceImageCropPreset}
+            mobileSize="main"
           />
         </ImageSection>
       </FormHeader>

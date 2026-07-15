@@ -185,6 +185,7 @@ export const FormItem = ({ theme, neon, contentType }: FormItemProps) => {
           placeholder="Descreva os detalhes do item..."
           minHeight="200px"
           fullWidth
+          expandable
         />
       </RichTextSection>
 
@@ -197,6 +198,7 @@ export const FormItem = ({ theme, neon, contentType }: FormItemProps) => {
           initialImage={imagemUrl}
           onImageCropped={handleItemImageUpload}
           cropPreset={itemImageCropPreset}
+          mobileSize="main"
         />
       </ImageSection>
 

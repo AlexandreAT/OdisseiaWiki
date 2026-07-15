@@ -95,6 +95,17 @@ export const PreviewContainer = styled.div<ThemeProps>`
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
+
+  @media (max-width: 768px) {
+    width: min(36vw, 130px);
+    max-width: 130px;
+    height: auto;
+    max-height: 150px;
+    align-self: center;
+    padding: 8px;
+    gap: 6px;
+    overflow: hidden;
+  }
 `;
 
 export const ImagePreview = styled.img`
@@ -102,6 +113,15 @@ export const ImagePreview = styled.img`
   max-height: 300px;
   object-fit: cover;
   border-radius: 6px;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    max-height: 118px;
+    align-self: center;
+    object-fit: cover;
+  }
 `;
 
 export const PreviewLabel = styled.p`

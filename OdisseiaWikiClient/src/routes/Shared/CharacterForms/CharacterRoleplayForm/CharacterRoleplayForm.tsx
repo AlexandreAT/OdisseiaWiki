@@ -1,5 +1,4 @@
 import React from 'react';
-import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import { BiSearchAlt } from 'react-icons/bi';
 import toast from 'react-hot-toast';
 import { ImageUploader } from '../../../../components/Generic/ImageUploader/ImageUploader';
@@ -7,7 +6,6 @@ import { ImageGalleryWithCrop } from '../../../../components/Generic/ImageGaller
 import type { CropPreset } from '../../../../components/Generic/ImageUploader/types';
 import { CheckSelect } from '../../../../components/Generic/CheckSelect/CheckSelect';
 import { InputText } from '../../../../components/Generic/InputText/InputText';
-import RichTextModal from '../../../../components/Generic/RichTextModal';
 import { RichTextEditor } from '../../../../components/Generic/RichTextEditor/RichTextEditor';
 import { Search } from '../../../../components/Generic/Search/Search';
 import { Select } from '../../../../components/Generic/Select/Select';
@@ -21,10 +19,8 @@ import {
   HeaderInputs,
 } from '../../../Hub/UserCharacters/CharacterCreate/FormUserCharacter/FormUserCharacter.style';
 import {
-  ExpandHistoryButton,
   HistoryEditorWrapper,
   HistoryHeader,
-  HistoryHint,
   RaceChangeInfo,
   RoleplayContainer,
 } from './CharacterRoleplayForm.style';
@@ -75,7 +71,6 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
   setDestaque,
   raceChangeMode = 'default',
 }) => {
-  const [historyModalOpen, setHistoryModalOpen] = React.useState(false);
 
   const characterAvatarCropPreset: CropPreset = {
     mode: 'single',
@@ -92,7 +87,7 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
 
   const canChangeRace = React.useMemo(
     () => {
-      if (raceChangeMode === 'current-or-android') return true;
+      if (raceChangeMode === 'current-or-android' || raceChangeMode === 'all') return true;
       return selectedRace?.nome?.toLowerCase().includes('android') ?? false;
     },
     [raceChangeMode, selectedRace?.nome]
@@ -138,7 +133,7 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
             width="100%"
             disabled={loadingRaces || !canChangeRace}
           />
-          {!canChangeRace && (
+          {!canChangeRace && raceChangeMode !== 'all' && (
             <RaceChangeInfo theme={theme} neon={neon}>
               Alteração de raça liberada somente para personagens android no momento.
             </RaceChangeInfo>
@@ -169,6 +164,7 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
             initialImage={avatarUrl}
             onImageCropped={handleCharacterAvatarUpload}
             cropPreset={characterAvatarCropPreset}
+            mobileSize="main"
           />
         </HeaderAvatar>
       </FormHeader>
@@ -183,21 +179,6 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
         onRemove={onRemoveGaleria}
       />
 
-      <HistoryHeader>
-        <HistoryHint theme={theme} neon={neon}>
-          História com visual compacto e rolagem vertical. Use expandir para editar em modal.
-        </HistoryHint>
-        <ExpandHistoryButton
-          type="button"
-          theme={theme}
-          neon={neon}
-          onClick={() => setHistoryModalOpen(true)}
-          title="Expandir história"
-        >
-          <OpenInFullIcon className="icon" />
-        </ExpandHistoryButton>
-      </HistoryHeader>
-
       <HistoryEditorWrapper theme={theme} neon={neon}>
         <RichTextEditor
           theme={theme}
@@ -208,6 +189,7 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
           height="220px"
           minHeight="220px"
           placeholder="Escreva a história do personagem..."
+          expandable
         />
       </HistoryEditorWrapper>
 
@@ -302,16 +284,6 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
         </HistoryHeader>
       )}
 
-      <RichTextModal
-        isOpen={historyModalOpen}
-        onClose={() => setHistoryModalOpen(false)}
-        onSave={setHistory}
-        initialContent={history}
-        title="Editar História"
-        placeholder="Escreva a história do personagem..."
-        theme={theme}
-        neon={neon}
-      />
     </RoleplayContainer>
   );
 };

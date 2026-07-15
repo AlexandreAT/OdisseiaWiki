@@ -50,5 +50,5 @@ export interface CharacterRoleplayFormProps {
   searchTerm: string;
   loadingPersonagens: boolean;
   searchPersonagens: (query: string) => void;
-  raceChangeMode?: 'default' | 'current-or-android';
+  raceChangeMode?: 'default' | 'current-or-android' | 'all';
 }

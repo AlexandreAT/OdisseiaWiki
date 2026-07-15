@@ -111,8 +111,8 @@ export const ImageContent = styled.div<ImageFloatProps>`
 
   @media (max-width: 768px) {
     float: none;
-    margin: 0 0 14px;
-    width: 100%;
+    margin: 0 auto 14px;
+    width: min(78vw, 260px);
   }
 
   &:hover {
@@ -137,7 +137,7 @@ export const StyledImage = styled.img`
   @media (max-width: 768px) {
     width: 100%;
     height: auto;
-    max-height: 320px;
+    max-height: 240px;
   }
 `;
 
@@ -149,6 +149,10 @@ export const ImageWrapper = styled.div`
   width: 100%;
   overflow: hidden;
   cursor: pointer;
+
+  @media (max-width: 768px) {
+    width: min(78vw, 280px);
+  }
 
   &:hover p {
     color: var(--clearneonBlue) !important;
@@ -165,6 +169,18 @@ export const ImageCaption = styled.p`
   padding: 4px 0;
   background-color: var(--black-blue);
   transition: color 0.2s ease;
+
+  @media (max-width: 768px) {
+    display: -webkit-box;
+    box-sizing: border-box;
+    padding: 4px 6px;
+    overflow: hidden;
+    font-size: 10px;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
 `;
 
 export const TextContent = styled.div`

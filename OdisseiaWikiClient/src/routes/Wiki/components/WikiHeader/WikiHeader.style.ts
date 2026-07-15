@@ -2,17 +2,19 @@ import styled from 'styled-components';
 
 export const DivController = styled.section`
   position: sticky;
-  top: 84px;
+  top: 85px;
   z-index: 20;
   width: 100%;
   min-width: 0;
+  margin-top: 1px;
 
   @media (max-width: 1100px) {
-    top: 66px;
+    top: 67px;
   }
 
   @media (max-width: 768px) {
     top: 54px;
+    margin-top: 0;
   }
 `
 

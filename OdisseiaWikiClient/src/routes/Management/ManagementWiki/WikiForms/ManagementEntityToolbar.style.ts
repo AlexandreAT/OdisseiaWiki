@@ -21,31 +21,25 @@ export const managementEntityToolbarResponsive = css`
   @media (max-width: 768px) {
     flex-direction: row;
     flex-wrap: nowrap;
-    justify-content: flex-start;
-    gap: 8px;
+    justify-content: center;
+    gap: 4px;
     padding: 6px;
-    overflow-x: auto;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
-
-    &::-webkit-scrollbar {
-      display: none;
-    }
 
     > div {
-      flex: 0 0 min(145px, calc(50% - 4px));
-      width: min(145px, calc(50% - 4px)) !important;
-      height: 51px !important;
+      flex: 1 1 0;
+      width: auto !important;
+      min-width: 0;
+      height: 44px !important;
 
       > div,
       > button {
-        width: calc(100% - 15px) !important;
-        height: 38px !important;
+        width: 100% !important;
+        height: 36px !important;
       }
 
       > button {
-        padding-inline: 6px;
-        font-size: 10px;
+        padding-inline: 4px;
+        font-size: 9px;
       }
     }
   }

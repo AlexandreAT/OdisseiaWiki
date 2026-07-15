@@ -34,10 +34,11 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
     imageRef,
   } = useImageCropper();
 
-  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const [preview, setPreview] = useState<string>('');
   const [modalRoot, setModalRoot] = useState<HTMLElement | null>(null);
   const cropAreaRef = useRef<HTMLDivElement>(null);
+  const dragStartRef = useRef<{ x: number; y: number; pointerId: number } | null>(null);
 
   useEffect(() => {
     let root = document.getElementById('modal-root');
@@ -60,6 +61,20 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
       };
     }
   }, [imageUrl, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    const previousOverscrollBehavior = document.body.style.overscrollBehavior;
+    document.body.style.overflow = 'hidden';
+    document.body.style.overscrollBehavior = 'none';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.style.overscrollBehavior = previousOverscrollBehavior;
+    };
+  }, [isOpen]);
 
   const calculateRenderedDimensions = (
     containerWidth: number,
@@ -95,22 +110,43 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
     };
   };
 
-  const handleMouseDown = (e: React.MouseEvent<HTMLImageElement>) => {
-    setDragStart({ x: e.clientX, y: e.clientY });
+  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragStartRef.current = {
+      x: event.clientX,
+      y: event.clientY,
+      pointerId: event.pointerId,
+    };
+    setIsDragging(true);
   };
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLImageElement>) => {
-    if (!dragStart) return;
+  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const dragStart = dragStartRef.current;
+    if (!dragStart || dragStart.pointerId !== event.pointerId) return;
 
-    const deltaX = e.clientX - dragStart.x;
-    const deltaY = e.clientY - dragStart.y;
+    event.preventDefault();
+    const deltaX = event.clientX - dragStart.x;
+    const deltaY = event.clientY - dragStart.y;
 
     handleDrag(deltaX, deltaY);
-    setDragStart({ x: e.clientX, y: e.clientY });
+    dragStartRef.current = {
+      x: event.clientX,
+      y: event.clientY,
+      pointerId: event.pointerId,
+    };
   };
 
-  const handleMouseUp = () => {
-    setDragStart(null);
+  const handlePointerEnd = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (dragStartRef.current?.pointerId !== event.pointerId) return;
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    dragStartRef.current = null;
+    setIsDragging(false);
   };
 
   const handleConfirm = async () => {
@@ -258,10 +294,10 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
             aspectRatio={getAspectRatio()}
             theme={theme}
             neon={neon}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerEnd}
+            onPointerCancel={handlePointerEnd}
           >
             <CropImage
               ref={imageRef}
@@ -269,10 +305,8 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
               alt="Imagem para recorte"
               style={{
                 transform: `scale(${cropState.scale}) translate(${cropState.x}px, ${cropState.y}px)`,
-                transition: dragStart ? 'none' : 'transform 0.1s ease',
+                transition: isDragging ? 'none' : 'transform 0.1s ease',
               }}
-              onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseUp}
               draggable={false}
             />
           </CropAreaWrapper>

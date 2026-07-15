@@ -180,7 +180,7 @@ export const UserCharacters = ({ theme, neon, userId, onViewModeChange, onPerson
                 <ArrowBack className="icon" />
               </StyledIconButton>
             </BackButtonDiv>
-            <Title theme={theme} neon={neon}>Editar Personagem</Title>
+            <Title theme={theme} neon={neon} $editMode>Editar Personagem</Title>
             {selectedCharacter && (
               <CharacterEdit 
                 theme={theme}

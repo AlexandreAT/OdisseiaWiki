@@ -1,10 +1,10 @@
 import { mapToItem } from './../../../../../../utils/mapItem';
-import { getRacas } from './../../../../../../services/racasService';
+import { getRacas, normalizeRacaStatus, resolveRacaCharacterStatus, RacaStatus } from './../../../../../../services/racasService';
 import { RacaPayload } from './../../../../../../services/racasService';
 import { CidadePayload, getCidades } from './../../../../../../services/cidadesService';
 import { PersonagemCreatePayload, getPersonagens } from './../../../../../../services/personagensService';
 import { saveAsset } from './../../../../../../services/assetsService';
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { CharacterFormData, CharacterFormErrors } from './FormCharacter.type';
 import toast from 'react-hot-toast';
 import { Principais, Secundarios, JSONContent } from '../../../../../../models/Characters';
@@ -166,6 +166,55 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
     listRaces.find(r => r.idraca === race),
     [listRaces, race]
   );
+  const selectedRaceStatus = useMemo(
+    () => normalizeRacaStatus(
+      selectedRace?.statusJson
+      ?? (selectedRace as (RacaPayload & { StatusJson?: unknown }) | undefined)?.StatusJson
+    ),
+    [selectedRace]
+  );
+  const hasInitializedRaceRef = useRef(false);
+  const lastRaceIdRef = useRef<number | undefined>(undefined);
+
+  const applySelectedRaceDefaults = useCallback((raceStatus: RacaStatus) => {
+    const basePrincipais: Principais = {
+      resistencia: 0,
+      agilidade: 0,
+      sabedoria: 0,
+      precisao: 0,
+      forca: 0,
+    };
+    const key = raceStatus.atributoInicial
+      ?.trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') as keyof Principais;
+
+    if (key && key in basePrincipais) basePrincipais[key] = 1;
+    setAtributosPrincipais(basePrincipais);
+    setAtributosSecundarios({
+      sanidade: 0,
+      coragem: 0,
+      inteligencia: 0,
+      percepcao: 0,
+      labia: 0,
+      intimidacao: 0,
+    });
+
+    const initialStatus = resolveRacaCharacterStatus(raceStatus);
+    if (initialStatus) setStatusBasico(initialStatus);
+  }, []);
+
+  const handleRaceChange = useCallback((raceId: number) => {
+    setRace(raceId);
+    const nextRace = listRaces.find(item => item.idraca === raceId);
+    const nextRaceStatus = normalizeRacaStatus(
+      nextRace?.statusJson
+      ?? (nextRace as (RacaPayload & { StatusJson?: unknown }) | undefined)?.StatusJson
+    );
+
+    if (nextRaceStatus) applySelectedRaceDefaults(nextRaceStatus);
+  }, [applySelectedRaceDefaults, listRaces]);
 
   // Auto-adiciona tag do tipo de conteúdo quando muda
   useEffect(() => {
@@ -259,44 +308,14 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
   }, []);
 
   useEffect(() => {
-    if (!applyRaceDefaults) return;
+    if (!applyRaceDefaults || !selectedRace || !selectedRaceStatus) return;
+    if (lastRaceIdRef.current === selectedRace.idraca && hasInitializedRaceRef.current) return;
 
-    if (selectedRace?.statusJson) {
-      const basePrincipais: Principais = {
-        resistencia: 0,
-        agilidade: 0,
-        sabedoria: 0,
-        precisao: 0,
-        forca: 0,
-      };
+    lastRaceIdRef.current = selectedRace.idraca;
+    hasInitializedRaceRef.current = true;
 
-      const key = selectedRace.statusJson.atributoInicial
-        ?.trim()
-        ?.toLowerCase() as keyof Principais;
-
-      if (key && key in basePrincipais) basePrincipais[key] = 1;
-      setAtributosPrincipais(basePrincipais);
-
-      setAtributosSecundarios({
-        sanidade: 0,
-        coragem: 0,
-        inteligencia: 0,
-        percepcao: 0,
-        labia: 0,
-        intimidacao: 0,
-      });
-
-      setStatusBasico({
-        vida: selectedRace.statusJson.status.vida,
-        vidaMaxima: selectedRace.statusJson.status.vidaMaxima ?? selectedRace.statusJson.status.vida,
-        estamina: selectedRace.statusJson.status.estamina,
-        estaminaMaxima: selectedRace.statusJson.status.estaminaMaxima ?? selectedRace.statusJson.status.estamina,
-        mana: selectedRace.statusJson.status.mana,
-        manaMaxima: selectedRace.statusJson.status.manaMaxima ?? selectedRace.statusJson.status.mana,
-        capacidadeCarga: selectedRace.statusJson.status.capacidadeCarga ?? 0,
-      });    
-    }
-  }, [selectedRace, applyRaceDefaults]);
+    applySelectedRaceDefaults(selectedRaceStatus);
+  }, [selectedRace?.idraca, selectedRaceStatus, applyRaceDefaults, applySelectedRaceDefaults]);
 
   useEffect(() => {
     if (!searchItensTerm.trim()) {
@@ -567,7 +586,7 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
   return {
     step, setStep,
     userName, setUserName,
-    race, setRace,
+    race, setRace, handleRaceChange,
     city, setCity,
     avatarUrl, setAvatarUrl,
     avatarFile, setAvatarFile,

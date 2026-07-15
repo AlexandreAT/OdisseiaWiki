@@ -192,6 +192,7 @@ export const FormPage: React.FC<FormPageProps> = ({
             initialImage={coverImageUrl}
             onImageCropped={handleCoverImageUpload}
             cropPreset={coverImageCropPreset}
+            mobileSize="main"
           />
         </FullWidthInput>
 

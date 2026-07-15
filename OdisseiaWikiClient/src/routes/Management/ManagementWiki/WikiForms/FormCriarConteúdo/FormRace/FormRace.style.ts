@@ -27,6 +27,13 @@ export const FormHeader = styled.div`
   justify-content: space-between;
   gap: 20px;
 
+  @media (min-width: 1101px) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(340px, 430px);
+    justify-content: stretch;
+    column-gap: clamp(28px, 3vw, 48px);
+  }
+
   @media (max-width: 768px) {
     flex-direction: column;
     align-items: center;
@@ -41,6 +48,11 @@ export const HeaderInfo = styled.div`
   width: 100%;
   min-width: 0;
   overflow: hidden;
+
+  @media (min-width: 1101px) {
+    width: 100%;
+    max-width: none;
+  }
 `;
 
 export const ImageSection = styled.div`
@@ -51,12 +63,17 @@ export const ImageSection = styled.div`
   justify-content: flex-start;
   gap: 15px;
 
+  @media (min-width: 1101px) {
+    width: 100%;
+    max-width: 430px;
+  }
+
   @media (max-width: 1100px) {
     width: clamp(220px, 28vw, 280px);
   }
 
   @media (max-width: 768px) {
-    width: 100%;
+    width: min(100%, 260px);
   }
 `;
 
@@ -80,6 +97,11 @@ export const StatusSection = styled.div<Props>`
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
+
+  @media (max-width: 768px) {
+    padding: 14px;
+    gap: 10px;
+  }
 `;
 
 export const StatusTitle = styled.h3<Props>`

@@ -6,6 +6,8 @@ import TextAlign from '@tiptap/extension-text-align';
 import { JSONContent } from '../../../models/Characters';
 import { normalizeToJSONContent, createEmptyJSONContent } from '../../../utils/richTextHelpers';
 import { RichTextToolbar } from './RichTextToolbar';
+import RichTextModal from '../RichTextModal';
+import { MdOutlineOpenInFull } from 'react-icons/md';
 import {
   ContentController,
   EditorContainer,
@@ -13,6 +15,7 @@ import {
   EditorLabelSpan,
   SpanError,
   EditorWrapper,
+  ExpandButton,
 } from './RichTextEditor.style';
 
 interface RichTextEditorProps {
@@ -32,6 +35,7 @@ interface RichTextEditorProps {
   minHeight?: string;
   fullWidth?: boolean;
   placeholder?: string;
+  expandable?: boolean;
 }
 
 const RichTextEditorComponent = ({
@@ -51,9 +55,14 @@ const RichTextEditorComponent = ({
   minHeight = '150px',
   fullWidth = false,
   placeholder,
+  expandable = false,
 }: RichTextEditorProps) => {
   const [focus, setFocus] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [expandedContent, setExpandedContent] = useState<JSONContent | string>(
+    value || createEmptyJSONContent(),
+  );
 
   // Inicializa o editor TipTap
   const editor = useEditor({
@@ -127,9 +136,33 @@ const RichTextEditorComponent = ({
 
   const hasContent = editor?.getText().trim().length > 0;
 
+  const handleExpand = () => {
+    setExpandedContent((editor?.getJSON() as JSONContent | undefined) || value || createEmptyJSONContent());
+    setIsExpanded(true);
+  };
+
+  const handleExpandedSave = (content: JSONContent | string) => {
+    const normalizedContent = normalizeToJSONContent(content);
+    setExpandedContent(normalizedContent);
+    onChange?.(normalizedContent);
+  };
+
   return (
     <ContentController width={width} height={height} fullWidth={fullWidth}>
       <EditorContainer width={width} height={height}>
+        {expandable && (
+          <ExpandButton
+            type="button"
+            theme={theme}
+            neon={neon}
+            onClick={handleExpand}
+            title={`Expandir ${label || 'editor de texto'}`}
+            aria-label={`Expandir ${label || 'editor de texto'}`}
+          >
+            <MdOutlineOpenInFull />
+            <span>Expandir</span>
+          </ExpandButton>
+        )}
         <EditorWrapper
           theme={theme}
           neon={neon}
@@ -140,22 +173,36 @@ const RichTextEditorComponent = ({
           height={height}
           minHeight={minHeight}
           focus={focus}
+          $expandable={expandable}
         >
           {editor && (
             <RichTextToolbar editor={editor} theme={theme} neon={neon} />
           )}
+
+          <EditorLabel>
+            <EditorLabelSpan active={focus || hasContent}>
+              {label}
+            </EditorLabelSpan>
+          </EditorLabel>
           
           <EditorContent editor={editor} />
         </EditorWrapper>
-
-        <EditorLabel>
-          <EditorLabelSpan active={focus || hasContent}>
-            {label}
-          </EditorLabelSpan>
-        </EditorLabel>
       </EditorContainer>
       
       {error && errorMessage && <SpanError>{errorMessage}</SpanError>}
+
+      {expandable && (
+        <RichTextModal
+          isOpen={isExpanded}
+          onClose={() => setIsExpanded(false)}
+          onSave={handleExpandedSave}
+          initialContent={expandedContent}
+          title={label || 'Editar texto'}
+          placeholder={placeholder}
+          theme={theme}
+          neon={neon}
+        />
+      )}
     </ContentController>
   );
 };

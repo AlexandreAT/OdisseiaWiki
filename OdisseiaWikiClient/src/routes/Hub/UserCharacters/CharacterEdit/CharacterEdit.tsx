@@ -31,7 +31,7 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserC
         userName,
     setUserName,
     race,
-    setRace,
+    handleRaceChange,
     city,
     setCity,
     avatarUrl,
@@ -192,7 +192,7 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserC
     }, [editStep]);
 
     return (
-        <FormController marginTop={editStep == 2 ? '80px' : undefined} onSubmit={(e) => e.preventDefault()}> 
+        <FormController marginTop="0px" onSubmit={(e) => e.preventDefault()}>
             <CharacterStepDots
               theme={theme}
               neon={neon}
@@ -244,7 +244,7 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserC
                   userName={userName}
                   setUserName={setUserName}
                   race={race}
-                  setRace={setRace}
+                  setRace={handleRaceChange}
                   city={city}
                   setCity={setCity}
                   selectedRace={selectedRace}
@@ -291,7 +291,7 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserC
                 colorType="secondary"
                 theme={theme}
                 neon={neon}
-                text={'Anterior'}
+                text={'Voltar'}
                 width="200px"
                 type="button"
                 onClick={() => setEditStep((prev) => (prev === 1 ? 1 : ((prev - 1) as 1 | 2)))}

@@ -17,6 +17,10 @@ export const ModalOverlay = styled.div`
   justify-content: center;
   z-index: 10100;
   padding: 20px;
+
+  @media (max-width: 768px) {
+    padding: 8px;
+  }
 `;
 
 export const ModalSheet = styled.div<ThemeProps>`
@@ -38,6 +42,11 @@ export const ModalSheet = styled.div<ThemeProps>`
   flex-direction: column;
   box-shadow: 0 10px 40px var(--blackTransp);
   animation: slideIn 0.3s ease-out;
+
+  @media (max-width: 768px) {
+    max-height: calc(100dvh - 16px);
+    border-radius: 6px;
+  }
 
   @keyframes slideIn {
     from {
@@ -65,6 +74,10 @@ export const ModalHeader = styled.div<ThemeProps>`
   display: flex;
   justify-content: space-between;
   align-items: center;
+
+  @media (max-width: 768px) {
+    padding: 12px 14px;
+  }
 `;
 
 export const ModalTitle = styled.h2<ThemeProps>`
@@ -120,6 +133,10 @@ export const ModalContent = styled.div<ThemeProps>`
   min-height: 0;
   overflow-y: auto;
   padding: 24px;
+
+  @media (max-width: 768px) {
+    padding: 12px;
+  }
   
   /* Custom scrollbar */
   &::-webkit-scrollbar {
@@ -205,4 +222,10 @@ export const ModalFooter = styled.div<ThemeProps>`
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+
+  @media (max-width: 768px) {
+    padding: 10px 12px;
+    gap: 6px;
+    overflow-x: auto;
+  }
 `;

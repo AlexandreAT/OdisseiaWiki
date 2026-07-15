@@ -27,6 +27,13 @@ export const FormHeader = styled.div`
   justify-content: space-between;
   gap: 20px;
 
+  @media (min-width: 1101px) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(340px, 430px);
+    justify-content: stretch;
+    column-gap: clamp(28px, 3vw, 48px);
+  }
+
   @media (max-width: 768px) {
     flex-direction: column;
     align-items: center;
@@ -41,6 +48,11 @@ export const HeaderInfo = styled.div`
   width: 100%;
   min-width: 0;
   overflow: hidden;
+
+  @media (min-width: 1101px) {
+    width: 100%;
+    max-width: none;
+  }
 `;
 
 export const ImageSection = styled.div`
@@ -51,12 +63,17 @@ export const ImageSection = styled.div`
   justify-content: flex-start;
   gap: 15px;
 
+  @media (min-width: 1101px) {
+    width: 100%;
+    max-width: 430px;
+  }
+
   @media (max-width: 1100px) {
     width: clamp(220px, 28vw, 280px);
   }
 
   @media (max-width: 768px) {
-    width: 100%;
+    width: min(100%, 260px);
   }
 `;
 
@@ -76,6 +93,10 @@ export const MainImageContainer = styled.div<{ hasImage: boolean }>`
   transition: all 0.3s ease;
   max-width: 100%;
   box-sizing: border-box;
+
+  @media (max-width: 768px) {
+    height: 220px;
+  }
 
   &:hover {
     border-color: var(--neonBlue);
@@ -133,6 +154,11 @@ export const GalleryGrid = styled.div`
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 10px;
   width: 100%;
+
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
 `;
 
 export const GalleryImageContainer = styled.div`
@@ -142,6 +168,14 @@ export const GalleryImageContainer = styled.div`
   border-radius: 8px;
   overflow: hidden;
   background: var(--lightBlack);
+
+  @media (max-width: 768px) {
+    width: 100%;
+    max-width: none;
+    height: auto;
+    max-height: none;
+    aspect-ratio: 1;
+  }
 
   img {
     width: 100%;
@@ -198,6 +232,16 @@ export const AddGalleryImageButton = styled.button<Props>`
   gap: 8px;
   transition: all 0.3s ease;
   font-size: 14px;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    max-width: none;
+    height: auto;
+    max-height: none;
+    aspect-ratio: 1;
+    gap: 5px;
+    font-size: 12px;
+  }
 
   &:hover {
     border-color: ${({ theme, neon }) =>

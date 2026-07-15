@@ -3,7 +3,7 @@ import { InputText } from '../../../../../../components/Generic/InputText/InputT
 import { Select } from '../../../../../../components/Generic/Select/Select';
 import { CheckBox } from '../../../../../../components/Generic/CheckBox/CheckBox';
 import { CyberButton } from '../../../../../../components/Generic/HighlightButton/HighlightButton';
-import { FormItemAtributos } from './FormCharacter.style';
+import { FormItemAtributos, ProsthesisActions } from './FormCharacter.style';
 import { ImplanteAtributos } from '../../../../../../models/Itens';
 
 interface BaseProps {
@@ -166,8 +166,12 @@ export const ImplanteAtributosForm: React.FC<BaseProps> = ({ value, onChange, th
     <CheckBox neon={neon} label="Necessita amputação" checked={atributos.necessitaAmputacao ?? false} onChange={(necessitaAmputacao) => update({ necessitaAmputacao })} />
     {BONUS_FIELDS.map(([key, label]) => <InputText key={key} label={`Bônus de ${label}`} type="number" theme={theme} neon={neon} value={String(atributos.bonus?.[key] ?? 0)} onChange={(e) => update({ bonus: { ...atributos.bonus, [key]: e.target.value === '' ? 0 : Number(e.target.value) } })} />)}
     {(atributos.especiais ?? []).map((item, index) => <React.Fragment key={`especial-${index}`}><InputText label={`Efeito especial ${index + 1}`} theme={theme} neon={neon} value={item} onChange={(e) => updateList('especiais', index, e.target.value)} /><CyberButton type="button" theme={theme} neon={neon} text="Remover efeito" onClick={() => update({ especiais: atributos.especiais?.filter((_, i) => i !== index) })} /></React.Fragment>)}
-    <CyberButton type="button" theme={theme} neon={neon} text="Adicionar efeito especial" onClick={() => update({ especiais: [...(atributos.especiais ?? []), ''] })} />
-    {(['modificacoes', 'lacrimas'] as const).map((key) => <React.Fragment key={key}>{(atributos[key] ?? []).map((item, index) => <React.Fragment key={`${key}-${index}`}><InputText label={`${key === 'modificacoes' ? 'Modificação' : 'Lágrima'} ${index + 1}: nome`} theme={theme} neon={neon} value={item.nome} onChange={(e) => updateDetails(key, index, 'nome', e.target.value)} /><InputText label={`${key === 'modificacoes' ? 'Modificação' : 'Lágrima'} ${index + 1}: descrição`} theme={theme} neon={neon} value={item.descricao} onChange={(e) => updateDetails(key, index, 'descricao', e.target.value)} /><CyberButton type="button" theme={theme} neon={neon} text="Remover" onClick={() => update({ [key]: atributos[key]?.filter((_, i) => i !== index) })} /></React.Fragment>)}<CyberButton type="button" theme={theme} neon={neon} text={`Adicionar ${key === 'modificacoes' ? 'modificação' : 'lágrima'}`} onClick={() => update({ [key]: [...(atributos[key] ?? []), { nome: '', descricao: '' }] })} /></React.Fragment>)}
+    {(['modificacoes', 'lacrimas'] as const).map((key) => <React.Fragment key={key}>{(atributos[key] ?? []).map((item, index) => <React.Fragment key={`${key}-${index}`}><InputText label={`${key === 'modificacoes' ? 'Modificação' : 'Lágrima'} ${index + 1}: nome`} theme={theme} neon={neon} value={item.nome} onChange={(e) => updateDetails(key, index, 'nome', e.target.value)} /><InputText label={`${key === 'modificacoes' ? 'Modificação' : 'Lágrima'} ${index + 1}: descrição`} theme={theme} neon={neon} value={item.descricao} onChange={(e) => updateDetails(key, index, 'descricao', e.target.value)} /><CyberButton type="button" theme={theme} neon={neon} text="Remover" onClick={() => update({ [key]: atributos[key]?.filter((_, i) => i !== index) })} /></React.Fragment>)}</React.Fragment>)}
+    <ProsthesisActions>
+      <CyberButton type="button" theme={theme} neon={neon} text="Adicionar efeito especial" onClick={() => update({ especiais: [...(atributos.especiais ?? []), ''] })} />
+      <CyberButton type="button" theme={theme} neon={neon} text="Adicionar modificação" onClick={() => update({ modificacoes: [...(atributos.modificacoes ?? []), { nome: '', descricao: '' }] })} />
+      <CyberButton type="button" theme={theme} neon={neon} text="Adicionar lágrima" onClick={() => update({ lacrimas: [...(atributos.lacrimas ?? []), { nome: '', descricao: '' }] })} />
+    </ProsthesisActions>
   </FormItemAtributos>;
 };
 

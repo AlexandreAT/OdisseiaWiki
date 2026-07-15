@@ -22,6 +22,12 @@ export const ModalOverlay = styled.div<Props>`
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  overscroll-behavior: contain;
+
+  @media (max-width: 768px) {
+    width: 100vw;
+    height: 100dvh;
+  }
 `;
 
 export const ModalContainer = styled.div<Props>`
@@ -44,6 +50,19 @@ export const ModalContainer = styled.div<Props>`
   flex-direction: column;
   gap: 20px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+
+  @media (max-width: 768px) {
+    width: 100vw;
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    margin: 0;
+    padding: 12px;
+    border-radius: 0;
+    gap: 12px;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
 `;
 
 export const ModalHeader = styled.div<Props>`
@@ -99,6 +118,14 @@ export const CropAreaWrapper = styled.div<CropAreaProps>`
         ? 'var(--neonViolet)'
         : 'var(--deepgrey)'};
   border-radius: ${({ shape }) => (shape === 'circle' ? '50%' : '8px')};
+  touch-action: none;
+  overscroll-behavior: contain;
+  cursor: grab;
+  user-select: none;
+
+  &:active {
+    cursor: grabbing;
+  }
 `;
 
 export const CropImage = styled.img`

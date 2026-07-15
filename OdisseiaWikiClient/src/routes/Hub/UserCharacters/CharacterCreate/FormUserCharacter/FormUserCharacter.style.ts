@@ -31,13 +31,15 @@ export const FormController = styled.form<{ marginTop?: string }>`
 export const FormEditController = styled.div`
     display: flex;
     flex-direction: column;
-    width: 1050px;
+    width: 100%;
     height: 100%;
     max-width: 100%;
     min-width: 0;
+    box-sizing: border-box;
 
     @media (max-width: 1100px) {
         width: 100%;
+        box-sizing: border-box;
     }
 `
 
@@ -114,13 +116,23 @@ export const SectionTable = styled.div`
     gap: 10px;
     min-width: 0;
     max-width: 100%;
-    overflow-x: auto;
+    overflow-x: hidden;
+
+    @media (max-width: 768px) {
+        gap: 6px;
+    }
 `
 
 export const TableTitle = styled.h2`
     font-family: 'DO Futuristic', sans-serif;
     font-weight: 100;
     letter-spacing: 3px;
+
+    @media (max-width: 768px) {
+        margin: 4px 0;
+        font-size: 20px;
+        letter-spacing: 1px;
+    }
 `
 
 export const RelatedCharactersSection = styled.div`
@@ -128,33 +140,6 @@ export const RelatedCharactersSection = styled.div`
   flex-direction: column;
   width: 100%;
   gap: 10px;
-`;
-
-export const HistoryEditorHeader = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  width: 100%;
-`;
-
-export const ExpandHistoryButton = styled.button<Props>`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: 2px solid ${({ theme, neon }) =>
-    theme === 'dark'
-      ? neon === 'on' ? 'var(--clearneonBlue)' : 'var(--lightBlack)'
-      : neon === 'on' ? 'var(--neonViolet)' : 'var(--lightGrey)'};
-  border-radius: 6px;
-  cursor: pointer;
-  background: ${({ theme }) => theme === 'dark' ? 'var(--black-blue)' : 'var(--clearWhite)'};
-  color: ${({ theme, neon }) =>
-    theme === 'dark'
-      ? neon === 'on' ? 'var(--clearneonBlue)' : 'var(--clearWhite)'
-      : neon === 'on' ? 'var(--neonViolet)' : 'var(--deepgray)'};
-
-  .icon { font-size: 18px; }
 `;
 
 export const SectionTitle = styled.h2<Props>`
@@ -179,15 +164,6 @@ export const NavegationButtons = styled.div`
         max-width: 100%;
     }
 
-    @media (max-width: 480px) {
-        flex-direction: column;
-        gap: 10px;
-
-        > * {
-            width: 100% !important;
-        }
-    }
-
     @media (max-width: 1100px) {
         order: -1;
         position: static;
@@ -198,22 +174,25 @@ export const NavegationButtons = styled.div`
     }
 
     @media (max-width: 768px) {
-        gap: 8px;
+        flex-wrap: nowrap;
+        gap: 4px;
         padding: 6px;
 
         > div {
-            width: 155px !important;
-            height: 51px !important;
+            flex: 1 1 0;
+            width: auto !important;
+            min-width: 0;
+            height: 44px !important;
 
             > div,
             > button {
-                width: 140px !important;
-                height: 38px !important;
+                width: 100% !important;
+                height: 36px !important;
             }
 
             > button {
-                padding-inline: 8px;
-                font-size: 10px;
+                padding-inline: 4px;
+                font-size: 9px;
             }
         }
     }
@@ -275,14 +254,42 @@ export const StatusContent = styled.div<Props>`
     display: flex;
     flex-direction: row;
     align-items: stretch;
-    justify-content: space-between;
+    justify-content: center;
     margin: 20px 0;
     width: 100%;
     gap: 15px;
     min-width: 0;
 
+    @media (min-width: 1101px) {
+        display: grid;
+        grid-template-columns: minmax(150px, 0.8fr) minmax(300px, 1.4fr) minmax(150px, 0.8fr);
+        column-gap: 15px;
+    }
+
+    @media (max-width: 1100px) {
+        display: grid;
+        grid-template-columns: minmax(70px, 0.55fr) minmax(235px, 3.1fr) minmax(70px, 0.55fr);
+        grid-template-areas:
+          "primary defenses secondary"
+          "primary image secondary";
+        align-items: stretch;
+        column-gap: 8px;
+        row-gap: 4px;
+        margin: 12px 0;
+    }
+
     @media (max-width: 768px) {
-        flex-direction: column;
+        grid-template-columns: minmax(82px, 0.9fr) minmax(150px, 1.7fr) minmax(88px, 0.95fr);
+        column-gap: 4px;
+    }
+
+    @media (max-width: 480px) {
+        grid-template-columns: minmax(76px, 0.9fr) minmax(140px, 1.7fr) minmax(82px, 0.95fr);
+        column-gap: 4px;
+    }
+
+    @media (max-width: 340px) {
+        grid-template-columns: 72px minmax(132px, 1.7fr) 78px;
     }
 `
 
@@ -300,12 +307,19 @@ export const StatusContentCenter = styled.div`
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
-    width: 60%;
-    gap: 10px;
+    flex: 1 1 0;
+    width: auto;
+    max-width: none;
+    gap: 4px;
     min-width: 0;
 
-    @media (max-width: 768px) {
+    @media (min-width: 1101px) {
         width: 100%;
+    }
+
+    @media (max-width: 1100px) {
+        display: contents;
+        max-width: none;
     }
 `
 
@@ -339,17 +353,35 @@ export const StatusDefesaController = styled.div<Props>`
     min-width: 0;
     max-width: 100%;
     box-sizing: border-box;
+
+    @media (max-width: 1100px) {
+      grid-area: defenses;
+      grid-row: 1;
+      gap: 6px;
+      padding: 8px 5px;
+      align-self: start;
+
+      > h2 {
+        font-size: 12px;
+      }
+    }
 `
 
 export const StatusDefesaDiv = styled.div<Props>`
     display: flex;
     flex-direction: row;
     align-items: center;
-    justify-content: space-between;
+    justify-content: space-evenly;
     width: 100%;
-    gap: 30px;
+    gap: clamp(10px, 2vw, 30px);
     min-width: 0;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+
+    @media (max-width: 768px) {
+      justify-content: center;
+      gap: 6px;
+      flex-wrap: nowrap;
+    }
 `
 
 export const StatusImageDiv = styled.div`
@@ -359,6 +391,19 @@ export const StatusImageDiv = styled.div`
     position: relative;
     width: 100%;
     height: 100%;
+
+    @media (max-width: 1100px) {
+      grid-area: image;
+      width: 100%;
+      height: auto;
+      min-height: clamp(160px, 42vw, 230px);
+      align-items: flex-start;
+      align-self: start;
+    }
+
+    @media (max-width: 360px) {
+      min-height: 140px;
+    }
 `
 
 export const InfoImage = styled.img`
@@ -401,32 +446,54 @@ export const AvatarController = styled.div<{ hasImage: boolean, imageSize?: numb
   height: ${({ hasImage, imageSize }) => (imageSize ? `${imageSize + 45}px` : hasImage ? "250px" : "215px")};
 
   @media (max-width: 1100px) {
-    min-width: clamp(170px, 22vw, 220px);
-    min-height: clamp(170px, 22vw, 220px);
-    width: clamp(170px, 22vw, 220px);
-    height: clamp(170px, 22vw, 220px);
+    min-width: clamp(155px, 42vw, 230px);
+    min-height: clamp(155px, 42vw, 230px);
+    width: clamp(155px, 42vw, 230px);
+    height: clamp(155px, 42vw, 230px);
   }
 
   @media (max-width: 768px) {
-    min-width: clamp(150px, 48vw, 200px);
-    min-height: clamp(150px, 48vw, 200px);
-    width: clamp(150px, 48vw, 200px);
-    height: clamp(150px, 48vw, 200px);
-
     > button {
       width: 100% !important;
       height: 100% !important;
       transform: none;
     }
   }
+
+  @media (max-width: 360px) {
+    min-width: 140px;
+    min-height: 140px;
+    width: 140px;
+    height: 140px;
+  }
 `;
 
 export const AtributeController = styled.div`
-    flex: 0.5;
+    flex: 0 1 125px;
+    max-width: 125px;
+
+    @media (min-width: 1101px) {
+      width: 100%;
+      max-width: none;
+    }
+
+    @media (max-width: 1100px) {
+      grid-area: primary;
+      width: 100%;
+      height: 100%;
+      min-width: 0;
+      max-width: none;
+    }
+
+    @media (max-width: 768px) {
+      justify-self: start;
+    }
 `
 
 export const StatusAtributosDiv = styled.div<Props>`
-    width: 150px;
+    width: 125px;
+    max-width: 125px;
+    flex: 0 1 125px;
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -455,13 +522,28 @@ export const StatusAtributosDiv = styled.div<Props>`
                 : "var(--lightGrey)"
         };
 
-    @media (max-width: 768px) {
+    @media (min-width: 1101px) {
         width: 100%;
-        height: auto;
-        flex-direction: row;
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 14px;
+        max-width: none;
+        flex: none;
+        box-sizing: border-box;
+    }
+
+    @media (max-width: 1100px) {
+        width: 100%;
+        max-width: none;
+        flex: none;
+        height: 100%;
+        min-width: 0;
+        grid-area: secondary;
+        gap: 6px;
+        padding: 8px 3px;
+        box-sizing: border-box;
+    }
+
+    @media (max-width: 768px) {
+        justify-self: end;
+        padding-inline: 2px;
     }
 `
 
@@ -471,6 +553,18 @@ export const LabelStatus = styled.h2<{ width?: string }>`
     letter-spacing: 3px;
     font-size: ${({ width }) => width || '18px'};
     cursor: default;
+
+    @media (max-width: 768px) {
+      max-width: 100%;
+      margin: 0;
+      font-size: clamp(8px, 2.4vw, 10px);
+      line-height: 1.1;
+      letter-spacing: 0;
+      text-align: center;
+      white-space: nowrap;
+      overflow-wrap: normal;
+      word-break: normal;
+    }
 `
 
 export const MinimalInput = styled.input.attrs({ type: "number" })`
@@ -494,6 +588,13 @@ export const MinimalInput = styled.input.attrs({ type: "number" })`
 
   &:focus {
     outline: none;
+  }
+
+  @media (max-width: 768px) {
+    width: 24px;
+    max-width: 24px;
+    padding: 0;
+    font-size: 10px;
   }
 `;
 
@@ -521,6 +622,13 @@ export const AtributoBox = styled.div<Props>`
     box-sizing: border-box;
     width: 50px;
     height: 50px;
+
+    @media (max-width: 768px) {
+      width: 34px;
+      height: 34px;
+      padding: 1px;
+      border-radius: 6px;
+    }
 `
 
 export const AtributoDiv = styled.div`
@@ -529,6 +637,21 @@ export const AtributoDiv = styled.div`
     align-items: center;
     justify-content: center;
     gap: 4px;
+
+    @media (max-width: 768px) {
+      width: 100%;
+      min-width: 0;
+      gap: 2px;
+
+      > h2 {
+        font-size: 7px;
+        line-height: 1.05;
+      }
+
+      input {
+        font-size: 8px;
+      }
+    }
 `
 
 export const FormItemAtributos = styled.div`

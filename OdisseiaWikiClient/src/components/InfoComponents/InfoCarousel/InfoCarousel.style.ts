@@ -19,6 +19,8 @@ interface StyleProps {
 const ContainerWiki = styled.div<StyleProps>`
     width: 100%;
     height: 100%;
+    min-width: 0;
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -252,6 +254,9 @@ const Title = styled.h2<StyleProps>`
 `;
 
 const DivInfos = styled.div<StyleProps>`
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -360,8 +365,11 @@ const Subtitle = styled.h3<StyleProps>`
 `;
 
 const InfoControl = styled.div<StyleProps>`
-    display: flex;
-    flex-direction: row;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 2rem;
     height: 500px;
     transition: all 0.3s ease-in-out;
@@ -391,6 +399,11 @@ const InfoControl = styled.div<StyleProps>`
 `;
 
 const InfoCard = styled.div<StyleProps>`
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    overflow: hidden;
     display: flex;
     height: 100%;
     flex-direction: column;
@@ -665,6 +678,10 @@ const CardName = styled.div<StyleProps>`
 `;
 
 const CardDescription = styled.div`
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    overflow: hidden;
     padding: 15px;
     height: 38%;
     font-size: 20px;
@@ -680,11 +697,42 @@ const CardDescription = styled.div`
         font-size: 14px;
     }
 
+    @media (max-width: 768px) {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 6;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-size: 12px;
+        line-height: 1.35;
+
+        &,
+        & * {
+            font-size: 12px !important;
+            line-height: 1.35 !important;
+        }
+
+        > div {
+            display: contents;
+        }
+
+        p {
+            display: inline;
+            margin: 0 !important;
+        }
+    }
+
     @media (max-width: 480px) {
         margin: 5px 0px 2px;
         padding: 0px 5px;
         height: 65%;
-        font-size: 11px;
+        -webkit-line-clamp: 5;
+        font-size: 10px;
+
+        &,
+        & * {
+            font-size: 10px !important;
+        }
     }
 `;
 

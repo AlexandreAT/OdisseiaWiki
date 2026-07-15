@@ -20,44 +20,6 @@ export const HistoryHeader = styled.div`
   gap: 12px;
 `;
 
-export const HistoryHint = styled.span<Props>`
-  font-size: 0.85rem;
-  color: ${({ theme }) =>
-    theme === 'dark' ? 'var(--lightGrey)' : 'var(--deepgray)'};
-`;
-
-export const ExpandHistoryButton = styled.button<Props>`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 6px;
-  cursor: pointer;
-  border: 2px solid ${({ theme, neon }) =>
-    theme === 'dark'
-      ? neon === 'on'
-        ? 'var(--clearneonBlue)'
-        : 'var(--lightBlack)'
-      : neon === 'on'
-        ? 'var(--neonViolet)'
-        : 'var(--lightGrey)'};
-  background: ${({ theme }) =>
-    theme === 'dark' ? 'var(--black-blue)' : 'var(--clearWhite)'};
-  color: ${({ theme, neon }) =>
-    theme === 'dark'
-      ? neon === 'on'
-        ? 'var(--clearneonBlue)'
-        : 'var(--clearWhite)'
-      : neon === 'on'
-        ? 'var(--neonViolet)'
-        : 'var(--deepgray)'};
-
-  .icon {
-    font-size: 18px;
-  }
-`;
-
 export const HistoryEditorWrapper = styled.div<Props>`
   width: 100%;
   height: 220px;

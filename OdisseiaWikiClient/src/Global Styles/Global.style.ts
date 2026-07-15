@@ -4,6 +4,7 @@ interface Props {
     theme: 'dark' | 'light';
     neon: 'on' | 'off';
     isLoginPage?: Boolean;
+    isWikiPage?: boolean;
 }
 
 const Page = styled.div<Props>`
@@ -61,7 +62,9 @@ const Body = styled.body<Props>`
     padding: ${props =>
         props.isLoginPage
             ? '0px'
-            : '84px 0 4rem'};
+            : props.isWikiPage
+                ? '84px 0 0'
+                : '84px 0 4rem'};
     width: 100%;
     min-height: 100vh;
     height: 100%;
@@ -73,11 +76,19 @@ const Body = styled.body<Props>`
     `};
 
     @media (max-width: 768px) {
-        padding: 54px 0 4rem;
+        padding: ${props => props.isLoginPage
+            ? '0'
+            : props.isWikiPage
+                ? '54px 0 0'
+                : '54px 0 4rem'};
     };
 
     @media (min-width: 769px) and (max-width: 1100px) {
-        padding-top: 66px;
+        padding: ${props => props.isLoginPage
+            ? '0'
+            : props.isWikiPage
+                ? '66px 0 0'
+                : '66px 0 4rem'};
     };
 
     transition: all 0.3s ease-in-out;

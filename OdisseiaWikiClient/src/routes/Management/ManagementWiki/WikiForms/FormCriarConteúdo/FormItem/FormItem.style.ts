@@ -12,25 +12,6 @@ export const FormController = styled.form<Props>`
   width: 100%;
   gap: 30px;
   padding: 30px;
-  background: ${({ theme }) =>
-    theme === 'dark' ? 'var(--clearblack)' : 'var(--whitesmoke)'};
-  border-radius: 10px;
-  border: 2px solid ${({ theme, neon }) =>
-    theme === 'dark'
-      ? neon === 'on'
-        ? 'var(--clearneonBlue)'
-        : 'var(--lightBlack)'
-      : neon === 'on'
-      ? 'var(--neonViolet)'
-      : 'var(--lightGrey)'};
-  box-shadow: 0 0 20px ${({ theme, neon }) =>
-    theme === 'dark'
-      ? neon === 'on'
-        ? 'rgba(0, 255, 255, 0.1)'
-        : 'rgba(0, 0, 0, 0.3)'
-      : neon === 'on'
-      ? 'rgba(200, 100, 200, 0.1)'
-      : 'rgba(0, 0, 0, 0.05)'};
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;

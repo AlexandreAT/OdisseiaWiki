@@ -3,6 +3,8 @@ import styled from 'styled-components';
 export const LightboxOverlay = styled.div<{ $backgroundImage?: string }>`
   position: fixed;
   inset: 0;
+  width: 100vw;
+  height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -11,6 +13,10 @@ export const LightboxOverlay = styled.div<{ $backgroundImage?: string }>`
   isolation: isolate;
   overflow: hidden;
   box-sizing: border-box;
+
+  @media (max-width: 768px) {
+    padding: 12px;
+  }
 
   &::before,
   &::after {
@@ -58,8 +64,9 @@ export const LightboxContent = styled.div`
   z-index: 1;
   box-sizing: border-box;
 
-  @media (max-width: 480px) {
-    max-width: calc(100vw - 16px);
+  @media (max-width: 768px) {
+    max-width: calc(100vw - 24px);
+    max-height: calc(100dvh - 24px);
     padding: 10px;
   }
 `;
@@ -73,8 +80,13 @@ export const LightboxImage = styled.img`
   border-radius: 8px;
   width: auto;
 
+  @media (max-width: 768px) {
+    max-width: 100%;
+    max-height: calc(100dvh - 48px);
+  }
+
   @media (max-width: 480px) {
-    max-width: calc(100vw - 38px);
+    max-width: 100%;
   }
 `;
 

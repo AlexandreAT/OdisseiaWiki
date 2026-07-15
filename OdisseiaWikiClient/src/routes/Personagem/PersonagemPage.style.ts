@@ -844,6 +844,8 @@ export const StatusDiv = styled.div`
   > :last-child {
     flex: 1;
     min-width: 0;
+    padding-right: 4px;
+    box-sizing: border-box;
   }
 
   @media (max-width: 1100px) {
@@ -888,17 +890,19 @@ export const StatusValue = styled.div`
   color: var(--muted, #cfcfcf);
 `;
 
-export const StatusBarWrapper = styled.div`
-  width: 160px;
+export const StatusBarWrapper = styled.div<{ $color: string }>`
+  width: 100%;
   height: 10px;
+  min-width: 0;
   background: rgba(255,255,255,0.06);
-  border-radius: 0;
+  border: 1px solid ${({ $color }) => $color};
+  box-sizing: border-box;
+  border-radius: 20px;
   overflow: hidden;
   margin-top: 6px;
 
   @media (max-width: 1100px) {
-    width: 100%;
-    min-width: 0;
+    max-width: 100%;
   }
 `;
 
@@ -970,8 +974,29 @@ export const ItemPlaceholder = styled.div<{ $size?: number; $color?: string; $cl
   }
 `;
 
-export const GalleryToggle = styled.div`
+export const GalleryToggle = styled.button`
+  align-self: flex-end;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 7px;
+  border: 1px solid var(--neonBlue);
+  background: rgba(0, 0, 10, 0.42);
+  color: var(--clearneonBlue);
+  font-family: 'Orbitron', sans-serif;
+  font-size: 10px;
   cursor: pointer;
+
+  svg {
+    width: 14px;
+    height: 14px;
+    transform: rotate(0deg);
+    transition: transform 180ms ease;
+  }
+
+  &[aria-expanded='false'] svg {
+    transform: rotate(-90deg);
+  }
 `;
 
 export const GalleryContent = styled.div`
@@ -980,10 +1005,10 @@ export const GalleryContent = styled.div`
   box-sizing: border-box;
 
   @media (max-width: 768px) {
-    padding: 0 8px 16px;
+    padding: 0 2px 8px;
 
     /* GalleryBlock renders either a grid or a carousel. Both become a
-       predictable two-column gallery in the character page on mobile. */
+       compact four-column gallery in the character page on mobile. */
     > div > div {
       width: 100%;
       max-width: none;
@@ -992,9 +1017,9 @@ export const GalleryContent = styled.div`
     }
 
     > div > div:not(:has(> button[aria-label="Anterior"])) {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 8px;
-      padding: 8px;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 6px;
+      padding: 4px;
     }
 
     > div > div:has(> button[aria-label="Anterior"]) > button {
@@ -1003,10 +1028,10 @@ export const GalleryContent = styled.div`
 
     > div > div:has(> button[aria-label="Anterior"]) > div {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 8px;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 6px;
       width: 100%;
-      padding: 8px;
+      padding: 4px;
       overflow: visible;
       box-sizing: border-box;
 
@@ -1022,7 +1047,7 @@ export const GalleryContent = styled.div`
 
     > div > div:not(:has(> button[aria-label="Anterior"])),
     > div > div:has(> button[aria-label="Anterior"]) > div {
-      grid-template-columns: minmax(0, 1fr);
+      grid-template-columns: repeat(4, minmax(0, 1fr));
     }
   }
 `;
@@ -1496,8 +1521,8 @@ export const ItemDescriptionLayout = styled.div<{ $withoutMedia?: boolean }>`
     @media (max-width: 767px) {
       > :first-child {
         float: none;
-        display: flex;
-        margin: 0 0 16px;
+        display: block;
+        margin: 0 auto 16px;
       }
     }
   `}
@@ -1571,7 +1596,8 @@ export const ItemDescriptionImage = styled.img`
   box-shadow: 0 0 10px var(--clearneonBlue);
 
   @media (max-width: 767px) {
-    width: 100%;
+    width: min(100%, 220px);
     max-height: 240px;
+    margin-inline: auto;
   }
 `;

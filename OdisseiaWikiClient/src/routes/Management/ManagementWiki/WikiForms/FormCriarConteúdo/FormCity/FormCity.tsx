@@ -203,6 +203,7 @@ export const FormCity = ({ theme, neon, initialCity, onSaveSuccess, contentType 
             initialImage={imagemUrl}
             onImageCropped={handleCityImageUpload}
             cropPreset={cityImageCropPreset}
+            mobileSize="main"
           />
         </ImageSection>
       </FormHeader>
@@ -217,6 +218,7 @@ export const FormCity = ({ theme, neon, initialCity, onSaveSuccess, contentType 
           width="100%"
           minHeight="150px"
           placeholder="Descreva a cidade..."
+          expandable
         />
       </DescriptionSection>
 

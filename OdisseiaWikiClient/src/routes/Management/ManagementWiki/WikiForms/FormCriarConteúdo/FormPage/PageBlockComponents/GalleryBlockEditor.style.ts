@@ -53,6 +53,11 @@ export const GalleryContainer = styled.div<ThemeProps>`
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
+
+  @media (max-width: 768px) {
+    padding: 8px;
+    gap: 8px;
+  }
 `;
 
 export const GalleryGrid = styled.div`
@@ -62,8 +67,9 @@ export const GalleryGrid = styled.div`
   width: 100%;
   min-width: 0;
 
-  @media (max-width: 480px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
   }
 `;
 
@@ -75,6 +81,23 @@ export const ImageItem = styled.div<ThemeProps>`
   border: 1px solid ${props => (props.$isDark ? '#444' : '#ccc')};
   display: flex;
   flex-direction: column;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    max-width: none;
+    height: auto;
+    max-height: none;
+
+    > div {
+      padding: 3px 4px !important;
+    }
+
+    input {
+      min-width: 0;
+      padding: 2px 3px !important;
+      font-size: 9px !important;
+    }
+  }
 `;
 
 export const ImageThumb = styled.img`
@@ -82,6 +105,12 @@ export const ImageThumb = styled.img`
   aspect-ratio: 1;
   object-fit: cover;
   display: block;
+
+  @media (max-width: 768px) {
+    height: auto;
+    max-height: none;
+    object-fit: cover;
+  }
 `;
 
 export const DeleteButton = styled.button`
@@ -103,6 +132,16 @@ export const DeleteButton = styled.button`
 
   &:hover {
     background-color: #cc0000;
+  }
+
+  @media (max-width: 768px) {
+    top: 3px;
+    right: 3px;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    justify-content: center;
+    font-size: 10px;
   }
 `;
 

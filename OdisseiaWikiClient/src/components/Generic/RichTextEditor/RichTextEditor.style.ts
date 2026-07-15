@@ -23,6 +23,7 @@ interface Props {
   minHeight?: string;
   fullWidth?: boolean;
   disabled?: boolean;
+  $expandable?: boolean;
 }
 
 const glitchBorder = keyframes`
@@ -74,7 +75,7 @@ export const EditorWrapper = styled.div<Props>`
   border: 2px solid var(--black-blue);
   border-radius: 7px;
   outline: none;
-  padding: 25px 10px 10px;
+  padding: ${({ $expandable }) => $expandable ? '48px 10px 10px' : '25px 10px 10px'};
   transition: background-color 0.2s, border 0.2s;
   box-shadow: 0 0 1px 1px rgba(50, 50, 50, 0.8);
   ${({ height }) => height ? 'overflow-y: auto;' : 'overflow-y: visible;'}
@@ -264,6 +265,21 @@ export const ToolbarContainer = styled.div<Props>`
   max-width: 100%;
   box-sizing: border-box;
   overflow-x: auto;
+
+  @media (max-width: 768px) {
+    flex-wrap: nowrap;
+    gap: 4px;
+    padding: 6px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
 `;
 
 export const ToolbarGroup = styled.div`
@@ -271,6 +287,48 @@ export const ToolbarGroup = styled.div`
   gap: 2px;
   flex-wrap: wrap;
   min-width: 0;
+
+  @media (max-width: 768px) {
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    gap: 4px;
+    min-width: max-content;
+  }
+`;
+
+export const ExpandButton = styled.button<Props>`
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 5px 9px;
+  border: 1px solid ${({ theme, neon }) =>
+    neon === 'on'
+      ? theme === 'light' ? 'var(--clearneonViolet)' : 'var(--clearneonBlue)'
+      : 'var(--grey)'};
+  border-radius: 4px;
+  background: rgba(0, 8, 18, 0.9);
+  color: var(--whitesmoke);
+  font-size: 11px;
+  cursor: pointer;
+
+  svg {
+    font-size: 15px;
+  }
+
+  &:hover {
+    border-color: ${({ theme }) => theme === 'light' ? 'var(--neonViolet)' : 'var(--neonBlue)'};
+  }
+
+  @media (max-width: 768px) {
+    min-height: 28px;
+    padding: 4px 7px;
+    font-size: 10px;
+  }
 `;
 
 export const ToolbarButton = styled.button<Props & { active?: boolean }>`
@@ -297,6 +355,14 @@ export const ToolbarButton = styled.button<Props & { active?: boolean }>`
   display: flex;
   align-items: center;
   justify-content: center;
+
+  @media (max-width: 768px) {
+    flex: 0 0 auto;
+    min-width: 28px;
+    height: 28px;
+    padding: 4px 7px;
+    font-size: 0.75em;
+  }
 
   &:hover:not(:disabled) {
     background-color: ${({ theme, neon, typeStyle }) =>
@@ -349,4 +415,10 @@ export const ToolbarDivider = styled.div<Props>`
   width: 1px;
   background-color: rgba(255, 255, 255, 0.2);
   margin: 0 4px;
+
+  @media (max-width: 768px) {
+    flex: 0 0 1px;
+    min-height: 28px;
+    margin: 0 2px;
+  }
 `;

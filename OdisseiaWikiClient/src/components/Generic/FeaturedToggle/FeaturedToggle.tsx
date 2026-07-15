@@ -21,6 +21,6 @@ export const FeaturedToggle = ({
     title={featured ? 'Remover destaque' : 'Adicionar destaque'}
   >
     {featured ? <StarIcon /> : <StarBorderIcon />}
-    <FeaturedLabel>{label}</FeaturedLabel>
+    <FeaturedLabel $featured={featured}>{label}</FeaturedLabel>
   </FeaturedButton>
 );

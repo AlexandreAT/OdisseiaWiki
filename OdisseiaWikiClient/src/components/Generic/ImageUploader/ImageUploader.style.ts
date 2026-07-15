@@ -11,6 +11,7 @@ interface ContainerProps extends Props {
   height?: string;
   aspectRatio?: number;
   shape?: 'square' | 'circle' | 'rectangle';
+  $mobileSize?: 'main' | 'compact';
 }
 
 interface LabelProps {
@@ -33,6 +34,7 @@ export const UploaderController = styled.div<{ width?: string }>`
 
   @media (max-width: 768px) {
     width: 100%;
+    gap: 6px;
   }
 `;
 
@@ -65,7 +67,16 @@ export const ImageContainer = styled.div<ContainerProps>`
   box-sizing: border-box;
 
   @media (max-width: 768px) {
-    width: min(100%, 240px);
+    width: ${({ $mobileSize }) => $mobileSize === 'main'
+      ? 'min(68vw, 240px)'
+      : 'min(36vw, 130px)'};
+    max-width: ${({ $mobileSize }) => $mobileSize === 'main' ? '240px' : '130px'};
+    height: auto;
+    max-height: ${({ $mobileSize }) => $mobileSize === 'main' ? '240px' : '150px'};
+
+    img {
+      object-fit: cover;
+    }
   }
 
   &:hover {
@@ -83,6 +94,12 @@ export const ImageContainer = styled.div<ContainerProps>`
     height: 100%;
     object-fit: contain;
     object-position: center;
+  }
+
+  @media (max-width: 768px) {
+    img {
+      object-fit: cover;
+    }
   }
 `;
 
@@ -108,6 +125,23 @@ export const ImagePlaceholder = styled.div<Props>`
     text-align: center;
     margin: 0;
     opacity: 0.7;
+  }
+
+  @media (max-width: 768px) {
+    gap: 6px;
+    padding: 10px;
+
+    svg {
+      width: 34px;
+      height: 34px;
+    }
+
+    p {
+      max-width: 100%;
+      font-size: 11px;
+      line-height: 1.3;
+      overflow-wrap: anywhere;
+    }
   }
 
   ${ImageContainer}:hover & {

@@ -63,12 +63,15 @@ export const GalleryGrid = styled.div`
 
   @media (max-width: 768px) {
     width: 100%;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+    padding: 8px;
   }
 
   @media (max-width: 480px) {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    padding: 6px;
   }
 `;
 
@@ -109,13 +112,14 @@ export const CarouselViewport = styled.div`
     min-width: 200px;
 
     @media (max-width: 768px) {
-      width: 150px;
-      min-width: 150px;
+      width: 120px;
+      min-width: 120px;
     }
   }
 
   @media (max-width: 768px) {
-    padding-inline: 40px;
+    gap: 8px;
+    padding: 8px 36px;
   }
 
   scrollbar-width: none;
@@ -196,6 +200,18 @@ export const GalleryCaption = styled.p`
   overflow-wrap: anywhere;
   pointer-events: none;
   align-self: stretch;
+
+  @media (max-width: 768px) {
+    display: -webkit-box;
+    min-height: 0;
+    padding: 4px 5px 5px;
+    overflow: hidden;
+    font-size: 10px;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
 `;
 
 export const ErrorMessage = styled.div`

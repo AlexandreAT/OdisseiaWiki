@@ -51,14 +51,15 @@ export const Lightbox: React.FC<LightboxProps> = ({
   );
 
   useEffect(() => {
-    if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'hidden';
-    }
+    if (!isOpen) return;
+
+    const previousBodyOverflow = document.body.style.overflow;
+    document.addEventListener('keydown', handleKeyDown);
+    document.body.style.overflow = 'hidden';
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = '';
+      document.body.style.overflow = previousBodyOverflow;
     };
   }, [isOpen, handleKeyDown]);
 

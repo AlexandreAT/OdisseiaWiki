@@ -146,7 +146,14 @@ export const ResultsGrid = styled.div`
   min-width: 0;
 
   @media (max-width: 768px) {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    justify-content: stretch;
+    justify-items: stretch;
+    gap: 8px;
+  }
+
+  @media (max-width: 360px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 `;
 

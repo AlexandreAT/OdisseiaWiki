@@ -46,4 +46,18 @@ export const Title = styled.h1<{
     ${({ neon, theme, $colorOverride }) => neon === 'on' && !$colorOverride && css`
       animation: ${theme === 'dark' ? neonBlinkBlue : neonBlinkPink} 12s infinite linear;
     `}
+
+    @media (max-width: 768px) {
+      width: 100%;
+      max-width: 100%;
+      margin-inline: 0;
+      font-size: clamp(20px, 6vw, 28px);
+      line-height: 1.15;
+      letter-spacing: 1px;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      text-align: center;
+      box-sizing: border-box;
+    }
 `;
