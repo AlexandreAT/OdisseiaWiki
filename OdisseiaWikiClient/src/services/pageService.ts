@@ -5,6 +5,7 @@ import {
   ResultPageComplete,
   ResultPages
 } from "../models/Pages";
+import { ServiceRequestOptions } from "./serviceRequestOptions";
 
 export const createPage = async (
   dto: CreatePageWithBlocksDto
@@ -22,11 +23,12 @@ export const updatePage = async (
 };
 
 export const getPages = async (
-  visivel?: boolean
+  visivel?: boolean,
+  requestOptions: ServiceRequestOptions = {}
 ): Promise<ResultPages> => {
   const params = visivel !== undefined ? { visivel } : {};
 
-  const response = await api.get("/pages", { params });
+  const response = await api.get("/pages", { params, ...requestOptions });
 
   return response.data;
 };
@@ -53,9 +55,13 @@ export const deletePage = async (
   return response.status === 204 || response.status === 200;
 };
 
-export const searchPages = async (termo: string) => {
+export const searchPages = async (
+  termo: string,
+  requestOptions: ServiceRequestOptions = {}
+): Promise<ResultPages> => {
   const response = await api.get("/pages/search", {
-    params: { termo }
+    params: { termo },
+    ...requestOptions
   });
   
   if (response.data.sucesso && response.data.pages) {

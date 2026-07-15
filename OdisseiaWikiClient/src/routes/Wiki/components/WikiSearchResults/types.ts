@@ -1,5 +1,8 @@
-import { Page } from '../../../../models/Pages';
+import { WikiSearchGroups, WikiSearchItem } from '../../types';
 
 export interface WikiSearchResultsProps {
-  results: Page[];
+  results: WikiSearchGroups;
+  theme: 'dark' | 'light';
+  neon: 'on' | 'off';
+  onResultSelect: (item: WikiSearchItem) => void;
 }

@@ -1,4 +1,13 @@
 import styled from 'styled-components';
+import { WikiSearchEntityType } from '../../types';
+
+const getGroupColor = (type: WikiSearchEntityType) => ({
+  pages: 'var(--clearneonBlue)',
+  characters: 'var(--clearneonPink)',
+  cities: 'var(--clearneonYellow)',
+  races: 'var(--clearneonGreen)',
+  items: 'var(--clearneonViolet)',
+}[type]);
 
 export const SearchResultsContainer = styled.section`
   display: flex;
@@ -44,6 +53,50 @@ export const NoResultsMessage = styled.div`
   }
 `;
 
+export const SearchResultGroup = styled.section`
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  min-width: 0;
+`;
+
+export const SearchResultGroupTitle = styled.h2<{ $type: WikiSearchEntityType; $neon: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 12px 0 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid ${({ $type }) => getGroupColor($type)};
+  color: ${({ $type }) => getGroupColor($type)} !important;
+  font-family: 'DO Futuristic', sans-serif;
+  font-size: 20px;
+  font-weight: 100;
+  letter-spacing: 1.5px;
+  text-shadow: ${({ $neon, $type }) => $neon ? `0 0 6px ${getGroupColor($type)}` : 'none'};
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 5px;
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    box-sizing: border-box;
+    color: inherit !important;
+    font-family: sans-serif;
+    font-size: 11px;
+    letter-spacing: 0;
+  }
+
+  @media (max-width: 768px) {
+    font-size: 16px;
+    letter-spacing: 1px;
+  }
+`;
+
 export const SearchResultsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
@@ -56,14 +109,18 @@ export const SearchResultsGrid = styled.div`
   }
 `;
 
-export const ResultCard = styled.button`
+export const ResultCard = styled.button<{
+  $type: WikiSearchEntityType;
+  $neon: boolean;
+  $isDark: boolean;
+}>`
   display: flex;
   flex-direction: column;
   gap: 12px;
   padding: 0;
   border: 2px solid #333;
   border-radius: 8px;
-  background-color: #1a1a1a;
+  background-color: ${({ $isDark }) => $isDark ? '#1a1a1a' : '#242532'};
   cursor: pointer;
   overflow: hidden;
   transition: all 0.3s ease;
@@ -74,8 +131,8 @@ export const ResultCard = styled.button`
   box-sizing: border-box;
 
   &:hover {
-    border-color: #00d4ff;
-    box-shadow: 0 0 16px rgba(0, 212, 255, 0.2);
+    border-color: ${({ $type }) => getGroupColor($type)};
+    box-shadow: ${({ $neon, $type }) => $neon ? `0 0 14px ${getGroupColor($type)}` : '0 8px 18px rgba(0, 0, 0, 0.28)'};
     transform: translateY(-4px);
   }
 
@@ -126,13 +183,13 @@ export const ResultCardDescription = styled.p`
   overflow-wrap: anywhere;
 `;
 
-export const ResultCardPlaceholder = styled.div`
+export const ResultCardPlaceholder = styled.div<{ $type: WikiSearchEntityType }>`
   width: 100%;
   height: 160px;
   background: linear-gradient(135deg, #0a3a3a 0%, #1a1a1a 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255, 255, 255, 0.3);
+  color: ${({ $type }) => getGroupColor($type)};
   font-size: 32px;
 `;

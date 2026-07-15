@@ -23,6 +23,28 @@ export const PageController = styled.div`
   }
 `
 
+export const PageLoadingState = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: calc(100svh - var(--main-header-height, 85px));
+  padding: 40px 16px 24px;
+  box-sizing: border-box;
+  color: var(--clearneonBlue);
+  font-family: 'DO Futuristic', sans-serif;
+  font-size: 18px;
+  letter-spacing: 1px;
+  text-align: center;
+  text-shadow: 0 0 7px var(--clearneonBlue);
+
+  @media (max-width: 768px) {
+    min-height: calc(100svh - var(--main-header-height, 54px));
+    padding: 24px 12px;
+    font-size: 14px;
+  }
+`;
+
 export const BackgroundVideo = styled.video`
   width: 100%;
   height: 100%;

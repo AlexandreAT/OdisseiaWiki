@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { usePersonagem } from './usePersonagem';
-import { PageContainer, TopSection, BottomSection, AvatarWrapper, MetaRow, Sections, CardContent, InfoList, InfoItem, MetaContent, SectionSpacer, AvatarDivController, SatusDivController, StatusList, StatusDiv, HeaderStatusController, StatusController, StatusHeader, StatusBarWrapper, StatusBarFill, InfoControllers, TitleDiv, TagItem, TagList, RelatedLink, HistoryWrapper, HistoryModalOverlay, HistoryModalSheet, HistoryModalHeader, HistoryModalTitle, HistoryModalClose, HistoryModalContent, InfoSpan, BottomInfoLeft, BottomInfoRight, StoryWithImage, StoryImage, HudCornerEl, HudTopLine, HudBottomLine, HudLeftLine, HudRightLine, StatusTopLine, StatusBottomLine, StatusLeftLine, StatusRightLine, BackgroundVideoContainer, BackgroundVideo, BackgroundOverlay, HexagonHud, HexagonBackground, HexagonBorder, HexagonContent, HexagonValue, PageController, SectionRow, InventoryList, LoadBar, LoadProgress, ImplantGrid, ImplantMods, SkillGrid, AbilityDescription, AbilityPair, AbilityCard, CooldownBar, CooldownFill, ItemDescriptionPreview, ItemDescriptionLayout, ItemDetailsBody, ViewMoreButton, DetailAttributes, DetailAttribute, DetailTextPair, DetailText, ItemDescriptionImage } from './PersonagemPage.style';
+import { PageContainer, TopSection, BottomSection, AvatarWrapper, MetaRow, Sections, CardContent, InfoList, InfoItem, MetaContent, SectionSpacer, AvatarDivController, SatusDivController, StatusList, StatusDiv, HeaderStatusController, StatusController, StatusHeader, StatusBarWrapper, StatusBarFill, InfoControllers, TitleDiv, TagItem, TagList, RelatedLink, HistoryWrapper, HistoryModalOverlay, HistoryModalSheet, HistoryModalHeader, HistoryModalTitle, HistoryModalClose, HistoryModalContent, InfoSpan, BottomInfoLeft, BottomInfoRight, StoryWithImage, StoryImage, HudCornerEl, HudTopLine, HudBottomLine, HudLeftLine, HudRightLine, StatusTopLine, StatusBottomLine, StatusLeftLine, StatusRightLine, BackgroundVideoContainer, BackgroundVideo, BackgroundOverlay, HexagonHud, HexagonBackground, HexagonBorder, HexagonContent, HexagonValue, PageController, PageLoadingState, SectionRow, InventoryList, LoadBar, LoadProgress, ImplantGrid, ImplantMods, SkillGrid, AbilityDescription, AbilityPair, AbilityCard, CooldownBar, CooldownFill, ItemDescriptionPreview, ItemDescriptionLayout, ItemDetailsBody, ViewMoreButton, DetailAttributes, DetailAttribute, DetailTextPair, DetailText, ItemDescriptionImage } from './PersonagemPage.style';
 import { PersonagemRichText, FlexRow, MutedText, BoldLabel, ItemThumb, ItemPlaceholder, GalleryToggle, GalleryContent, MaskIcon, ItemRow, FlexFill } from './PersonagemPage.style';
 import glassHeart from '../../assets/svg/glass-heart.svg';
 import rollingEnergy from '../../assets/svg/rolling-energy.svg';
@@ -274,7 +274,7 @@ const PersonagemPage: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [historyModalOpen, selectedInventoryItem]);
 
-  if (loading) return <div>Carregando personagem...</div>;
+  if (loading) return <PageLoadingState>Carregando personagem...</PageLoadingState>;
   if (error) return <div>Erro: {error}</div>;
   console.log("🚀 ~ PersonagemPage ~ personagem:", personagem)
   if (!personagem) return <div>Personagem não encontrado</div>;

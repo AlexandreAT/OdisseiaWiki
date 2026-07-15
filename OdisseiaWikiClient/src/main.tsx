@@ -21,35 +21,47 @@ const router = createBrowserRouter([{
   errorElement: <ErrorPage />,
   children: [
     {
-      path: '/',
-      element: <Home />
-    },
-    {
-      path: 'login',
-      element: <Login />
-    },
-    {
-      path: 'wiki',
-      element: <Wiki />,
+      errorElement: <ErrorPage />,
       children: [
         {
-          path: ':slug',
-          element: <Wiki />
+          path: '/',
+          element: <Home />
+        },
+        {
+          path: 'login',
+          element: <Login />
+        },
+        {
+          path: 'wiki',
+          element: <Wiki />,
+          children: [
+            {
+              path: ':slug',
+              element: <Wiki />
+            }
+          ]
+        },
+        {
+          path: 'management',
+          element: <Management />
+        },
+        {
+          path: 'hub',
+          element: <Hub />
+        },
+        {
+          path: 'personagem/:id',
+          element: <PersonagemPage />
+        },
+        {
+          path: 'erro',
+          element: <ErrorPage />
+        },
+        {
+          path: '*',
+          element: <ErrorPage />
         }
       ]
-    },
-    {
-      path: 'management',
-      element: <Management />
-    },
-    {
-      path: 'hub',
-      element: <Hub />
-    }
-    ,
-    {
-      path: 'personagem/:id',
-      element: <PersonagemPage />
     }
   ]
 }])

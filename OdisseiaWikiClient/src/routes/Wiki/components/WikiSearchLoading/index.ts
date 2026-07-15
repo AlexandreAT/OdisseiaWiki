@@ -1,0 +1,1 @@
+export { WikiSearchLoading } from './WikiSearchLoading';

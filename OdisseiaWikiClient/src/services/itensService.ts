@@ -1,5 +1,6 @@
 import api from "../axios/api";
 import { JSONContent } from "../models/Itens";
+import { ServiceRequestOptions } from './serviceRequestOptions';
 
 export interface ItemPayload {
   iditem?: string;
@@ -25,8 +26,10 @@ export interface ResultItem {
   item?: ItemPayload;
 }
 
-export const getItens = async (): Promise<ItemPayload[]> => {
-  const response = await api.get("/item");
+export const getItens = async (
+  requestOptions: ServiceRequestOptions = {}
+): Promise<ItemPayload[]> => {
+  const response = await api.get("/item", requestOptions);
   return response.data;
 };
 

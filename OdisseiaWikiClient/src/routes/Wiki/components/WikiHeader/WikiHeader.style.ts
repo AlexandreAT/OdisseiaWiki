@@ -1,19 +1,32 @@
 import styled from 'styled-components';
+import { WikiSearchEntityType } from '../../types';
+
+const getGroupColor = (type: WikiSearchEntityType) => ({
+  pages: 'var(--clearneonBlue)',
+  characters: 'var(--clearneonPink)',
+  cities: 'var(--clearneonYellow)',
+  races: 'var(--clearneonGreen)',
+  items: 'var(--clearneonViolet)',
+}[type]);
 
 export const DivController = styled.section`
   position: sticky;
-  top: 85px;
-  z-index: 20;
+  top: calc(var(--main-header-height, 85px) + 1px);
+  z-index: 50;
   width: 100%;
   min-width: 0;
-  margin-top: 1px;
+  margin-top: 0;
+
+  @media (min-width: 1101px) {
+    top: calc(var(--main-header-height, 85px) + 6px);
+  }
 
   @media (max-width: 1100px) {
-    top: 67px;
+    top: calc(var(--main-header-height, 67px) + 1px);
   }
 
   @media (max-width: 768px) {
-    top: 54px;
+    top: var(--main-header-height, 54px);
     margin-top: 0;
   }
 `
@@ -31,7 +44,7 @@ export const WikiHeaderWrapper = styled.div<{ $isExpanded: boolean }>`
     props.$isExpanded
       ? '100px'
       : '0px'};
-  overflow: hidden;
+  overflow: ${({ $isExpanded }) => ($isExpanded ? 'visible' : 'hidden')};
   background-color: rgba(0, 8, 18, 0.58);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -62,6 +75,15 @@ export const WikiHeaderWrapper = styled.div<{ $isExpanded: boolean }>`
     gap: 8px;
     padding: ${props => props.$isExpanded ? '10px 12px' : '0 12px'};
   }
+`;
+
+export const SearchForm = styled.form`
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  max-width: 400px;
 `;
 
 export const HomeButton = styled.button`
@@ -187,4 +209,98 @@ export const ToggleHeaderButton = styled.button<{ $isExpanded: boolean }>`
   @media (max-width: 768px) {
     right: 8px;
   }
+`;
+
+export const AutocompleteDropdown = styled.div<{ $isDark: boolean }>`
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 100;
+  width: 100%;
+  max-height: min(58vh, 430px);
+  overflow-y: auto;
+  padding: 6px;
+  box-sizing: border-box;
+  border: 1px solid rgba(0, 212, 255, 0.45);
+  border-radius: 6px;
+  background: ${({ $isDark }) => $isDark ? 'rgba(0, 8, 18, 0.97)' : 'rgba(20, 22, 32, 0.97)'};
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+
+  @media (max-width: 768px) {
+    max-height: 50vh;
+    padding: 4px;
+  }
+`;
+
+export const SuggestionGroup = styled.section`
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+
+  & + & {
+    margin-top: 5px;
+    padding-top: 5px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+`;
+
+export const SuggestionGroupTitle = styled.button<{ $type: WikiSearchEntityType; $neon: boolean }>`
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 5px 8px 4px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: ${({ $type }) => getGroupColor($type)} !important;
+  font-family: 'DO Futuristic', sans-serif;
+  font-size: 11px;
+  font-weight: 100;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  text-align: left;
+  text-shadow: ${({ $neon, $type }) => $neon ? `0 0 5px ${getGroupColor($type)}` : 'none'};
+
+  &:hover,
+  &:focus-visible {
+    outline: none;
+    background: rgba(255, 255, 255, 0.07);
+    text-shadow: ${({ $type }) => `0 0 8px ${getGroupColor($type)}`};
+  }
+`;
+
+export const SuggestionButton = styled.button`
+  width: 100%;
+  min-width: 0;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--whitesmoke);
+  font-size: 13px;
+  line-height: 1.25;
+  text-align: left;
+  overflow-wrap: anywhere;
+
+  &:hover,
+  &:focus-visible {
+    outline: none;
+    background: rgba(0, 212, 255, 0.12);
+  }
+
+  @media (max-width: 768px) {
+    padding: 6px;
+    font-size: 12px;
+  }
+`;
+
+export const SuggestionStatus = styled.p<{ $error?: boolean }>`
+  margin: 0;
+  padding: 10px;
+  color: ${({ $error }) => ($error ? 'var(--clearneonPink)' : 'var(--clearneonYellow)')} !important;
+  font-size: 12px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 `;

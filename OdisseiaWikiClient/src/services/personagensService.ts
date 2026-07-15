@@ -1,5 +1,6 @@
 import { Principais, Secundarios, JSONContent } from './../models/Characters';
 import api from "../axios/api";
+import { ServiceRequestOptions } from './serviceRequestOptions';
 
 export interface PersonagemPayload {
   idpersonagem: string;
@@ -150,9 +151,12 @@ export interface PersonagemUpdatePayload {
   personagemsVinculados?: number[];
 }
 
-export const getPersonagens = async (visivel?: boolean): Promise<PersonagemPayload[]> => {
+export const getPersonagens = async (
+  visivel?: boolean,
+  requestOptions: ServiceRequestOptions = {}
+): Promise<PersonagemPayload[]> => {
   const params = visivel !== undefined ? { visivel } : {};
-  const response = await api.get("/personagens", { params });
+  const response = await api.get("/personagens", { params, ...requestOptions });
   return response.data;
 };
 

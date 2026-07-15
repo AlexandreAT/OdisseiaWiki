@@ -1,13 +1,16 @@
 import React from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { BiBookmark } from 'react-icons/bi';
 import { normalizeImagePath } from '../../utils/imagePathHelper';
+import { WIKI_SEARCH_GROUP_LABELS, WIKI_SEARCH_GROUP_ORDER } from '../../types';
 import { WikiSearchResultsProps } from './types';
 import {
   SearchResultsContainer,
   SearchResultsHeader,
   ResultCount,
   NoResultsMessage,
+  SearchResultGroup,
+  SearchResultGroupTitle,
   SearchResultsGrid,
   ResultCard,
   ResultCardImage,
@@ -17,20 +20,30 @@ import {
   ResultCardPlaceholder,
 } from './WikiSearchResults.style';
 
-export const WikiSearchResults: React.FC<WikiSearchResultsProps> = ({ results }) => {
-  const navigate = useNavigate();
+export const WikiSearchResults: React.FC<WikiSearchResultsProps> = ({
+  results,
+  theme,
+  neon,
+  onResultSelect,
+}) => {
   const [searchParams] = useSearchParams();
   const query = searchParams.get('q') || '';
+  const selectedGroupParam = searchParams.get('type');
+  const selectedGroup = WIKI_SEARCH_GROUP_ORDER.find((group) => group === selectedGroupParam) ?? null;
+  const totalResults = WIKI_SEARCH_GROUP_ORDER.reduce(
+    (total, group) => total + results[group].length,
+    0,
+  );
 
-  const handleResultClick = (slug: string) => {
-    navigate(`/wiki/${slug}`);
-  };
-
-  if (results.length === 0) {
+  if (totalResults === 0) {
     return (
       <SearchResultsContainer>
         <SearchResultsHeader>
-          <ResultCount>Nenhum resultado encontrado para "{query}"</ResultCount>
+          <ResultCount>
+            {selectedGroup
+              ? `Nenhum registro encontrado em ${WIKI_SEARCH_GROUP_LABELS[selectedGroup]}`
+              : `Nenhuma entidade encontrada para "${query}"`}
+          </ResultCount>
         </SearchResultsHeader>
         <NoResultsMessage>
           <p>Tente ajustar seus termos de busca</p>
@@ -43,31 +56,50 @@ export const WikiSearchResults: React.FC<WikiSearchResultsProps> = ({ results })
     <SearchResultsContainer>
       <SearchResultsHeader>
         <ResultCount>
-          {results.length} resultado{results.length > 1 ? 's' : ''} encontrado{results.length > 1 ? 's' : ''} para "{query}"
+          {selectedGroup
+            ? `${totalResults} registro${totalResults > 1 ? 's' : ''} em ${WIKI_SEARCH_GROUP_LABELS[selectedGroup]}`
+            : `${totalResults} resultado${totalResults > 1 ? 's' : ''} encontrado${totalResults > 1 ? 's' : ''} para "${query}"`}
         </ResultCount>
       </SearchResultsHeader>
 
-      <SearchResultsGrid>
-        {results.map(page => (
-          <ResultCard
-            key={page.idPage || page.slug}
-            onClick={() => handleResultClick(page.slug)}
-            type="button"
-          >
-            {page.coverImage ? (
-              <ResultCardImage src={normalizeImagePath(page.coverImage)} alt={page.titulo} />
-            ) : (
-              <ResultCardPlaceholder>
-                <BiBookmark />
-              </ResultCardPlaceholder>
-            )}
-            <ResultCardContent>
-              <ResultCardTitle>{page.titulo}</ResultCardTitle>
-              {page.descricao && <ResultCardDescription>{page.descricao}</ResultCardDescription>}
-            </ResultCardContent>
-          </ResultCard>
-        ))}
-      </SearchResultsGrid>
+      {WIKI_SEARCH_GROUP_ORDER.map((group) => {
+        const groupResults = results[group];
+        if (groupResults.length === 0) return null;
+
+        return (
+          <SearchResultGroup key={group}>
+            <SearchResultGroupTitle $type={group} $neon={neon === 'on'}>
+              {WIKI_SEARCH_GROUP_LABELS[group]}
+              <span>{groupResults.length}</span>
+            </SearchResultGroupTitle>
+
+            <SearchResultsGrid>
+              {groupResults.map((item) => (
+                <ResultCard
+                  key={`${item.type}-${item.id}`}
+                  type="button"
+                  $type={group}
+                  $neon={neon === 'on'}
+                  $isDark={theme === 'dark'}
+                  onClick={() => onResultSelect(item)}
+                >
+                  {item.image ? (
+                    <ResultCardImage src={normalizeImagePath(item.image)} alt={item.title} />
+                  ) : (
+                    <ResultCardPlaceholder $type={group}>
+                      <BiBookmark />
+                    </ResultCardPlaceholder>
+                  )}
+                  <ResultCardContent>
+                    <ResultCardTitle>{item.title}</ResultCardTitle>
+                    {item.description && <ResultCardDescription>{item.description}</ResultCardDescription>}
+                  </ResultCardContent>
+                </ResultCard>
+              ))}
+            </SearchResultsGrid>
+          </SearchResultGroup>
+        );
+      })}
     </SearchResultsContainer>
   );
 };

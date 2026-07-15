@@ -17,7 +17,7 @@ const Wiki = () => {
   );
 
   useEffect(() => {
-    if (!slug && !searchParams.has('q')) {
+    if (!slug && !searchParams.has('q') && !searchParams.has('type')) {
       navigate('/wiki/MainPage');
     }
   }, [slug, searchParams, navigate]);

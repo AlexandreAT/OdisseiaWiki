@@ -1,4 +1,5 @@
 import api from "../axios/api";
+import { ServiceRequestOptions } from './serviceRequestOptions';
 
 export interface StatusBase {
   vida: number;
@@ -123,12 +124,16 @@ export const resolveRacaCharacterStatus = (value: unknown): RacaCharacterStatusD
 };
 
 // READ
-export const getRacas = async (visivel?: boolean, idMesa?: number): Promise<ResultRacas> => {
+export const getRacas = async (
+  visivel?: boolean,
+  idMesa?: number,
+  requestOptions: ServiceRequestOptions = {}
+): Promise<ResultRacas> => {
   const params = {
     ...(visivel !== undefined ? { visivel } : {}),
     ...(idMesa !== undefined ? { idMesa } : {}),
   };
-  const response = await api.get("/racas", { params });
+  const response = await api.get("/racas", { params, ...requestOptions });
   return response.data;
 };
 

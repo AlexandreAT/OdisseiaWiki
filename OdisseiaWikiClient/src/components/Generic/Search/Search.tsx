@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, ReactNode, memo, useCallback } from 'react';
+import { useState, useRef, useEffect, ReactNode, memo, useCallback, useMemo } from 'react';
 import {
   ContentController,
   SearchLabel,
@@ -8,6 +8,7 @@ import {
   IconWrapper,
   SuggestionsList
 } from './Search.style';
+import { getRankedSuggestions, getSuggestionDisplayLabel } from '../../../utils/searchSuggestions';
 
 interface Props {
   theme: 'dark' | 'light';
@@ -53,6 +54,9 @@ const SearchComponent = ({
   const [focus, setFocus] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const rankedSuggestions = useMemo(() => (
+    getRankedSuggestions(suggestions, value ?? '', 5, getSuggestionDisplayLabel)
+  ), [suggestions, value]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -106,20 +110,17 @@ const SearchComponent = ({
         )}
       </SearchLabel>
 
-      {showSuggestions && !disabled && suggestions.length > 0 && (
+      {showSuggestions && !disabled && (loading || rankedSuggestions.length > 0) && (
         <SuggestionsList theme={theme} neon={neon}>
           {loading && <li>Buscando...</li>} {/* ✅ loading visual */}
-          {!loading && suggestions.length > 0 && suggestions.map((s, i) => (
+          {!loading && rankedSuggestions.map((suggestion, index) => (
             <li
-              key={i}
-              onClick={() => handleSelectSuggestion(s)}
+              key={`${suggestion}-${index}`}
+              onClick={() => handleSelectSuggestion(suggestion)}
             >
-              {s}
+              {getSuggestionDisplayLabel(suggestion)}
             </li>
           ))}
-          {!loading && suggestions.length == 0 && (
-            <li>Nenhum resultado encontrado</li>
-          )}
         </SuggestionsList>
       )}
 

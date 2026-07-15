@@ -1,6 +1,7 @@
 import api from "../axios/api";
 import { JSONContent } from "../models/Cities";
 import { PontoDeInteresse } from "../models/InfoLore";
+import { ServiceRequestOptions } from './serviceRequestOptions';
 
 export interface CidadePayload {
   idcidade: number;
@@ -38,9 +39,12 @@ export interface ResultCreateCidade {
   cidade?: CidadePayload;
 }
 
-export const getCidades = async (visivel?: boolean): Promise<ResultCidades> => {
+export const getCidades = async (
+  visivel?: boolean,
+  requestOptions: ServiceRequestOptions = {}
+): Promise<ResultCidades> => {
   const params = visivel !== undefined ? { visivel } : {};
-  const response = await api.get("/cidades", { params });
+  const response = await api.get("/cidades", { params, ...requestOptions });
   return response.data;
 };
 

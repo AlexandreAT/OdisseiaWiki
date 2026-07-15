@@ -76,3 +76,27 @@ export const LoadingContainer = styled.div<WikiLayoutProps>`
     opacity: 0.7;
   }
 `;
+
+export const SearchWarning = styled.p`
+  align-self: center;
+  width: calc(100% - 48px);
+  max-width: 760px;
+  margin: 20px 24px 0;
+  padding: 9px 12px;
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 210, 0, 0.45);
+  border-radius: 4px;
+  background: rgba(20, 16, 0, 0.58);
+  color: var(--clearneonYellow) !important;
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: center;
+  overflow-wrap: anywhere;
+
+  @media (max-width: 768px) {
+    width: calc(100% - 24px);
+    margin: 14px 12px 0;
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+`;

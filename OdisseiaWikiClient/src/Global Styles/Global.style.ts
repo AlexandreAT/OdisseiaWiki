@@ -8,6 +8,16 @@ interface Props {
 }
 
 const Page = styled.div<Props>`
+    --main-header-height: 85px;
+
+    @media (max-width: 1100px) {
+        --main-header-height: 67px;
+    }
+
+    @media (max-width: 768px) {
+        --main-header-height: 54px;
+    }
+
     .link {
         text-decoration: none;
     }

@@ -1,5 +1,43 @@
 import { Page } from '../../models/Pages';
 
+export type WikiSearchEntityType = 'pages' | 'characters' | 'cities' | 'races' | 'items';
+
+export interface WikiSearchItem {
+  id: string;
+  type: WikiSearchEntityType;
+  title: string;
+  description?: string;
+  image?: string;
+  route: string;
+  searchTerms?: string[];
+}
+
+export type WikiSearchGroups = Record<WikiSearchEntityType, WikiSearchItem[]>;
+
+export const WIKI_SEARCH_GROUP_ORDER: WikiSearchEntityType[] = [
+  'pages',
+  'characters',
+  'cities',
+  'races',
+  'items',
+];
+
+export const WIKI_SEARCH_GROUP_LABELS: Record<WikiSearchEntityType, string> = {
+  pages: 'Páginas',
+  characters: 'Personagens',
+  cities: 'Cidades',
+  races: 'Raças',
+  items: 'Itens',
+};
+
+export const createEmptyWikiSearchGroups = (): WikiSearchGroups => ({
+  pages: [],
+  characters: [],
+  cities: [],
+  races: [],
+  items: [],
+});
+
 export interface WikiContextualBlock {
   id: string;
   title: string;
@@ -22,7 +60,8 @@ export interface WikiContentState {
 
 export interface WikiSearchState {
   query: string;
-  results: Page[];
+  results: WikiSearchGroups;
   loading: boolean;
   error: string | null;
+  warning: string | null;
 }
