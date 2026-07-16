@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using OdisseiaWiki.Dtos;
+using OdisseiaWiki.Security;
 using OdisseiaWiki.Services.Interfaces;
 
 namespace OdisseiaWiki.Controllers
@@ -16,6 +18,7 @@ namespace OdisseiaWiki.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = AuthorizationPolicies.Admin)]
         public async Task<IActionResult> Create(CreatePageWithBlocksDto dto)
         {
             var result = await _service.CreateAsync(dto);
@@ -26,6 +29,9 @@ namespace OdisseiaWiki.Controllers
         public async Task<IActionResult> Search([FromQuery] string termo)
         {
             List<SearchItemDto> result = await _service.SearchAsync(termo);
+
+            if (!User.IsAdmin())
+                result = result.Where(page => page.Visivel).ToList();
 
             return Ok(new
             {
@@ -39,7 +45,7 @@ namespace OdisseiaWiki.Controllers
         {
             var page = await _service.GetBySlugAsync(slug);
 
-            if (page == null)
+            if (page == null || (!page.Visivel && !User.IsAdmin()))
                 return NotFound(ResultPage.Fail("Página não encontrada."));
 
             return Ok(ResultPage.Ok(page));
@@ -50,7 +56,7 @@ namespace OdisseiaWiki.Controllers
         {
             var page = await _service.GetByIdAsync(id);
 
-            if (page == null)
+            if (page == null || (!page.Visivel && !User.IsAdmin()))
                 return NotFound(ResultPage.Fail("Página não encontrada."));
 
             return Ok(ResultPage.Ok(page));
@@ -59,12 +65,16 @@ namespace OdisseiaWiki.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] bool? visivel = null)
         {
+            if (!User.IsAdmin())
+                visivel = true;
+
             var pages = await _service.GetAllAsync(visivel);
 
             return Ok(ResultPage.Ok(pages));
         }
 
         [HttpPut("{id:int}")]
+        [Authorize(Policy = AuthorizationPolicies.Admin)]
         public async Task<IActionResult> Update(
             int id,
             [FromBody] CreatePageWithBlocksDto dto)
@@ -79,7 +89,7 @@ namespace OdisseiaWiki.Controllers
                     page = result
                 });
             }
-            catch (Exception ex)
+            catch (InvalidOperationException ex)
             {
                 return BadRequest(new
                 {
@@ -90,6 +100,7 @@ namespace OdisseiaWiki.Controllers
         }
 
         [HttpDelete("{id:int}")]
+        [Authorize(Policy = AuthorizationPolicies.Admin)]
         public async Task<IActionResult> Delete(int id)
         {
             bool deleted = await _service.DeleteAsync(id);

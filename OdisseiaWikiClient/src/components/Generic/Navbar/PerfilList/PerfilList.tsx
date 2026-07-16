@@ -1,13 +1,12 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { PerfilDropdown, PerfilOption, PerfilButton } from './PerfilList.style';
 
-const adminEmail = import.meta.env.VITE_ADMIN_EMAIL;
-
 interface Props {
     usuario: {
         email: string;
         imagemUrl?: string;
         nome?: string;
+        role?: string;
     };
     onClose: () => void;
     avatarRef: React.RefObject<HTMLDivElement>;
@@ -66,6 +65,7 @@ export const PerfilList = ({ usuario, onClose, avatarRef, theme }: Props) => {
     }, [onClose, avatarRef]);
     
     const handleLogout = () => {
+        localStorage.removeItem('token');
         localStorage.removeItem('usuario');
         window.location.href = '/login';
     };
@@ -80,7 +80,7 @@ export const PerfilList = ({ usuario, onClose, avatarRef, theme }: Props) => {
         >
             {/* A opção Perfil retornará em uma versão futura. */}
             <PerfilOption to="/hub" themeMode={theme}>Mesas e personagens</PerfilOption>
-            {usuario.email === adminEmail && (
+            {usuario.role === 'Admin' && (
                 <PerfilOption to="/management" themeMode={theme}>Gerenciamento</PerfilOption>
             )}
             <PerfilButton onClick={handleLogout} themeMode={theme}>Sair</PerfilButton>

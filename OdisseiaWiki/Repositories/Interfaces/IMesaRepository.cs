@@ -9,6 +9,7 @@ namespace OdisseiaWiki.Repositories.Interfaces
         Task<Mesa?> GetByCodigoSistemaAsync(string codigoSistema);
         Task<bool> IsOwnerAsync(int idMesa, int idUsuario);
         Task<bool> UsuarioPodeUsarMesaAsync(int idMesa, int idUsuario);
+        Task<List<Mesa>> GetAccessibleByUsuarioIdAsync(int usuarioId);
         Task<List<Mesa>> GetByUsuarioIdAsync(int usuarioId);
         Task<Mesa> CreateAsync(Mesa mesa);
         Task<Mesa> UpdateAsync(Mesa mesa);

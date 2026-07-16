@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using OdisseiaWiki.Dtos;
 using OdisseiaWiki.Models;
+using OdisseiaWiki.Security;
 using OdisseiaWiki.Services.Interfaces;
 
 namespace OdisseiaWiki.Controllers
@@ -17,6 +19,7 @@ namespace OdisseiaWiki.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = AuthorizationPolicies.Admin)]
         public async Task<IActionResult> Create([FromBody] PersonagemDto dto)
         {
             ResultPersonagem resultado = await _service.CreateAsync(dto);
@@ -30,6 +33,9 @@ namespace OdisseiaWiki.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] bool? visivel = null)
         {
+            if (!User.IsAdmin())
+                visivel = true;
+
             List<Personagen> personagens = await _service.GetAllAsync(visivel);
             return Ok(personagens);
         }
@@ -38,13 +44,14 @@ namespace OdisseiaWiki.Controllers
         public async Task<IActionResult> GetById(int id)
         {
             Personagen personagem = await _service.GetByIdAsync(id);
-            if (personagem == null)
+            if (personagem == null || (!personagem.Visivel && !User.IsAdmin()))
                 return NotFound($"Personagem com id {id} não encontrado.");
 
             return Ok(personagem);
         }
 
         [HttpPut("{id:int}")]
+        [Authorize(Policy = AuthorizationPolicies.Admin)]
         public async Task<IActionResult> Update(int id, [FromBody] PersonagemDto dto)
         {
             ResultPersonagem resultado = await _service.UpdateAsync(id, dto);
@@ -55,6 +62,7 @@ namespace OdisseiaWiki.Controllers
         }
 
         [HttpDelete("{id:int}")]
+        [Authorize(Policy = AuthorizationPolicies.Admin)]
         public async Task<IActionResult> Delete(int id)
         {
             bool sucesso = await _service.DeleteAsync(id);
@@ -72,6 +80,9 @@ namespace OdisseiaWiki.Controllers
 
             List<Personagen> personagens =
                 await _service.GetBatchAsync(dto.Ids);
+
+            if (!User.IsAdmin())
+                personagens = personagens.Where(personagem => personagem.Visivel).ToList();
 
             return Ok(personagens);
         }

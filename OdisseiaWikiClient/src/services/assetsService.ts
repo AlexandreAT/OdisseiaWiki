@@ -20,8 +20,6 @@ export const saveAsset = async (payload: SaveAssetPayload): Promise<SaveAssetRes
     formData.append('type', payload.type);
     formData.append('entityName', payload.entityName);
     if (payload.folderName) formData.append('folderName', payload.folderName);
-    console.log("🚀 ~ saveAsset ~ formData:", formData)
-
     const response = await api.postForm('/assets/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
     });

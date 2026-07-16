@@ -36,6 +36,15 @@ namespace OdisseiaWiki.Services
         public async Task<List<Mesa>> GetAllAsync()
             => await _repository.GetAllAsync();
 
+        public Task<List<Mesa>> GetAccessibleAsync(int idUsuario)
+            => _repository.GetAccessibleByUsuarioIdAsync(idUsuario);
+
+        public Task<bool> IsOwnerAsync(int idMesa, int idUsuario)
+            => _repository.IsOwnerAsync(idMesa, idUsuario);
+
+        public Task<bool> CanUseAsync(int idMesa, int idUsuario)
+            => _repository.UsuarioPodeUsarMesaAsync(idMesa, idUsuario);
+
         public async Task<Mesa> ObterMesaPadraoAsync()
         {
             var mesaPadrao = await _repository.GetByCodigoSistemaAsync(SystemMesaConstants.CodigoMesaPadrao);

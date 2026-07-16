@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using OdisseiaWiki.Dtos;
+using OdisseiaWiki.Security;
 using OdisseiaWiki.Services.Interfaces;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -20,6 +22,9 @@ namespace OdisseiaWiki.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] bool? visivel = null)
         {
+            if (!User.IsAdmin())
+                visivel = true;
+
             var items = await _service.GetAllAsync(visivel);
             return Ok(items);
         }
@@ -29,12 +34,13 @@ namespace OdisseiaWiki.Controllers
         {
             var item = await _service.GetByIdAsync(id);
             
-            return item is null
-                ? NotFound($"Item com id {id} n„o encontrado.")
+            return item is null || (!item.Visivel && !User.IsAdmin())
+                ? NotFound($"Item com id {id} n√£o encontrado.")
                 : Ok(item);
         }
 
         [HttpPost]
+        [Authorize(Policy = AuthorizationPolicies.Admin)]
         public async Task<IActionResult> Create([FromBody] ItemCreateDto dto)
         {
             var id = await _service.CreateAsync(dto);
@@ -42,22 +48,24 @@ namespace OdisseiaWiki.Controllers
         }
 
         [HttpPut]
+        [Authorize(Policy = AuthorizationPolicies.Admin)]
         public async Task<IActionResult> Update([FromBody] ItemUpdateDto dto)
         {
             var sucesso = await _service.UpdateAsync(dto);
             
             return !sucesso
-                ? NotFound($"Item com id {dto.Iditem} n„o encontrado.")
+                ? NotFound($"Item com id {dto.Iditem} n√£o encontrado.")
                 : NoContent();
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Policy = AuthorizationPolicies.Admin)]
         public async Task<IActionResult> Delete(string id)
         {
             var sucesso = await _service.DeleteAsync(id);
             
             return !sucesso
-                ? NotFound($"Item com id {id} n„o encontrado.")
+                ? NotFound($"Item com id {id} n√£o encontrado.")
                 : NoContent();
         }
     }

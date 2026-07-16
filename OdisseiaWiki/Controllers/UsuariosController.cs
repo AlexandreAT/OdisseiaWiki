@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.RateLimiting;
 using OdisseiaWiki.Dtos;
 using OdisseiaWiki.Models;
 using OdisseiaWiki.Services;
@@ -7,16 +9,16 @@ using OdisseiaWiki.Services.Interfaces;
 namespace OdisseiaWiki.Controllers
 {
     [ApiController]
+    [AllowAnonymous]
+    [EnableRateLimiting("authentication")]
     [Route("api/[controller]")]
     public class UsuariosController : ControllerBase
     {
         private readonly IUsuarioService _service;
-        private readonly ITokenService _tokenService;
 
-        public UsuariosController(IUsuarioService service, ITokenService tokenService)
+        public UsuariosController(IUsuarioService service)
         {
             _service = service;
-            _tokenService = tokenService;
         }
 
         [HttpPost("register")]

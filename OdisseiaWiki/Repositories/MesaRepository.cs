@@ -37,6 +37,16 @@ namespace OdisseiaWiki.Repositories
                  _context.Mesausuarios.Any(vinculo =>
                     vinculo.Idmesa == idMesa && vinculo.Idusuario == idUsuario)));
 
+        public Task<List<Mesa>> GetAccessibleByUsuarioIdAsync(int usuarioId)
+            => _context.Mesas
+                .AsNoTracking()
+                .Where(mesa =>
+                    mesa.PadraoSistema ||
+                    mesa.IdusuarioCriacao == usuarioId ||
+                    _context.Mesausuarios.Any(vinculo =>
+                        vinculo.Idmesa == mesa.Idmesa && vinculo.Idusuario == usuarioId))
+                .ToListAsync();
+
         public async Task<List<Mesa>> GetByUsuarioIdAsync(int usuarioId)
         {
             return await _context.Mesas

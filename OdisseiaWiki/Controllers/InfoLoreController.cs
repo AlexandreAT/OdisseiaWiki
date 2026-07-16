@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using OdisseiaWiki.Dtos;
+using OdisseiaWiki.Security;
 using OdisseiaWiki.Services.Interfaces;
 using System.Threading.Tasks;
 
@@ -17,6 +19,7 @@ namespace OdisseiaWiki.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = AuthorizationPolicies.Admin)]
         public async Task<IActionResult> Create([FromBody] InfoLoreDto dto)
         {
             var resultado = await _service.CreateAsync(dto);
@@ -28,6 +31,7 @@ namespace OdisseiaWiki.Controllers
         }
 
         [HttpPut("{id:int}")]
+        [Authorize(Policy = AuthorizationPolicies.Admin)]
         public async Task<IActionResult> Update(int id, [FromBody] InfoLoreDto dto)
         {
             var resultado = await _service.UpdateAsync(id, dto);
@@ -41,6 +45,9 @@ namespace OdisseiaWiki.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] bool? visivel = null)
         {
+            if (!User.IsAdmin())
+                visivel = true;
+
             var resultado = await _service.GetAllAsync(visivel);
 
             if (!resultado.Sucesso)
@@ -54,18 +61,19 @@ namespace OdisseiaWiki.Controllers
         {
             var infoLore = await _service.GetByIdAsync(id);
 
-            return infoLore is null
-                ? NotFound($"InfoLore com id {id} n„o encontrado.")
+            return infoLore is null || (!infoLore.Visivel && !User.IsAdmin())
+                ? NotFound($"InfoLore com id {id} n√£o encontrado.")
                 : Ok(infoLore);
         }
 
         [HttpDelete("{id:int}")]
+        [Authorize(Policy = AuthorizationPolicies.Admin)]
         public async Task<IActionResult> Delete(int id)
         {
             var sucesso = await _service.DeleteAsync(id);
 
             return !sucesso
-                ? NotFound($"InfoLore com id {id} n„o encontrado.")
+                ? NotFound($"InfoLore com id {id} n√£o encontrado.")
                 : NoContent();
         }
 
@@ -73,9 +81,19 @@ namespace OdisseiaWiki.Controllers
         public async Task<IActionResult> SearchGlobal([FromQuery] string termo)
         {
             if (string.IsNullOrWhiteSpace(termo))
-                return BadRequest("O termo de busca È obrigatÛrio.");
+                return BadRequest("O termo de busca √© obrigat√≥rio.");
 
             var resultado = await _service.SearchGlobalAsync(termo);
+
+            if (!User.IsAdmin())
+            {
+                resultado.Cidades = resultado.Cidades.Where(item => item.Visivel).ToList();
+                resultado.Personagens = resultado.Personagens.Where(item => item.Visivel).ToList();
+                resultado.Itens = resultado.Itens.Where(item => item.Visivel).ToList();
+                resultado.InfoLores = resultado.InfoLores.Where(item => item.Visivel).ToList();
+                resultado.Racas = resultado.Racas.Where(item => item.Visivel).ToList();
+                resultado.Pages = resultado.Pages.Where(item => item.Visivel).ToList();
+            }
 
             return Ok(resultado);
         }

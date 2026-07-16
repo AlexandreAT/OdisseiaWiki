@@ -20,7 +20,7 @@ namespace OdisseiaWiki.Services
             Page? slugExistente = await _repository.GetBySlugAsync(dto.Page.Slug);
 
             if (slugExistente != null)
-                throw new Exception("Já existe uma página com esse slug.");
+                throw new InvalidOperationException("Já existe uma página com esse slug.");
 
             Page page = new()
             {
@@ -86,12 +86,12 @@ namespace OdisseiaWiki.Services
             Page? page = await _repository.GetByIdAsync(id);
 
             if (page == null)
-                throw new Exception($"Página com id {id} não encontrada.");
+                throw new InvalidOperationException($"Página com id {id} não encontrada.");
 
             Page? slugExistente = await _repository.GetBySlugAsync(dto.Page.Slug);
 
             if (slugExistente != null && slugExistente.IdPage != id)
-                throw new Exception("Já existe uma página com esse slug.");
+                throw new InvalidOperationException("Já existe uma página com esse slug.");
 
             page.Titulo = dto.Page.Titulo;
             page.Slug = dto.Page.Slug;

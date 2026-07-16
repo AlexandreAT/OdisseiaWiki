@@ -4,12 +4,19 @@
     {
         public static void DeleteIfExists(string relativePath)
         {
-            if (string.IsNullOrWhiteSpace(relativePath))
+            if (string.IsNullOrWhiteSpace(relativePath) ||
+                Uri.TryCreate(relativePath, UriKind.Absolute, out _))
                 return;
 
             try
             {
-                var fullPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", relativePath);
+                string webRoot = Path.GetFullPath(
+                    Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"));
+                string fullPath = Path.GetFullPath(Path.Combine(webRoot, relativePath));
+                string requiredPrefix = webRoot.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+
+                if (!fullPath.StartsWith(requiredPrefix, StringComparison.OrdinalIgnoreCase))
+                    return;
 
                 if (File.Exists(fullPath))
                     File.Delete(fullPath);
