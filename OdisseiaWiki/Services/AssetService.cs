@@ -2,9 +2,9 @@ using System.Globalization;
 using System.Text;
 using Microsoft.Extensions.Options;
 using OdisseiaWiki.Dtos;
-using OdisseiaWiki.Enums;
 using OdisseiaWiki.Services.Interfaces;
 using OdisseiaWiki.Settings;
+using OdisseiaWiki.Repositories.Interfaces;
 
 namespace OdisseiaWiki.Services;
 
@@ -41,17 +41,73 @@ public class AssetService : IAssetService
     };
 
     private readonly ILocalStorageProvider _local;
-    private readonly IImgBBStorageProvider _imgbb;
+    private readonly ICloudinaryStorageProvider _cloudinary;
     private readonly UploadSettings _settings;
+    private readonly CloudinarySettings _cloudinarySettings;
+    private readonly IWebHostEnvironment _environment;
+    private readonly IAssetReferenceRepository _assetReferences;
+    private readonly ILogger<AssetService> _logger;
 
     public AssetService(
         ILocalStorageProvider local,
-        IImgBBStorageProvider imgbb,
-        IOptions<UploadSettings> options)
+        ICloudinaryStorageProvider cloudinary,
+        IOptions<UploadSettings> options,
+        IOptions<CloudinarySettings> cloudinaryOptions,
+        IWebHostEnvironment environment,
+        IAssetReferenceRepository assetReferences,
+        ILogger<AssetService> logger)
     {
         _local = local;
-        _imgbb = imgbb;
+        _cloudinary = cloudinary;
         _settings = options.Value;
+        _cloudinarySettings = cloudinaryOptions.Value;
+        _environment = environment;
+        _assetReferences = assetReferences;
+        _logger = logger;
+    }
+
+    public async Task<bool> DeleteIfUnreferencedAsync(
+        string? assetUrl,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(assetUrl))
+            return true;
+
+        try
+        {
+            if (await _assetReferences.IsReferencedAsync(assetUrl, cancellationToken))
+            {
+                _logger.LogInformation("Asset não excluído porque ainda possui referências no banco.");
+                return true;
+            }
+
+            if (_cloudinary.TryGetPublicId(assetUrl, out string publicId))
+                return await _cloudinary.DeleteAsync(publicId, cancellationToken);
+
+            if (_environment.IsDevelopment() &&
+                (assetUrl.StartsWith("assets_dynamic/", StringComparison.OrdinalIgnoreCase) ||
+                 assetUrl.StartsWith("/assets_dynamic/", StringComparison.OrdinalIgnoreCase)))
+            {
+                return await _local.DeleteAsync(assetUrl, cancellationToken);
+            }
+
+            // URLs externas antigas (incluindo ImgBB) permanecem válidas. Sem delete token
+            // persistido não há uma exclusão remota segura a executar.
+            return true;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            // A atualização da entidade já foi confirmada antes desta limpeza.
+            // Em caso de falha, preserva o arquivo e registra a pendência.
+            _logger.LogError(
+                exception,
+                "Falha ao verificar ou excluir um asset removido. O arquivo foi preservado para evitar perda de dados.");
+            return false;
+        }
     }
 
     public async Task<ResultSaveImage> SaveImageAsync(
@@ -67,10 +123,12 @@ public class AssetService : IAssetService
         if (!TryBuildSubFolder(type, entityName, folderName, out string subFolder))
             return ResultSaveImage.Fail("Destino do arquivo inválido.");
 
-        AssetType assetType = MapType(type);
-        return assetType is AssetType.Player or AssetType.Profile
-            ? await _imgbb.SaveAsync(file, subFolder)
-            : await _local.SaveAsync(file, subFolder);
+        bool useLocal = _environment.IsDevelopment() &&
+            _cloudinarySettings.UseLocalStorageInDevelopment;
+
+        return useLocal
+            ? await _local.SaveAsync(file, subFolder)
+            : await _cloudinary.SaveAsync(file, subFolder);
     }
 
     private async Task<ResultSaveImage?> ValidateFileAsync(IFormFile file)
@@ -188,14 +246,4 @@ public class AssetService : IAssetService
         return result.ToString().Trim('-');
     }
 
-    private static AssetType MapType(string type)
-    {
-        string normalizedType = type.Trim().ToLowerInvariant();
-        return normalizedType switch
-        {
-            "player" or "personagemjogador" => AssetType.Player,
-            "perfil" => AssetType.Profile,
-            _ => AssetType.Wiki,
-        };
-    }
 }

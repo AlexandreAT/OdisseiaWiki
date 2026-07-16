@@ -7,6 +7,11 @@
 export const normalizeImagePath = (imagePath: string | undefined): string => {
   if (!imagePath) return '';
 
+  // URLs externas e previews locais já estão prontas para uso.
+  if (/^(https?:|data:|blob:)/i.test(imagePath)) {
+    return imagePath;
+  }
+
   // Se já começa com /, devolvemos como está
   if (imagePath.startsWith('/')) {
     return imagePath;

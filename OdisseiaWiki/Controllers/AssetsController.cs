@@ -40,7 +40,13 @@ namespace OdisseiaWiki.Controllers
             if (!result.Sucesso)
                 return BadRequest(result.MensagemErro);
 
-            return Ok(new { path = result.Path });
+            return Ok(new
+            {
+                path = result.Path,
+                url = result.Url,
+                provider = result.Provider,
+                publicId = result.PublicId,
+            });
         }
     }
 

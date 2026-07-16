@@ -12,10 +12,12 @@ namespace OdisseiaWiki.Services
     public class PersonagemService : IPersonagemService
     {
         private readonly IPersonagemRepository _repository;
+        private readonly IAssetService _assetService;
 
-        public PersonagemService(IPersonagemRepository repository)
+        public PersonagemService(IPersonagemRepository repository, IAssetService assetService)
         {
             _repository = repository;
+            _assetService = assetService;
         }
 
         public async Task<ResultPersonagem> CreateAsync(PersonagemDto dto)
@@ -77,23 +79,7 @@ namespace OdisseiaWiki.Services
             if (personagem == null)
                 return ResultPersonagem.Fail($"Personagem com id {id} não encontrado.");
 
-            if (!string.IsNullOrWhiteSpace(personagem.Imagem) &&
-                dto.Imagem != null &&
-                personagem.Imagem != dto.Imagem)
-            {
-                AssetFileHelper.DeleteIfExists(personagem.Imagem);
-            }
-
-            List<string>? oldGaleria = !string.IsNullOrWhiteSpace(personagem.GaleriaImagem)
-                ? JsonSerializer.Deserialize<List<string>>(personagem.GaleriaImagem)
-                : new List<string>();
-
-            List<string>? removedImages = AssetDiffHelper.GetRemovedFiles(oldGaleria, dto.GaleriaImagem);
-
-            foreach (string? img in removedImages)
-            {
-                AssetFileHelper.DeleteIfExists(img);
-            }
+            HashSet<string> oldAssets = ExtractAssets(personagem);
 
             personagem.Nome = dto.Nome ?? personagem.Nome;
             personagem.Idraca = dto.Idraca;
@@ -123,6 +109,10 @@ namespace OdisseiaWiki.Services
             personagem.Destaque = dto.Destaque;
 
             var atualizado = await _repository.UpdateAsync(personagem);
+            await AssetReferenceHelper.DeleteRemovedAsync(
+                _assetService,
+                oldAssets,
+                ExtractAssets(atualizado));
             return ResultPersonagem.Ok(atualizado);
         }
 
@@ -132,6 +122,27 @@ namespace OdisseiaWiki.Services
         }
 
         public async Task<bool> DeleteAsync(int id)
-            => await _repository.DeleteAsync(id);
+        {
+            Personagen? personagem = await _repository.GetByIdAsync(id);
+            if (personagem is null)
+                return false;
+
+            HashSet<string> assets = ExtractAssets(personagem);
+            bool deleted = await _repository.DeleteAsync(id);
+            if (deleted)
+                await AssetReferenceHelper.DeleteAllAsync(_assetService, assets);
+            return deleted;
+        }
+
+        private static HashSet<string> ExtractAssets(Personagen personagem)
+            => AssetReferenceHelper.Extract(
+                personagem.Imagem,
+                personagem.GaleriaImagem,
+                personagem.InventarioJson,
+                personagem.Skills,
+                personagem.Magia,
+                personagem.Historia,
+                personagem.Implantes,
+                personagem.Ultimate);
     }
 }

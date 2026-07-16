@@ -43,7 +43,7 @@ namespace OdisseiaWiki.Controllers
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int id)
         {
-            Personagen personagem = await _service.GetByIdAsync(id);
+            Personagen? personagem = await _service.GetByIdAsync(id);
             if (personagem == null || (!personagem.Visivel && !User.IsAdmin()))
                 return NotFound($"Personagem com id {id} não encontrado.");
 

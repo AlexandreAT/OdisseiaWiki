@@ -10,10 +10,12 @@ namespace OdisseiaWiki.Services
     public class MesaService : IMesaService
     {
         private readonly IMesaRepository _repository;
+        private readonly IAssetService _assetService;
 
-        public MesaService(IMesaRepository repository)
+        public MesaService(IMesaRepository repository, IAssetService assetService)
         {
             _repository = repository;
+            _assetService = assetService;
         }
 
         public async Task<ResultMesa> CreateAsync(MesaDto dto)
@@ -84,16 +86,25 @@ namespace OdisseiaWiki.Services
             if (string.IsNullOrWhiteSpace(dto.Nome))
                 return ResultMesaFail("Nome é obrigatório.");
 
+            string? oldImage = mesa.Imagem;
             mesa.Nome = dto.Nome;
             mesa.Imagem = dto.Imagem;
             var atualizada = await _repository.UpdateAsync(mesa);
+            if (!string.Equals(oldImage, atualizada.Imagem, StringComparison.Ordinal))
+                await _assetService.DeleteIfUnreferencedAsync(oldImage);
             return ResultMesaOk(atualizada);
         }
 
         public async Task<bool> DeleteAsync(int id)
         {
             var mesa = await _repository.GetByIdAsync(id);
-            return mesa is not null && !mesa.PadraoSistema && await _repository.DeleteAsync(id);
+            if (mesa is null || mesa.PadraoSistema)
+                return false;
+
+            bool deleted = await _repository.DeleteAsync(id);
+            if (deleted)
+                await _assetService.DeleteIfUnreferencedAsync(mesa.Imagem);
+            return deleted;
         }
 
         private static ResultMesa ResultMesaFail(string mensagem)

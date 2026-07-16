@@ -11,10 +11,12 @@ namespace OdisseiaWiki.Services
     public class CidadeService : ICidadeService
     {
         private readonly ICidadeRepository _repository;
+        private readonly IAssetService _assetService;
 
-        public CidadeService(ICidadeRepository repository)
+        public CidadeService(ICidadeRepository repository, IAssetService assetService)
         {
             _repository = repository;
+            _assetService = assetService;
         }
 
         public async Task<ResultCidade> CreateAsync(CidadeDto dto)
@@ -52,42 +54,36 @@ namespace OdisseiaWiki.Services
             if (cidade == null)
                 return ResultCidade.Fail($"Cidade com id {id} não encontrada.");
 
-            if (!string.IsNullOrWhiteSpace(cidade.Imagem) &&
-                dto.Imagem != null &&
-                cidade.Imagem != dto.Imagem)
-            {
-                AssetFileHelper.DeleteIfExists(cidade.Imagem);
-            }
-
-            List<string>? oldGaleria = !string.IsNullOrWhiteSpace(cidade.GaleriaImagem)
-                ? JsonSerializer.Deserialize<List<string>>(cidade.GaleriaImagem)
-                : new List<string>();
-
-            List<string>? removedImages = AssetDiffHelper.GetRemovedFiles(oldGaleria, dto.GaleriaImagem);
-
-            foreach (string? img in removedImages)
-            {
-                AssetFileHelper.DeleteIfExists(img);
-            }
+            HashSet<string> oldAssets = AssetReferenceHelper.Extract(
+                cidade.Imagem, cidade.GaleriaImagem, cidade.PontosDeInteresse, cidade.Descricao);
 
             cidade.Nome = dto.Nome ?? cidade.Nome;
             cidade.Descricao = dto.Descricao.HasValue 
                 ? RichTextHelper.SerializeRichText(dto.Descricao) 
                 : cidade.Descricao;
             cidade.Imagem = dto.Imagem ?? cidade.Imagem;
-            cidade.GaleriaImagem = dto.GaleriaImagem != null && dto.GaleriaImagem.Any()
-                ? JsonSerializer.Serialize(dto.GaleriaImagem)
-                : cidade.GaleriaImagem;
+            if (dto.GaleriaImagem is not null)
+            {
+                cidade.GaleriaImagem = dto.GaleriaImagem.Count > 0
+                    ? JsonSerializer.Serialize(dto.GaleriaImagem)
+                    : null;
+            }
             cidade.Tags = JsonSerializer.Serialize(ContentCategoryHelper.EnsureCategoryTag(
                 dto.Tags ?? JsonSafeHelper.DeserializeTags(cidade.Tags),
                 ContentCategoryHelper.Cidade));
-            cidade.PontosDeInteresse = dto.PontosDeInteresse != null && dto.PontosDeInteresse.Any()
-                ? JsonSerializer.Serialize(dto.PontosDeInteresse)
-                : cidade.PontosDeInteresse;
+            if (dto.PontosDeInteresse is not null)
+            {
+                cidade.PontosDeInteresse = dto.PontosDeInteresse.Count > 0
+                    ? JsonSerializer.Serialize(dto.PontosDeInteresse)
+                    : null;
+            }
             cidade.Visivel = dto.Visivel;
             cidade.Destaque = dto.Destaque;
 
             var atualizada = await _repository.UpdateAsync(cidade);
+            HashSet<string> currentAssets = AssetReferenceHelper.Extract(
+                atualizada.Imagem, atualizada.GaleriaImagem, atualizada.PontosDeInteresse, atualizada.Descricao);
+            await AssetReferenceHelper.DeleteRemovedAsync(_assetService, oldAssets, currentAssets);
             return ResultCidade.Ok(atualizada);
         }
 
@@ -146,6 +142,17 @@ namespace OdisseiaWiki.Services
             => await _repository.GetByIdAsync(id);
 
         public async Task<bool> DeleteAsync(int id)
-            => await _repository.DeleteAsync(id);
+        {
+            Cidade? cidade = await _repository.GetByIdAsync(id);
+            if (cidade is null)
+                return false;
+
+            HashSet<string> assets = AssetReferenceHelper.Extract(
+                cidade.Imagem, cidade.GaleriaImagem, cidade.PontosDeInteresse, cidade.Descricao);
+            bool deleted = await _repository.DeleteAsync(id);
+            if (deleted)
+                await AssetReferenceHelper.DeleteAllAsync(_assetService, assets);
+            return deleted;
+        }
     }
 }

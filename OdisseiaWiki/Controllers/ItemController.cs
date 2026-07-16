@@ -21,7 +21,7 @@ namespace OdisseiaWiki.Controllers
         [HttpGet("{id:guid}")]
         public async Task<IActionResult> GetById(string id)
         {
-            ItemDto item = await _service.GetByIdAsync(id);
+            ItemDto? item = await _service.GetByIdAsync(id);
             return item is null || (!item.Visivel && !User.IsAdmin()) ? NotFound() : Ok(item);
         }
 

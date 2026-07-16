@@ -8,6 +8,7 @@ import { RegisterFormErrors, validateRegisterForm } from './useRegisterField';
 import { formatPhone } from '../../../utils/formatPhone';
 import { registerUsuario } from '../../../services/usuarioService';
 import { AvatarIcon } from '../../../components/Generic/AvatarIcon/AvatarIcon';
+import { getApiErrorMessage } from '../../../utils/apiError';
 
 interface Props {
     theme: 'dark' | 'light';
@@ -65,8 +66,8 @@ const RegisterField = ({ theme, neon, onBackToLogin }: Props) => {
                 toast.success('Usuário cadastrado com sucesso!');
                 if (onBackToLogin) onBackToLogin();
             });
-        } catch (error: any) {
-            toast.error(error?.response?.data || 'Erro ao registrar');
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, 'Erro ao registrar'));
         }
     };
 

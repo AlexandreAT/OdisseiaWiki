@@ -23,7 +23,11 @@ public class ImgBBStorageProvider : IImgBBStorageProvider
         _logger = logger;
     }
 
-    public async Task<ResultSaveImage> SaveAsync(IFormFile file, string subFolder)
+    public async Task<ResultSaveImage> SaveAsync(
+        IFormFile file,
+        string subFolder,
+        string? publicId = null,
+        CancellationToken cancellationToken = default)
     {
         try
         {
@@ -42,7 +46,7 @@ public class ImgBBStorageProvider : IImgBBStorageProvider
             using MultipartFormDataContent content = new();
             content.Add(imageContent, "image", safeFileName);
 
-            using HttpResponseMessage response = await _httpClient.PostAsync(requestUrl, content);
+            using HttpResponseMessage response = await _httpClient.PostAsync(requestUrl, content, cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogWarning("ImgBB rejeitou um upload com status {StatusCode}.", response.StatusCode);
@@ -55,7 +59,7 @@ public class ImgBBStorageProvider : IImgBBStorageProvider
                 data.TryGetProperty("url", out JsonElement urlElement) &&
                 !string.IsNullOrWhiteSpace(urlElement.GetString()))
             {
-                return ResultSaveImage.Ok(urlElement.GetString()!);
+                return ResultSaveImage.Ok(urlElement.GetString()!, "imgbb");
             }
 
             _logger.LogWarning("ImgBB retornou uma resposta sem URL para o upload.");
@@ -66,5 +70,11 @@ public class ImgBBStorageProvider : IImgBBStorageProvider
             _logger.LogError(exception, "Falha ao enviar imagem ao ImgBB.");
             return ResultSaveImage.Fail("Não foi possível enviar a imagem.");
         }
+    }
+
+    public Task<bool> DeleteAsync(string assetIdentifier, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Exclusão de URL legada do ImgBB ignorada: não existe delete token persistido.");
+        return Task.FromResult(false);
     }
 }

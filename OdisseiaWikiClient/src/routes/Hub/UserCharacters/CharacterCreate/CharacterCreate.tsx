@@ -53,7 +53,7 @@ const CharacterCreateComponent = ({ theme, neon, userId, onSave }: UserCharacter
   } = useFormUserCharacter(userId, onSave);
 
   const raceImageUrl = React.useMemo(() => 
-    selectedRace?.imagem ? selectedRace.imagem : '/assets_dynamic/default.png',
+    selectedRace?.imagem ?? '',
     [selectedRace]
   );
   

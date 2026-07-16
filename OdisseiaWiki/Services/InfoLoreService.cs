@@ -20,6 +20,7 @@ namespace OdisseiaWiki.Services
         private readonly IItemRepository _itemRepo;
         private readonly IRacaRepository _racaRepo;
         private readonly IPageRepository _pageRepo;
+        private readonly IAssetService _assetService;
 
         public InfoLoreService(
             IInfoLoreRepository infoLoreRepo,
@@ -27,7 +28,8 @@ namespace OdisseiaWiki.Services
             IPersonagemRepository personagemRepo,
             IItemRepository itemRepo,
             IRacaRepository racaRepo,
-            IPageRepository pageRepo)
+            IPageRepository pageRepo,
+            IAssetService assetService)
         {
             _infoLoreRepo = infoLoreRepo;
             _cidadeRepo = cidadeRepo;
@@ -35,6 +37,7 @@ namespace OdisseiaWiki.Services
             _itemRepo = itemRepo;
             _racaRepo = racaRepo;
             _pageRepo = pageRepo;
+            _assetService = assetService;
         }
 
         public async Task<ResultInfoLore> CreateAsync(InfoLoreDto dto)
@@ -63,24 +66,7 @@ namespace OdisseiaWiki.Services
             if (infoLore == null)
                 return ResultInfoLore.Fail($"InfoLore com id {id} não encontrado.");
 
-            if (!string.IsNullOrWhiteSpace(infoLore.Imagem) &&
-                dto.Imagem != null &&
-                infoLore.Imagem != dto.Imagem)
-            {
-                AssetFileHelper.DeleteIfExists(infoLore.Imagem);
-            }
-
-            // =============== QUANDO TIVER GALERIA DE IMAGENS ===============
-            //List<string>? oldGaleria = !string.IsNullOrWhiteSpace(infoLore.GaleriaImagem)
-            //    ? JsonSerializer.Deserialize<List<string>>(infoLore.GaleriaImagem)
-            //    : new List<string>();
-
-            //List<string>? removedImages = AssetDiffHelper.GetRemovedFiles(oldGaleria, dto.GaleriaImagem);
-
-            //foreach (string? img in removedImages)
-            //{
-            //    AssetFileHelper.DeleteIfExists(img);
-            //}
+            HashSet<string> oldAssets = AssetReferenceHelper.Extract(infoLore.Imagem, infoLore.Conteudo);
 
             infoLore.Titulo = dto.Titulo ?? infoLore.Titulo;
             infoLore.Conteudo = dto.Conteudo != null
@@ -94,6 +80,10 @@ namespace OdisseiaWiki.Services
             infoLore.Destaque = dto.Destaque;
 
             var atualizado = await _infoLoreRepo.UpdateAsync(infoLore);
+            await AssetReferenceHelper.DeleteRemovedAsync(
+                _assetService,
+                oldAssets,
+                AssetReferenceHelper.Extract(atualizado.Imagem, atualizado.Conteudo));
             return ResultInfoLore.Ok(MapToDto(atualizado));
         }
 
@@ -113,7 +103,17 @@ namespace OdisseiaWiki.Services
         }
 
         public async Task<bool> DeleteAsync(int id)
-            => await _infoLoreRepo.DeleteAsync(id);
+        {
+            Infolore? infoLore = await _infoLoreRepo.GetByIdAsync(id);
+            if (infoLore is null)
+                return false;
+
+            HashSet<string> assets = AssetReferenceHelper.Extract(infoLore.Imagem, infoLore.Conteudo);
+            bool deleted = await _infoLoreRepo.DeleteAsync(id);
+            if (deleted)
+                await AssetReferenceHelper.DeleteAllAsync(_assetService, assets);
+            return deleted;
+        }
 
         public async Task<GlobalSearchResultDto> SearchGlobalAsync(string termo)
         {

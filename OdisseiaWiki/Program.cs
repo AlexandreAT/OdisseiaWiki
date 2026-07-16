@@ -66,6 +66,27 @@ public class Program
                 "Uploads:MaxFileSizeBytes deve estar entre 1 byte e 20 MB.")
             .ValidateOnStart();
 
+        builder.Services.AddOptions<CloudinarySettings>()
+            .Bind(builder.Configuration.GetSection(CloudinarySettings.SectionName))
+            .Validate(
+                settings => builder.Environment.IsDevelopment() && settings.UseLocalStorageInDevelopment ||
+                    !string.IsNullOrWhiteSpace(settings.CloudName),
+                "Cloudinary:CloudName é obrigatório quando o armazenamento local não está ativo.")
+            .Validate(
+                settings => builder.Environment.IsDevelopment() && settings.UseLocalStorageInDevelopment ||
+                    !string.IsNullOrWhiteSpace(settings.ApiKey),
+                "Cloudinary:ApiKey é obrigatória quando o armazenamento local não está ativo.")
+            .Validate(
+                settings => builder.Environment.IsDevelopment() && settings.UseLocalStorageInDevelopment ||
+                    !string.IsNullOrWhiteSpace(settings.ApiSecret),
+                "Cloudinary:ApiSecret é obrigatória quando o armazenamento local não está ativo.")
+            .Validate(
+                settings => !string.IsNullOrWhiteSpace(settings.RootFolder) &&
+                    !settings.RootFolder.Contains("..", StringComparison.Ordinal) &&
+                    !settings.RootFolder.Contains('\\'),
+                "Cloudinary:RootFolder é inválida.")
+            .ValidateOnStart();
+
         UploadSettings uploadSettings = builder.Configuration
             .GetSection(UploadSettings.SectionName)
             .Get<UploadSettings>() ?? new UploadSettings();
@@ -184,31 +205,31 @@ public class Program
 
         if (app.Environment.IsDevelopment())
         {
-            app.UseDeveloperExceptionPage();
             app.UseSwagger();
             app.UseSwaggerUI();
         }
-        else
+
+        app.UseExceptionHandler(exceptionHandlerApp =>
         {
-            app.UseExceptionHandler(exceptionHandlerApp =>
+            exceptionHandlerApp.Run(async context =>
             {
-                exceptionHandlerApp.Run(async context =>
-                {
-                    Exception? exception = context.Features.Get<IExceptionHandlerFeature>()?.Error;
-                    ILogger<Program> logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-                    logger.LogError(exception, "Erro inesperado ao processar {Method} {Path}",
-                        context.Request.Method, context.Request.Path);
+                Exception? exception = context.Features.Get<IExceptionHandlerFeature>()?.Error;
+                ILogger<Program> logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+                logger.LogError(exception, "Erro inesperado ao processar {Method} {Path}",
+                    context.Request.Method, context.Request.Path);
 
-                    await WriteProblemAsync(
-                        context,
-                        StatusCodes.Status500InternalServerError,
-                        "Erro interno",
-                        "Não foi possível concluir a solicitação.");
-                });
+                await WriteProblemAsync(
+                    context,
+                    StatusCodes.Status500InternalServerError,
+                    "Erro interno",
+                    "Não foi possível concluir a solicitação.");
             });
-        }
+        });
 
-        app.UseStaticFiles();
+        // Assets locais existem somente para compatibilidade no desenvolvimento.
+        // Em produção, todas as imagens novas possuem URL pública do Cloudinary.
+        if (app.Environment.IsDevelopment())
+            app.UseStaticFiles();
         app.UseRouting();
         app.UseCors(FrontendCorsPolicy);
         app.UseAuthentication();
@@ -271,6 +292,7 @@ public class Program
         services.AddScoped<IMesaEntidadeConfigRepository, MesaEntidadeConfigRepository>();
         services.AddScoped<IInfoLoreRepository, InfoLoreRepository>();
         services.AddScoped<IPageRepository, PageRepository>();
+        services.AddScoped<IAssetReferenceRepository, AssetReferenceRepository>();
 
         services.AddScoped<IUsuarioService, UsuarioService>();
         services.AddScoped<IPersonagemService, PersonagemService>();
@@ -285,6 +307,7 @@ public class Program
 
         services.Configure<ImgBBSettings>(configuration.GetSection("ImgBB"));
         services.AddScoped<ILocalStorageProvider, LocalStorageProvider>();
+        services.AddScoped<ICloudinaryStorageProvider, CloudinaryStorageProvider>();
         services.AddHttpClient<IImgBBStorageProvider, ImgBBStorageProvider>(client =>
         {
             client.Timeout = TimeSpan.FromSeconds(30);

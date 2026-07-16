@@ -60,11 +60,16 @@ namespace OdisseiaWiki.Services
                 if (!payload.EmailVerified)
                     return ResultLoginUsuario.Falha("O e-mail da conta Google não foi verificado.");
 
-                string? email = payload.Email;
-                string? nome = payload.Name;
+                string? email = payload.Email?.Trim();
+                if (string.IsNullOrWhiteSpace(email))
+                    return ResultLoginUsuario.Falha("A conta Google não informou um e-mail válido.");
+
+                string nome = string.IsNullOrWhiteSpace(payload.Name)
+                    ? email.Split('@', 2)[0]
+                    : payload.Name.Trim();
                 string? imagem = payload.Picture;
 
-                Usuario? usuario = await _repository.GetByEmailAsync(payload.Email);
+                Usuario? usuario = await _repository.GetByEmailAsync(email);
                 if (usuario == null)
                 {
                     string? baseNick = nome.Split(" ").FirstOrDefault()?.ToLower() ?? "user";

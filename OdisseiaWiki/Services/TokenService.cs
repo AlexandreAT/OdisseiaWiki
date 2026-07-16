@@ -21,7 +21,7 @@ namespace OdisseiaWiki.Services
             IOptions<AuthorizationSettings> authorizationOptions)
         {
             _jwtSettings = jwtOptions.Value;
-            _adminEmails = authorizationOptions.Value.AdminEmails
+            _adminEmails = (authorizationOptions.Value.AdminEmails ?? Array.Empty<string>())
                 .Where(email => !string.IsNullOrWhiteSpace(email))
                 .Select(email => email.Trim())
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);

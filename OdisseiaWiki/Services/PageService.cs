@@ -2,6 +2,7 @@
 using OdisseiaWiki.Models;
 using OdisseiaWiki.Repositories.Interfaces;
 using OdisseiaWiki.Services.Interfaces;
+using OdisseiaWiki.Services.Helpers;
 using System.Text.Json;
 
 namespace OdisseiaWiki.Services
@@ -9,10 +10,12 @@ namespace OdisseiaWiki.Services
     public class PageService : IPageService
     {
         private readonly IPageRepository _repository;
+        private readonly IAssetService _assetService;
 
-        public PageService(IPageRepository repository)
+        public PageService(IPageRepository repository, IAssetService assetService)
         {
             _repository = repository;
+            _assetService = assetService;
         }
 
         public async Task<ResultPage> CreateAsync(CreatePageWithBlocksDto dto)
@@ -93,6 +96,8 @@ namespace OdisseiaWiki.Services
             if (slugExistente != null && slugExistente.IdPage != id)
                 throw new InvalidOperationException("Já existe uma página com esse slug.");
 
+            HashSet<string> oldAssets = ExtractAssets(page);
+
             page.Titulo = dto.Page.Titulo;
             page.Slug = dto.Page.Slug;
             page.Descricao = dto.Page.Descricao;
@@ -109,11 +114,32 @@ namespace OdisseiaWiki.Services
 
             Page updated = await _repository.UpdateAsync(page);
 
+            await AssetReferenceHelper.DeleteRemovedAsync(
+                _assetService,
+                oldAssets,
+                ExtractAssets(updated));
+
             return MapPageToDto(updated);
         }
 
         public async Task<bool> DeleteAsync(int id)
-            => await _repository.DeleteAsync(id);
+        {
+            Page? page = await _repository.GetByIdAsync(id);
+            if (page is null)
+                return false;
+
+            HashSet<string> assets = ExtractAssets(page);
+            bool deleted = await _repository.DeleteAsync(id);
+            if (deleted)
+                await AssetReferenceHelper.DeleteAllAsync(_assetService, assets);
+            return deleted;
+        }
+
+        private static HashSet<string> ExtractAssets(Page page)
+            => AssetReferenceHelper.Extract(
+                new[] { page.CoverImage, page.Descricao }
+                    .Concat(page.Blocks.Select(block => block.Conteudo))
+                    .ToArray());
 
         private static PageBlock MapBlockDtoToEntity(PageBlockDto dto)
         {

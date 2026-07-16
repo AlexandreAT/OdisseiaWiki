@@ -1,5 +1,5 @@
 import { BiArrowBack, BiBookOpen, BiErrorAlt } from 'react-icons/bi';
-import { isRouteErrorResponse, useLocation, useNavigate, useRouteError } from 'react-router-dom';
+import { isRouteErrorResponse, useLocation, useRouteError } from 'react-router-dom';
 import {
   ErrorActions,
   ErrorDescription,
@@ -44,7 +44,6 @@ const getPathContext = (pathname: string): ErrorLocationState => {
 };
 
 const ErrorPage = () => {
-  const navigate = useNavigate();
   const location = useLocation();
   const routeError = useRouteError();
   const locationState = location.state as ErrorLocationState | null;
@@ -59,13 +58,18 @@ const ErrorPage = () => {
     ?? pathContext.errorDescription;
 
   const handleBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-      return;
+    if (document.referrer) {
+      const previousUrl = new URL(document.referrer);
+      if (previousUrl.origin === window.location.origin) {
+        window.location.assign(previousUrl.href);
+        return;
+      }
     }
 
-    navigate('/');
+    window.location.assign('/');
   };
+
+  const handleWiki = () => window.location.assign('/wiki/MainPage');
 
   return (
     <ErrorPageContainer>
@@ -80,7 +84,7 @@ const ErrorPage = () => {
             <BiArrowBack />
             Voltar
           </ErrorActionButton>
-          <ErrorActionButton type="button" $primary onClick={() => navigate('/wiki/MainPage')}>
+          <ErrorActionButton type="button" $primary onClick={handleWiki}>
             <BiBookOpen />
             Ir para a Wiki
           </ErrorActionButton>

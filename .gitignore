@@ -33,3 +33,6 @@ dist/
 .env.*
 !.env.example
 appsettings.Development.json
+
+# Optional asset migration reports
+migration-output/

@@ -15,11 +15,16 @@ namespace OdisseiaWiki.Services
     {
         private readonly IRacaRepository _repository;
         private readonly IMesaEntidadeConfigService _mesaEntidadeConfigService;
+        private readonly IAssetService _assetService;
 
-        public RacaService(IRacaRepository repository, IMesaEntidadeConfigService mesaEntidadeConfigService)
+        public RacaService(
+            IRacaRepository repository,
+            IMesaEntidadeConfigService mesaEntidadeConfigService,
+            IAssetService assetService)
         {
             _repository = repository;
             _mesaEntidadeConfigService = mesaEntidadeConfigService;
+            _assetService = assetService;
         }
 
         public async Task<ResultRaca> CreateAsync(RacaDto dto)
@@ -53,32 +58,19 @@ namespace OdisseiaWiki.Services
             if (raca == null)
                 return ResultRaca.Fail($"Raça com id {id} não encontrada.");
 
-            if (!string.IsNullOrWhiteSpace(raca.Imagem) &&
-                dto.Imagem != null &&
-                raca.Imagem != dto.Imagem)
-            {
-                AssetFileHelper.DeleteIfExists(raca.Imagem);
-            }
-
-            List<string>? oldGaleria = !string.IsNullOrWhiteSpace(raca.GaleriaImagem)
-                ? JsonSerializer.Deserialize<List<string>>(raca.GaleriaImagem)
-                : new List<string>();
-
-            List<string>? removedImages = AssetDiffHelper.GetRemovedFiles(oldGaleria, dto.GaleriaImagem);
-
-            foreach (string? img in removedImages)
-            {
-                AssetFileHelper.DeleteIfExists(img);
-            }
+            HashSet<string> oldAssets = AssetReferenceHelper.Extract(raca.Imagem, raca.GaleriaImagem);
 
             raca.Nome = dto.Nome ?? raca.Nome;
             raca.StatusJson = dto.StatusJson != null
                 ? JsonSerializer.Serialize(dto.StatusJson)
                 : raca.StatusJson;
             raca.Imagem = dto.Imagem ?? raca.Imagem;
-            raca.GaleriaImagem = dto.GaleriaImagem != null && dto.GaleriaImagem.Any()
-                ? JsonSerializer.Serialize(dto.GaleriaImagem)
-                : raca.GaleriaImagem;
+            if (dto.GaleriaImagem is not null)
+            {
+                raca.GaleriaImagem = dto.GaleriaImagem.Count > 0
+                    ? JsonSerializer.Serialize(dto.GaleriaImagem)
+                    : null;
+            }
             raca.Tags = JsonSerializer.Serialize(ContentCategoryHelper.EnsureCategoryTag(
                 dto.Tags ?? JsonSafeHelper.DeserializeTags(raca.Tags),
                 ContentCategoryHelper.Raca));
@@ -86,6 +78,10 @@ namespace OdisseiaWiki.Services
             raca.Destaque = dto.Destaque;
 
             var atualizada = await _repository.UpdateAsync(raca);
+            await AssetReferenceHelper.DeleteRemovedAsync(
+                _assetService,
+                oldAssets,
+                AssetReferenceHelper.Extract(atualizada.Imagem, atualizada.GaleriaImagem));
             return ResultRaca.Ok(MapToDto(atualizada));
         }
 
@@ -105,7 +101,17 @@ namespace OdisseiaWiki.Services
         }
 
         public async Task<bool> DeleteAsync(int id)
-            => await _repository.DeleteAsync(id);
+        {
+            Raca? raca = await _repository.GetByIdAsync(id);
+            if (raca is null)
+                return false;
+
+            HashSet<string> assets = AssetReferenceHelper.Extract(raca.Imagem, raca.GaleriaImagem);
+            bool deleted = await _repository.DeleteAsync(id);
+            if (deleted)
+                await AssetReferenceHelper.DeleteAllAsync(_assetService, assets);
+            return deleted;
+        }
 
         private static RacaDto MapToDto(Raca raca) => new()
         {

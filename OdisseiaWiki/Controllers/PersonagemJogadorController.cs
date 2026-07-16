@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using OdisseiaWiki.Dtos;
-using OdisseiaWiki.Models;
 using OdisseiaWiki.Security;
 using OdisseiaWiki.Services.Interfaces;
 
@@ -32,7 +31,10 @@ namespace OdisseiaWiki.Controllers
             if (!resultado.Sucesso)
                 return BadRequest(resultado);
 
-            return Ok(resultado);
+            return CreatedAtAction(
+                nameof(GetById),
+                new { id = resultado.Personagem!.IdpersonagemJogador },
+                resultado);
         }
 
         [HttpPut("{id:int}")]
@@ -42,7 +44,7 @@ namespace OdisseiaWiki.Controllers
             if (!userId.HasValue)
                 return Unauthorized();
 
-            PersonagemJogador? personagem = await _service.GetByIdAsync(id);
+            PersonagemJogadorDto? personagem = await _service.GetByIdAsync(id);
             if (personagem is null)
                 return NotFound($"PersonagemJogador com id {id} não encontrado.");
 
@@ -62,7 +64,7 @@ namespace OdisseiaWiki.Controllers
         [Authorize(Policy = AuthorizationPolicies.Admin)]
         public async Task<IActionResult> GetAll()
          {
-            List<PersonagemJogador> personagens = await _service.GetAllAsync();
+            List<PersonagemJogadorDto> personagens = await _service.GetAllAsync();
             return Ok(personagens);
         }
 
@@ -73,7 +75,7 @@ namespace OdisseiaWiki.Controllers
             if (!userId.HasValue)
                 return Unauthorized();
 
-            PersonagemJogador? personagem = await _service.GetByIdAsync(id);
+            PersonagemJogadorDto? personagem = await _service.GetByIdAsync(id);
 
             if (personagem is not null && !User.IsAdmin() && personagem.Idusuario != userId.Value)
                 return Forbid();
@@ -93,7 +95,7 @@ namespace OdisseiaWiki.Controllers
             if (!User.IsAdmin() && authenticatedUserId.Value != usuarioId)
                 return Forbid();
 
-            List<PersonagemJogador> personagens = await _service.GetByUsuarioIdAsync(usuarioId);
+            List<PersonagemJogadorDto> personagens = await _service.GetByUsuarioIdAsync(usuarioId);
 
             if (personagens == null || !personagens.Any())
                 return NotFound($"Nenhum personagem encontrado.");
@@ -108,7 +110,7 @@ namespace OdisseiaWiki.Controllers
             if (!userId.HasValue)
                 return Unauthorized();
 
-            PersonagemJogador? personagem = await _service.GetByIdAsync(id);
+            PersonagemJogadorDto? personagem = await _service.GetByIdAsync(id);
             if (personagem is null)
                 return NotFound($"PersonagemJogador com id {id} não encontrado.");
 
