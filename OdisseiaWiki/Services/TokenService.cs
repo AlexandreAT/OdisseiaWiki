@@ -1,41 +1,63 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using OdisseiaWiki.Models;
+using OdisseiaWiki.Security;
 using OdisseiaWiki.Services.Interfaces;
+using OdisseiaWiki.Settings;
 
 namespace OdisseiaWiki.Services
 {
     public class TokenService : ITokenService
     {
-        private readonly IConfiguration _config;
+        private readonly JwtSettings _jwtSettings;
+        private readonly HashSet<string> _adminEmails;
+        private readonly bool _requireVerifiedEmailForAdmin;
 
-        public TokenService(IConfiguration config)
+        public TokenService(
+            IOptions<JwtSettings> jwtOptions,
+            IOptions<AuthorizationSettings> authorizationOptions)
         {
-            _config = config;
+            _jwtSettings = jwtOptions.Value;
+            _adminEmails = (authorizationOptions.Value.AdminEmails ?? Array.Empty<string>())
+                .Where(email => !string.IsNullOrWhiteSpace(email))
+                .Select(email => email.Trim())
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            _requireVerifiedEmailForAdmin = authorizationOptions.Value.RequireVerifiedEmailForAdmin;
         }
 
-        public string GerarToken(Usuario usuario)
+        public string GerarToken(Usuario usuario, bool emailVerified = false)
         {
-            string? chave = _config["Jwt:ChaveSecreta"];
-            SymmetricSecurityKey key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(chave!));
+            SymmetricSecurityKey key = new(
+                Encoding.UTF8.GetBytes(_jwtSettings.ChaveSecreta));
             SigningCredentials creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-            Claim[] claims = new[]
+            List<Claim> claims = new()
             {
+                new Claim(JwtRegisteredClaimNames.Sub, usuario.Idusuario.ToString()),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 new Claim("id", usuario.Idusuario.ToString()),
                 new Claim("email", usuario.Email ?? ""),
                 new Claim("nickname", usuario.Nickname ?? ""),
                 new Claim("imagemUrl", usuario.ImagemUrl ?? "")
             };
 
+            bool canReceiveAdminRole = !_requireVerifiedEmailForAdmin || emailVerified;
+            if (canReceiveAdminRole &&
+                !string.IsNullOrWhiteSpace(usuario.Email) &&
+                _adminEmails.Contains(usuario.Email))
+            {
+                claims.Add(new Claim("role", AuthorizationPolicies.AdminRole));
+            }
+
             JwtSecurityToken token = new JwtSecurityToken(
-                issuer: _config["Jwt:Issuer"],
-                audience: _config["Jwt:Audience"],
+                issuer: _jwtSettings.Issuer,
+                audience: _jwtSettings.Audience,
                 claims: claims,
-                expires: DateTime.UtcNow.AddDays(7),
+                notBefore: DateTime.UtcNow,
+                expires: DateTime.UtcNow.AddHours(_jwtSettings.ExpiracaoHoras),
                 signingCredentials: creds
             );
 

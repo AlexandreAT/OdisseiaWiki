@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { PageDto, PageBlock, CreatePageWithBlocksDto, PageBlockType, PageBlockDto } from '../../../../../../models/Pages';
 import { createPage, updatePage } from '../../../../../../services/pageService';
 import { saveAsset } from '../../../../../../services/assetsService';
+import { getApiErrorMessage } from '../../../../../../utils/apiError';
 
 interface UseFormPageProps {
   initialPage?: PageDto;
@@ -23,36 +24,6 @@ const getDefaultContent = (tipo: PageBlockType): any => {
     default:
       return {};
   }
-};
-
-const extractErrorMessage = (error: any): string => {
-  const responseData = error?.response?.data;
-  console.log("🚀 ~ extractErrorMessage ~ responseData:", responseData)
-
-  if (!responseData) return 'Erro ao salvar página';
-  if (typeof responseData === 'string') return responseData;
-
-  if (typeof responseData === 'object') {
-    if (typeof responseData.title === 'string' && responseData.title.trim()) {
-      return responseData.title;
-    }
-
-    if (typeof responseData.mensagemErro === 'string' && responseData.mensagemErro.trim()) {
-      return responseData.mensagemErro;
-    }
-
-    if (responseData.errors && typeof responseData.errors === 'object') {
-      const firstErrorArray = Object.values(responseData.errors).find(
-        (value) => Array.isArray(value) && value.length > 0
-      ) as string[] | undefined;
-
-      if (firstErrorArray?.[0]) {
-        return firstErrorArray[0];
-      }
-    }
-  }
-
-  return 'Erro ao salvar página';
 };
 
 export const useFormPage = ({
@@ -259,7 +230,7 @@ export const useFormPage = ({
 
         toast.success("Página salva com sucesso!");
     } catch (err: any) {
-      toast.error(extractErrorMessage(err));
+      toast.error(getApiErrorMessage(err, 'Erro ao salvar página'));
     }
   }, [validateForm, coverImageUrl, coverImageFile, slug, titulo, descricao, visivel, destaque, blocks, pageId, initialPage?.dataCriacao]);
 

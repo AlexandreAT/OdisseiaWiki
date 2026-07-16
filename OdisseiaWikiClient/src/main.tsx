@@ -15,6 +15,12 @@ import { Management } from './routes/Management/Management.tsx';
 import { Hub } from './routes/Hub/Hub.tsx';
 import PersonagemPage from './routes/Personagem/PersonagemPage';
 
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+if (!googleClientId) {
+  throw new Error('VITE_GOOGLE_CLIENT_ID não foi configurado.');
+}
+
 const router = createBrowserRouter([{
   path: '/',
   element: <App />,
@@ -68,7 +74,7 @@ const router = createBrowserRouter([{
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <GoogleOAuthProvider clientId="1000361239674-p29f1mb5mdardrmucofq5m2r0v340nu2.apps.googleusercontent.com">
+    <GoogleOAuthProvider clientId={googleClientId}>
       <Provider store = {store}>
         <RouterProvider router={router} />
       </Provider>

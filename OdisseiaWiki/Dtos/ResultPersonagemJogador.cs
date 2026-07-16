@@ -1,11 +1,9 @@
-﻿using OdisseiaWiki.Models;
+namespace OdisseiaWiki.Dtos;
 
-namespace OdisseiaWiki.Dtos
+public sealed class ResultPersonagemJogador
 {
-    public class ResultPersonagemJogador
-    {
-        public bool Sucesso { get; set; }
-        public string? MensagemErro { get; set; }
-        public PersonagemJogador? Personagem { get; set; }
-    }
+    public bool Sucesso { get; set; }
+    public string? Mensagem { get; set; }
+    public string? MensagemErro { get; set; }
+    public PersonagemJogadorResumoDto? Personagem { get; set; }
 }

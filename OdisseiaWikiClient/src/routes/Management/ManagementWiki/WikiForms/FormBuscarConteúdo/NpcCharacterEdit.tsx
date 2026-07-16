@@ -17,6 +17,7 @@ import { normalizeToJSONContent, prepareForAPI } from '../../../../../utils/rich
 import { normalizeCharacterStatusExtras } from '../../../../../utils/characterStatus';
 import { useFormCharacter } from '../FormCriarConteúdo/FormCharacter/useFormCharacter';
 import { EditHeader } from './EditFormStyles';
+import { getApiErrorMessage } from '../../../../../utils/apiError';
 
 interface NpcCharacterEditProps {
   theme: 'dark' | 'light';
@@ -94,35 +95,6 @@ const serializeRichText = (value: any): string => {
   } catch {
     return '';
   }
-};
-
-const extractErrorMessage = (error: any): string => {
-  const responseData = error?.response?.data;
-
-  if (!responseData) return 'Erro ao atualizar personagem.';
-  if (typeof responseData === 'string') return responseData;
-
-  if (typeof responseData === 'object') {
-    if (typeof responseData.title === 'string' && responseData.title.trim()) {
-      return responseData.title;
-    }
-
-    if (typeof responseData.mensagemErro === 'string' && responseData.mensagemErro.trim()) {
-      return responseData.mensagemErro;
-    }
-
-    if (responseData.errors && typeof responseData.errors === 'object') {
-      const firstErrorArray = Object.values(responseData.errors).find(
-        (value) => Array.isArray(value) && value.length > 0
-      ) as string[] | undefined;
-
-      if (firstErrorArray?.[0]) {
-        return firstErrorArray[0];
-      }
-    }
-  }
-
-  return 'Erro ao atualizar personagem.';
 };
 
 export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
@@ -213,7 +185,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
   const [galeriaPreviewFileMap, setGaleriaPreviewFileMap] = React.useState<Record<string, File>>({});
 
   const raceImageUrl = React.useMemo(
-    () => selectedRace?.imagem ?? '/assets_dynamic/default.png',
+    () => selectedRace?.imagem ?? '',
     [selectedRace]
   );
 
@@ -691,8 +663,8 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
       if (options?.goBackAfterSave) {
         onBack();
       }
-    } catch (error: any) {
-      toast.error(extractErrorMessage(error));
+    } catch (error: unknown) {
+      toast.error(getApiErrorMessage(error, 'Erro ao atualizar personagem.'));
     } finally {
       setIsSaving(false);
     }

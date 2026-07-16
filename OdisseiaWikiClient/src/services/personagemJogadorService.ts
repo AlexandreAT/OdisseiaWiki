@@ -52,8 +52,20 @@ export interface PersonagemJogadorPayload {
 
 export interface ResultPersonagemJogador {
   sucesso: boolean;
+  mensagem?: string;
   mensagemErro?: string;
-  personagem?: PersonagemJogadorPayload;
+  personagem?: PersonagemJogadorResumo;
+}
+
+export interface PersonagemJogadorResumo {
+  idpersonagemJogador: number;
+  idusuario: number;
+  idmesa: number;
+  idraca: number;
+  idcidade?: number;
+  nome: string;
+  imagem?: string;
+  dataCriacao: string;
 }
 
 export const getPersonagensPorUsuario = async (
@@ -72,7 +84,7 @@ export const getPersonagemJogadorById = async (
 
 export const criarPersonagemJogador = async (
   payload: PersonagemJogadorPayload
-): Promise<{ sucesso: boolean; mensagemErro?: string; personagemJogador?: PersonagemJogadorPayload }> => {
+): Promise<ResultPersonagemJogador> => {
   const response = await api.post("/PersonagemJogador", payload);
   return response.data;
 };
@@ -80,7 +92,7 @@ export const criarPersonagemJogador = async (
 export const atualizarPersonagemJogador = async (
   id: number,
   payload: PersonagemJogadorPayload
-): Promise<{ sucesso: boolean; mensagemErro?: string; personagemJogador?: PersonagemJogadorPayload }> => {
+): Promise<ResultPersonagemJogador> => {
   const response = await api.put(`/PersonagemJogador/${id}`, payload);
   return response.data;
 };

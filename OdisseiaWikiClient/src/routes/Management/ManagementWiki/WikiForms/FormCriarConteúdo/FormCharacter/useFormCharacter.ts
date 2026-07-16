@@ -17,6 +17,7 @@ import { prepareForAPI } from '../../../../../../utils/richTextHelpers';
 import { TOTAL_STEPS } from '../../../../../../constants';
 import { ensureContentCategoryTag, isContentCategoryTag } from '../../../../../../utils/contentCategoryTag';
 import { CharacterStatusExtras, DEFAULT_CHARACTER_STATUS_EXTRAS } from '../../../../../../utils/characterStatus';
+import { getApiErrorMessage } from '../../../../../../utils/apiError';
 
 const serializeRichText = (value: any): string => {
   if (value === undefined || value === null) return '';
@@ -28,36 +29,6 @@ const serializeRichText = (value: any): string => {
     return '';
   }
 };
-
-const extractErrorMessage = (error: any): string => {
-  const responseData = error?.response?.data;
-
-  if (!responseData) return 'Erro ao salvar personagem';
-  if (typeof responseData === 'string') return responseData;
-
-  if (typeof responseData === 'object') {
-    if (typeof responseData.title === 'string' && responseData.title.trim()) {
-      return responseData.title;
-    }
-
-    if (typeof responseData.mensagemErro === 'string' && responseData.mensagemErro.trim()) {
-      return responseData.mensagemErro;
-    }
-
-    if (responseData.errors && typeof responseData.errors === 'object') {
-      const firstErrorArray = Object.values(responseData.errors).find(
-        (value) => Array.isArray(value) && value.length > 0
-      ) as string[] | undefined;
-
-      if (firstErrorArray?.[0]) {
-        return firstErrorArray[0];
-      }
-    }
-  }
-
-  return 'Erro ao salvar personagem';
-};
-
 
 export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { applyRaceDefaults?: boolean; contentType?: string } = {}) => {
   // --- step ---
@@ -579,7 +550,7 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
 
       toast.success("Personagem salvo com sucesso!");
     } catch (err: any) {
-      toast.error(extractErrorMessage(err));
+      toast.error(getApiErrorMessage(err, 'Erro ao salvar personagem'));
     }
   }, [avatarUrl, avatarFile, userName, statusBasico, itens, magias, skills, race, city, history, costumes, nanites, alignment, traits, idpassiva, ultimate, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, statusExtras, defesas, tags, contentType, visivel, destaque, validateStepOne]);
 

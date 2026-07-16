@@ -1,4 +1,9 @@
 import { Personagem } from "../models/Characters";
+import tokenFaevh from "../assets/Token Faevh.png";
+import tokenGunther from "../assets/Token Gunther.png";
+import tokenLaraki from "../assets/Token Laraki.png";
+import tokenSute from "../assets/Token Sute.png";
+import tokenTigre from "../assets/Token Tigre.png";
 
 export const personagensMock: Personagem[] = [
   {
@@ -20,7 +25,7 @@ export const personagensMock: Personagem[] = [
     Alinhamento: "neutro_bondoso",
     Tracos: ["curioso", "leal"],
     Costumes: ["Sempre ajuda os necessitados"],
-    Imagem: "src/assets/Token Sute.png",
+    Imagem: tokenSute,
     InventarioJson: [
       {
         id: "uuid-inv-1",
@@ -73,7 +78,7 @@ export const personagensMock: Personagem[] = [
     Alinhamento: "leal_neutro",
     Tracos: ["orgulhoso", "bravo"],
     Costumes: ["Segue o código de honra dos guerreiros"],
-    Imagem: "src/assets/Token Gunther.png",
+    Imagem: tokenGunther,
     InventarioJson: [
       {
         id: "uuid-inv-4",
@@ -126,7 +131,7 @@ export const personagensMock: Personagem[] = [
     Alinhamento: "caotico_bondoso",
     Tracos: ["impulsivo", "bondoso"],
     Costumes: ["Canta histórias antigas em tavernas"],
-    Imagem: "src/assets/Token Laraki.png",
+    Imagem: tokenLaraki,
     InventarioJson: [
       {
         id: "uuid-inv-7",
@@ -169,7 +174,7 @@ export const personagensMock: Personagem[] = [
     Alinhamento: "neutro",
     Tracos: ["calculista", "leal"],
     Costumes: ["Sempre em vigília pela matilha"],
-    Imagem: "src/assets/Token Tigre.png",
+    Imagem: tokenTigre,
     InventarioJson: [
       {
         id: "uuid-inv-9",
@@ -214,7 +219,7 @@ export const personagensMock: Personagem[] = [
     Alinhamento: "caotico_neutro",
     Tracos: ["curioso", "impulsivo"],
     Costumes: ["Gosta de mexer com magias proibidas"],
-    Imagem: "src/assets/Token Faevh.png",
+    Imagem: tokenFaevh,
     InventarioJson: [
       {
         id: "uuid-inv-11",

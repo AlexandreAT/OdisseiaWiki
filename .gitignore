@@ -30,4 +30,16 @@ dist/
 
 # Environment / Secrets
 .env
+.env.*
+!.env.example
 appsettings.Development.json
+appsettings.*.local.json
+*.pfx
+*.pem
+*.sql
+
+# Optional asset migration reports
+migration-output/
+
+# Local development uploads. Existing legacy files remain tracked for compatibility.
+/OdisseiaWiki/wwwroot/assets_dynamic/**

@@ -11,8 +11,13 @@ namespace OdisseiaWiki.Services
     public class ItemService : IItemService
     {
         private readonly IItemRepository _repository;
+        private readonly IAssetService _assetService;
 
-        public ItemService(IItemRepository repository) => _repository = repository;
+        public ItemService(IItemRepository repository, IAssetService assetService)
+        {
+            _repository = repository;
+            _assetService = assetService;
+        }
 
         public async Task<IEnumerable<ItemDto>> GetAllAsync(bool? visivel = null)
         {
@@ -103,24 +108,8 @@ namespace OdisseiaWiki.Services
             var item = await _repository.GetByIdAsync(dto.Iditem);
             if (item is null) return false;
 
-            if (!string.IsNullOrWhiteSpace(item.Imagem) &&
-                dto.Imagem != null &&
-                item.Imagem != dto.Imagem)
-            {
-                AssetFileHelper.DeleteIfExists(item.Imagem);
-            }
-
-            // =============== QUANDO TIVER GALERIA DE IMAGENS ===============
-            //List<string>? oldGaleria = !string.IsNullOrWhiteSpace(item.GaleriaImagem)
-            //    ? JsonSerializer.Deserialize<List<string>>(item.GaleriaImagem)
-            //    : new List<string>();
-
-            //List<string>? removedImages = AssetDiffHelper.GetRemovedFiles(oldGaleria, dto.GaleriaImagem);
-
-            //foreach (string? img in removedImages)
-            //{
-            //    AssetFileHelper.DeleteIfExists(img);
-            //}
+            HashSet<string> oldAssets = AssetReferenceHelper.Extract(
+                item.Imagem, item.Descricao, item.AtributosJson);
 
             item.Nome = dto.Nome;
             item.Tipo = dto.Tipo;
@@ -143,6 +132,10 @@ namespace OdisseiaWiki.Services
             item.Idpersonagem = dto.Idpersonagem;
 
             await _repository.UpdateAsync(item);
+            await AssetReferenceHelper.DeleteRemovedAsync(
+                _assetService,
+                oldAssets,
+                AssetReferenceHelper.Extract(item.Imagem, item.Descricao, item.AtributosJson));
             return true;
         }
 
@@ -151,7 +144,10 @@ namespace OdisseiaWiki.Services
             var item = await _repository.GetByIdAsync(id);
             if (item is null) return false;
 
+            HashSet<string> assets = AssetReferenceHelper.Extract(
+                item.Imagem, item.Descricao, item.AtributosJson);
             await _repository.DeleteAsync(id);
+            await AssetReferenceHelper.DeleteAllAsync(_assetService, assets);
             return true;
         }
 

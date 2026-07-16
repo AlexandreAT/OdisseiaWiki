@@ -46,7 +46,7 @@ namespace OdisseiaWiki.Repositories
 
         public async Task<bool> DeleteAsync(int id)
         {
-            PersonagemJogador personagem = await _context.PersonagemJogadores.FindAsync(id);
+            PersonagemJogador? personagem = await _context.PersonagemJogadores.FindAsync(id);
             if (personagem == null) return false;
 
             _context.PersonagemJogadores.Remove(personagem);

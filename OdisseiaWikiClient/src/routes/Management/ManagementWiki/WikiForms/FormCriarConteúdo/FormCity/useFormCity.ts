@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { CityFormErrors, CidadeDto } from './FormCity.type';
 import { createCidade, updateCidade, CidadePayload } from '../../../../../../services/cidadesService';
 import { saveAsset } from '../../../../../../services/assetsService';
+import { getApiErrorMessage } from '../../../../../../utils/apiError';
 import { JSONContent } from '../../../../../../models/Cities';
 import { PontoDeInteresse } from '../../../../../../models/InfoLore';
 import { prepareForAPI } from '../../../../../../utils/richTextHelpers';
@@ -216,7 +217,7 @@ export const useFormCity = (initialCity?: CidadePayload, contentType?: string) =
     setImagemError('');
   };
 
-  const uploadImages = async (): Promise<{ imagemPath: string; galeriaPaths?: string[] }> => {
+  const uploadImages = async (): Promise<{ imagemPath: string; galeriaPaths: string[] }> => {
     const entityName = nome.toLowerCase().replace(/\s+/g, '_');
     
     let imagemPath = imagemUrl;
@@ -230,13 +231,10 @@ export const useFormCity = (initialCity?: CidadePayload, contentType?: string) =
     }
 
     // Começa apenas com as URLs existentes (do servidor), sem BLOBs temporários
-    let galeriaPaths: string[] | undefined = existingGaleriaUrls.length > 0 ? [...existingGaleriaUrls] : undefined;
+    const galeriaPaths: string[] = [...existingGaleriaUrls];
     
     // Adiciona novos uploads
     if (galeriaFiles.length > 0) {
-      if (!galeriaPaths) {
-        galeriaPaths = [];
-      }
       for (const file of galeriaFiles) {
         const result = await saveAsset({
           imageFile: file,
@@ -264,7 +262,7 @@ export const useFormCity = (initialCity?: CidadePayload, contentType?: string) =
       Imagem: imagemPath,
       GaleriaImagem: galeriaPaths,
       Tags: ensureContentCategoryTag(tags, contentType),
-      PontosDeInteresse: pontosDeInteresse.length > 0 ? pontosDeInteresse : undefined,
+      PontosDeInteresse: pontosDeInteresse,
         Visivel: visivel,
         Destaque: destaque,
     };
@@ -312,12 +310,13 @@ export const useFormCity = (initialCity?: CidadePayload, contentType?: string) =
         message: cidadeId ? 'Cidade atualizada com sucesso!' : 'Cidade criada com sucesso!',
         data: response.cidade 
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error submitting form:', error);
       setIsSubmitting(false);
-      const errorMessage = error?.response?.data?.mensagemErro || 
-                          error?.message || 
-                          (cidadeId ? 'Erro ao atualizar cidade. Tente novamente.' : 'Erro ao criar cidade. Tente novamente.');
+      const errorMessage = getApiErrorMessage(
+        error,
+        cidadeId ? 'Erro ao atualizar cidade. Tente novamente.' : 'Erro ao criar cidade. Tente novamente.'
+      );
       return { 
         success: false, 
         message: errorMessage 

@@ -3,6 +3,8 @@ using OdisseiaWiki.Models;
 using OdisseiaWiki.Repositories.Interfaces;
 using OdisseiaWiki.Services.Helpers;
 using OdisseiaWiki.Services.Interfaces;
+using OdisseiaWiki.Settings;
+using Microsoft.Extensions.Options;
 
 namespace OdisseiaWiki.Services
 {
@@ -10,11 +12,19 @@ namespace OdisseiaWiki.Services
     {
         private readonly IUsuarioRepository _repository;
         private readonly ITokenService _tokenService;
+        private readonly GoogleAuthSettings _googleAuthSettings;
+        private readonly ILogger<UsuarioService> _logger;
 
-        public UsuarioService(IUsuarioRepository repository, ITokenService tokenService)
+        public UsuarioService(
+            IUsuarioRepository repository,
+            ITokenService tokenService,
+            IOptions<GoogleAuthSettings> googleAuthOptions,
+            ILogger<UsuarioService> logger)
         {
             _repository = repository;
             _tokenService = tokenService;
+            _googleAuthSettings = googleAuthOptions.Value;
+            _logger = logger;
         }
 
         public async Task<ResultRegisterUsuario> Register(RegisterUsuarioDto usuarioDto)
@@ -41,15 +51,25 @@ namespace OdisseiaWiki.Services
         {
             try
             {
-                var payload = await GoogleJwtHelper.ValidarTokenAsync(tokenJwtGoogle);
+                var payload = await GoogleJwtHelper.ValidarTokenAsync(
+                    tokenJwtGoogle,
+                    _googleAuthSettings.ClientId);
                 if (payload == null)
                     return ResultLoginUsuario.Falha("Token inválido.");
 
-                string? email = payload.Email;
-                string? nome = payload.Name;
+                if (!payload.EmailVerified)
+                    return ResultLoginUsuario.Falha("O e-mail da conta Google não foi verificado.");
+
+                string? email = payload.Email?.Trim();
+                if (string.IsNullOrWhiteSpace(email))
+                    return ResultLoginUsuario.Falha("A conta Google não informou um e-mail válido.");
+
+                string nome = string.IsNullOrWhiteSpace(payload.Name)
+                    ? email.Split('@', 2)[0]
+                    : payload.Name.Trim();
                 string? imagem = payload.Picture;
 
-                Usuario? usuario = await _repository.GetByEmailAsync(payload.Email);
+                Usuario? usuario = await _repository.GetByEmailAsync(email);
                 if (usuario == null)
                 {
                     string? baseNick = nome.Split(" ").FirstOrDefault()?.ToLower() ?? "user";
@@ -68,14 +88,13 @@ namespace OdisseiaWiki.Services
                     await _repository.CreateAsync(usuario);
                 }
 
-                string? token = _tokenService.GerarToken(usuario);
+                string? token = _tokenService.GerarToken(usuario, emailVerified: true);
                 return ResultLoginUsuario.Ok(token);
             }
-            catch (Exception ex)
+            catch (Exception exception)
             {
-                Console.WriteLine("🔥 ERRO NO LOGIN GOOGLE:");
-                Console.WriteLine(ex.ToString());
-                throw;
+                _logger.LogError(exception, "Erro inesperado durante o login com Google.");
+                return ResultLoginUsuario.Falha("Não foi possível autenticar com o Google.");
             }
         }
 

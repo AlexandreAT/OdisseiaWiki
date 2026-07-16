@@ -21,6 +21,7 @@ import { CharacterCreate } from './CharacterCreate/CharacterCreate';
 import { CharacterEdit } from './CharacterEdit/CharacterEdit';
 import { useFormUserCharacter } from './CharacterCreate/useFormUserCharacter';
 import { StatusBar } from '../../../components/Generic/StatusBar/StatusBar';
+import { getApiErrorMessage } from '../../../utils/apiError';
 
 interface UserCharactersProps {
   theme: 'dark' | 'light';
@@ -101,9 +102,9 @@ export const UserCharacters = ({ theme, neon, userId, onViewModeChange, onPerson
         });
 
         setPersonagens(parsed);
-      } catch (err: any) {
-        console.error(err);
-        setError(err.response?.data || "Erro ao carregar personagens");
+      } catch (error: unknown) {
+        console.error(error);
+        setError(getApiErrorMessage(error, "Erro ao carregar personagens"));
       } finally {
         setLoading(false);
       }

@@ -20,6 +20,7 @@ import { TOTAL_STEPS } from './constants';
 import { mapInventoryForPayload, mapMagiasForPayload, mapSkillsForPayload } from './helpers';
 import { normalizeToJSONContent, prepareForAPI } from '../../../../utils/richTextHelpers';
 import { CharacterStatusExtras, DEFAULT_CHARACTER_STATUS_EXTRAS, normalizeCharacterStatusExtras } from '../../../../utils/characterStatus';
+import { getApiErrorMessage } from '../../../../utils/apiError';
 
 const parseJson = <T,>(value: unknown, fallback: T): T => {
   if (value === undefined || value === null) return fallback;
@@ -760,8 +761,8 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
       toast.success("Personagem salvo com sucesso!");
       if (onSave) onSave();
       return true;
-    } catch (err: any) {
-      toast.error(err?.response?.data || "Erro ao salvar personagem");
+    } catch (error: unknown) {
+      toast.error(getApiErrorMessage(error, "Erro ao salvar personagem"));
       return false;
     }
   }, [avatarUrl, avatarFile, galeriaUrls, galeriaPreviewFileMap, userName, statusBasico, itens, magias, skills, race, city, userId, selectedMesa, history, costumes, extraInformation, nanites, alignment, traits, idpassiva, ultimate, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, statusExtras, defesas, personagem, onSave, validateStepOne]);
@@ -858,8 +859,8 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
 
       toast.success("Personagem salvo com sucesso!");
       if (onSave) onSave();
-    } catch (err: any) {
-      toast.error(err?.response?.data || "Erro ao salvar personagem");
+    } catch (error: unknown) {
+      toast.error(getApiErrorMessage(error, "Erro ao salvar personagem"));
     }
   }, [avatarUrl, avatarFile, galeriaUrls, galeriaShapes, galeriaPreviewFileMap, userName, itens, magias, skills, race, city, userId, selectedMesa, history, costumes, extraInformation, nanites, alignment, traits, idpassiva, ultimate, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, statusExtras, defesas, buildStatusForPayload, onSave, validateStepOne]);
 

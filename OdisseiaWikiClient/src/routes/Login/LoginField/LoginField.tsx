@@ -58,7 +58,8 @@ export const LoginField = ({ theme, neon, onRegisterClick }: Props) => {
                     nickname: payload.nickname,
                     imagemUrl: payload.imagemUrl,
                     email: payload.email,
-                    id: payload.id
+                    id: payload.id,
+                    role: payload.role
                 }));
 
                 toast.success('Login realizado com sucesso!');
@@ -89,7 +90,8 @@ export const LoginField = ({ theme, neon, onRegisterClick }: Props) => {
                         nickname: payload.nickname,
                         imagemUrl: payload.imagemUrl,
                         email: payload.email,
-                        id: payload.id
+                        id: payload.id,
+                        role: payload.role
                     }));
 
                     toast.success('Login realizado com sucesso!');

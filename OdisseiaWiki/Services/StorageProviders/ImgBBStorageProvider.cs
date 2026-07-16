@@ -1,68 +1,80 @@
+using System.Net.Http.Headers;
+using System.Text.Json;
 using Microsoft.Extensions.Options;
-using Microsoft.AspNetCore.Http;
 using OdisseiaWiki.Dtos;
 using OdisseiaWiki.Services.Interfaces;
 using OdisseiaWiki.Settings;
-using System;
-using System.Net.Http;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
 
-namespace OdisseiaWiki.Services.StorageProviders
+namespace OdisseiaWiki.Services.StorageProviders;
+
+public class ImgBBStorageProvider : IImgBBStorageProvider
 {
-    public class ImgBBStorageProvider : IImgBBStorageProvider
+    private readonly HttpClient _httpClient;
+    private readonly ImgBBSettings _settings;
+    private readonly ILogger<ImgBBStorageProvider> _logger;
+
+    public ImgBBStorageProvider(
+        HttpClient httpClient,
+        IOptions<ImgBBSettings> options,
+        ILogger<ImgBBStorageProvider> logger)
     {
-        private readonly HttpClient _http;
-        private readonly ImgBBSettings _settings;
+        _httpClient = httpClient;
+        _settings = options.Value;
+        _logger = logger;
+    }
 
-        public ImgBBStorageProvider(HttpClient http, IOptions<ImgBBSettings> options)
+    public async Task<ResultSaveImage> SaveAsync(
+        IFormFile file,
+        string subFolder,
+        string? publicId = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
         {
-            _http = http;
-            _settings = options.Value;
-        }
+            if (string.IsNullOrWhiteSpace(_settings.ApiKey))
+            {
+                _logger.LogError("ImgBB:ApiKey não está configurada.");
+                return ResultSaveImage.Fail("O armazenamento externo não está configurado.");
+            }
 
-        public async Task<ResultSaveImage> SaveAsync(IFormFile file, string subFolder)
+            string requestUrl = $"{_settings.Endpoint}?key={Uri.EscapeDataString(_settings.ApiKey)}";
+            await using Stream fileStream = file.OpenReadStream();
+            using StreamContent imageContent = new(fileStream);
+            imageContent.Headers.ContentType = MediaTypeHeaderValue.Parse(file.ContentType);
+
+            string safeFileName = $"{Guid.NewGuid():N}{Path.GetExtension(file.FileName).ToLowerInvariant()}";
+            using MultipartFormDataContent content = new();
+            content.Add(imageContent, "image", safeFileName);
+
+            using HttpResponseMessage response = await _httpClient.PostAsync(requestUrl, content, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("ImgBB rejeitou um upload com status {StatusCode}.", response.StatusCode);
+                return ResultSaveImage.Fail("O armazenamento externo rejeitou a imagem.");
+            }
+
+            await using Stream responseStream = await response.Content.ReadAsStreamAsync();
+            using JsonDocument document = await JsonDocument.ParseAsync(responseStream);
+            if (document.RootElement.TryGetProperty("data", out JsonElement data) &&
+                data.TryGetProperty("url", out JsonElement urlElement) &&
+                !string.IsNullOrWhiteSpace(urlElement.GetString()))
+            {
+                return ResultSaveImage.Ok(urlElement.GetString()!, "imgbb");
+            }
+
+            _logger.LogWarning("ImgBB retornou uma resposta sem URL para o upload.");
+            return ResultSaveImage.Fail("O armazenamento externo retornou uma resposta inválida.");
+        }
+        catch (Exception exception)
         {
-            try
-            {
-                await using var ms = new System.IO.MemoryStream();
-                await file.CopyToAsync(ms);
-                string base64 = Convert.ToBase64String(ms.ToArray());
-
-                // Monta request conforme API ImgBB (key na query, image em form)
-                var requestUrl = $"{_settings.Endpoint}?key={_settings.ApiKey}";
-
-                var content = new MultipartFormDataContent
-                {
-                    { new StringContent(base64, Encoding.UTF8), "image" },
-                    // opcional: nome original
-                    { new StringContent(file.FileName ?? "upload"), "name" }
-                };
-
-                using var resp = await _http.PostAsync(requestUrl, content);
-                if (!resp.IsSuccessStatusCode)
-                {
-                    var err = await resp.Content.ReadAsStringAsync();
-                    return ResultSaveImage.Fail($"ImgBB retornou erro: {resp.StatusCode} - {err}");
-                }
-
-                using var stream = await resp.Content.ReadAsStreamAsync();
-                using var doc = await JsonDocument.ParseAsync(stream);
-                if (doc.RootElement.TryGetProperty("data", out var data))
-                {
-                    string imageUrl = data.GetProperty("url").GetString() ?? string.Empty;
-                    string? deleteUrl = data.TryGetProperty("delete_url", out var d) ? d.GetString() : null;
-                    // Opcional: retornar deleteUrl em MensagemErro (n�o ideal, mas �til)
-                    return ResultSaveImage.Ok(imageUrl);
-                }
-
-                return ResultSaveImage.Fail("Resposta ImgBB inv�lida.");
-            }
-            catch (Exception ex)
-            {
-                return ResultSaveImage.Fail($"Erro ao enviar para ImgBB: {ex.Message}");
-            }
+            _logger.LogError(exception, "Falha ao enviar imagem ao ImgBB.");
+            return ResultSaveImage.Fail("Não foi possível enviar a imagem.");
         }
+    }
+
+    public Task<bool> DeleteAsync(string assetIdentifier, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Exclusão de URL legada do ImgBB ignorada: não existe delete token persistido.");
+        return Task.FromResult(false);
     }
 }

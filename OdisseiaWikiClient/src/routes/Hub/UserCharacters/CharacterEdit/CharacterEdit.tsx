@@ -84,7 +84,7 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserC
     // Debug logs and temporary race-filter removed
 
     const raceImageUrl = React.useMemo(() => 
-        selectedRace?.imagem ?? '/assets_dynamic/default.png',
+        selectedRace?.imagem ?? '',
         [selectedRace]
     );
 

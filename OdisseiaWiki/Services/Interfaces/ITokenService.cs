@@ -4,6 +4,6 @@ namespace OdisseiaWiki.Services.Interfaces
 {
     public interface ITokenService
     {
-        string GerarToken(Usuario usuario);
+        string GerarToken(Usuario usuario, bool emailVerified = false);
     }
 }

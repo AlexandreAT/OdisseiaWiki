@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
-using System.IO;
+using OdisseiaWiki.Settings;
 
 namespace OdisseiaWiki.Data
 {
@@ -16,13 +16,25 @@ namespace OdisseiaWiki.Data
                 .AddEnvironmentVariables()
                 .Build();
 
-            var connectionString = configuration.GetConnectionString("DefaultConnection");
+            var connectionString = configuration.GetConnectionString("DefaultConnection")
+                ?? throw new InvalidOperationException(
+                    "ConnectionStrings:DefaultConnection não configurada.");
+            DatabaseSettings databaseSettings = configuration
+                .GetSection(DatabaseSettings.SectionName)
+                .Get<DatabaseSettings>() ?? new DatabaseSettings();
+
+            if (!Version.TryParse(databaseSettings.ServerVersion, out Version? serverVersion))
+                throw new InvalidOperationException("Database:ServerVersion é inválida.");
 
             var optionsBuilder = new DbContextOptionsBuilder<OdisseiaContext>();
 
             optionsBuilder.UseMySql(
                 connectionString,
-                ServerVersion.AutoDetect(connectionString)
+                new MySqlServerVersion(serverVersion),
+                mySqlOptions => mySqlOptions.EnableRetryOnFailure(
+                    databaseSettings.RetryCount,
+                    TimeSpan.FromSeconds(databaseSettings.RetryDelaySeconds),
+                    errorNumbersToAdd: null)
             );
 
             return new OdisseiaContext(optionsBuilder.Options);

@@ -3,6 +3,7 @@ using OdisseiaWiki.Helpers;
 using OdisseiaWiki.Models;
 using OdisseiaWiki.Repositories.Interfaces;
 using OdisseiaWiki.Services.Interfaces;
+using OdisseiaWiki.Services.Helpers;
 using System.Text.Json;
 
 namespace OdisseiaWiki.Services
@@ -12,15 +13,18 @@ namespace OdisseiaWiki.Services
         private readonly IPersonagemJogadorRepository _repository;
         private readonly IMesaRepository _mesaRepository;
         private readonly IMesaService _mesaService;
+        private readonly IAssetService _assetService;
 
         public PersonagemJogadorService(
             IPersonagemJogadorRepository repository,
             IMesaRepository mesaRepository,
-            IMesaService mesaService)
+            IMesaService mesaService,
+            IAssetService assetService)
         {
             _repository = repository;
             _mesaRepository = mesaRepository;
             _mesaService = mesaService;
+            _assetService = assetService;
         }
 
         public async Task<ResultPersonagemJogador> CreateAsync(PersonagemJogadorDto personagemDto)
@@ -77,12 +81,12 @@ namespace OdisseiaWiki.Services
             personagem.Idcidade = personagem.Idcidade == 0 ? null : personagem.Idcidade;
 
             PersonagemJogador criado = await _repository.CreateAsync(personagem);
-            return ResultOk(criado);
+            return ResultOk(criado, "Personagem criado com sucesso.");
         }
 
         public async Task<ResultPersonagemJogador> UpdateAsync(int id, PersonagemJogadorDto personagemDto)
         {
-            PersonagemJogador personagem = await _repository.GetByIdAsync(id);
+            PersonagemJogador? personagem = await _repository.GetByIdAsync(id);
             if (personagem == null)
                 return ResultFail($"PersonagemJogador com id {id} não encontrado.");
 
@@ -93,20 +97,54 @@ namespace OdisseiaWiki.Services
             personagemDto.Idmesa = validacaoMesa.Idmesa;
             personagemDto.Idusuario = idUsuario;
 
+            HashSet<string> oldAssets = ExtractAssets(personagem);
+
             personagem = MapDtoToModel(personagemDto, personagem);
             personagem.Idcidade = personagem.Idcidade == 0 ? null : personagem.Idcidade;
 
             PersonagemJogador atualizado = await _repository.UpdateAsync(personagem);
-            return ResultOk(atualizado);
+            await AssetReferenceHelper.DeleteRemovedAsync(
+                _assetService,
+                oldAssets,
+                ExtractAssets(atualizado));
+            return ResultOk(atualizado, "Personagem atualizado com sucesso.");
         }
 
-        public async Task<List<PersonagemJogador>> GetAllAsync() => await _repository.GetAllAsync();
+        public async Task<List<PersonagemJogadorDto>> GetAllAsync()
+            => (await _repository.GetAllAsync()).Select(MapToDto).ToList();
 
-        public async Task<List<PersonagemJogador>> GetByUsuarioIdAsync(int usuarioId) => await _repository.GetByUsuarioIdAsync(usuarioId);
+        public async Task<List<PersonagemJogadorDto>> GetByUsuarioIdAsync(int usuarioId)
+            => (await _repository.GetByUsuarioIdAsync(usuarioId)).Select(MapToDto).ToList();
 
-        public async Task<PersonagemJogador?> GetByIdAsync(int id) => await _repository.GetByIdAsync(id);
+        public async Task<PersonagemJogadorDto?> GetByIdAsync(int id)
+        {
+            PersonagemJogador? personagem = await _repository.GetByIdAsync(id);
+            return personagem is null ? null : MapToDto(personagem);
+        }
 
-        public async Task<bool> DeleteAsync(int id) => await _repository.DeleteAsync(id);
+        public async Task<bool> DeleteAsync(int id)
+        {
+            PersonagemJogador? personagem = await _repository.GetByIdAsync(id);
+            if (personagem is null)
+                return false;
+
+            HashSet<string> assets = ExtractAssets(personagem);
+            bool deleted = await _repository.DeleteAsync(id);
+            if (deleted)
+                await AssetReferenceHelper.DeleteAllAsync(_assetService, assets);
+            return deleted;
+        }
+
+        private static HashSet<string> ExtractAssets(PersonagemJogador personagem)
+            => AssetReferenceHelper.Extract(
+                personagem.Imagem,
+                personagem.GaleriaImagem,
+                personagem.InventarioJson,
+                personagem.Skills,
+                personagem.Magia,
+                personagem.Historia,
+                personagem.Implantes,
+                personagem.Ultimate);
 
         private async Task<(bool Sucesso, int Idmesa, string? MensagemErro)> ValidarMesaAsync(int idMesa, int idUsuario)
         {
@@ -170,6 +208,63 @@ namespace OdisseiaWiki.Services
 
         private static ResultPersonagemJogador ResultFail(string mensagem) => new() { Sucesso = false, MensagemErro = mensagem };
 
-        private static ResultPersonagemJogador ResultOk(PersonagemJogador personagem) => new() { Sucesso = true, Personagem = personagem };
+        private static ResultPersonagemJogador ResultOk(PersonagemJogador personagem, string mensagem) => new()
+        {
+            Sucesso = true,
+            Mensagem = mensagem,
+            Personagem = new PersonagemJogadorResumoDto
+            {
+                IdpersonagemJogador = personagem.IdpersonagemJogador,
+                Idusuario = personagem.Idusuario,
+                Idmesa = personagem.Idmesa,
+                Idraca = personagem.Idraca,
+                Idcidade = personagem.Idcidade,
+                Nome = personagem.Nome,
+                Imagem = personagem.Imagem,
+                DataCriacao = personagem.DataCriacao,
+            },
+        };
+
+        private static PersonagemJogadorDto MapToDto(PersonagemJogador personagem) => new()
+        {
+            IdpersonagemJogador = personagem.IdpersonagemJogador,
+            Idusuario = personagem.Idusuario,
+            Idmesa = personagem.Idmesa,
+            Idraca = personagem.Idraca,
+            Idcidade = personagem.Idcidade,
+            Nome = personagem.Nome,
+            Alinhamento = personagem.Alinhamento,
+            Historia = RichTextHelper.DeserializeRichText(personagem.Historia),
+            Imagem = personagem.Imagem,
+            GaleriaImagem = Deserialize<List<string>>(personagem.GaleriaImagem),
+            Nanites = int.TryParse(personagem.Nanites, out int nanites) ? nanites : null,
+            InfoSecundariasJson = personagem.InfoSecundariasJson,
+            Costumes = Deserialize<List<string>>(personagem.Costumes),
+            Tracos = Deserialize<List<string>>(personagem.Tracos),
+            InventarioJson = Deserialize<object>(personagem.InventarioJson),
+            Skills = Deserialize<object>(personagem.Skills),
+            Magia = Deserialize<object>(personagem.Magia),
+            StatusJson = Deserialize<object>(personagem.StatusJson),
+            PersonagemsVinculados = Deserialize<List<string>>(personagem.PersonagemsVinculados),
+            Implantes = Deserialize<List<string>>(personagem.Implantes),
+            Ultimate = personagem.Ultimate,
+            Idpassiva = personagem.Idpassiva,
+            DataCriacao = personagem.DataCriacao,
+        };
+
+        private static T? Deserialize<T>(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return default;
+
+            try
+            {
+                return JsonSerializer.Deserialize<T>(value);
+            }
+            catch (JsonException)
+            {
+                return default;
+            }
+        }
     }
 }

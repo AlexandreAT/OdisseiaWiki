@@ -95,7 +95,7 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
   }, [handleAddTag]);
 
   const raceImageUrl = React.useMemo(() => 
-    selectedRace?.imagem ? selectedRace.imagem : '/assets_dynamic/default.png',
+    selectedRace?.imagem ?? '',
     [selectedRace]
   );
 

@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using OdisseiaWiki.Dtos;
 using OdisseiaWiki.Models;
+using OdisseiaWiki.Security;
 using OdisseiaWiki.Services.Interfaces;
 
 namespace OdisseiaWiki.Controllers
@@ -17,6 +19,7 @@ namespace OdisseiaWiki.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = AuthorizationPolicies.Admin)]
         public async Task<IActionResult> Create([FromBody] CidadeDto dto)
         {
             ResultCidade resultado = await _service.CreateAsync(dto);
@@ -28,6 +31,7 @@ namespace OdisseiaWiki.Controllers
         }
 
         [HttpPut("{id:int}")]
+        [Authorize(Policy = AuthorizationPolicies.Admin)]
         public async Task<IActionResult> Update(int id, [FromBody] CidadeDto dto)
         {
             ResultCidade resultado = await _service.UpdateAsync(id, dto);
@@ -41,6 +45,9 @@ namespace OdisseiaWiki.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] bool? visivel = null)
         {
+            if (!User.IsAdmin())
+                visivel = true;
+
             ResultCidade resultado = await _service.GetAllAsync(visivel);
 
             if (!resultado.Sucesso)
@@ -54,12 +61,13 @@ namespace OdisseiaWiki.Controllers
         {
             Cidade? cidade = await _service.GetByIdAsync(id);
 
-            return cidade is null
+            return cidade is null || (!cidade.Visivel && !User.IsAdmin())
                 ? NotFound($"Cidade com id {id} não encontrada.")
                 : Ok(cidade);
         }
 
         [HttpDelete("{id:int}")]
+        [Authorize(Policy = AuthorizationPolicies.Admin)]
         public async Task<IActionResult> Delete(int id)
         {
             bool sucesso = await _service.DeleteAsync(id);
@@ -77,6 +85,9 @@ namespace OdisseiaWiki.Controllers
 
             List<CidadeDto> cidades =
                 await _service.GetBatchAsync(dto.Ids);
+
+            if (!User.IsAdmin())
+                cidades = cidades.Where(cidade => cidade.Visivel).ToList();
 
             return Ok(cidades);
         }
