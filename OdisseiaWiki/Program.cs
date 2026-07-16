@@ -1,17 +1,23 @@
 using System.Security.Claims;
+using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using MySqlConnector;
 using OdisseiaWiki.Data;
+using OdisseiaWiki.Health;
 using OdisseiaWiki.Repositories;
 using OdisseiaWiki.Repositories.Interfaces;
 using OdisseiaWiki.Security;
@@ -31,6 +37,7 @@ public class Program
     public static async Task Main(string[] args)
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+        ConfigureListeningAddress(builder);
 
         builder.Logging.AddFilter("System.Net.Http.HttpClient", LogLevel.Warning);
 
@@ -87,6 +94,27 @@ public class Program
                 "Cloudinary:RootFolder é inválida.")
             .ValidateOnStart();
 
+        builder.Services.AddOptions<DatabaseSettings>()
+            .Bind(builder.Configuration.GetSection(DatabaseSettings.SectionName))
+            .Validate(settings => Version.TryParse(settings.ServerVersion, out _),
+                "Database:ServerVersion deve ser uma versão válida, por exemplo 8.0.0.")
+            .Validate(settings => settings.MaximumPoolSize is > 0 and <= 50,
+                "Database:MaximumPoolSize deve estar entre 1 e 50.")
+            .Validate(settings => settings.ConnectionIdleTimeoutSeconds is > 0 and <= 600,
+                "Database:ConnectionIdleTimeoutSeconds deve estar entre 1 e 600.")
+            .Validate(settings => settings.RetryCount is >= 0 and <= 10,
+                "Database:RetryCount deve estar entre 0 e 10.")
+            .Validate(settings => settings.RetryDelaySeconds is > 0 and <= 60,
+                "Database:RetryDelaySeconds deve estar entre 1 e 60.")
+            .Validate(settings => settings.InitializationRetrySeconds is > 0 and <= 300,
+                "Database:InitializationRetrySeconds deve estar entre 1 e 300.")
+            .Validate(settings => settings.InitializationLockTimeoutSeconds is > 0 and <= 120,
+                "Database:InitializationLockTimeoutSeconds deve estar entre 1 e 120.")
+            .ValidateOnStart();
+
+        builder.Services.AddOptions<ForwardedHeadersSettings>()
+            .Bind(builder.Configuration.GetSection(ForwardedHeadersSettings.SectionName));
+
         UploadSettings uploadSettings = builder.Configuration
             .GetSection(UploadSettings.SectionName)
             .Get<UploadSettings>() ?? new UploadSettings();
@@ -98,8 +126,30 @@ public class Program
         string connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection não configurada.");
 
+        DatabaseSettings databaseSettings = builder.Configuration
+            .GetSection(DatabaseSettings.SectionName)
+            .Get<DatabaseSettings>() ?? new DatabaseSettings();
+        connectionString = BuildDatabaseConnectionString(
+            connectionString,
+            databaseSettings,
+            builder.Environment);
+        Version databaseServerVersion = Version.Parse(databaseSettings.ServerVersion);
+
         builder.Services.AddDbContext<OdisseiaContext>(options =>
-            options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+            options.UseMySql(
+                connectionString,
+                new MySqlServerVersion(databaseServerVersion),
+                mySqlOptions => mySqlOptions.EnableRetryOnFailure(
+                    databaseSettings.RetryCount,
+                    TimeSpan.FromSeconds(databaseSettings.RetryDelaySeconds),
+                    errorNumbersToAdd: null)));
+
+        builder.Services.AddSingleton<DatabaseInitializationState>();
+        builder.Services.AddHostedService<DatabaseInitializationService>();
+        builder.Services.AddHealthChecks()
+            .AddCheck<DatabaseReadinessHealthCheck>(
+                "database",
+                tags: new[] { "ready" });
 
         JwtSettings jwtSettings = builder.Configuration
             .GetSection(JwtSettings.SectionName)
@@ -194,6 +244,7 @@ public class Program
         });
 
         ConfigureCors(builder);
+        ConfigureForwardedHeaders(builder);
         RegisterApplicationServices(builder.Services, builder.Configuration);
 
         builder.Services.AddEndpointsApiExplorer();
@@ -201,7 +252,11 @@ public class Program
 
         WebApplication app = builder.Build();
 
-        await DatabaseSeeder.SeedAsync(app.Services);
+        ForwardedHeadersSettings forwardedHeadersSettings = app.Services
+            .GetRequiredService<IOptions<ForwardedHeadersSettings>>()
+            .Value;
+        if (forwardedHeadersSettings.Enabled)
+            app.UseForwardedHeaders();
 
         if (app.Environment.IsDevelopment())
         {
@@ -236,8 +291,92 @@ public class Program
         app.UseRateLimiter();
         app.UseAuthorization();
         app.MapControllers();
+        app.MapHealthChecks("/health", new HealthCheckOptions
+        {
+            Predicate = _ => false,
+            ResponseWriter = WriteHealthResponseAsync,
+        }).AllowAnonymous();
+        app.MapHealthChecks("/health/ready", new HealthCheckOptions
+        {
+            Predicate = registration => registration.Tags.Contains("ready"),
+            ResponseWriter = WriteHealthResponseAsync,
+        }).AllowAnonymous();
 
-        app.Run();
+        await app.RunAsync();
+    }
+
+    private static void ConfigureListeningAddress(WebApplicationBuilder builder)
+    {
+        string? portValue = Environment.GetEnvironmentVariable("PORT");
+        if (string.IsNullOrWhiteSpace(portValue))
+            return;
+
+        if (!int.TryParse(portValue, out int port) || port is < 1 or > 65535)
+            throw new InvalidOperationException("A variável PORT deve conter uma porta TCP válida.");
+
+        builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+    }
+
+    private static string BuildDatabaseConnectionString(
+        string connectionString,
+        DatabaseSettings settings,
+        IWebHostEnvironment environment)
+    {
+        MySqlConnectionStringBuilder connectionBuilder = new(connectionString);
+        connectionBuilder.MaximumPoolSize = Math.Min(
+            connectionBuilder.MaximumPoolSize,
+            settings.MaximumPoolSize);
+        connectionBuilder.MinimumPoolSize = 0;
+        connectionBuilder.ConnectionIdleTimeout = settings.ConnectionIdleTimeoutSeconds;
+
+        if (!environment.IsDevelopment() &&
+            connectionBuilder.SslMode is MySqlSslMode.None or MySqlSslMode.Preferred)
+        {
+            throw new InvalidOperationException(
+                "A conexão MySQL de produção deve configurar SslMode=Required, VerifyCA ou VerifyFull.");
+        }
+
+        return connectionBuilder.ConnectionString;
+    }
+
+    private static void ConfigureForwardedHeaders(WebApplicationBuilder builder)
+    {
+        ForwardedHeadersSettings settings = builder.Configuration
+            .GetSection(ForwardedHeadersSettings.SectionName)
+            .Get<ForwardedHeadersSettings>() ?? new ForwardedHeadersSettings();
+        if (!settings.Enabled)
+            return;
+
+        bool isRender = string.Equals(
+            Environment.GetEnvironmentVariable("RENDER"),
+            "true",
+            StringComparison.OrdinalIgnoreCase);
+
+        builder.Services.Configure<ForwardedHeadersOptions>(options =>
+        {
+            options.ForwardedHeaders =
+                ForwardedHeaders.XForwardedFor |
+                ForwardedHeaders.XForwardedProto;
+            options.ForwardLimit = 1;
+
+            if (isRender)
+            {
+                // O origin do Web Service não é acessível diretamente e o Render é o único
+                // proxy de entrada. Limitamos o processamento ao hop mais próximo.
+                options.KnownNetworks.Clear();
+                options.KnownProxies.Clear();
+                return;
+            }
+
+            foreach (string proxyValue in settings.KnownProxies)
+            {
+                if (!IPAddress.TryParse(proxyValue, out IPAddress? proxyAddress))
+                    throw new InvalidOperationException(
+                        "ForwardedHeaders:KnownProxies contém um endereço IP inválido.");
+
+                options.KnownProxies.Add(proxyAddress);
+            }
+        });
     }
 
     private static void ConfigureCors(WebApplicationBuilder builder)
@@ -346,5 +485,14 @@ public class Program
         problem.Extensions["traceId"] = context.TraceIdentifier;
 
         await context.Response.WriteAsync(JsonSerializer.Serialize(problem));
+    }
+
+    private static Task WriteHealthResponseAsync(HttpContext context, HealthReport report)
+    {
+        context.Response.ContentType = "application/json; charset=utf-8";
+        return context.Response.WriteAsync(JsonSerializer.Serialize(new
+        {
+            status = report.Status.ToString(),
+        }));
     }
 }
