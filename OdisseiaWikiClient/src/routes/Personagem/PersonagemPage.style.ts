@@ -109,6 +109,10 @@ export const BottomInfoLeft = styled.div`
   width: 35%;
   min-width: 0;
 
+  &:only-child {
+    width: 100%;
+  }
+
   @media (max-width: 1100px) {
     width: 100%;
   }
@@ -117,6 +121,10 @@ export const BottomInfoLeft = styled.div`
 export const BottomInfoRight = styled.div`
   width: 65%;
   min-width: 0;
+
+  &:only-child {
+    width: 100%;
+  }
 
   @media (max-width: 1100px) {
     width: 100%;

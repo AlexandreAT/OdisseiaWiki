@@ -35,6 +35,10 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   const [createdObjectUrls, setCreatedObjectUrls] = useState<Set<string>>(new Set());
 
   useEffect(() => {
+    setImageUrl(initialImage || undefined);
+  }, [initialImage]);
+
+  useEffect(() => {
     return () => {
       createdObjectUrls.forEach((url) => URL.revokeObjectURL(url));
     };

@@ -8,6 +8,7 @@ namespace OdisseiaWiki.Repositories.Interfaces
     {
         Task<List<Personagen>> GetAllAsync(bool? visivel = null);
         Task<Personagen?> GetByIdAsync(int id);
+        Task<List<ProficienciaResumoView>> GetProficienciasByPersonagemIdAsync(int id);
         Task<Personagen> CreateAsync(Personagen personagem);
         Task<Personagen> UpdateAsync(Personagen personagem);
         Task<bool> DeleteAsync(int id);

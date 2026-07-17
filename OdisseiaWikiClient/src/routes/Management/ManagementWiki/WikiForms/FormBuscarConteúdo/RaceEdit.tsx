@@ -156,7 +156,6 @@ export const RaceEdit: React.FC<RaceEditProps> = ({ theme, neon, raceId, onBack,
     if (onSave) {
       onSave();
     }
-    onBack();
   };
 
   return (

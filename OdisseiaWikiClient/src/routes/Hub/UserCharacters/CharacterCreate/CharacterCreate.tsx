@@ -194,9 +194,9 @@ const CharacterCreateComponent = ({ theme, neon, userId, onSave }: UserCharacter
           width="200px"
           onClick={handlePrev}
           type="button"
-          disabled={isFirstStep}
+          disabled={isFirstStep || isSubmitting}
         />
-        
+
         <CyberButton
           theme={theme}
           neon={neon}

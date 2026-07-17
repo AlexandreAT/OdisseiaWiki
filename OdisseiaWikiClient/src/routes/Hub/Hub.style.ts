@@ -337,7 +337,7 @@ export const MobileCollapsedBackButton = styled.button<Props>`
     position: absolute;
     top: 80px;
     left: 20px;
-    z-index: 6;
+    z-index: 300;
     display: inline-flex;
     align-items: center;
     justify-content: center;

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getPersonagemById } from '../../services/personagensService';
+import { getPersonagemJogadorById } from '../../services/personagemJogadorService';
 import { normalizePersonagem } from '../../utils/normalizePersonagem';
 
 export type NormalizedPersonagem = ReturnType<typeof normalizePersonagem> | {
@@ -10,7 +11,7 @@ export type NormalizedPersonagem = ReturnType<typeof normalizePersonagem> | {
   historia?: any;
 };
 
-export const usePersonagem = (idParam?: string | undefined) => {
+export const usePersonagem = (idParam?: string | undefined, source: 'public' | 'player' = 'public') => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [personagem, setPersonagem] = useState<NormalizedPersonagem | null>(null);
@@ -22,7 +23,9 @@ export const usePersonagem = (idParam?: string | undefined) => {
       setLoading(true);
       setError(null);
       try {
-        const res = await getPersonagemById(String(idParam));
+        const res = source === 'player'
+          ? await getPersonagemJogadorById(Number(idParam))
+          : await getPersonagemById(String(idParam));
         // API may return payload or wrapper
         const payload = (res as any)?.personagem ?? res;
         if (payload) {
@@ -49,6 +52,18 @@ export const usePersonagem = (idParam?: string | undefined) => {
             magia: (payload as any).magia ?? (payload as any).Magia ?? undefined,
             personagemsVinculados: (payload as any).personagemsVinculados ?? (payload as any).PersonagemsVinculados ?? undefined,
             tags: (payload as any).tags ?? (payload as any).Tags ?? undefined,
+            racaNome: (payload as any).racaNome ?? (payload as any).RacaNome ?? undefined,
+            cidadeNome: (payload as any).cidadeNome ?? (payload as any).CidadeNome ?? undefined,
+            mesaNome: (payload as any).mesaNome ?? (payload as any).MesaNome ?? undefined,
+            autorNome: (payload as any).autorNome ?? (payload as any).AutorNome ?? undefined,
+            proficiencias: (payload as any).proficiencias
+              ?? (payload as any).Proficiencias
+              ?? (payload as any).proficienciasResumo
+              ?? (payload as any).ProficienciasResumo
+              ?? [],
+            idpassiva: (payload as any).idpassiva ?? (payload as any).Idpassiva ?? undefined,
+            passiva: (payload as any).passiva ?? (payload as any).Passiva ?? undefined,
+            ultimate: (payload as any).ultimate ?? (payload as any).Ultimate ?? undefined,
             visivel: (payload as any).visivel ?? true,
           } as any;
 
@@ -65,7 +80,7 @@ export const usePersonagem = (idParam?: string | undefined) => {
     load();
 
     return () => { cancelled = true; };
-  }, [idParam]);
+  }, [idParam, source]);
 
   return { loading, error, personagem };
 };

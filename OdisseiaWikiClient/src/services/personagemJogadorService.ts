@@ -100,3 +100,8 @@ export const atualizarPersonagemJogador = async (
 export const deletarPersonagemJogador = async (id: number) => {
   await api.delete(`/PersonagemJogador/${id}`);
 };
+
+export const deletarPersonagensJogador = async (ids: number[]): Promise<number> => {
+  const response = await api.post('/PersonagemJogador/batch-delete', { ids });
+  return response.data.excluidos ?? response.data.Excluidos ?? 0;
+};

@@ -111,15 +111,35 @@ namespace OdisseiaWiki.Services
         }
 
         public async Task<List<PersonagemJogadorDto>> GetAllAsync()
-            => (await _repository.GetAllAsync()).Select(MapToDto).ToList();
+        {
+            List<PersonagemJogador> personagens = await _repository.GetAllAsync();
+            return await MapListToDtoAsync(personagens);
+        }
+
+        public async Task<List<PersonagemJogadorDto>> GetByIdsAsync(IReadOnlyCollection<int> ids)
+        {
+            List<PersonagemJogador> personagens = await _repository.GetByIdsAsync(ids);
+            return await MapListToDtoAsync(personagens);
+        }
 
         public async Task<List<PersonagemJogadorDto>> GetByUsuarioIdAsync(int usuarioId)
-            => (await _repository.GetByUsuarioIdAsync(usuarioId)).Select(MapToDto).ToList();
+        {
+            List<PersonagemJogador> personagens = await _repository.GetByUsuarioIdAsync(usuarioId);
+            return await MapListToDtoAsync(personagens);
+        }
 
         public async Task<PersonagemJogadorDto?> GetByIdAsync(int id)
         {
-            PersonagemJogador? personagem = await _repository.GetByIdAsync(id);
-            return personagem is null ? null : MapToDto(personagem);
+            PersonagemJogador? personagem = await _repository.GetByIdWithDetailsAsync(id);
+            if (personagem is null)
+                return null;
+
+            Dictionary<int, List<Proficiencia>> proficiencias =
+                await _repository.GetProficienciasByPersonagemIdsAsync(new[] { id });
+
+            return MapToDto(
+                personagem,
+                proficiencias.GetValueOrDefault(id) ?? new List<Proficiencia>());
         }
 
         public async Task<bool> DeleteAsync(int id)
@@ -132,6 +152,24 @@ namespace OdisseiaWiki.Services
             bool deleted = await _repository.DeleteAsync(id);
             if (deleted)
                 await AssetReferenceHelper.DeleteAllAsync(_assetService, assets);
+            return deleted;
+        }
+
+        public async Task<int> DeleteManyAsync(IReadOnlyCollection<int> ids)
+        {
+            int[] normalizedIds = ids.Where(id => id > 0).Distinct().ToArray();
+            if (normalizedIds.Length == 0)
+                return 0;
+
+            List<PersonagemJogador> personagens = await _repository.GetByIdsAsync(normalizedIds);
+            HashSet<string> assets = personagens
+                .SelectMany(ExtractAssets)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            int deleted = await _repository.DeleteManyAsync(normalizedIds);
+            if (deleted > 0)
+                await AssetReferenceHelper.DeleteAllAsync(_assetService, assets);
+
             return deleted;
         }
 
@@ -225,7 +263,22 @@ namespace OdisseiaWiki.Services
             },
         };
 
-        private static PersonagemJogadorDto MapToDto(PersonagemJogador personagem) => new()
+        private async Task<List<PersonagemJogadorDto>> MapListToDtoAsync(List<PersonagemJogador> personagens)
+        {
+            Dictionary<int, List<Proficiencia>> proficiencias =
+                await _repository.GetProficienciasByPersonagemIdsAsync(
+                    personagens.Select(personagem => personagem.IdpersonagemJogador));
+
+            return personagens
+                .Select(personagem => MapToDto(
+                    personagem,
+                    proficiencias.GetValueOrDefault(personagem.IdpersonagemJogador) ?? new List<Proficiencia>()))
+                .ToList();
+        }
+
+        private static PersonagemJogadorDto MapToDto(
+            PersonagemJogador personagem,
+            IReadOnlyCollection<Proficiencia>? proficiencias = null) => new()
         {
             IdpersonagemJogador = personagem.IdpersonagemJogador,
             Idusuario = personagem.Idusuario,
@@ -250,6 +303,18 @@ namespace OdisseiaWiki.Services
             Ultimate = personagem.Ultimate,
             Idpassiva = personagem.Idpassiva,
             DataCriacao = personagem.DataCriacao,
+            RacaNome = personagem.IdracaNavigation?.Nome,
+            CidadeNome = personagem.IdcidadeNavigation?.Nome,
+            MesaNome = personagem.Mesa?.Nome,
+            AutorNome = personagem.Usuario?.Nome ?? personagem.Usuario?.Nickname,
+            Proficiencias = proficiencias?
+                .Select(proficiencia => new ProficienciaResumoDto
+                {
+                    Idproficiencia = proficiencia.Idproficiencia,
+                    Nome = proficiencia.Nome,
+                    Descricao = proficiencia.Descricao,
+                })
+                .ToList() ?? new List<ProficienciaResumoDto>(),
         };
 
         private static T? Deserialize<T>(string? value)

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ContentController, MainContainer, Content, ButtonSpan, Header, ClipButtonAnimated, DisabledFeatureOverlay, ProductionBanner, MobileCollapsedBackButton } from './Hub.style';
 import { ArrowBack } from '@mui/icons-material';
 import { ClipBox } from '../../components/Generic/ClipBox/ClipBox';
@@ -12,8 +12,10 @@ import { AnimatedBackground, BackgroundType } from '../../components/Generic/Ani
 
 export const Hub = () => {
     const { theme, neon } = useSelector((state: any) => state.themesReducer);
-    const [selected, setSelected] = useState<'mesas' | 'personagens' | ''>('');
-    const [isCollapsed, setIsCollapsed] = useState(false);
+    const [searchParams, setSearchParams] = useSearchParams();
+    const initialSection = searchParams.get('section') === 'personagens' ? 'personagens' : '';
+    const [selected, setSelected] = useState<'mesas' | 'personagens' | ''>(initialSection);
+    const [isCollapsed, setIsCollapsed] = useState(initialSection !== '');
     const [characterViewMode, setCharacterViewMode] = useState<ViewMode>('list');
     const [hasPersonagens, setHasPersonagens] = useState(false);
     const [hasPlayedIntro, setHasPlayedIntro] = useState(false);
@@ -29,6 +31,13 @@ export const Hub = () => {
         }
     }, [usuarioLogado, navigate])
 
+    useEffect(() => {
+        const section = searchParams.get('section');
+        const routeSelection = section === 'personagens' ? 'personagens' : '';
+        setSelected(routeSelection);
+        setIsCollapsed(routeSelection !== '');
+    }, [searchParams]);
+
     if (!usuarioLogado) {
         return null;
     }
@@ -36,11 +45,20 @@ export const Hub = () => {
     const handleClick = (type: 'mesas' | 'personagens') => {
         setSelected(type);
         setIsCollapsed(true);
+        const next = new URLSearchParams(searchParams);
+        next.set('section', type);
+        setSearchParams(next);
     };
 
     const handleBackToSelection = () => {
+        if (selected === 'personagens' && characterViewMode !== 'list') {
+            setSearchParams({ section: 'personagens' });
+            return;
+        }
+
         setSelected('');
         setIsCollapsed(false);
+        setSearchParams({});
     };
 
     const getBackgroundType = (): BackgroundType | null => {
@@ -89,7 +107,15 @@ export const Hub = () => {
                     onIntroComplete={() => setHasPlayedIntro(true)}
                 />
             )}
-            <ClipBox backgroundColor='rgba(0, 0, 15, 0.4)' useClip={false} autoSize zIndex={1} theme={theme} neon={neon} width='1200px'>
+            <ClipBox
+                backgroundColor='rgba(0, 0, 15, 0.4)'
+                useClip={false}
+                autoSize
+                zIndex={1}
+                theme={theme}
+                neon={neon}
+                width={selected === 'personagens' && characterViewMode !== 'list' ? 'min(1400px, 96vw)' : '1200px'}
+            >
                 <Header><TitleGlitch theme={theme} neon={neon} text='Gerenciar Mesas e Personagens' /></Header>
                 <ContentController collapsed={isCollapsed}>
                     {[{ img: BannerMesa, label: 'Mesas' }, { img: BannerPersonagens, label: 'Personagens' }].map(

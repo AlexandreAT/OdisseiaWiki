@@ -37,6 +37,20 @@ const getPathContext = (pathname: string): ErrorLocationState => {
     };
   }
 
+  if (pathname.startsWith('/mesa/')) {
+    return {
+      errorTitle: 'Página de mesa ainda não disponível',
+      errorDescription: 'A página dinâmica desta mesa está em desenvolvimento.',
+    };
+  }
+
+  if (pathname.startsWith('/sistema/')) {
+    return {
+      errorTitle: 'Página de sistema ainda não disponível',
+      errorDescription: 'Esta página dinâmica do sistema de RPG está em desenvolvimento.',
+    };
+  }
+
   return {
     errorTitle: 'Ocorreu um erro',
     errorDescription: 'Não foi possível encontrar ou carregar o conteúdo solicitado.',

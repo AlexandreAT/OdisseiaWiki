@@ -123,5 +123,30 @@ namespace OdisseiaWiki.Controllers
                 ? NotFound($"PersonagemJogador com id {id} não encontrado.")
                 : NoContent();
         }
+
+        [HttpPost("batch-delete")]
+        public async Task<IActionResult> DeleteMany([FromBody] DeletePersonagensJogadorDto dto)
+        {
+            int? userId = User.GetUserId();
+            if (!userId.HasValue)
+                return Unauthorized();
+
+            int[] ids = dto.Ids.Where(id => id > 0).Distinct().ToArray();
+            if (ids.Length == 0 || ids.Length > 100)
+                return BadRequest("Informe entre 1 e 100 personagens válidos.");
+
+            List<PersonagemJogadorDto> personagens = await _service.GetByIdsAsync(ids);
+            if (personagens.Count != ids.Length)
+                return NotFound("Um ou mais personagens não foram encontrados.");
+
+            if (!User.IsAdmin() && personagens.Any(personagem => personagem.Idusuario != userId.Value))
+                return Forbid();
+
+            int deleted = await _service.DeleteManyAsync(ids);
+            if (deleted != ids.Length)
+                return Conflict("Não foi possível excluir todos os personagens selecionados.");
+
+            return Ok(new DeletePersonagensJogadorResultDto { Excluidos = deleted });
+        }
     }
 }

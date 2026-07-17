@@ -29,5 +29,17 @@ namespace OdisseiaWiki.Dtos
         public string? Ultimate { get; set; }
         public int? Idpassiva { get; set; }
         public DateTime DataCriacao { get; set; }
+        public string? RacaNome { get; set; }
+        public string? CidadeNome { get; set; }
+        public string? MesaNome { get; set; }
+        public string? AutorNome { get; set; }
+        public List<ProficienciaResumoDto> Proficiencias { get; set; } = new();
+    }
+
+    public class ProficienciaResumoDto
+    {
+        public int Idproficiencia { get; set; }
+        public string Nome { get; set; } = null!;
+        public string? Descricao { get; set; }
     }
 }
