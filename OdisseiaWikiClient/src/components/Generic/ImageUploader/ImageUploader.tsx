@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import CloseIcon from '@mui/icons-material/Close';
+import { FallbackImage } from '../FallbackImage/FallbackImage';
 import { ImageCropperModal } from './ImageCropperModal';
 import { ImageUploaderProps, CropResult } from './types';
 import {
@@ -32,6 +33,10 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   const [isCropperOpen, setIsCropperOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [createdObjectUrls, setCreatedObjectUrls] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    setImageUrl(initialImage || undefined);
+  }, [initialImage]);
 
   useEffect(() => {
     return () => {
@@ -140,7 +145,11 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       >
         {imageUrl ? (
           <>
-            <img src={imageUrl} alt={label || 'Imagem selecionada'} />
+            <FallbackImage
+              src={imageUrl}
+              alt={label || 'Imagem selecionada'}
+              style={{ width: '100%', height: '100%' }}
+            />
             <RemoveImageButton
               theme={theme}
               neon={neon}

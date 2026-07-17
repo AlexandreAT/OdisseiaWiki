@@ -5,6 +5,87 @@ interface ThemeProps {
   neon: 'on' | 'off';
 }
 
+export const CharacterEditActions = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  width: min(100%, 760px);
+  margin: 0 auto 4px;
+
+  @media (max-width: 600px) {
+    gap: 6px;
+  }
+`;
+
+export const CharacterOptionButton = styled.button<{ $variant?: 'danger' }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 0;
+  min-height: 42px;
+  padding: 8px 12px;
+  border: 1px solid ${({ $variant }) => $variant === 'danger' ? 'var(--clearneonRed)' : 'var(--neonBlue)'};
+  color: ${({ $variant }) => $variant === 'danger' ? 'var(--clearneonRed)' : 'var(--clearneonBlue)'};
+  background: rgba(0, 7, 17, 0.72);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.35px;
+  cursor: pointer;
+  transition: color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+
+  svg {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+    fill: currentColor;
+  }
+
+  span,
+  svg,
+  svg path {
+    color: inherit;
+    fill: currentColor;
+  }
+
+  &:disabled {
+    opacity: 0.42;
+    cursor: not-allowed;
+  }
+
+  &:not(:disabled):hover,
+  &:not(:disabled):focus-visible {
+    color: var(--black);
+    background: ${({ $variant }) => $variant === 'danger' ? 'var(--clearneonRed)' : 'var(--clearneonBlue)'};
+    box-shadow: 0 0 8px ${({ $variant }) => $variant === 'danger' ? 'var(--neonRed)' : 'var(--neonBlue)'};
+
+    span,
+    svg,
+    svg path {
+      color: var(--black) !important;
+      fill: var(--black) !important;
+    }
+  }
+
+  @media (max-width: 600px) {
+    min-height: 40px;
+    padding: 6px 5px;
+    font-size: 0.62rem;
+    line-height: 1.15;
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
+
+  @media (max-width: 390px) {
+    flex-direction: column;
+    gap: 3px;
+  }
+`;
+
 export const FloatingActions = styled.div`
   position: fixed;
   right: 18px;

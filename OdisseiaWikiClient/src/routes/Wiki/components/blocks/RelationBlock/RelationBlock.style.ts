@@ -1,4 +1,5 @@
 import styled from 'styled-components';
+import { FallbackImage } from '../../../../../components/Generic/FallbackImage/FallbackImage';
 
 export const RelationBlockContainer = styled.div`
   display: flex;
@@ -178,10 +179,9 @@ export const RelationCard = styled.button`
   }
 `;
 
-export const RelationCardImage = styled.img<{ $entityType?: string }>`
+export const RelationCardImage = styled(FallbackImage)<{ $entityType?: string }>`
   height: 80px;
   width: auto;
-  object-fit: cover;
   background-color: #000;
   flex-shrink: 0;
   /* Shapes by entity type */

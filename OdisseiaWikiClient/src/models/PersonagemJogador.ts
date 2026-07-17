@@ -34,6 +34,17 @@ export interface PersonagemJogador {
   skills?: string;
   magia?: string;
   personagemsVinculados?: string;
+  racaNome?: string;
+  cidadeNome?: string;
+  mesaNome?: string;
+  autorNome?: string;
+  proficiencias?: ProficienciaResumo[];
+}
+
+export interface ProficienciaResumo {
+  idproficiencia: number;
+  nome: string;
+  descricao?: JSONContent | string;
 }
 
 // ---- Status ----

@@ -90,12 +90,6 @@ export const FormItem = ({ theme, neon, contentType }: FormItemProps) => {
     if (result?.success) {
       toast.success(result.message);
     } else {
-      if(imagemUrl == "")
-      {
-        toast.error("É necessário fazer upload de uma imagem para o item");
-        return;
-      }
-
       toast.error(result?.message || "Erro ao criar item");
     }
   };

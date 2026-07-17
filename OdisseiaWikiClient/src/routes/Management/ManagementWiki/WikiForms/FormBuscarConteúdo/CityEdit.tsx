@@ -167,7 +167,6 @@ export const CityEdit: React.FC<CityEditProps> = ({ theme, neon, cityId, onBack,
     if (onSave) {
       onSave();
     }
-    onBack();
   };
 
   return (

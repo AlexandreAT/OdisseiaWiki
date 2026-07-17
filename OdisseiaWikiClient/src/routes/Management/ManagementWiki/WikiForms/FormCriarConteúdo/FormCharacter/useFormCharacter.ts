@@ -129,6 +129,7 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
   const [personagens, setPersonagens] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loadingPersonagens, setLoadingPersonagens] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isFirstStep = step === 1;
   const isLastStep = step === TOTAL_STEPS;
@@ -432,6 +433,7 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
       return;
     }
 
+    setIsSubmitting(true);
     try {
       let avatarPath = avatarUrl;
 
@@ -551,6 +553,8 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
       toast.success("Personagem salvo com sucesso!");
     } catch (err: any) {
       toast.error(getApiErrorMessage(err, 'Erro ao salvar personagem'));
+    } finally {
+      setIsSubmitting(false);
     }
   }, [avatarUrl, avatarFile, userName, statusBasico, itens, magias, skills, race, city, history, costumes, nanites, alignment, traits, idpassiva, ultimate, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, statusExtras, defesas, tags, contentType, visivel, destaque, validateStepOne]);
 
@@ -609,6 +613,7 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
     handleRemoveGaleriaImage,
     handleNext,
     handleSubmit,
+    isSubmitting,
     handlePrev,
     handleSelectItem
   };

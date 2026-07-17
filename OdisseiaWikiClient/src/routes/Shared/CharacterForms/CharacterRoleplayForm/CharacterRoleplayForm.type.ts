@@ -51,4 +51,10 @@ export interface CharacterRoleplayFormProps {
   loadingPersonagens: boolean;
   searchPersonagens: (query: string) => void;
   raceChangeMode?: 'default' | 'current-or-android' | 'all';
+  nameError?: boolean;
+  nameErrorMessage?: string;
+  onNameFocus?: () => void;
+  raceError?: boolean;
+  raceErrorMessage?: string;
+  onRaceFocus?: () => void;
 }

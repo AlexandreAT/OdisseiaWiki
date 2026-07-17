@@ -30,11 +30,27 @@ const INTRO_TEXTS = {
   management: 'Gerenciando conteúdo...'
 };
 
+const getDailySessionIntroKey = () => {
+  const today = new Date().toISOString().slice(0, 10);
+  return `odisseia:background-intro:${today}`;
+};
+
+const hasSeenIntroThisSession = () => {
+  if (typeof window === 'undefined') return false;
+  return sessionStorage.getItem(getDailySessionIntroKey()) === 'seen';
+};
+
+const markIntroAsSeenThisSession = () => {
+  if (typeof window === 'undefined') return;
+  sessionStorage.setItem(getDailySessionIntroKey(), 'seen');
+};
+
 export const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ type, introText, skipIntro = false, onIntroComplete }) => {
-  const [animationPhase, setAnimationPhase] = useState<'initial' | 'typing' | 'complete'>(skipIntro ? 'complete' : 'initial');
-  const [showBlur, setShowBlur] = useState(skipIntro);
-  const [showOverlay, setShowOverlay] = useState(skipIntro);
-  const isFirstRender = useRef(!skipIntro);
+  const shouldSkipIntro = skipIntro || hasSeenIntroThisSession();
+  const [animationPhase, setAnimationPhase] = useState<'initial' | 'typing' | 'complete'>(shouldSkipIntro ? 'complete' : 'initial');
+  const [showBlur, setShowBlur] = useState(shouldSkipIntro);
+  const [showOverlay, setShowOverlay] = useState(shouldSkipIntro);
+  const isFirstRender = useRef(!shouldSkipIntro);
   const previousType = useRef(type);
 
   useEffect(() => {
@@ -61,10 +77,11 @@ export const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ type, in
     if (isFirstRender.current) {
       setTimeout(() => {
         setShowBlur(true);
-        setShowOverlay(true);
-        setAnimationPhase('complete');
-        isFirstRender.current = false;
-        onIntroComplete?.();
+      setShowOverlay(true);
+      setAnimationPhase('complete');
+      isFirstRender.current = false;
+      markIntroAsSeenThisSession();
+      onIntroComplete?.();
       }, 800);
     }
   };

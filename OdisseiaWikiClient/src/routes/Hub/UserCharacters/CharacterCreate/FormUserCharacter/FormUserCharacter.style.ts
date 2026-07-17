@@ -399,10 +399,19 @@ export const StatusImageDiv = styled.div`
       min-height: clamp(160px, 42vw, 230px);
       align-items: flex-start;
       align-self: start;
+      margin-top: -2px;
+    }
+
+    @media (max-width: 768px) {
+      min-height: clamp(136px, 32vw, 190px);
+    }
+
+    @media (max-width: 480px) {
+      min-height: clamp(124px, 31vw, 145px);
     }
 
     @media (max-width: 360px) {
-      min-height: 140px;
+      min-height: 122px;
     }
 `
 
@@ -453,6 +462,11 @@ export const AvatarController = styled.div<{ hasImage: boolean, imageSize?: numb
   }
 
   @media (max-width: 768px) {
+    min-width: clamp(136px, 32vw, 190px);
+    min-height: clamp(136px, 32vw, 190px);
+    width: clamp(136px, 32vw, 190px);
+    height: clamp(136px, 32vw, 190px);
+
     > button {
       width: 100% !important;
       height: 100% !important;
@@ -460,11 +474,18 @@ export const AvatarController = styled.div<{ hasImage: boolean, imageSize?: numb
     }
   }
 
+  @media (max-width: 480px) {
+    min-width: clamp(124px, 31vw, 145px);
+    min-height: clamp(124px, 31vw, 145px);
+    width: clamp(124px, 31vw, 145px);
+    height: clamp(124px, 31vw, 145px);
+  }
+
   @media (max-width: 360px) {
-    min-width: 140px;
-    min-height: 140px;
-    width: 140px;
-    height: 140px;
+    min-width: 122px;
+    min-height: 122px;
+    width: 122px;
+    height: 122px;
   }
 `;
 

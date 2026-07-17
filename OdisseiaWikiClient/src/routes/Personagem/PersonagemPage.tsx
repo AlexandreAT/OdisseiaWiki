@@ -1,6 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { usePersonagem } from './usePersonagem';
 import { PageContainer, TopSection, BottomSection, AvatarWrapper, MetaRow, Sections, CardContent, InfoList, InfoItem, MetaContent, SectionSpacer, AvatarDivController, SatusDivController, StatusList, StatusDiv, HeaderStatusController, StatusController, StatusHeader, StatusBarWrapper, StatusBarFill, InfoControllers, TitleDiv, TagItem, TagList, RelatedLink, HistoryWrapper, HistoryModalOverlay, HistoryModalSheet, HistoryModalHeader, HistoryModalTitle, HistoryModalClose, HistoryModalContent, InfoSpan, BottomInfoLeft, BottomInfoRight, StoryWithImage, StoryImage, HudCornerEl, HudTopLine, HudBottomLine, HudLeftLine, HudRightLine, StatusTopLine, StatusBottomLine, StatusLeftLine, StatusRightLine, BackgroundVideoContainer, BackgroundVideo, BackgroundOverlay, HexagonHud, HexagonBackground, HexagonBorder, HexagonContent, HexagonValue, PageController, PageLoadingState, SectionRow, InventoryList, LoadBar, LoadProgress, ImplantGrid, ImplantMods, SkillGrid, AbilityDescription, AbilityPair, AbilityCard, CooldownBar, CooldownFill, ItemDescriptionPreview, ItemDescriptionLayout, ItemDetailsBody, ViewMoreButton, DetailAttributes, DetailAttribute, DetailTextPair, DetailText, ItemDescriptionImage } from './PersonagemPage.style';
@@ -24,6 +24,7 @@ import dna1 from '../../assets/svg/dna1.svg';
 import { SpanLink } from '../../components/Generic/SpanLink/SpanLink';
 import { getPersonagensByIds } from '../../services/personagensService';
 import CloseIcon from '@mui/icons-material/Close';
+import AccountCircleOutlinedIcon from '@mui/icons-material/AccountCircleOutlined';
 import backgroundVideo from '../../assets/backgroundLinesScifiAnimation.mp4';
 import { ScrollRevealBlock } from '../../components/Generic/ScrollRevealBlock';
 import { getInventarioItems, getProtesesItems } from '../../utils/itemInventorySections';
@@ -110,30 +111,68 @@ const ImplantItem: React.FC<{ item: Item; itemBaseImage?: string; onOpenDescript
 type AbilityItemProps = {
   ability: any;
   index: number;
-  type: 'skills' | 'magias';
+  type: 'skills' | 'magias' | 'proficiencias';
   color: string;
   onOpenDescription?: (item: Item) => void;
 };
 
 const getAbilityEffect = (ability: any) => (
   ability?.efeito
+  ?? ability?.descricao
   ?? ability?.atributos?.__efeitoRichText
   ?? ability?.atributos?.efeitoRichText
 );
 
 const AbilityItem: React.FC<AbilityItemProps> = ({ ability, index, type, color, onOpenDescription }) => {
   const effect = getAbilityEffect(ability);
-  const clearColor = type === 'skills' ? 'var(--clearneonCyan)' : 'var(--clearneonPurple)';
+  const clearColor = type === 'skills'
+    ? 'var(--clearneonCyan)'
+    : type === 'proficiencias'
+      ? 'var(--clearneonRed)'
+      : 'var(--clearneonPurple)';
+  const fallbackName = type === 'skills' ? 'Skill' : type === 'magias' ? 'Magia' : 'Proficiência';
 
   return (
-    <ItemRow $clickable={Boolean(onOpenDescription)} $color={color} $clearColor={clearColor} onClick={() => onOpenDescription?.({ ...ability, __detailType: 'ability', descricao: '', tipo: 'outro', quantidade: 1 } as Item)}>
+    <ItemRow $clickable={Boolean(onOpenDescription)} $color={color} $clearColor={clearColor} onClick={() => onOpenDescription?.({ ...ability, __detailType: type === 'proficiencias' ? 'proficiency' : 'ability', descricao: type === 'proficiencias' ? ability.descricao : '', tipo: 'outro', quantidade: 1 } as Item)}>
       <FlexFill>
-      <BoldLabel $color={color}>{ability.nome ?? ability.titulo ?? `${type === 'skills' ? 'Skill' : 'Magia'} ${index + 1}`}</BoldLabel>
+      <BoldLabel $color={color}>{ability.nome ?? ability.titulo ?? `${fallbackName} ${index + 1}`}</BoldLabel>
       {effect ? <ItemDescriptionPreview><RichTextDisplay content={effect} /></ItemDescriptionPreview> : <ItemDescriptionPreview>Sem efeito registrado.</ItemDescriptionPreview>}
       </FlexFill>
     </ItemRow>
   );
 };
+
+const hasRichTextValue = (value: any): boolean => {
+  if (value === null || value === undefined) return false;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return false;
+    try { return hasRichTextValue(JSON.parse(trimmed)); } catch { return true; }
+  }
+  if (Array.isArray(value)) return value.some(hasRichTextValue);
+  if (typeof value === 'object') {
+    if (typeof value.text === 'string' && value.text.trim()) return true;
+    return Array.isArray(value.content) && value.content.some(hasRichTextValue);
+  }
+  return false;
+};
+
+const hasMeaningfulAbilityAttribute = (value: any): boolean => {
+  if (value === null || value === undefined || value === false || value === 0) return false;
+  if (typeof value === 'string') return value.trim().length > 0;
+  if (Array.isArray(value)) return value.some(hasMeaningfulAbilityAttribute);
+  if (typeof value === 'object') return Object.values(value).some(hasMeaningfulAbilityAttribute);
+  return true;
+};
+
+const isMeaningfulAbility = (ability: any) => Boolean(
+  ability
+  && (
+    String(ability.nome ?? ability.titulo ?? '').trim()
+    || hasRichTextValue(getAbilityEffect(ability))
+    || hasMeaningfulAbilityAttribute(ability.atributos)
+  )
+);
 
 type HudContentSectionProps = {
   title: string;
@@ -168,8 +207,10 @@ const HudContentSection: React.FC<HudContentSectionProps> = ({
 
 const PersonagemPage: React.FC = () => {
   const params = useParams();
+  const [searchParams] = useSearchParams();
   const id = params.id;
-  const { loading, error, personagem } = usePersonagem(id);
+  const characterSource = searchParams.get('tipo') === 'jogador' ? 'player' : 'public';
+  const { loading, error, personagem } = usePersonagem(id, characterSource);
   const { theme, neon } = useSelector((state: any) => state.themesReducer);
   const getField = (obj: any, keys: string[]) => {
     if (!obj) return undefined;
@@ -189,7 +230,7 @@ const PersonagemPage: React.FC = () => {
   const [selectedInventoryItem, setSelectedInventoryItem] = React.useState<Item | null>(null);
   const [activeAbilityTab, setActiveAbilityTab] = React.useState<'skills' | 'magias'>('skills');
   const [itemBaseImages, setItemBaseImages] = React.useState<Record<string, string>>({});
-  const [listModal, setListModal] = React.useState<'inventory' | 'implants' | 'abilities' | null>(null);
+  const [listModal, setListModal] = React.useState<'inventory' | 'implants' | 'abilities' | 'proficiencies' | null>(null);
 
   React.useEffect(() => {
     let mounted = true;
@@ -288,7 +329,9 @@ const PersonagemPage: React.FC = () => {
     ? 100
     : Math.round((currentXp / xpRequiredForNextLevel) * 100);
   const imagem = getField(personagem, ['imagem', 'Imagem', 'imagemUrl', 'ImagemUrl']) as string | undefined;
+  const autorNome = getField(personagem, ['autorNome', 'AutorNome']) as string | undefined;
   const historia = getField(personagem, ['historia', 'Historia']) as any | undefined;
+  const hasHistory = hasRichTextValue(historia);
   const alinhamentoRaw = getField(personagem, ['alinhamento', 'Alinhamento', 'alignment']);
 
   const alinhamento = alinhamentoRaw
@@ -312,6 +355,7 @@ const PersonagemPage: React.FC = () => {
 
   const tags = (personagem as any)?.tags;
   const tagsList = Array.isArray(tags) && tags.length > 0 ? tags : null;
+  const hasInformation = Boolean(tagsList || costumesList || hasVinculados || tracosList || hasInfoExtras);
 
   const rawItems = (personagem as any)?.inventarioJson;
   const allItems: Item[] = Array.isArray(rawItems) ? rawItems : [];
@@ -325,9 +369,12 @@ const PersonagemPage: React.FC = () => {
   const isOverloaded = currentLoad > loadCapacity;
 
   const rawGallery = (personagem as any)?.galeriaImagem;
-  const galleryImages = Array.isArray(rawGallery) ? rawGallery : [];
-  const skills = Array.isArray((personagem as any)?.skills) ? (personagem as any).skills : [];
-  const magias = Array.isArray((personagem as any)?.magia) ? (personagem as any).magia : [];
+  const galleryImages = Array.isArray(rawGallery) ? rawGallery.filter((url: any) => typeof url === 'string' && url.trim()) : [];
+  const skills = Array.isArray((personagem as any)?.skills) ? (personagem as any).skills.filter(isMeaningfulAbility) : [];
+  const magias = Array.isArray((personagem as any)?.magia) ? (personagem as any).magia.filter(isMeaningfulAbility) : [];
+  const proficiencias = Array.isArray((personagem as any)?.proficiencias)
+    ? (personagem as any).proficiencias.filter((proficiencia: any) => String(proficiencia?.nome ?? '').trim())
+    : [];
   const activeAbilities = activeAbilityTab === 'skills' ? skills : magias;
   const activeAbilityColor = activeAbilityTab === 'skills' ? 'var(--neonCyan)' : 'var(--neonPurple)';
   const visibleInventoryItems = inventoryItems.slice(0, 4);
@@ -335,8 +382,12 @@ const PersonagemPage: React.FC = () => {
   const visibleAbilities = activeAbilities.slice(0, 6);
   const visibleSkills = skills.slice(0, 6);
   const visibleMagias = magias.slice(0, 6);
+  const visibleProficiencias = proficiencias.slice(0, 6);
 
   const passiva = (personagem as any)?.passiva ?? (personagem as any)?.idpassiva;
+  const hasPassiva = typeof passiva === 'number'
+    ? passiva > 0
+    : isMeaningfulAbility(passiva);
   const passivaNome = typeof passiva === 'object'
     ? (passiva?.nome ?? passiva?.titulo ?? 'Passiva')
     : passiva ? `Passiva ${passiva}` : 'Nenhuma passiva registrada';
@@ -344,6 +395,9 @@ const PersonagemPage: React.FC = () => {
     ? (passiva?.descricao ?? passiva?.efeito ?? 'Sem descricao registrada.')
     : 'Sem descricao registrada.';
   const ultimate = (personagem as any)?.ultimate;
+  const hasUltimate = typeof ultimate === 'string'
+    ? ultimate.trim().length > 0
+    : isMeaningfulAbility(ultimate);
   const ultimateNome = typeof ultimate === 'object'
     ? (ultimate?.nome ?? ultimate?.titulo ?? 'Ultimate')
     : ultimate || 'Nenhuma ultimate registrada';
@@ -413,16 +467,22 @@ const PersonagemPage: React.FC = () => {
                                 <MetaContent as={FlexRow} gap={12} alignItems="flex-start">
                                   <FlexRow gap={8}>
                                     <MaskIcon src={dna1} color={'var(--neonBlue)'} size={20} />
-                                    <BoldLabel>Raça:</BoldLabel> {racaNome ?? ((personagem as any).idraca ?? '—')}
+                                    <BoldLabel>Raça:</BoldLabel> {racaNome ?? (personagem as any).racaNome ?? ((personagem as any).idraca ?? '—')}
                                   </FlexRow>
                                   <FlexRow gap={8}>
                                     <MaskIcon src={village} color={'var(--neonBlue)'} size={20} />
-                                    <BoldLabel>Cidade:</BoldLabel> {cidadeNome ?? ((personagem as any).idcidade ?? '—')}
+                                    <BoldLabel>Cidade:</BoldLabel> {cidadeNome ?? (personagem as any).cidadeNome ?? ((personagem as any).idcidade ?? '—')}
                                   </FlexRow>
                                   <FlexRow gap={8}>
                                     <MaskIcon src={scales} color={'var(--neonBlue)'} size={20} />
                                     <BoldLabel>Alinhamento:</BoldLabel> {alinhamento ?? '—'}
                                   </FlexRow>
+                                  {autorNome && (
+                                    <FlexRow gap={8}>
+                                      <AccountCircleOutlinedIcon sx={{ color: 'var(--neonBlue)', fontSize: 20, flex: '0 0 auto' }} />
+                                      <BoldLabel>Autor:</BoldLabel> {autorNome}
+                                    </FlexRow>
+                                  )}
                                 </MetaContent>
                             </HeaderStatusController>
                         </MetaRow>
@@ -514,8 +574,9 @@ const PersonagemPage: React.FC = () => {
                     </StatusController>
                 </SatusDivController>
             </TopSection>
+            {(hasInformation || hasHistory) && (
             <BottomSection>
-                <BottomInfoLeft>
+                {hasInformation && <BottomInfoLeft>
                   <CardContent gap={5} neon={neon}>
                     <HudCornerEl $position="top-left" $neon={neon === 'on'} />
                     <HudCornerEl $position="top-right" $neon={neon === 'on'} />
@@ -609,8 +670,8 @@ const PersonagemPage: React.FC = () => {
                         </HeaderStatusController>
                       )}
                   </CardContent>
-                </BottomInfoLeft>
-                <BottomInfoRight>
+                </BottomInfoLeft>}
+                {hasHistory && <BottomInfoRight>
                   <CardContent neon={neon}>
                     <HudCornerEl $position="top-left" $neon={neon === 'on'} />
                     <HudCornerEl $position="top-right" $neon={neon === 'on'} />
@@ -632,8 +693,9 @@ const PersonagemPage: React.FC = () => {
                         {cidadeImagem && <StoryImage src={normalizeImagePath(cidadeImagem)} alt={cidadeNome ?? 'Cidade'} />}
                       </StoryWithImage>
                   </CardContent>
-                </BottomInfoRight>
+                </BottomInfoRight>}
             </BottomSection>
+            )}
         </ClipBox>
         </PageController>
 
@@ -732,8 +794,28 @@ const PersonagemPage: React.FC = () => {
           />
         )}
 
+        {listModal === 'proficiencies' && (
+          <ListModal<any>
+            title="PROFICIÊNCIAS"
+            items={proficiencias}
+            color="var(--neonRed)"
+            emptyMessage="Sem proficiências"
+            onClose={() => setListModal(null)}
+            renderItem={(proficiencia, index) => (
+              <AbilityItem
+                key={proficiencia.idproficiencia ?? `${proficiencia.nome}-${index}`}
+                ability={proficiencia}
+                index={index}
+                type="proficiencias"
+                color="var(--neonRed)"
+                onOpenDescription={setSelectedInventoryItem}
+              />
+            )}
+          />
+        )}
+
       <Sections>
-        <ScrollRevealBlock variant="personagemCard" threshold={0.4}>
+        {galleryImages.length > 0 && <ScrollRevealBlock variant="personagemCard" threshold={0.4}>
           <SectionSpacer>
             <HudContentSection title="GALERIA" theme={theme} neon={neon} color="var(--neonBlue)" clearColor="var(--clearneonBlue)">
               <GalleryToggle
@@ -748,22 +830,20 @@ const PersonagemPage: React.FC = () => {
               </GalleryToggle>
               {galleryOpen && (
                 <GalleryContent>
-                  {galleryImages.length > 0 ? (
-                    <GalleryBlock
+                  <GalleryBlock
                       block={{ tipo: PageBlockType.GALLERY, conteudo: { imagens: galleryImages.map((url: string) => ({ url, legenda: '' })) }, ordem: 0 }}
                       blockIndex={0}
                       theme={theme}
                       neon={neon}
-                    />
-                  ) : <MutedText>Nenhuma imagem na galeria</MutedText>}
+                  />
                 </GalleryContent>
               )}
             </HudContentSection>
           </SectionSpacer>
-        </ScrollRevealBlock>
+        </ScrollRevealBlock>}
 
         <SectionRow>
-          {inventoryItems.length > 0 && <ScrollRevealBlock variant="personagemCard" threshold={0.4}>
+          <ScrollRevealBlock variant="personagemCard" threshold={0.4}>
             <SectionSpacer>
               <HudContentSection title="INVENTARIO" theme={theme} neon={neon} color="var(--neonBlue)" clearColor="var(--clearneonBlue)">
                 <FlexRow gap={12} alignItems="center">
@@ -784,7 +864,7 @@ const PersonagemPage: React.FC = () => {
                 </> : <MutedText>Sem itens</MutedText>}
               </HudContentSection>
             </SectionSpacer>
-          </ScrollRevealBlock>}
+          </ScrollRevealBlock>
 
           {implantItems.length > 0 && <ScrollRevealBlock variant="personagemCard" threshold={0.4}>
             <SectionSpacer>
@@ -865,26 +945,54 @@ const PersonagemPage: React.FC = () => {
 
         </SectionRow>
 
+        {proficiencias.length > 0 && (
+          <SectionRow>
+            <ScrollRevealBlock variant="personagemCard" threshold={0.4}>
+              <SectionSpacer>
+                <HudContentSection title="PROFICIÊNCIAS" theme={theme} neon={neon} color="var(--neonRed)" clearColor="var(--clearneonRed)">
+                  <SkillGrid>
+                    {visibleProficiencias.map((proficiencia: any, index: number) => (
+                      <AbilityItem
+                        key={proficiencia.idproficiencia ?? `${proficiencia.nome}-${index}`}
+                        ability={proficiencia}
+                        index={index}
+                        type="proficiencias"
+                        color="var(--neonRed)"
+                        onOpenDescription={setSelectedInventoryItem}
+                      />
+                    ))}
+                  </SkillGrid>
+                  {proficiencias.length > visibleProficiencias.length && (
+                    <ViewMoreButton $color="var(--neonRed)" onClick={() => setListModal('proficiencies')}>
+                      Ver mais ({proficiencias.length - visibleProficiencias.length} itens)
+                    </ViewMoreButton>
+                  )}
+                </HudContentSection>
+              </SectionSpacer>
+            </ScrollRevealBlock>
+          </SectionRow>
+        )}
+
         <AbilityPair>
-          {passiva && <ScrollRevealBlock variant="personagemCard" threshold={0.4}>
+          {hasPassiva && <ScrollRevealBlock variant="personagemCard" threshold={0.4}>
             <SectionSpacer>
               <HudContentSection title="PASSIVA" theme={theme} neon={neon} color="var(--neonGreen)" clearColor="var(--clearneonGreen)">
-                {passiva ? <AbilityCard>
+                <AbilityCard>
                   <BoldLabel>{passivaNome}</BoldLabel>
                   <AbilityDescription>{typeof passivaDescricao === 'string' ? passivaDescricao : 'Sem descricao registrada.'}</AbilityDescription>
-                </AbilityCard> : <MutedText>Sem passiva</MutedText>}
+                </AbilityCard>
               </HudContentSection>
             </SectionSpacer>
           </ScrollRevealBlock>}
 
-          {ultimate && <ScrollRevealBlock variant="personagemCard" threshold={0.4}>
+          {hasUltimate && <ScrollRevealBlock variant="personagemCard" threshold={0.4}>
             <SectionSpacer>
               <HudContentSection title="ULTIMATE" theme={theme} neon={neon} color="var(--neonOrange)" clearColor="var(--clearneonOrange)">
-                {ultimate ? <AbilityCard>
+                <AbilityCard>
                   <BoldLabel>{ultimateNome}</BoldLabel>
                   <AbilityDescription>{typeof ultimateDescricao === 'string' ? ultimateDescricao : 'Sem descricao registrada.'}</AbilityDescription>
                   <CooldownBar><CooldownFill $pct={cooldownValue} /></CooldownBar>
-                </AbilityCard> : <MutedText>Sem ultimate</MutedText>}
+                </AbilityCard>
               </HudContentSection>
             </SectionSpacer>
           </ScrollRevealBlock>}

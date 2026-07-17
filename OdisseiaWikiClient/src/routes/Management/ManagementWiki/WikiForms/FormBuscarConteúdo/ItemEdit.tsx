@@ -208,7 +208,6 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
       if (onSave) {
         onSave();
       }
-      onBack();
     } else {
       toast.error(result?.message || 'Erro ao atualizar item');
     }

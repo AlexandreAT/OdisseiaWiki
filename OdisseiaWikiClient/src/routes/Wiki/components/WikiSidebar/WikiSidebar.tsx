@@ -26,7 +26,7 @@ export const WikiSidebar: React.FC<WikiSidebarInternalProps> = ({ page, onToggle
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(sections.filter(s => s.expanded).map(s => s.title))
   );
-  const [localExpanded, setLocalExpanded] = useState(true);
+  const [localExpanded, setLocalExpanded] = useState(false);
   
   // Use external state if provided, otherwise fall back to local state
   const sidebarExpanded = externalExpanded !== undefined ? externalExpanded : localExpanded;

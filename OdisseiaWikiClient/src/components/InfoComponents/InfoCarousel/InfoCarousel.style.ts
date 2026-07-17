@@ -1,4 +1,5 @@
 import styled from 'styled-components';
+import { FallbackImage } from '../../Generic/FallbackImage/FallbackImage';
 
 interface StyleProps {
     colorScheme: {
@@ -529,7 +530,7 @@ const CardHeader = styled.div<StyleProps>`
     transition: all 0.3s ease-in-out;
 `;
 
-const CardImage = styled.img<StyleProps>`
+const CardImage = styled(FallbackImage)<StyleProps>`
     cursor: pointer;
     ${props => props.type === 'simple' ? `
         height: 100%;
@@ -563,7 +564,8 @@ const CardImage = styled.img<StyleProps>`
         @media (max-width: 480px) {
         }
     ` : `
-        width: 100%;  
+        width: 100%;
+        aspect-ratio: 16 / 9;
         position: absolute;
         left: 0;
         border-top-right-radius: 10px;

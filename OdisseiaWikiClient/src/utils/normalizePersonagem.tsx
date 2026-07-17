@@ -47,6 +47,14 @@ export interface RawPersonagemApi {
   // ... outros campos que o back enviar
   galeriaImagem?: string | string[];
   tags?: string | string[];
+  racaNome?: string;
+  cidadeNome?: string;
+  mesaNome?: string;
+  autorNome?: string;
+  proficiencias?: Array<{ idproficiencia: number; nome: string; descricao?: any }>;
+  idpassiva?: number;
+  passiva?: any;
+  ultimate?: string | any;
 }
 
 // ----- default status para fallback -----
@@ -120,5 +128,13 @@ export function normalizePersonagem(raw: RawPersonagemApi) {
     magia: magias,
     personagemsVinculados: relacionados,
     tags,
+    racaNome: raw.racaNome,
+    cidadeNome: raw.cidadeNome,
+    mesaNome: raw.mesaNome,
+    autorNome: raw.autorNome,
+    proficiencias: Array.isArray(raw.proficiencias) ? raw.proficiencias : [],
+    idpassiva: raw.idpassiva,
+    passiva: raw.passiva,
+    ultimate: parseJsonOr<any>(raw.ultimate, raw.ultimate ?? null),
   } as const; // retorna um objeto normalizado
 }

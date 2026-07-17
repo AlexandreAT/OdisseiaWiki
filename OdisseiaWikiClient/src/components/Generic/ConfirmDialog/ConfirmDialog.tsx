@@ -1,11 +1,11 @@
 import React from 'react';
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-} from '@mui/material';
+  DialogActionButton,
+  StyledDialog,
+  StyledDialogActions,
+  StyledDialogContent,
+  StyledDialogTitle,
+} from './ConfirmDialog.style';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -29,24 +29,23 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   isLoading = false,
 }) => {
   return (
-    <Dialog open={open} onClose={onCancel} maxWidth="sm" fullWidth>
-      <DialogTitle>{title}</DialogTitle>
-      <DialogContent>
+    <StyledDialog open={open} onClose={isLoading ? undefined : onCancel} maxWidth="sm" fullWidth>
+      <StyledDialogTitle>{title}</StyledDialogTitle>
+      <StyledDialogContent>
         <p>{message}</p>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onCancel} disabled={isLoading}>
+      </StyledDialogContent>
+      <StyledDialogActions>
+        <DialogActionButton onClick={onCancel} disabled={isLoading}>
           {cancelText}
-        </Button>
-        <Button
+        </DialogActionButton>
+        <DialogActionButton
           onClick={onConfirm}
-          variant="contained"
-          color="error"
+          $danger
           disabled={isLoading}
         >
           {confirmText}
-        </Button>
-      </DialogActions>
-    </Dialog>
+        </DialogActionButton>
+      </StyledDialogActions>
+    </StyledDialog>
   );
 };

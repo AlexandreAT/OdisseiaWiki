@@ -16,9 +16,7 @@ const OPTIONS = [
 export const Management = () => {
     const { theme, neon } = useSelector((state: any) => state.themesReducer);
     const [selected, setSelected] = useState<string>('wiki');
-    const [sidebarExpanded, setSidebarExpanded] = useState<boolean>(() => (
-        typeof window === 'undefined' || window.innerWidth > 768
-    ));
+    const [sidebarExpanded, setSidebarExpanded] = useState(false);
 
     useEffect(() => {
         const collapseMobileSidebar = () => {

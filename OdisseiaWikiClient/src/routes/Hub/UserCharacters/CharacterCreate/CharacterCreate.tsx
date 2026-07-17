@@ -50,6 +50,8 @@ const CharacterCreateComponent = ({ theme, neon, userId, onSave }: UserCharacter
     defesas, setDefesas,
     listItens, handleSelectItem,
     selectedMesa, listMesas, setSelectedMesa, loadingMesas,
+    mesaError, setMesaError,
+    isSubmitting,
   } = useFormUserCharacter(userId, onSave);
 
   const raceImageUrl = React.useMemo(() => 
@@ -88,6 +90,10 @@ const CharacterCreateComponent = ({ theme, neon, userId, onSave }: UserCharacter
         options={listMesas.map(m => ({ value: m.idmesa, label: m.nome }))}
         value={selectedMesa}
         onChange={e => setSelectedMesa(Number(e.target.value))}
+        onFocus={() => setMesaError(false)}
+        error={mesaError}
+        errorMessage="Selecione uma mesa válida."
+        required
         width="100%"
         disabled={loadingMesas}
         allowEmptyOption={false}
@@ -188,9 +194,9 @@ const CharacterCreateComponent = ({ theme, neon, userId, onSave }: UserCharacter
           width="200px"
           onClick={handlePrev}
           type="button"
-          disabled={isFirstStep}
+          disabled={isFirstStep || isSubmitting}
         />
-        
+
         <CyberButton
           theme={theme}
           neon={neon}
@@ -198,6 +204,8 @@ const CharacterCreateComponent = ({ theme, neon, userId, onSave }: UserCharacter
           width="200px"
           type="button"
           onClick={isLastStep ? handleSubmit : handleNext}
+          disabled={isSubmitting}
+          loading={isLastStep && isSubmitting}
         />
       </NavegationButtons>
     </FormController>

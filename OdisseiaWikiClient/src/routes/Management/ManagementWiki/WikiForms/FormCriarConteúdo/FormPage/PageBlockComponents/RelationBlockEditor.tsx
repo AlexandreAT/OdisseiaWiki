@@ -378,13 +378,13 @@ export const RelationBlockEditor: React.FC<RelationBlockEditorProps> = ({
       {previewEntity && (
         <EntityDisplay $isDark={theme === 'dark'}>
           <EntityContent>
-            {extractEntityImage(previewEntity) && (
-              <EntityImage
-                $entityType={pickingType}
-                src={normalizeImagePath(extractEntityImage(previewEntity))}
-                alt={extractEntityName(previewEntity)}
-              />
-            )}
+            <EntityImage
+              $entityType={pickingType}
+              src={extractEntityImage(previewEntity)
+                ? normalizeImagePath(extractEntityImage(previewEntity))
+                : undefined}
+              alt={`Imagem de ${extractEntityName(previewEntity)}`}
+            />
             <EntityDetails>
               <EntityName>{extractEntityName(previewEntity)}</EntityName>
               <EntityType>Tipo: {pickingType}</EntityType>
@@ -445,13 +445,11 @@ export const RelationBlockEditor: React.FC<RelationBlockEditorProps> = ({
                           const img = ent ? (ent.Imagem || ent.imagem || ent.imagem) : (ref.imagem as string | undefined);
                           return (
                             <>
-                              {img && (
-                                <EntityImage
-                                  $entityType={ref.tipoEntidade}
-                                  src={normalizeImagePath(img as string)}
-                                  alt={name || 'Referência'}
-                                />
-                              )}
+                              <EntityImage
+                                $entityType={ref.tipoEntidade}
+                                src={img ? normalizeImagePath(img as string) : undefined}
+                                alt={`Imagem de ${name || 'referência'}`}
+                              />
                               <EntityDetails>
                                 <EntityName>{name || 'Sem nome'}</EntityName>
                                 <EntityType>Tipo: {ref.tipoEntidade}</EntityType>

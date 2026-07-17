@@ -17,7 +17,6 @@ import {
   ResultCardContent,
   ResultCardTitle,
   ResultCardDescription,
-  ResultCardPlaceholder,
 } from './WikiSearchResults.style';
 
 export const WikiSearchResults: React.FC<WikiSearchResultsProps> = ({
@@ -83,13 +82,12 @@ export const WikiSearchResults: React.FC<WikiSearchResultsProps> = ({
                   $isDark={theme === 'dark'}
                   onClick={() => onResultSelect(item)}
                 >
-                  {item.image ? (
-                    <ResultCardImage src={normalizeImagePath(item.image)} alt={item.title} />
-                  ) : (
-                    <ResultCardPlaceholder $type={group}>
-                      <BiBookmark />
-                    </ResultCardPlaceholder>
-                  )}
+                  <ResultCardImage
+                    $type={group}
+                    src={normalizeImagePath(item.image)}
+                    alt={`Imagem de ${item.title}`}
+                    fallbackIcon={<BiBookmark />}
+                  />
                   <ResultCardContent>
                     <ResultCardTitle>{item.title}</ResultCardTitle>
                     {item.description && <ResultCardDescription>{item.description}</ResultCardDescription>}

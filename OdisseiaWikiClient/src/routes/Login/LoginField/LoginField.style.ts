@@ -61,7 +61,8 @@ export const ButtonContainer = styled.div`
     }
 `;
 
-export const GoogleLoginContainer = styled.div`
+export const GoogleLoginContainer = styled.div<{ $loading?: boolean }>`
+    position: relative;
     width: 70%;
     margin: 10px 0;
     display: flex;
@@ -73,11 +74,30 @@ export const GoogleLoginContainer = styled.div`
         margin-inline: auto;
     }
 
+    ${({ $loading }) => $loading && `
+        pointer-events: none;
+        opacity: 0.55;
+    `}
+
     @media (max-width: 768px) {
         width: 100%;
         display: flex;
         justify-content: center;
         margin: 4px 0;
+    }
+`;
+
+export const GoogleLoginLoading = styled.span`
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255, 255, 255, 0.28);
+    border-top-color: var(--clearneonBlue);
+    border-radius: 50%;
+    animation: google-login-spin 0.7s linear infinite;
+
+    @keyframes google-login-spin {
+        to { transform: rotate(360deg); }
     }
 `;
 

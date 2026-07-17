@@ -167,11 +167,17 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
   const [personagens, setPersonagens] = useState<typeof personagensMock>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loadingPersonagens, setLoadingPersonagens] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // --- mesas ---
   const [listMesas, setListMesas] = useState<Mesa[]>([]);
   const [selectedMesa, setSelectedMesa] = useState<number | undefined>(undefined);
   const [loadingMesas, setLoadingMesas] = useState(true);
+  const [mesaError, setMesaError] = useState(false);
+
+  useEffect(() => {
+    if (selectedMesa) setMesaError(false);
+  }, [selectedMesa]);
 
   const isFirstStep = step === 1;
   const isLastStep = step === TOTAL_STEPS;
@@ -670,10 +676,12 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     }
 
     if (!selectedMesa) {
+      setMesaError(true);
       toast.error('Selecione uma mesa válida.');
       return false;
     }
 
+    setIsSubmitting(true);
     try {
       let avatarPath = avatarUrl;
 
@@ -764,6 +772,8 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     } catch (error: unknown) {
       toast.error(getApiErrorMessage(error, "Erro ao salvar personagem"));
       return false;
+    } finally {
+      setIsSubmitting(false);
     }
   }, [avatarUrl, avatarFile, galeriaUrls, galeriaPreviewFileMap, userName, statusBasico, itens, magias, skills, race, city, userId, selectedMesa, history, costumes, extraInformation, nanites, alignment, traits, idpassiva, ultimate, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, statusExtras, defesas, personagem, onSave, validateStepOne]);
 
@@ -777,10 +787,12 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     }
 
     if (!selectedMesa) {
+      setMesaError(true);
       toast.error('Selecione uma mesa válida.');
       return;
     }
 
+    setIsSubmitting(true);
     try {
       let avatarPath = avatarUrl;
 
@@ -861,6 +873,8 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
       if (onSave) onSave();
     } catch (error: unknown) {
       toast.error(getApiErrorMessage(error, "Erro ao salvar personagem"));
+    } finally {
+      setIsSubmitting(false);
     }
   }, [avatarUrl, avatarFile, galeriaUrls, galeriaShapes, galeriaPreviewFileMap, userName, itens, magias, skills, race, city, userId, selectedMesa, history, costumes, extraInformation, nanites, alignment, traits, idpassiva, ultimate, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, statusExtras, defesas, buildStatusForPayload, onSave, validateStepOne]);
 
@@ -935,12 +949,15 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     allPersonagens,
     searchTerm,
     loadingPersonagens,
+    isSubmitting,
     listItens,
     loadingItens,
     searchItensTerm,
     setSearchItensTerm,
     selectedMesa,
     setSelectedMesa,
+    mesaError,
+    setMesaError,
     listMesas,
     loadingMesas,
     searchPersonagens,

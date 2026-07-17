@@ -1,4 +1,5 @@
 import styled from 'styled-components';
+import { FallbackImage } from '../../../../../../../components/Generic/FallbackImage/FallbackImage';
 
 interface ThemeProps {
   $isDark?: boolean;
@@ -56,10 +57,9 @@ export const EntityContent = styled.div`
   }
 `;
 
-export const EntityImage = styled.img<{ $entityType?: string }>`
+export const EntityImage = styled(FallbackImage)<{ $entityType?: string }>`
   height: 80px;
   width: auto;
-  object-fit: cover;
   flex-shrink: 0;
   /* Shape and aspect based on entity type */
   border-radius: ${props => (props.$entityType === 'Personagem' ? '50%' : '6px')};

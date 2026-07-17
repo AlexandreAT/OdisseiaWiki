@@ -31,6 +31,22 @@ namespace OdisseiaWiki.Repositories
         public async Task<Personagen?> GetByIdAsync(int id)
             => await _context.Personagens.FindAsync(id);
 
+        public async Task<List<ProficienciaResumoView>> GetProficienciasByPersonagemIdAsync(int id)
+            => await _context.PersonagemProficiencias
+                .AsNoTracking()
+                .Where(link => link.Idpersonagem == id)
+                .Join(
+                    _context.Proficiencias.AsNoTracking(),
+                    link => link.Idproficiencia,
+                    proficiencia => proficiencia.Idproficiencia,
+                    (_, proficiencia) => new ProficienciaResumoView
+                    {
+                        Idproficiencia = proficiencia.Idproficiencia,
+                        Nome = proficiencia.Nome,
+                        Descricao = proficiencia.Descricao,
+                    })
+                .ToListAsync();
+
         public async Task<Personagen> CreateAsync(Personagen personagem)
         {
             _context.Personagens.Add(personagem);

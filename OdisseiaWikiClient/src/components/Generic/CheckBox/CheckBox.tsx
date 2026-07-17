@@ -10,6 +10,7 @@ interface Props {
     fontSize?: string;
     checked?: boolean;
     onChange?: (checked: boolean) => void;
+    disabled?: boolean;
 }
 
 const CheckBoxComponent = ({
@@ -20,7 +21,8 @@ const CheckBoxComponent = ({
     height,
     fontSize,
     checked,
-    onChange
+    onChange,
+    disabled = false,
 }: Props) => {
     const [internalChecked, setInternalChecked] = useState(false);
     const isChecked = checked !== undefined ? checked : internalChecked;
@@ -37,6 +39,7 @@ const CheckBoxComponent = ({
                 checked={isChecked}
                 onChange={handleChange}
                 id={`checkbox-${label}`}
+                disabled={disabled}
             />
             <CheckboxLabel
                 typeStyle={typeStyle}

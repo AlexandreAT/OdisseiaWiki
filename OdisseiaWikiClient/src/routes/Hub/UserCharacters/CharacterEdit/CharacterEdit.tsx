@@ -2,7 +2,11 @@ import React from 'react'
 import CloudDoneIcon from '@mui/icons-material/CloudDone';
 import CloudOffIcon from '@mui/icons-material/CloudOff';
 import SaveIcon from '@mui/icons-material/Save';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import TuneIcon from '@mui/icons-material/Tune';
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import toast from 'react-hot-toast';
+import { ConfirmDialog } from '../../../../components/Generic/ConfirmDialog/ConfirmDialog';
 import { PersonagemJogador } from '../../../../models/PersonagemJogador';
 import { useFormUserCharacter } from '../CharacterCreate/useFormUserCharacter';
 import { FormController, FormEditController, NavegationButtons } from '../CharacterCreate/FormUserCharacter/FormUserCharacter.style';
@@ -11,23 +15,38 @@ import { createItemColumns, createSkillsColumns, createMagiasColumns } from '../
 import { CharacterSystemForm } from '../../../Shared/CharacterForms/CharacterSystemForm';
 import { CharacterRoleplayForm } from '../../../Shared/CharacterForms/CharacterRoleplayForm';
 import { CharacterStepDots } from '../../../Shared/CharacterForms/CharacterStepDots';
-import { FloatingActions, FloatingSaveButton, SyncIconBadge } from './CharacterEdit.style';
+import { deletarPersonagemJogador } from '../../../../services/personagemJogadorService';
+import { getApiErrorMessage } from '../../../../utils/apiError';
+import {
+  CharacterEditActions,
+  CharacterOptionButton,
+  FloatingActions,
+  FloatingSaveButton,
+  SyncIconBadge,
+} from './CharacterEdit.style';
 
 interface UserCharactersProps {
   theme: 'dark' | 'light';
   neon: 'on' | 'off';
   personagem: PersonagemJogador;
   userId: number;
-  onSave?: () => void;
+  initialStep?: 1 | 2;
+  onSave?: () => void | Promise<void>;
+  onBack: () => void;
 }
 
-export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserCharactersProps) => {
-  const [editStep, setEditStep] = React.useState<1 | 2>(1);
+export const CharacterEdit = ({ theme, neon, personagem, userId, initialStep = 1, onSave, onBack }: UserCharactersProps) => {
+  const [editStep, setEditStep] = React.useState<1 | 2>(initialStep);
   const [lastSavedSnapshot, setLastSavedSnapshot] = React.useState('');
+  const [nameError, setNameError] = React.useState(false);
+  const [raceError, setRaceError] = React.useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
   const hasSnapshotInitializedRef = React.useRef(false);
 
     const {
         handleUpdate,
+        isSubmitting,
         userName,
     setUserName,
     race,
@@ -143,7 +162,8 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserC
     React.useEffect(() => {
       hasSnapshotInitializedRef.current = false;
       setLastSavedSnapshot('');
-    }, [personagem.idpersonagemJogador]);
+      setEditStep(initialStep);
+    }, [personagem.idpersonagemJogador, initialStep]);
 
     React.useEffect(() => {
       if (hasSnapshotInitializedRef.current) return;
@@ -159,40 +179,81 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserC
     const isLastStep = editStep === 2;
 
     const validateEdit = React.useCallback(() => {
-      if (!userName.trim()) {
-        toast.error('Nome é obrigatório.');
-        return false;
-      }
+      const hasNameError = !userName.trim();
+      const hasRaceError = !race || race === 0;
 
-      if (!race || race === 0) {
-        toast.error('Selecione uma raça válida.');
-        return false;
-      }
+      setNameError(hasNameError);
+      setRaceError(hasRaceError);
 
-      if (!city || city === 0) {
-        toast.error('Selecione uma cidade válida.');
+      if (hasNameError || hasRaceError) {
+        setEditStep(1);
+        toast.error('Corrija os campos obrigatórios destacados.');
         return false;
       }
 
       return true;
-    }, [userName, race, city]);
+    }, [userName, race]);
 
-    const handleSave = React.useCallback(async () => {
+    const handleSave = React.useCallback(async (goBackAfterSave = false) => {
       if (!validateEdit()) return;
 
       const success = await handleUpdate();
       if (success) {
         setLastSavedSnapshot(snapshot);
+        if (goBackAfterSave) onBack();
       }
-    }, [handleUpdate, snapshot, validateEdit]);
+    }, [handleUpdate, onBack, snapshot, validateEdit]);
 
     const handleStepDotClick = React.useCallback((targetStep: 1 | 2) => {
       if (targetStep === editStep) return;
       setEditStep(targetStep);
     }, [editStep]);
 
+    const handleDelete = React.useCallback(async () => {
+      setIsDeleting(true);
+      try {
+        await deletarPersonagemJogador(personagem.idpersonagemJogador);
+        await onSave?.();
+        toast.success('Personagem excluído com sucesso.');
+        setDeleteDialogOpen(false);
+        onBack();
+      } catch (requestError: unknown) {
+        toast.error(getApiErrorMessage(requestError, 'Não foi possível excluir o personagem.'));
+      } finally {
+        setIsDeleting(false);
+      }
+    }, [onBack, onSave, personagem.idpersonagemJogador]);
+
     return (
         <FormController marginTop="0px" onSubmit={(e) => e.preventDefault()}>
+            <CharacterEditActions aria-label="Opções do personagem">
+              <CharacterOptionButton
+                type="button"
+                $variant="danger"
+                onClick={() => setDeleteDialogOpen(true)}
+                disabled={isSubmitting || isDeleting}
+              >
+                <DeleteOutlineIcon />
+                <span>Excluir</span>
+              </CharacterOptionButton>
+              <CharacterOptionButton
+                type="button"
+                disabled
+                title="Configuração de visibilidade disponível em breve"
+              >
+                <TuneIcon />
+                <span>Dados visíveis</span>
+              </CharacterOptionButton>
+              <CharacterOptionButton
+                type="button"
+                disabled
+                title="Configuração de visibilidade disponível em breve"
+              >
+                <VisibilityOutlinedIcon />
+                <span>Personagem visível</span>
+              </CharacterOptionButton>
+            </CharacterEditActions>
+
             <CharacterStepDots
               theme={theme}
               neon={neon}
@@ -201,7 +262,7 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserC
             />
 
             <FormEditController>
-              {editStep === 1 && (
+              {editStep === 2 && (
                 <CharacterSystemForm
                   theme={theme}
                   neon={neon}
@@ -236,7 +297,7 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserC
                 />
               )}
 
-              {editStep === 2 && (
+              {editStep === 1 && (
                 <CharacterRoleplayForm
                   raceChangeMode='current-or-android'
                   theme={theme}
@@ -282,6 +343,12 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserC
                   searchTerm={searchTerm}
                   loadingPersonagens={loadingPersonagens}
                   searchPersonagens={searchPersonagens}
+                  nameError={nameError}
+                  nameErrorMessage="Nome é obrigatório."
+                  onNameFocus={() => setNameError(false)}
+                  raceError={raceError}
+                  raceErrorMessage="Selecione uma raça válida."
+                  onRaceFocus={() => setRaceError(false)}
                 />
               )}
             </FormEditController>
@@ -291,11 +358,11 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserC
                 colorType="secondary"
                 theme={theme}
                 neon={neon}
-                text={'Voltar'}
+                text="Anterior"
                 width="200px"
                 type="button"
-                onClick={() => setEditStep((prev) => (prev === 1 ? 1 : ((prev - 1) as 1 | 2)))}
-                disabled={isFirstStep}
+                onClick={() => setEditStep(1)}
+                disabled={isFirstStep || isSubmitting}
               />
 
               <CyberButton
@@ -304,7 +371,9 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserC
                 text={'Salvar'}
                 width="200px"
                 type="button"
-                onClick={handleSave}
+                onClick={() => handleSave(true)}
+                disabled={isSubmitting}
+                loading={isSubmitting}
               />
 
               <CyberButton
@@ -315,11 +384,13 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserC
                 type="button"
                 onClick={() => {
                   if (isLastStep) {
-                    handleSave();
+                    handleSave(false);
                     return;
                   }
                   setEditStep(2);
                 }}
+                disabled={isSubmitting}
+                loading={isLastStep && isSubmitting}
               />
             </NavegationButtons>
 
@@ -336,12 +407,22 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserC
                 type="button"
                 theme={theme}
                 neon={neon}
-                onClick={handleSave}
+                onClick={() => handleSave(false)}
+                disabled={isSubmitting}
                 title="Salvar alterações"
               >
                 <SaveIcon className="icon" />
               </FloatingSaveButton>
             </FloatingActions>
+            <ConfirmDialog
+              open={deleteDialogOpen}
+              title="Excluir personagem"
+              message={`Tem certeza de que deseja excluir ${personagem.nome}? Esta ação também removerá as imagens vinculadas e não poderá ser desfeita.`}
+              confirmText="Excluir"
+              onConfirm={handleDelete}
+              onCancel={() => setDeleteDialogOpen(false)}
+              isLoading={isDeleting}
+            />
         </FormController>
     )
 }

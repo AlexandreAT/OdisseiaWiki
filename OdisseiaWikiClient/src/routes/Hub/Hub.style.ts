@@ -308,6 +308,12 @@ export const ClipButtonAnimated = styled(ClipButton)<SmallButtonProps>`
         };
     `}
 
+  @media (max-width: 1100px) {
+    ${({ collapsed, index }) => collapsed && index === 0 && `
+      display: none;
+    `}
+  }
+
   @media (max-width: 768px) {
     ${({ collapsed }) => collapsed && `
       width: 46px;
@@ -327,11 +333,11 @@ export const ClipButtonAnimated = styled(ClipButton)<SmallButtonProps>`
 export const MobileCollapsedBackButton = styled.button<Props>`
   display: none;
 
-  @media (max-width: 768px) {
+  @media (max-width: 1100px) {
     position: absolute;
     top: 80px;
     left: 20px;
-    z-index: 6;
+    z-index: 300;
     display: inline-flex;
     align-items: center;
     justify-content: center;

@@ -31,6 +31,7 @@ const RegisterField = ({ theme, neon, onBackToLogin }: Props) => {
     const [nicknameError, setNicknameError] = useState(false);
 
     const [errors, setErrors] = useState<RegisterFormErrors>({});
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -53,6 +54,7 @@ const RegisterField = ({ theme, neon, onBackToLogin }: Props) => {
 
             return;
         }
+        setIsSubmitting(true);
         try {
             const payload = {
                 nome: userName,
@@ -68,6 +70,8 @@ const RegisterField = ({ theme, neon, onBackToLogin }: Props) => {
             });
         } catch (error: unknown) {
             toast.error(getApiErrorMessage(error, 'Erro ao registrar'));
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -159,6 +163,7 @@ const RegisterField = ({ theme, neon, onBackToLogin }: Props) => {
                     neon={neon}
                     type='submit'
                     width='150px'
+                    loading={isSubmitting}
                 />
                 <CyberButton
                     colorType="secondary"
@@ -168,6 +173,7 @@ const RegisterField = ({ theme, neon, onBackToLogin }: Props) => {
                     type="button"
                     onClick={onBackToLogin}
                     width='150px'
+                    disabled={isSubmitting}
                 />
             </ContainerButtons>
         </Form>

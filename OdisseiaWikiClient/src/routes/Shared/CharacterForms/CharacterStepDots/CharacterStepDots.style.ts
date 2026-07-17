@@ -7,9 +7,9 @@ interface ThemeProps {
 
 export const StepDotsAnchor = styled.div<{ right?: string }>`
   position: absolute;
-  top: 140px;
-  right: ${({ right }) => right || '-46px'};
-  z-index: 12;
+  top: 0px;
+  right: ${({ right }) => right || '-42px'};
+  z-index: 180;
 
   @media (max-width: 1100px) {
     position: static;

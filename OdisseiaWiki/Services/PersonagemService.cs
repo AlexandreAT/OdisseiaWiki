@@ -71,7 +71,14 @@ namespace OdisseiaWiki.Services
             => await _repository.GetAllAsync(visivel);
 
         public async Task<Personagen?> GetByIdAsync(int id)
-            => await _repository.GetByIdAsync(id);
+        {
+            Personagen? personagem = await _repository.GetByIdAsync(id);
+            if (personagem is null)
+                return null;
+
+            personagem.ProficienciasResumo = await _repository.GetProficienciasByPersonagemIdAsync(id);
+            return personagem;
+        }
 
         public async Task<ResultPersonagem> UpdateAsync(int id, PersonagemDto dto)
         {

@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import CloseIcon from '@mui/icons-material/Close';
+import { FallbackImage } from '../FallbackImage/FallbackImage';
 import { ImageCropperModal } from '../ImageUploader/ImageCropperModal';
 import { CropResult } from '../ImageUploader/types';
 import { RemoveImageButton, GalleryController } from './ImageGallery.style';
@@ -170,9 +171,10 @@ export const ImageGalleryWithCrop = ({
               isCircle={isCircle}
               shape={shape}
             >
-              <img
+              <FallbackImage
                 src={url}
                 alt={`Galeria ${index + 1}`}
+                style={{ width: '100%', height: '100%' }}
               />
               <RemoveImageButton
                 theme={theme}

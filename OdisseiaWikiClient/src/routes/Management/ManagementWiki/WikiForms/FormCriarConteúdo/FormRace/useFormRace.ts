@@ -47,7 +47,6 @@ export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => 
 
   const [errors, setErrors] = useState<RaceFormErrors>({});
   const [nomeError, setNomeError] = useState('');
-  const [imagemError, setImagemError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Auto-adiciona tag do tipo de conteúdo quando muda
@@ -68,21 +67,6 @@ export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => 
       return false;
     }
     setNomeError('');
-    return true;
-  };
-
-  const validateImagem = (url: string, file: File | null): boolean => {
-    // Em modo edição (racaId existe), imagem não é obrigatória pois já existe
-    if (racaId) {
-      setImagemError('');
-      return true;
-    }
-    // Em modo criação, imagem é obrigatória
-    if (!url && !file) {
-      setImagemError('Imagem principal é obrigatória');
-      return false;
-    }
-    setImagemError('');
     return true;
   };
 
@@ -117,16 +101,22 @@ export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => 
 
   const validateForm = (): boolean => {
     const isNomeValid = validateNome(nome);
-    const isImagemValid = validateImagem(imagemUrl, imagemFile);
     const isStatusValid = validateStatus();
 
-    return isNomeValid && isImagemValid && isStatusValid;
+    return isNomeValid && isStatusValid;
   };
 
   const handleNomeChange = (value: string) => {
     setNome(value);
     if (nomeError) {
       validateNome(value);
+    }
+  };
+
+  const handleAtributoInicialChange = (value: string) => {
+    setAtributoInicial(value);
+    if (errors.atributoInicial) {
+      setErrors((previous) => ({ ...previous, atributoInicial: undefined }));
     }
   };
 
@@ -137,12 +127,10 @@ export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => 
       }
       setImagemUrl('');
       setImagemFile(null);
-      validateImagem('', null);
     } else {
       const url = URL.createObjectURL(file);
       setImagemUrl(url);
       setImagemFile(file);
-      validateImagem(url, file);
     }
   };
 
@@ -335,7 +323,6 @@ export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => 
       setDestaque(false);
     setErrors({});
     setNomeError('');
-    setImagemError('');
   };
 
   return {
@@ -359,7 +346,6 @@ export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => 
     isSubmitting,
     errors,
     nomeError,
-    imagemError,
     atributoOptions: ATRIBUTO_OPTIONS,
     setNome: handleNomeChange,
     setNomeError,
@@ -371,7 +357,7 @@ export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => 
     setEstamina,
     setMana,
     setCapacidadeCarga,
-    setAtributoInicial,
+    setAtributoInicial: handleAtributoInicialChange,
     handleImagemUpload,
     handleGaleriaUpload,
     handleRemoveGaleriaImage,

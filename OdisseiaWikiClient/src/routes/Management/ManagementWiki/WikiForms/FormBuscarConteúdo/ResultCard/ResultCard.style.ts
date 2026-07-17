@@ -1,4 +1,5 @@
 import styled from "styled-components";
+import { FallbackImage } from '../../../../../../components/Generic/FallbackImage/FallbackImage';
 
 interface StyledCardProps {
   theme: 'dark' | 'light';
@@ -79,17 +80,10 @@ export const CardHeader = styled.div`
   }
 `;
 
-export const CardImage = styled.div<{ imageUrl?: string }>`
+export const CardImage = styled(FallbackImage)`
   width: 100%;
   height: 140px;
   border-radius: 6px;
-  background: ${({ imageUrl }) =>
-    imageUrl
-      ? `url(${imageUrl})`
-      : 'linear-gradient(135deg, var(--deepgray) 0%, var(--gray) 100%)'};
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
   flex-shrink: 0;
 
   @media (max-width: 768px) {

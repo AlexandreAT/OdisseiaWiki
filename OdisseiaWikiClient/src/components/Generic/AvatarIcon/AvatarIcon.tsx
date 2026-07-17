@@ -55,6 +55,7 @@ const AvatarIconComponent = ({
         <img
           src={avatarUrl}
           alt="Avatar"
+          onError={() => setAvatarUrl('')}
           style={{
             width: '100%',
             height: '100%',

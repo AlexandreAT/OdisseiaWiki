@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 import { CircularProgress } from '@mui/material';
 import { ButtonClipController, ButtonBoxShadow, ButtonClipBorder, ButtonContentContainer } from './HighlightButton.styles';
+import { useApiRequestActivity } from '../../../services/apiRequestActivity';
 
 interface CyberButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     backgroundColor?: string;
@@ -35,7 +36,8 @@ const CyberButtonComponent = ({
   loading = false,
   ...rest
 }: CyberButtonProps) => {
-  const isDisabledState = disabled || loading;
+  const hasActiveApiRequest = useApiRequestActivity();
+  const isDisabledState = disabled || loading || hasActiveApiRequest;
   
   return (
     <ButtonClipController
@@ -64,7 +66,7 @@ const CyberButtonComponent = ({
         disabled={isDisabledState}
         {...rest}
       >
-        {loading ? (
+        {loading || hasActiveApiRequest ? (
           <CircularProgress 
             size={20} 
             sx={{ color: theme === 'dark' ? '#00ff00' : '#000000' }}
