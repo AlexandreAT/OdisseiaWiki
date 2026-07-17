@@ -14,11 +14,11 @@ export const HorizontalRectangleBackground = styled.div`
   position: absolute;
   inset: 6px;
   background: rgba(0, 0, 10, 0.65);
-  -webkit-mask-image: url(${HorizontalRectangleLinesFill});
+  -webkit-mask-image: url("${HorizontalRectangleLinesFill}");
   -webkit-mask-repeat: no-repeat;
   -webkit-mask-size: 100% 100%;
   -webkit-mask-position: center;
-  mask-image: url(${HorizontalRectangleLinesFill});
+  mask-image: url("${HorizontalRectangleLinesFill}");
   mask-repeat: no-repeat;
   mask-size: 100% 100%;
   mask-position: center;
@@ -37,11 +37,11 @@ export const HorizontalRectangleBorder = styled.div<{ $neon?: boolean }>`
   position: absolute;
   inset: 0;
   background: ${({ $neon }) => $neon ? 'var(--clearneonBlue)' : 'var(--neonBlue)'};
-  -webkit-mask-image: url(${HorizontalRectangleLines});
+  -webkit-mask-image: url("${HorizontalRectangleLines}");
   -webkit-mask-repeat: no-repeat;
   -webkit-mask-size: 100% 100%;
   -webkit-mask-position: center;
-  mask-image: url(${HorizontalRectangleLines});
+  mask-image: url("${HorizontalRectangleLines}");
   mask-repeat: no-repeat;
   mask-size: 100% 100%;
   mask-position: center;

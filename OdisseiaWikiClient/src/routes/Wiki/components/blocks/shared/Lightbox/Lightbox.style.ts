@@ -27,7 +27,7 @@ export const LightboxOverlay = styled.div<{ $backgroundImage?: string }>`
   }
 
   &::before {
-    background-image: url(${props => props.$backgroundImage ? `'${props.$backgroundImage}'` : 'none'});
+    background-image: ${props => props.$backgroundImage ? `url("${props.$backgroundImage}")` : 'none'};
     background-size: cover;
     background-position: center;
     filter: blur(18px);

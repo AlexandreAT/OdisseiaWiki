@@ -19,7 +19,7 @@ export const WikiPageHeaderSection = styled.section<{
   max-width: 100%;
   
   ${props => props.$coverImage ? `
-    background-image: url(${props.$coverImage});
+    background-image: url("${props.$coverImage}");
     background-size: cover;
     background-repeat: no-repeat;
     background-position: center;

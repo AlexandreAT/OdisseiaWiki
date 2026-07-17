@@ -257,8 +257,8 @@ export const InfoIcon = styled.span<{ $icon: string }>`
   height: 24px;
   flex: 0 0 24px;
   background: var(--clearneonBlue);
-  mask: url(${({ $icon }) => $icon}) center / contain no-repeat;
-  -webkit-mask: url(${({ $icon }) => $icon}) center / contain no-repeat;
+  mask: url("${({ $icon }) => $icon}") center / contain no-repeat;
+  -webkit-mask: url("${({ $icon }) => $icon}") center / contain no-repeat;
   transition: background 160ms ease, filter 160ms ease;
 
   ${InfoItem}:hover &,

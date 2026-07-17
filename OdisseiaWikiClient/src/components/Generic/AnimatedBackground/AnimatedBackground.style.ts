@@ -12,7 +12,7 @@ export const BackgroundContainer = styled(motion.div)<BackgroundContainerProps>`
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-image: url(${props => props.$backgroundImage});
+  background-image: url("${props => props.$backgroundImage}");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;

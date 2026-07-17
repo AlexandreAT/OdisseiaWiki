@@ -158,7 +158,7 @@ export const ClipButton = styled.button<Props>`
     width: 100%;
     height: 100%;
     border: none;
-    background: url(${props => props.img}) no-repeat center center;
+    background: url("${props => props.img}") no-repeat center center;
     background-size: cover;
     overflow: hidden;
     cursor: pointer;

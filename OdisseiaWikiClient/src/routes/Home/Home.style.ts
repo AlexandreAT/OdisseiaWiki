@@ -19,7 +19,7 @@ const Main = styled.div<{ $backgroundImage: string }>`
 
     &::before {
         z-index: -2;
-        background-image: url(${({ $backgroundImage }) => $backgroundImage});
+        background-image: url("${({ $backgroundImage }) => $backgroundImage}");
         background-size: cover;
         background-position: center;
         background-repeat: no-repeat;

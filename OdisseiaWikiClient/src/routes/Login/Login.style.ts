@@ -1,4 +1,5 @@
 import styled from "styled-components";
+import BannerLogin from '../../assets/BannerLogin.jpg';
 
 export const MainContainer = styled.div`
     width: 100%;
@@ -19,7 +20,7 @@ export const MainContainer = styled.div`
 `
 
 export const Background = styled.div`
-    background-image: url('/src/assets/BannerLogin.jpg');
+    background-image: url("${BannerLogin}");
     background-size: cover;
     background-position: center;
     z-index: -2;

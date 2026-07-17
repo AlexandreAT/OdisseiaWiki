@@ -79,7 +79,7 @@ const BannerBackground = styled.div<Props>`
     inset: 0;
     z-index: 0;
     border-radius: inherit;
-    background-image: url(${props => props.image});
+    background-image: url("${props => props.image}");
     background-size: cover;
     background-position: center bottom;
     background-repeat: no-repeat;

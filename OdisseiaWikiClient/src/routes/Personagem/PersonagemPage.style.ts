@@ -333,11 +333,11 @@ export const HudCornerEl = styled.div<{ $position: CornerPosition; $color?: stri
     }
   }}
 
-  -webkit-mask-image: url(${HudCorner});
+  -webkit-mask-image: url("${HudCorner}");
   -webkit-mask-repeat: no-repeat;
   -webkit-mask-size: contain;
   -webkit-mask-position: center;
-  mask-image: url(${HudCorner});
+  mask-image: url("${HudCorner}");
   mask-repeat: no-repeat;
   mask-size: contain;
   mask-position: center;
@@ -1241,11 +1241,11 @@ export const HexagonBackground = styled.div`
   position: absolute;
   inset: 6px;
   background: rgba(0, 0, 10, 0.88);
-  -webkit-mask-image: url(${HexagonoFill});
+  -webkit-mask-image: url("${HexagonoFill}");
   -webkit-mask-repeat: no-repeat;
   -webkit-mask-size: contain;
   -webkit-mask-position: center;
-  mask-image: url(${HexagonoFill});
+  mask-image: url("${HexagonoFill}");
   mask-repeat: no-repeat;
   mask-size: contain;
   mask-position: center;
@@ -1256,11 +1256,11 @@ export const HexagonContent = styled.div`
   position: absolute;
   inset: 6px;
   background: transparent;
-  -webkit-mask-image: url(${HexagonoFill});
+  -webkit-mask-image: url("${HexagonoFill}");
   -webkit-mask-repeat: no-repeat;
   -webkit-mask-size: contain;
   -webkit-mask-position: center;
-  mask-image: url(${HexagonoFill});
+  mask-image: url("${HexagonoFill}");
   mask-repeat: no-repeat;
   mask-size: contain;
   mask-position: center;
@@ -1275,11 +1275,11 @@ export const HexagonBorder = styled.div<{ $neon?: boolean }>`
   position: absolute;
   inset: 0;
   background: var(--neonBlue);
-  -webkit-mask-image: url(${Hexagono});
+  -webkit-mask-image: url("${Hexagono}");
   -webkit-mask-repeat: no-repeat;
   -webkit-mask-size: 100% 100%;
   -webkit-mask-position: center;
-  mask-image: url(${Hexagono});
+  mask-image: url("${Hexagono}");
   mask-repeat: no-repeat;
   mask-size: 100% 100%;
   mask-position: center;
