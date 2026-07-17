@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BiChevronDown, BiChevronLeft } from 'react-icons/bi';
 import { useSidebarNavigation } from '../../hooks';
 import { WikiSidebarProps } from './types';
@@ -22,7 +22,7 @@ interface WikiSidebarInternalProps extends WikiSidebarProps {
 }
 
 export const WikiSidebar: React.FC<WikiSidebarInternalProps> = ({ page, onToggle, headerExpanded = true, sidebarExpanded: externalExpanded }) => {
-  const { sections, scrollToBlock } = useSidebarNavigation(page);
+  const { sections, scrollToTarget } = useSidebarNavigation(page);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(sections.filter(s => s.expanded).map(s => s.title))
   );
@@ -34,6 +34,12 @@ export const WikiSidebar: React.FC<WikiSidebarInternalProps> = ({ page, onToggle
     ? (value: boolean) => { if (onToggle) onToggle(value); }
     : setLocalExpanded;
 
+  useEffect(() => {
+    setExpandedSections(new Set(
+      sections.filter(section => section.expanded).map(section => section.title)
+    ));
+  }, [sections]);
+
   const toggleSection = (sectionTitle: string) => {
     const newExpanded = new Set(expandedSections);
     if (newExpanded.has(sectionTitle)) {
@@ -44,23 +50,20 @@ export const WikiSidebar: React.FC<WikiSidebarInternalProps> = ({ page, onToggle
     setExpandedSections(newExpanded);
   };
 
-  const handleBlockClick = (blockIndex: number) => {
-    scrollToBlock(blockIndex);
+  const handleBlockClick = (targetId: string) => {
+    scrollToTarget(targetId);
     if (window.innerWidth <= 768) setSidebarExpanded(false);
   };
 
   const handleToggleSidebar = () => {
     const newState = !sidebarExpanded;
     setSidebarExpanded(newState);
-    if (onToggle) {
-      onToggle(newState);
-    }
   };
 
   if (!page || sections.length === 0) {
     return (
       <SidebarWrapper $expanded={sidebarExpanded} $headerExpanded={headerExpanded}>
-        <SidebarInner $headerExpanded={headerExpanded}>
+        <SidebarInner $headerExpanded={headerExpanded} $expanded={sidebarExpanded}>
           <ToggleSidebarButton
             onClick={handleToggleSidebar}
             title={sidebarExpanded ? 'Esconder sidebar' : 'Mostrar sidebar'}
@@ -69,9 +72,9 @@ export const WikiSidebar: React.FC<WikiSidebarInternalProps> = ({ page, onToggle
           >
             <BiChevronLeft />
           </ToggleSidebarButton>
-          <EmptySidebarMessage>
+          {sidebarExpanded && <EmptySidebarMessage>
             <p>Nenhuma navegação disponível para esta página</p>
-          </EmptySidebarMessage>
+          </EmptySidebarMessage>}
         </SidebarInner>
       </SidebarWrapper>
     );
@@ -79,7 +82,7 @@ export const WikiSidebar: React.FC<WikiSidebarInternalProps> = ({ page, onToggle
 
   return (
     <SidebarWrapper $expanded={sidebarExpanded} $headerExpanded={headerExpanded}>
-      <SidebarInner $headerExpanded={headerExpanded}>
+      <SidebarInner $headerExpanded={headerExpanded} $expanded={sidebarExpanded}>
         <ToggleSidebarButton
           onClick={handleToggleSidebar}
           title={sidebarExpanded ? 'Esconder sidebar' : 'Mostrar sidebar'}
@@ -105,8 +108,9 @@ export const WikiSidebar: React.FC<WikiSidebarInternalProps> = ({ page, onToggle
                   {section.blocks.map(block => (
                     <SectionItemContainer key={block.id}>
                       <SectionItem
-                        onClick={() => handleBlockClick(block.blockIndex)}
+                        onClick={() => handleBlockClick(block.targetId)}
                         title={block.title}
+                        $level={block.level}
                       >
                         {block.title}
                       </SectionItem>

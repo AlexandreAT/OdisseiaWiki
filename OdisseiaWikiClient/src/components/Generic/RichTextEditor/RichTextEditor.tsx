@@ -8,6 +8,7 @@ import { normalizeToJSONContent, createEmptyJSONContent } from '../../../utils/r
 import { RichTextToolbar } from './RichTextToolbar';
 import RichTextModal from '../RichTextModal';
 import { MdOutlineOpenInFull } from 'react-icons/md';
+import { FirstLineIndent } from './FirstLineIndent';
 import {
   ContentController,
   EditorContainer,
@@ -76,6 +77,7 @@ const RichTextEditorComponent = ({
       TextAlign.configure({
         types: ['heading', 'paragraph'],
       }),
+      FirstLineIndent,
     ],
     content: createEmptyJSONContent(),
     onUpdate: ({ editor }) => {

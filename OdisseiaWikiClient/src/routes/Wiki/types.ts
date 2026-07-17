@@ -40,9 +40,11 @@ export const createEmptyWikiSearchGroups = (): WikiSearchGroups => ({
 
 export interface WikiContextualBlock {
   id: string;
+  targetId: string;
   title: string;
   type: string;
   blockIndex: number;
+  level?: 1 | 2;
 }
 
 export interface WikiSidebarSection {

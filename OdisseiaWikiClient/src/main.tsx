@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { lazy, Suspense } from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
@@ -7,13 +7,23 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import store from './redux/store.ts';
 import ErrorPage from './routes/Error/ErrorPage.tsx';
-import Home from './routes/Home/Home.tsx';
-import Login from './routes/Login/Login.tsx';
-import Wiki from './routes/Wiki/Wiki.tsx';
 import { GoogleOAuthProvider } from '@react-oauth/google';
-import { Management } from './routes/Management/Management.tsx';
-import { Hub } from './routes/Hub/Hub.tsx';
-import PersonagemPage from './routes/Personagem/PersonagemPage';
+import { RouteLoading } from './components/Generic/RouteLoading/RouteLoading.tsx';
+
+const Home = lazy(() => import('./routes/Home/Home.tsx'));
+const Login = lazy(() => import('./routes/Login/Login.tsx'));
+const Wiki = lazy(() => import('./routes/Wiki/Wiki.tsx'));
+const Management = lazy(() => import('./routes/Management/Management.tsx').then(module => ({
+  default: module.Management,
+})));
+const Hub = lazy(() => import('./routes/Hub/Hub.tsx').then(module => ({
+  default: module.Hub,
+})));
+const PersonagemPage = lazy(() => import('./routes/Personagem/PersonagemPage'));
+
+const withRouteLoading = (element: React.ReactNode) => (
+  <Suspense fallback={<RouteLoading />}>{element}</Suspense>
+);
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
@@ -31,33 +41,33 @@ const router = createBrowserRouter([{
       children: [
         {
           path: '/',
-          element: <Home />
+          element: withRouteLoading(<Home />)
         },
         {
           path: 'login',
-          element: <Login />
+          element: withRouteLoading(<Login />)
         },
         {
           path: 'wiki',
-          element: <Wiki />,
+          element: withRouteLoading(<Wiki />),
           children: [
             {
               path: ':slug',
-              element: <Wiki />
+              element: withRouteLoading(<Wiki />)
             }
           ]
         },
         {
           path: 'management',
-          element: <Management />
+          element: withRouteLoading(<Management />)
         },
         {
           path: 'hub',
-          element: <Hub />
+          element: withRouteLoading(<Hub />)
         },
         {
           path: 'personagem/:id',
-          element: <PersonagemPage />
+          element: withRouteLoading(<PersonagemPage />)
         },
         {
           path: 'erro',

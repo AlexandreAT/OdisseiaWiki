@@ -20,13 +20,13 @@ export const CheckListDropdown = styled.div<DropdownProps>`
   min-width: 100%;
   width: fit-content;
   z-index: 1000;
-  max-height: 200px;
+  max-height: 230px;
   overflow-y: auto;
   background-color: rgba(0, 0, 0, 0.9);
   border: 2px solid var(--black-blue);
   border-radius: 7px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-  max-width: min(100%, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
   box-sizing: border-box;
 
   ${({ theme, neon }) =>

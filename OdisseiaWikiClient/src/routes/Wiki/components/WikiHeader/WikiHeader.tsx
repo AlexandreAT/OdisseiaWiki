@@ -108,7 +108,7 @@ export const WikiHeader: React.FC<WikiHeaderInternalProps> = ({
   };
 
   return (
-    <DivController>
+    <DivController data-wiki-header>
         <WikiHeaderWrapper $isExpanded={isExpanded}>
         <HomeButton
             onClick={handleHomeClick}

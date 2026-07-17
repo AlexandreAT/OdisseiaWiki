@@ -64,9 +64,13 @@ export const ButtonContainer = styled.div`
 export const GoogleLoginContainer = styled.div`
     width: 70%;
     margin: 10px 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 
     > div {
         max-width: 100%;
+        margin-inline: auto;
     }
 
     @media (max-width: 768px) {

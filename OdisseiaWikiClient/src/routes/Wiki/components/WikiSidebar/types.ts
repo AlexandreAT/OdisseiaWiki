@@ -6,4 +6,5 @@ export interface WikiSidebarProps {
 
 export interface SectionItemProps {
   $isActive?: boolean;
+  $level?: 1 | 2;
 }

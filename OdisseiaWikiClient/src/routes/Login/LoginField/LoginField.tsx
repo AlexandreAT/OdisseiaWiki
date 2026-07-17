@@ -11,6 +11,9 @@ import TitleGlitch from '../../../components/Generic/TitleGlitch/TitleGlitch';
 import { loginComGoogle, LoginGoogleDto, login } from '../../../services/usuarioService';
 import { useNavigate } from 'react-router-dom';
 
+const REMEMBERED_USER_KEY = 'odisseia:last-manual-user';
+const REMEMBERED_PASSWORD_KEY = 'odisseia:last-manual-password';
+
 interface Props {
     theme: 'dark' | 'light';
     neon: 'on' | 'off';
@@ -18,8 +21,9 @@ interface Props {
 }
 
 export const LoginField = ({ theme, neon, onRegisterClick }: Props) => {
-    const [userName, setUserName] = useState('');
-    const [password, setPassword] = useState('');
+    const [userName, setUserName] = useState(() => localStorage.getItem(REMEMBERED_USER_KEY) ?? '');
+    const [password, setPassword] = useState(() => sessionStorage.getItem(REMEMBERED_PASSWORD_KEY) ?? '');
+    const [rememberLogin, setRememberLogin] = useState(true);
     const [userError, setUserError] = useState(false);
     const [passError, setPassError] = useState(false);
     const navigate = useNavigate();
@@ -51,6 +55,14 @@ export const LoginField = ({ theme, neon, onRegisterClick }: Props) => {
             const result = await login({ nickname: userName, senha: password });
 
             if (result.sucesso && result.tokenJwt) {
+                if (rememberLogin) {
+                    localStorage.setItem(REMEMBERED_USER_KEY, userName);
+                    sessionStorage.setItem(REMEMBERED_PASSWORD_KEY, password);
+                } else {
+                    localStorage.removeItem(REMEMBERED_USER_KEY);
+                    sessionStorage.removeItem(REMEMBERED_PASSWORD_KEY);
+                }
+
                 localStorage.setItem('token', result.tokenJwt);
 
                 const payload: any = jwtDecode(result.tokenJwt);
@@ -111,7 +123,7 @@ export const LoginField = ({ theme, neon, onRegisterClick }: Props) => {
     };
 
     return (
-        <Form onSubmit={handleSubmit}>
+        <Form onSubmit={handleSubmit} autoComplete="on">
             <TitleGlitch theme={theme} neon={neon} text='Login'></TitleGlitch>
             <InputContainer>
                 <InputText
@@ -124,6 +136,8 @@ export const LoginField = ({ theme, neon, onRegisterClick }: Props) => {
                     error={userError}
                     required
                     width='100%'
+                    name="username"
+                    autoComplete="username"
                 />
                 <InputText
                     theme={theme}
@@ -137,6 +151,8 @@ export const LoginField = ({ theme, neon, onRegisterClick }: Props) => {
                     required
                     typeStyle="secondary"
                     width='100%'
+                    name="password"
+                    autoComplete="current-password"
                 />
             </InputContainer>
             <ButtonContainer>
@@ -151,7 +167,12 @@ export const LoginField = ({ theme, neon, onRegisterClick }: Props) => {
                 />
             </GoogleLoginContainer>
             <CheckboxContainer>
-                <CheckBox neon={neon} label='Manter login' />
+                <CheckBox
+                    neon={neon}
+                    label='Lembrar usuário e senha'
+                    checked={rememberLogin}
+                    onChange={setRememberLogin}
+                />
             </CheckboxContainer>
             <LinkContainer>
                 <SpanLink theme={theme} neon={neon} link='/' colorScheme='pinkBlue'>Não consegue iniciar a sessão?</SpanLink>

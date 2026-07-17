@@ -4,23 +4,20 @@ import { SectionItemProps } from './types';
 export const SidebarWrapper = styled.aside<{ $expanded: boolean; $headerExpanded: boolean }>`
   display: flex;
   flex-direction: column;
-  width: ${props => (props.$expanded ? '180px' : '0px')};
-  border-right: ${props => (props.$expanded ? '1px solid #333' : 'none')};
+  width: ${props => (props.$expanded ? 'clamp(240px, 18vw, 300px)' : '0px')};
   height: auto;
   min-height: 100%;
   align-self: stretch;
   position: relative;
   left: 0;
   transition: width 0.3s ease-in-out;
-  z-index: 10;
-  background-color: rgba(0, 8, 18, 0.48);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  z-index: 4;
+  background-color: transparent;
 
   box-sizing: border-box;
 
   @media (max-width: 1100px) {
-    width: ${props => (props.$expanded ? '110px' : '0px')};
+    width: ${props => (props.$expanded ? 'clamp(205px, 24vw, 250px)' : '0px')};
   }
 
   @media (max-width: 768px) {
@@ -128,13 +125,10 @@ export const SectionItems = styled.div<{ $expanded: boolean }>`
   display: ${props => (props.$expanded ? 'flex' : 'none')};
   flex-direction: column;
   gap: 0;
-  max-height: ${props => (props.$expanded ? '500px' : '0')};
-  overflow: hidden;
-  transition: all 0.2s ease;
 `;
 
 export const SectionItemContainer = styled.div`
-  overflow: hidden;
+  overflow: visible;
   width: 100%;
 `;
 
@@ -143,17 +137,20 @@ export const SectionItem = styled.button<SectionItemProps>`
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 10px 16px 10px 18px;
+  padding: ${({ $level }) => ($level === 2 ? '9px 12px 9px 28px' : '10px 16px 10px 18px')};
   background-color: transparent;
   border: none;
   border-left: 2px solid ${props => (props.$isActive ? '#00d4ff' : 'transparent')};
   color: ${props => (props.$isActive ? '#00d4ff' : 'rgba(255, 255, 255, 0.7)')};
   font-size: 12px;
+  line-height: 1.35;
   cursor: pointer;
   text-align: left;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  box-sizing: border-box;
   transition: all 0.2s ease;
 
   &:hover {
@@ -167,8 +164,8 @@ export const SectionItem = styled.button<SectionItemProps>`
   }
 
   @media (max-width: 1100px) {
-    padding: 8px 7px 8px 10px;
-    font-size: 10px;
+    padding: ${({ $level }) => ($level === 2 ? '8px 6px 8px 15px' : '8px 7px 8px 10px')};
+    font-size: 11px;
   }
 `;
 
@@ -181,6 +178,10 @@ export const EmptySidebarMessage = styled.div`
   color: rgba(255, 255, 255, 0.4);
   font-size: 12px;
   flex: 1;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
 
   p {
     margin: 0;
@@ -237,7 +238,7 @@ export const ToggleSidebarButton = styled.button<{ $isExpanded: boolean }>`
   }
 `;
 
-export const SidebarInner = styled.div<{ $headerExpanded: boolean }>`
+export const SidebarInner = styled.div<{ $headerExpanded: boolean; $expanded: boolean }>`
   position: sticky;
   top: ${props => (props.$headerExpanded ? '157px' : '85px')};
   display: flex;
@@ -245,6 +246,11 @@ export const SidebarInner = styled.div<{ $headerExpanded: boolean }>`
   width: 100%;
   height: ${props => (props.$headerExpanded ? 'calc(100vh - 157px)' : 'calc(100vh - 85px)')};
   min-width: 0;
+  box-sizing: border-box;
+  border-right: ${({ $expanded }) => ($expanded ? '1px solid #333' : 'none')};
+  background-color: ${({ $expanded }) => ($expanded ? 'rgba(0, 8, 18, 0.48)' : 'transparent')};
+  backdrop-filter: ${({ $expanded }) => ($expanded ? 'blur(12px)' : 'none')};
+  -webkit-backdrop-filter: ${({ $expanded }) => ($expanded ? 'blur(12px)' : 'none')};
   transition: top 0.3s ease-in-out, height 0.3s ease-in-out;
 
   @media (max-width: 1100px) {
@@ -256,5 +262,9 @@ export const SidebarInner = styled.div<{ $headerExpanded: boolean }>`
     position: relative;
     top: 0;
     height: 100%;
+    border-right: none;
+    background-color: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 `;
