@@ -69,7 +69,6 @@ const RichTextModal: React.FC<RichTextModalProps> = ({
   };
 
   const handleSave = () => {
-    console.log("🚀 ~ handleSave ~ content:", content)
     onSave(content);
     setHasChanges(false);
     onClose();

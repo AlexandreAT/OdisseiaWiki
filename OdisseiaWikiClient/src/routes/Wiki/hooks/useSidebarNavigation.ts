@@ -1,121 +1,96 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Page, PageBlockType } from '../../../models/Pages';
-import { WikiSidebarSection, WikiContextualBlock } from '../types';
 import { JSONContent } from '../../../models/Characters';
+import { WikiContextualBlock, WikiSidebarSection } from '../types';
 
-export const useSidebarNavigation = (page: Page | null) => {
-  const sections: WikiSidebarSection[] = useMemo(() => {
-    if (!page || !page.blocks || page.blocks.length === 0) {
-      return [];
-    }
+export const createHeadingId = (blockIndex: number, headingIndex: number) => (
+  `wiki-heading-${blockIndex}-${headingIndex}`
+);
 
-    const textBlocks: WikiContextualBlock[] = [];
-    const infoLoreBlocks: WikiContextualBlock[] = [];
-
-    page.blocks.forEach((block, blockIndex) => {
-      const blockId = block.tempId || `block-${blockIndex}`;
-
-      if (block.tipo === PageBlockType.RICH_TEXT) {
-        // Extract headings from rich text content for the sidebar labels
-        const headings = extractHeadingsFromRichText(block.conteudo);
-
-        if (headings.length > 0) {
-          headings.forEach((heading, headingIndex) => {
-            textBlocks.push({
-              id: `heading-${blockIndex}-${headingIndex}`,
-              title: heading.text,
-              type: PageBlockType.RICH_TEXT,
-              blockIndex,
-            });
-          });
-        } else {
-          textBlocks.push({
-            id: blockId,
-            title: `Seção de Texto ${blockIndex + 1}`,
-            type: PageBlockType.RICH_TEXT,
-            blockIndex,
-          });
-        }
-      } else if (block.tipo === PageBlockType.INFOLORE) {
-        infoLoreBlocks.push({
-          id: blockId,
-          title: block.conteudo?.titulo || `InfoLore ${blockIndex + 1}`,
-          type: PageBlockType.INFOLORE,
-          blockIndex,
-        });
-      }
-    });
-
-    const navigation: WikiSidebarSection[] = [];
-
-    if (textBlocks.length > 0) {
-      navigation.push({
-        title: 'Textos',
-        blocks: textBlocks,
-        expanded: true,
-      });
-    }
-
-    if (infoLoreBlocks.length > 0) {
-      navigation.push({
-        title: 'Informações',
-        blocks: infoLoreBlocks,
-        expanded: true,
-      });
-    }
-
-    return navigation;
-  }, [page]);
-
-  const scrollToBlock = (blockIndex: number) => {
-    const element = document.getElementById(`wiki-block-${blockIndex}`);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      // Offset for the fixed header (167px when expanded, 100px when collapsed)
-      window.scrollBy({ top: -200, behavior: 'smooth' });
-    }
-  };
-
-  return { sections, scrollToBlock };
-};
-
-// Helper to extract headings from JSONContent — used only for sidebar text labels
 interface Heading {
-  level: number;
+  level: 1 | 2;
   text: string;
 }
 
-const extractHeadingsFromRichText = (content: JSONContent | any): Heading[] => {
+const getNodeText = (node: JSONContent): string => {
+  if (typeof node.text === 'string') return node.text;
+  return node.content?.map(getNodeText).join('') ?? '';
+};
+
+const normalizeSidebarTitle = (title: string) => (
+  title
+    .replace(/:/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+);
+
+const extractHeadingsFromRichText = (content: JSONContent | null | undefined): Heading[] => {
   const headings: Heading[] = [];
 
-  if (!content || !content.content || !Array.isArray(content.content)) {
-    return headings;
-  }
+  const traverse = (node: JSONContent): void => {
+    const legacyHeadingLevel = node.type?.match(/^heading([1-6])$/)?.[1];
+    const rawLevel = node.type === 'heading' ? node.attrs?.level : legacyHeadingLevel;
+    const level = Number(rawLevel);
 
-  const traverse = (node: any): void => {
-    if (!node) return;
-
-    if (node.type && node.type.match(/^heading/)) {
-      const level = parseInt(node.type.replace('heading', '')) || 1;
-      let text = '';
-
-      if (node.content && Array.isArray(node.content)) {
-        text = node.content
-          .map((n: any) => n.text || '')
-          .join('')
-          .trim();
-      }
-
-      if (text) {
-        headings.push({ level, text });
-      }
+    if ((level === 1 || level === 2) && (node.type === 'heading' || legacyHeadingLevel)) {
+      const text = normalizeSidebarTitle(getNodeText(node));
+      if (text) headings.push({ level, text });
     }
 
-    if (node.content && Array.isArray(node.content)) {
-      node.content.forEach(traverse);
-    }
+    node.content?.forEach(traverse);
   };
 
-  content.content.forEach(traverse);
+  if (content) traverse(content);
   return headings;
+};
+
+const getHeaderOffset = (): number => {
+  const mainHeader = document.querySelector('header');
+  const wikiHeader = document.querySelector('[data-wiki-header]');
+  const visibleBottoms = [mainHeader, wikiHeader]
+    .map((element) => element?.getBoundingClientRect().bottom ?? 0)
+    .filter((bottom) => bottom > 0);
+
+  return Math.max(0, ...visibleBottoms) + 16;
+};
+
+export const useSidebarNavigation = (page: Page | null) => {
+  const sections: WikiSidebarSection[] = useMemo(() => {
+    if (!page?.blocks?.length) return [];
+
+    const sortedBlocks = [...page.blocks].sort(
+      (left, right) => (left.ordem || 0) - (right.ordem || 0),
+    );
+    const textHeadings: WikiContextualBlock[] = [];
+
+    sortedBlocks.forEach((block, blockIndex) => {
+      if (block.tipo !== PageBlockType.RICH_TEXT) return;
+
+      extractHeadingsFromRichText(block.conteudo).forEach((heading, headingIndex) => {
+        const targetId = createHeadingId(blockIndex, headingIndex);
+        textHeadings.push({
+          id: targetId,
+          targetId,
+          title: heading.text,
+          level: heading.level,
+          type: PageBlockType.RICH_TEXT,
+          blockIndex,
+        });
+      });
+    });
+
+    return textHeadings.length > 0
+      ? [{ title: 'Textos', blocks: textHeadings, expanded: true }]
+      : [];
+  }, [page]);
+
+  const scrollToTarget = useCallback((targetId: string) => {
+    const element = document.getElementById(targetId);
+    if (!element) return;
+
+    const top = element.getBoundingClientRect().top + window.scrollY - getHeaderOffset();
+    window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+  }, []);
+
+  return { sections, scrollToTarget };
 };

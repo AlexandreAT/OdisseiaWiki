@@ -174,6 +174,28 @@ export const ScrollRevealSection = styled.section<ScrollRevealSectionProps>`
     return wikiBlockFragments;
   }}
 
+  @media (max-width: 768px) {
+    &.sr-entered > * {
+      animation-duration: 0.48s;
+    }
+
+    &.sr-entered img {
+      animation-duration: 0.36s;
+      animation-delay: 0.48s;
+    }
+
+    &.sr-entered :is(h1, h2, h3, h4) {
+      animation-duration: 0.58s;
+    }
+
+    &.sr-entered :is(p, ul, ol, blockquote),
+    &.sr-entered > * > div,
+    &.sr-entered > * > div > div {
+      animation-duration: 0.48s;
+      animation-delay: 0.24s;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     & *,
     & > * {

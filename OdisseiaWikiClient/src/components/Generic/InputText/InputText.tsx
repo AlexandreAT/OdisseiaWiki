@@ -15,6 +15,8 @@ interface Props {
     typeStyle?: 'primary' | 'secondary';
     width?: string;
     height?: string;
+    name?: string;
+    autoComplete?: string;
 }
 
 export const InputText = forwardRef<HTMLInputElement, Props>(
@@ -31,7 +33,9 @@ export const InputText = forwardRef<HTMLInputElement, Props>(
     required,
     typeStyle = "primary",
     width,
-    height
+    height,
+    name,
+    autoComplete,
   }, ref) => {
     const [focus, setFocus] = useState(false);
     const controllerRef = useRef<HTMLDivElement>(null);
@@ -69,6 +73,8 @@ export const InputText = forwardRef<HTMLInputElement, Props>(
               ref={ref}
               width={width}
               height={height}
+              name={name}
+              autoComplete={autoComplete}
           />
           <LoginLabelSpan active={focus || hasValue}>{label}</LoginLabelSpan>
         </LoginLabel>

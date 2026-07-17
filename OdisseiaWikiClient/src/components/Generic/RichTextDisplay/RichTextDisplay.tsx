@@ -48,7 +48,14 @@ const renderNode = (node: JSONContent, key?: React.Key): React.ReactNode => {
     case 'paragraph': {
       const attrs = (node.attrs || {}) as any;
       const align = attrs.align || attrs.textAlign || 'left';
-      return <p key={key} style={{ textAlign: align }}>{children}</p>;
+      const firstLineIndent = typeof attrs.firstLineIndent === 'string'
+        ? attrs.firstLineIndent
+        : undefined;
+      return (
+        <p key={key} style={{ textAlign: align, textIndent: firstLineIndent }}>
+          {children}
+        </p>
+      );
     }
     case 'heading':
       // level in attrs.level

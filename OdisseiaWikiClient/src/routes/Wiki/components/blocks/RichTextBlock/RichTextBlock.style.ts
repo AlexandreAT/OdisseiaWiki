@@ -54,10 +54,12 @@ export const RichTextBlockContainer = styled.div`
 
     h1 {
       ${wikiHeading1Style}
+      scroll-margin-top: 180px;
     }
 
     h2 {
       ${wikiHeading2Style}
+      scroll-margin-top: 180px;
     }
 
     h3 {

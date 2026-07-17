@@ -6,6 +6,7 @@ import {
   ToolbarDivider,
   ToolbarGroup,
 } from './RichTextEditor.style';
+import { FIRST_LINE_INDENT_VALUE } from './FirstLineIndent';
 
 interface RichTextToolbarProps {
   editor: Editor;
@@ -212,6 +213,29 @@ export const RichTextToolbar = ({ editor, theme, neon }: RichTextToolbarProps) =
           type="button"
         >
           ⇔
+        </ToolbarButton>
+      </ToolbarGroup>
+
+      <ToolbarDivider theme={theme} />
+
+      {/* Parágrafo */}
+      <ToolbarGroup>
+        <ToolbarButton
+          onMouseDown={(e) => {
+            e.preventDefault();
+            editor.chain().focus().toggleFirstLineIndent().run();
+          }}
+          active={editor.isActive('paragraph', {
+            firstLineIndent: FIRST_LINE_INDENT_VALUE,
+          })}
+          disabled={!editor.isActive('paragraph')}
+          title="Alternar recuo da primeira linha"
+          aria-label="Alternar recuo da primeira linha"
+          theme={theme}
+          neon={neon}
+          type="button"
+        >
+          ↦
         </ToolbarButton>
       </ToolbarGroup>
 

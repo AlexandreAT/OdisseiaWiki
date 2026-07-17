@@ -1,35 +1,53 @@
-import axios from 'axios';
+import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import { API_REQUEST_TIMEOUT_MS, apiUrl } from './apiConfig';
+import {
+  isTransientApiError,
+  waitForActiveServerWakeup,
+  wakeApiServer,
+} from '../services/apiAvailability';
 
-const configuredApiUrl = import.meta.env.VITE_API_URL?.trim();
-
-if (!configuredApiUrl && import.meta.env.PROD) {
-  throw new Error('VITE_API_URL não foi configurada para o build de produção.');
-}
-
-const apiUrl = (configuredApiUrl || 'http://localhost:5146/api').replace(/\/$/, '');
-
-if (!/^https?:\/\//i.test(apiUrl)) {
-  throw new Error('VITE_API_URL deve ser uma URL HTTP(S) absoluta.');
+interface RetryableRequestConfig extends InternalAxiosRequestConfig {
+  __odisseiaRetryAttempted?: boolean;
 }
 
 const api = axios.create({
   baseURL: apiUrl,
+  timeout: API_REQUEST_TIMEOUT_MS,
   headers: {
-    'Content-Type': 'application/json'
-  }
+    'Content-Type': 'application/json',
+  },
 });
 
 api.interceptors.request.use(
-  (config) => {
+  async (config) => {
+    await waitForActiveServerWakeup();
+
     const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error),
+);
+
+api.interceptors.response.use(
+  (response) => response,
+  async (error: AxiosError) => {
+    const config = error.config as RetryableRequestConfig | undefined;
+    const isSafeGet = config?.method?.toLowerCase() === 'get';
+
+    if (!config || !isSafeGet || config.__odisseiaRetryAttempted || !isTransientApiError(error)) {
+      return Promise.reject(error);
+    }
+
+    config.__odisseiaRetryAttempted = true;
+
+    try {
+      await wakeApiServer({ announceDelayMs: 0 });
+      return api.request(config);
+    } catch {
+      return Promise.reject(error);
+    }
+  },
 );
 
 export default api;

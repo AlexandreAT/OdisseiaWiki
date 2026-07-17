@@ -131,7 +131,7 @@ const CheckSelectComponent = ({
       window.removeEventListener('scroll', onScrollOrResize, true);
     };
   
-  }, [open, selectedValues]);
+  }, [computeRect, open, selectedValues]);
 
 
   useEffect(() => {
@@ -160,22 +160,29 @@ const CheckSelectComponent = ({
   const dropdownPortal = (() => {
     if (!open || !rect || typeof document === "undefined") return null;
 
+    const safeMargin = 12;
+    const dropdownWidth = Math.min(rect.width, window.innerWidth - safeMargin * 2);
+    const safeLeft = Math.min(
+      Math.max(rect.left, safeMargin),
+      Math.max(safeMargin, window.innerWidth - dropdownWidth - safeMargin),
+    );
+
     const style: React.CSSProperties = {
       position: 'fixed',
       top: finalTop !== null ? finalTop : rect.bottom,
-      left: rect.left,
-      minWidth: rect.width,
-      width: 'auto',       
+      left: safeLeft,
+      width: dropdownWidth,
+      maxWidth: `calc(100vw - ${safeMargin * 2}px)`,
       zIndex: 99999,
-      display: 'inline-block',
+      display: 'block',
     };
 
     return createPortal(
       <CheckListDropdown
-        ref={dropdownRef as any}
+        ref={dropdownRef}
         theme={theme}
         neon={neon}
-        style={style as any}
+        style={style}
       >
         {options.map(opt => (
           <CheckListContainer key={opt.value}>
