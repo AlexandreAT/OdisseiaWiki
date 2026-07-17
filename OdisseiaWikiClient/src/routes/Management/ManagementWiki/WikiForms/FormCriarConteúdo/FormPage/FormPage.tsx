@@ -158,6 +158,7 @@ export const FormPage: React.FC<FormPageProps> = ({
             width="100%"
             error={!!tituloError}
             errorMessage={tituloError}
+            required
           />
 
           <InputText
@@ -170,6 +171,7 @@ export const FormPage: React.FC<FormPageProps> = ({
             width="100%"
             error={!!slugError}
             errorMessage={slugError}
+            required
           />
         </GridInputs>
 

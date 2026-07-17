@@ -167,6 +167,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
   const [personagens, setPersonagens] = useState<typeof personagensMock>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loadingPersonagens, setLoadingPersonagens] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // --- mesas ---
   const [listMesas, setListMesas] = useState<Mesa[]>([]);
@@ -674,6 +675,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
       return false;
     }
 
+    setIsSubmitting(true);
     try {
       let avatarPath = avatarUrl;
 
@@ -764,6 +766,8 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     } catch (error: unknown) {
       toast.error(getApiErrorMessage(error, "Erro ao salvar personagem"));
       return false;
+    } finally {
+      setIsSubmitting(false);
     }
   }, [avatarUrl, avatarFile, galeriaUrls, galeriaPreviewFileMap, userName, statusBasico, itens, magias, skills, race, city, userId, selectedMesa, history, costumes, extraInformation, nanites, alignment, traits, idpassiva, ultimate, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, statusExtras, defesas, personagem, onSave, validateStepOne]);
 
@@ -781,6 +785,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
       return;
     }
 
+    setIsSubmitting(true);
     try {
       let avatarPath = avatarUrl;
 
@@ -861,6 +866,8 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
       if (onSave) onSave();
     } catch (error: unknown) {
       toast.error(getApiErrorMessage(error, "Erro ao salvar personagem"));
+    } finally {
+      setIsSubmitting(false);
     }
   }, [avatarUrl, avatarFile, galeriaUrls, galeriaShapes, galeriaPreviewFileMap, userName, itens, magias, skills, race, city, userId, selectedMesa, history, costumes, extraInformation, nanites, alignment, traits, idpassiva, ultimate, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, statusExtras, defesas, buildStatusForPayload, onSave, validateStepOne]);
 
@@ -935,6 +942,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     allPersonagens,
     searchTerm,
     loadingPersonagens,
+    isSubmitting,
     listItens,
     loadingItens,
     searchItensTerm,

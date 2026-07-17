@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Form, InputContainer, ButtonContainer, GoogleLoginContainer, CheckboxContainer, LinkContainer } from './LoginField.style';
+import { Form, InputContainer, ButtonContainer, GoogleLoginContainer, GoogleLoginLoading, CheckboxContainer, LinkContainer } from './LoginField.style';
 import { CyberButton } from '../../../components/Generic/HighlightButton/HighlightButton';
 import { InputText } from '../../../components/Generic/InputText/InputText';
 import { GoogleLogin } from '@react-oauth/google';
@@ -26,6 +26,8 @@ export const LoginField = ({ theme, neon, onRegisterClick }: Props) => {
     const [rememberLogin, setRememberLogin] = useState(true);
     const [userError, setUserError] = useState(false);
     const [passError, setPassError] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
     const navigate = useNavigate();
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -51,6 +53,7 @@ export const LoginField = ({ theme, neon, onRegisterClick }: Props) => {
 
         if (hasError) return;
 
+        setIsSubmitting(true);
         try {
             const result = await login({ nickname: userName, senha: password });
 
@@ -82,6 +85,8 @@ export const LoginField = ({ theme, neon, onRegisterClick }: Props) => {
         } catch (error) {
             console.error('Erro ao fazer login:', error);
             toast.error('Erro ao tentar logar. Tente novamente.');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -91,6 +96,7 @@ export const LoginField = ({ theme, neon, onRegisterClick }: Props) => {
             tokenGoogle: credentialResponse.credential,
             };
 
+            setIsGoogleSubmitting(true);
             try {
                 const result = await loginComGoogle(dto);
 
@@ -113,6 +119,8 @@ export const LoginField = ({ theme, neon, onRegisterClick }: Props) => {
                 }
             } catch (error) {
                 toast.error('Falha ao autenticar com o Google');
+            } finally {
+                setIsGoogleSubmitting(false);
             }
         }
     };
@@ -134,6 +142,7 @@ export const LoginField = ({ theme, neon, onRegisterClick }: Props) => {
                     onChange={e => setUserName(e.target.value)}
                     onFocus={() => setUserError(false)}
                     error={userError}
+                    errorMessage="Informe um nome de usu\u00e1rio v\u00e1lido."
                     required
                     width='100%'
                     name="username"
@@ -148,6 +157,7 @@ export const LoginField = ({ theme, neon, onRegisterClick }: Props) => {
                     onChange={e => setPassword(e.target.value)}
                     onFocus={() => setPassError(false)}
                     error={passError}
+                    errorMessage="Informe uma senha v\u00e1lida."
                     required
                     typeStyle="secondary"
                     width='100%'
@@ -156,15 +166,16 @@ export const LoginField = ({ theme, neon, onRegisterClick }: Props) => {
                 />
             </InputContainer>
             <ButtonContainer>
-                <CyberButton colorType="secondary" width='160px' text="Registrar-se" theme={theme} neon={neon} onClick={onRegisterClick}/>
-                <CyberButton colorType="primary" text="Logar" theme={theme} neon={neon} type='submit' width='160px'/>
+                <CyberButton colorType="secondary" width='160px' text="Registrar-se" theme={theme} neon={neon} onClick={onRegisterClick} disabled={isSubmitting || isGoogleSubmitting}/>
+                <CyberButton colorType="primary" text="Logar" theme={theme} neon={neon} type='submit' width='160px' loading={isSubmitting}/>
             </ButtonContainer>
-            <GoogleLoginContainer>
+            <GoogleLoginContainer $loading={isSubmitting || isGoogleSubmitting}>
                 <GoogleLogin
                     onSuccess={handleGoogleSuccess}
                     onError={handleGoogleError}
                     theme={theme === 'dark' ? "filled_black" : "outline"}
                 />
+                {isGoogleSubmitting && <GoogleLoginLoading aria-label="Autenticando com Google" />}
             </GoogleLoginContainer>
             <CheckboxContainer>
                 <CheckBox
@@ -172,6 +183,7 @@ export const LoginField = ({ theme, neon, onRegisterClick }: Props) => {
                     label='Lembrar usuário e senha'
                     checked={rememberLogin}
                     onChange={setRememberLogin}
+                    disabled={isSubmitting || isGoogleSubmitting}
                 />
             </CheckboxContainer>
             <LinkContainer>

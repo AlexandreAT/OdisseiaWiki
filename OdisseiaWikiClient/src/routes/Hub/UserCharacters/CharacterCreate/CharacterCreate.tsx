@@ -50,6 +50,7 @@ const CharacterCreateComponent = ({ theme, neon, userId, onSave }: UserCharacter
     defesas, setDefesas,
     listItens, handleSelectItem,
     selectedMesa, listMesas, setSelectedMesa, loadingMesas,
+    isSubmitting,
   } = useFormUserCharacter(userId, onSave);
 
   const raceImageUrl = React.useMemo(() => 
@@ -198,6 +199,8 @@ const CharacterCreateComponent = ({ theme, neon, userId, onSave }: UserCharacter
           width="200px"
           type="button"
           onClick={isLastStep ? handleSubmit : handleNext}
+          disabled={isSubmitting}
+          loading={isLastStep && isSubmitting}
         />
       </NavegationButtons>
     </FormController>

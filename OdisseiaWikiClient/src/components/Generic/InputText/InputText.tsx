@@ -38,14 +38,17 @@ export const InputText = forwardRef<HTMLInputElement, Props>(
     autoComplete,
   }, ref) => {
     const [focus, setFocus] = useState(false);
+    const [nativeError, setNativeError] = useState('');
     const controllerRef = useRef<HTMLDivElement>(null);
     const hasValue = value !== '' && value !== null && value !== undefined;
 
+    const hasError = Boolean(error || nativeError);
+
     useEffect(() => {
-      if (!error) return;
+      if (!hasError) return;
 
       controllerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, [error]);
+    }, [hasError]);
 
     const handleFocus = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
       setFocus(true);
@@ -56,6 +59,16 @@ export const InputText = forwardRef<HTMLInputElement, Props>(
       setFocus(false);
     }, []);
 
+    const handleChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+      if (nativeError) setNativeError('');
+      onChange?.(event);
+    }, [nativeError, onChange]);
+
+    const handleInvalid = useCallback((event: React.InvalidEvent<HTMLInputElement>) => {
+      event.preventDefault();
+      setNativeError(errorMessage || 'Este campo \u00e9 obrigat\u00f3rio.');
+    }, [errorMessage]);
+
     return (
       <ContentController ref={controllerRef} width={width}>
         <LoginLabel width={width} height={height}>
@@ -65,20 +78,22 @@ export const InputText = forwardRef<HTMLInputElement, Props>(
               onFocus={handleFocus}
               onBlur={handleBlur}
               value={value}
-              onChange={onChange}
+              onChange={handleChange}
+              onInvalid={handleInvalid}
               type={type}
-              error={error}
+              error={hasError}
               required={required}
               typeStyle={typeStyle}
               ref={ref}
               width={width}
               height={height}
               name={name}
+              aria-invalid={hasError}
               autoComplete={autoComplete}
           />
           <LoginLabelSpan active={focus || hasValue}>{label}</LoginLabelSpan>
         </LoginLabel>
-        {error && errorMessage && <SpanError>{errorMessage}</SpanError>}
+        {hasError && <SpanError>{errorMessage || nativeError}</SpanError>}
       </ContentController>
     );
   }

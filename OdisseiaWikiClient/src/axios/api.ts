@@ -5,9 +5,11 @@ import {
   waitForActiveServerWakeup,
   wakeApiServer,
 } from '../services/apiAvailability';
+import { beginApiRequest, finishApiRequest } from '../services/apiRequestActivity';
 
 interface RetryableRequestConfig extends InternalAxiosRequestConfig {
   __odisseiaRetryAttempted?: boolean;
+  __odisseiaRequestTracked?: boolean;
 }
 
 const api = axios.create({
@@ -24,15 +26,21 @@ api.interceptors.request.use(
 
     const token = localStorage.getItem('token');
     if (token) config.headers.Authorization = `Bearer ${token}`;
+    (config as RetryableRequestConfig).__odisseiaRequestTracked = true;
+    beginApiRequest();
     return config;
   },
   (error) => Promise.reject(error),
 );
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if ((response.config as RetryableRequestConfig).__odisseiaRequestTracked) finishApiRequest();
+    return response;
+  },
   async (error: AxiosError) => {
     const config = error.config as RetryableRequestConfig | undefined;
+    if (config?.__odisseiaRequestTracked) finishApiRequest();
     const isSafeGet = config?.method?.toLowerCase() === 'get';
 
     if (!config || !isSafeGet || config.__odisseiaRetryAttempted || !isTransientApiError(error)) {

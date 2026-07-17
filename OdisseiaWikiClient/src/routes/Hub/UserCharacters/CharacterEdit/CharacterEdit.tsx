@@ -28,6 +28,7 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserC
 
     const {
         handleUpdate,
+        isSubmitting,
         userName,
     setUserName,
     race,
@@ -305,6 +306,8 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserC
                 width="200px"
                 type="button"
                 onClick={handleSave}
+                disabled={isSubmitting}
+                loading={isSubmitting}
               />
 
               <CyberButton
@@ -320,6 +323,8 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserC
                   }
                   setEditStep(2);
                 }}
+                disabled={isSubmitting}
+                loading={isLastStep && isSubmitting}
               />
             </NavegationButtons>
 
@@ -337,6 +342,7 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserC
                 theme={theme}
                 neon={neon}
                 onClick={handleSave}
+                disabled={isSubmitting}
                 title="Salvar alterações"
               >
                 <SaveIcon className="icon" />

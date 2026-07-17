@@ -42,7 +42,7 @@ export const ServerStatusNotice = () => {
         <strong>{status === 'starting' ? 'Iniciando o servidor...' : 'Servidor temporariamente indisponível'}</strong>
         <span>
           {status === 'starting'
-            ? 'No plano gratuito isso pode levar alguns segundos.'
+            ? 'A conex\u00e3o est\u00e1 sendo preparada. Isso pode levar alguns segundos.'
             : 'Confira sua conexão e tente novamente.'}
         </span>
       </NoticeContent>

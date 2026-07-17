@@ -66,6 +66,7 @@ export const Select = forwardRef<HTMLSelectElement, Props>(({
   const [focus, setFocus] = useState(false);
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [nativeError, setNativeError] = useState('');
   const controllerRef = useRef<HTMLDivElement>(null);
   const nativeSelectRef = useRef<HTMLSelectElement | null>(null);
 
@@ -86,10 +87,12 @@ export const Select = forwardRef<HTMLSelectElement, Props>(({
     setFocus(hasValue);
   }, [hasValue]);
 
+  const hasError = Boolean(error || nativeError);
+
   useEffect(() => {
-    if (!error) return;
+    if (!hasError) return;
     controllerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }, [error]);
+  }, [hasError]);
 
   useEffect(() => {
     if (!open) return;
@@ -128,6 +131,7 @@ export const Select = forwardRef<HTMLSelectElement, Props>(({
   }, [disabled, notifyFocus, selectedIndex]);
 
   const selectOption = useCallback((option: Option) => {
+    if (nativeError) setNativeError('');
     const element = nativeSelectRef.current;
     if (element) {
       const target = Object.create(element) as HTMLSelectElement;
@@ -140,7 +144,12 @@ export const Select = forwardRef<HTMLSelectElement, Props>(({
 
     setOpen(false);
     setFocus(true);
-  }, [onChange]);
+  }, [nativeError, onChange]);
+
+  const handleInvalid = useCallback((event: React.InvalidEvent<HTMLSelectElement>) => {
+    event.preventDefault();
+    setNativeError(errorMessage || 'Selecione uma op\u00e7\u00e3o.');
+  }, [errorMessage]);
 
   const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLButtonElement>) => {
     if (disabled) return;
@@ -184,6 +193,7 @@ export const Select = forwardRef<HTMLSelectElement, Props>(({
           tabIndex={-1}
           aria-hidden="true"
           onChange={() => undefined}
+          onInvalid={handleInvalid}
         >
           {allowEmptyOption && <option value="" />}
           {options.map((option) => (
@@ -195,7 +205,7 @@ export const Select = forwardRef<HTMLSelectElement, Props>(({
           type="button"
           theme={theme}
           neon={neon}
-          error={error}
+          error={hasError}
           typeStyle={typeStyle}
           height={height}
           disabled={disabled}
@@ -233,7 +243,7 @@ export const Select = forwardRef<HTMLSelectElement, Props>(({
           </SelectDropdown>
         )}
       </Label>
-      {error && errorMessage && <SpanError>{errorMessage}</SpanError>}
+      {hasError && <SpanError>{errorMessage || nativeError}</SpanError>}
     </ContentController>
   );
 });

@@ -26,7 +26,6 @@ import {
   TagsSection,
   CheckboxSection,
   ButtonsContainer,
-  ErrorText,
 } from './FormRace.style';
 import { ImageGalleryWithCrop } from '../../../../../../components/Generic/ImageGallery/ImageGalleryWithCrop';
 
@@ -214,8 +213,8 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
             onChange={(e) => setVida(Number(e.target.value))}
             width="100%"
             error={!!errors.statusVida}
+            errorMessage={errors.statusVida}
           />
-          {errors.statusVida && <ErrorText theme={theme} neon={neon}>{errors.statusVida}</ErrorText>}
 
           <InputText
             theme={theme}
@@ -226,8 +225,8 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
             onChange={(e) => setEstamina(Number(e.target.value))}
             width="100%"
             error={!!errors.statusEstamina}
+            errorMessage={errors.statusEstamina}
           />
-          {errors.statusEstamina && <ErrorText theme={theme} neon={neon}>{errors.statusEstamina}</ErrorText>}
 
           <InputText
             theme={theme}
@@ -238,8 +237,8 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
             onChange={(e) => setMana(Number(e.target.value))}
             width="100%"
             error={!!errors.statusMana}
+            errorMessage={errors.statusMana}
           />
-          {errors.statusMana && <ErrorText theme={theme} neon={neon}>{errors.statusMana}</ErrorText>}
 
           <InputText
             theme={theme}
@@ -250,8 +249,8 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
             onChange={(e) => setCapacidadeCarga(Number(e.target.value))}
             width="100%"
             error={!!errors.statusCapacidadeCarga}
+            errorMessage={errors.statusCapacidadeCarga}
           />
-          {errors.statusCapacidadeCarga && <ErrorText theme={theme} neon={neon}>{errors.statusCapacidadeCarga}</ErrorText>}
         </StatusGrid>
 
         <Select
@@ -262,8 +261,10 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
           value={atributoInicial}
           onChange={(e) => setAtributoInicial(e.target.value)}
           width="100%"
+          error={!!errors.atributoInicial}
+          errorMessage={errors.atributoInicial}
+          required
         />
-        {errors.atributoInicial && <ErrorText theme={theme} neon={neon}>{errors.atributoInicial}</ErrorText>}
 
         <PassivasSection>
           <StatusTitle theme={theme} neon={neon}>Habilidades Passivas</StatusTitle>

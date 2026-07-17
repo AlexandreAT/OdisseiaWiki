@@ -36,6 +36,7 @@ interface FormProps {
 export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
   const {
     step, handleNext, handleSubmit,
+    isSubmitting,
     handlePrev, isFirstStep, isLastStep,
     userName, setUserName,
     race, handleRaceChange,
@@ -647,6 +648,8 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
           width="200px"
           type="button"
           onClick={isLastStep ? handleSubmit : handleNext}
+          disabled={isSubmitting}
+          loading={isLastStep && isSubmitting}
         />
       </NavegationButtons>
 
