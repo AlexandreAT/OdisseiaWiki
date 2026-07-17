@@ -9,6 +9,7 @@ import {
   HiddenInput,
 } from './ImageGallery.style';
 import CloseIcon from '@mui/icons-material/Close';
+import { FallbackImage } from '../FallbackImage/FallbackImage';
 
 interface ImageGalleryProps {
   theme: 'dark' | 'light';
@@ -65,7 +66,11 @@ export const ImageGallery = ({
       <GalleryGrid>
         {imageUrls.map((url, index) => (
           <GalleryImageContainer key={index}>
-            <img src={url} alt={`Galeria ${index + 1}`} />
+            <FallbackImage
+              src={url}
+              alt={`Galeria ${index + 1}`}
+              style={{ width: '100%', height: '100%' }}
+            />
             <RemoveImageButton
               theme={theme}
               neon={neon}

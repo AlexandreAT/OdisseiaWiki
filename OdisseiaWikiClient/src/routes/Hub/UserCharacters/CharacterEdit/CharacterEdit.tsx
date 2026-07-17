@@ -24,6 +24,8 @@ interface UserCharactersProps {
 export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserCharactersProps) => {
   const [editStep, setEditStep] = React.useState<1 | 2>(1);
   const [lastSavedSnapshot, setLastSavedSnapshot] = React.useState('');
+  const [nameError, setNameError] = React.useState(false);
+  const [raceError, setRaceError] = React.useState(false);
   const hasSnapshotInitializedRef = React.useRef(false);
 
     const {
@@ -160,23 +162,20 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserC
     const isLastStep = editStep === 2;
 
     const validateEdit = React.useCallback(() => {
-      if (!userName.trim()) {
-        toast.error('Nome é obrigatório.');
-        return false;
-      }
+      const hasNameError = !userName.trim();
+      const hasRaceError = !race || race === 0;
 
-      if (!race || race === 0) {
-        toast.error('Selecione uma raça válida.');
-        return false;
-      }
+      setNameError(hasNameError);
+      setRaceError(hasRaceError);
 
-      if (!city || city === 0) {
-        toast.error('Selecione uma cidade válida.');
+      if (hasNameError || hasRaceError) {
+        setEditStep(2);
+        toast.error('Corrija os campos obrigatórios destacados.');
         return false;
       }
 
       return true;
-    }, [userName, race, city]);
+    }, [userName, race]);
 
     const handleSave = React.useCallback(async () => {
       if (!validateEdit()) return;
@@ -283,6 +282,12 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, onSave }: UserC
                   searchTerm={searchTerm}
                   loadingPersonagens={loadingPersonagens}
                   searchPersonagens={searchPersonagens}
+                  nameError={nameError}
+                  nameErrorMessage="Nome é obrigatório."
+                  onNameFocus={() => setNameError(false)}
+                  raceError={raceError}
+                  raceErrorMessage="Selecione uma raça válida."
+                  onRaceFocus={() => setRaceError(false)}
                 />
               )}
             </FormEditController>

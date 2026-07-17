@@ -109,6 +109,8 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
   const [isSaving, setIsSaving] = React.useState(false);
   const [loadingError, setLoadingError] = React.useState<string | null>(null);
   const [lastSavedSnapshot, setLastSavedSnapshot] = React.useState('');
+  const [nameError, setNameError] = React.useState(false);
+  const [raceError, setRaceError] = React.useState(false);
   const hasSnapshotInitializedRef = React.useRef(false);
 
   const {
@@ -286,7 +288,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
 
         setUserName(payload.nome || '');
         setRace(Number(payload.idraca));
-        setCity(Number(payload.idcidade));
+        setCity(payload.idcidade ? Number(payload.idcidade) : undefined);
         setAvatarUrl(payload.imagem || '');
         setGaleriaUrls(Array.isArray(loadedGaleria) ? loadedGaleria : []);
         setHistory(normalizeToJSONContent(tryParseRichText(payload.historia) || ''));
@@ -490,23 +492,20 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
   }, []);
 
   const validateEdit = React.useCallback(() => {
-    if (!userName.trim()) {
-      toast.error('Nome é obrigatório.');
-      return false;
-    }
+    const hasNameError = !userName.trim();
+    const hasRaceError = !race || race === 0;
 
-    if (!race || race === 0) {
-      toast.error('Selecione uma raça válida.');
-      return false;
-    }
+    setNameError(hasNameError);
+    setRaceError(hasRaceError);
 
-    if (!city || city === 0) {
-      toast.error('Selecione uma cidade válida.');
+    if (hasNameError || hasRaceError) {
+      setEditStep(2);
+      toast.error('Corrija os campos obrigatórios destacados.');
       return false;
     }
 
     return true;
-  }, [city, race, userName]);
+  }, [race, userName]);
 
   const handleSave = React.useCallback(async (options?: { goBackAfterSave?: boolean }) => {
     if (!validateEdit()) return;
@@ -833,6 +832,12 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
             searchTerm={searchTerm}
             loadingPersonagens={loadingPersonagens}
             searchPersonagens={searchPersonagens}
+            nameError={nameError}
+            nameErrorMessage="Nome é obrigatório."
+            onNameFocus={() => setNameError(false)}
+            raceError={raceError}
+            raceErrorMessage="Selecione uma raça válida."
+            onRaceFocus={() => setRaceError(false)}
           />
         )}
       </FormEditController>

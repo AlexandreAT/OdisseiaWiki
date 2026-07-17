@@ -1,4 +1,5 @@
 import styled from 'styled-components';
+import { FallbackImage } from '../FallbackImage/FallbackImage';
 
 interface Props {
     theme: 'dark' | 'light';
@@ -220,6 +221,12 @@ export const Avatar = styled.div<Props>`
         height: 100%;
         object-fit: cover;
     }
+`;
+
+export const NavbarAvatarImage = styled(FallbackImage)`
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
 `;
 
 

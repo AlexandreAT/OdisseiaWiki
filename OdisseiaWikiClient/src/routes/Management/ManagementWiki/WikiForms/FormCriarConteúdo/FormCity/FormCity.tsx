@@ -107,10 +107,6 @@ export const FormCity = ({ theme, neon, initialCity, onSaveSuccess, contentType 
         onSaveSuccess();
       }
     } else {
-      if (imagemUrl == "") {
-        toast.error("É necessário fazer upload de uma imagem para a cidade");
-        return;
-      }
       toast.error(result?.message || 'Erro ao salvar cidade');
     }
   };

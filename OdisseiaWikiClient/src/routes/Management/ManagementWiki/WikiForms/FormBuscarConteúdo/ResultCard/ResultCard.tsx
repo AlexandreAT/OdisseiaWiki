@@ -100,7 +100,7 @@ export const ResultCard: React.FC<CardProps> = ({ theme, neon, item, onEdit, onD
     <CardContainer theme={theme} neon={neon}>
       <VisibilityIndicator theme={theme} neon={neon} visivel={item.visivel} />
       
-      <CardImage imageUrl={item.imagem} />
+      <CardImage src={item.imagem} alt={`Imagem de ${item.nome}`} />
       
       <CardHeader>
         <CardTitle theme={theme} neon={neon} title={item.nome}>

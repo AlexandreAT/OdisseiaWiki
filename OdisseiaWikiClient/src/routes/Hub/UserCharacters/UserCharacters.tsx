@@ -213,8 +213,8 @@ export const UserCharacters = ({ theme, neon, userId, onViewModeChange, onPerson
                       <CharacterImage 
                         theme={theme} 
                         neon={neon} 
-                        src={p.imagem || '/assets/default-character.png'} 
-                        alt={p.nome} 
+                        src={p.imagem}
+                        alt={`Imagem de ${p.nome ?? 'personagem'}`}
                         onClick={() => {
                           setSelectedCharacter(p);
                           setViewMode('edit');

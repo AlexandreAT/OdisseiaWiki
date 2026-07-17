@@ -70,6 +70,12 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
   destaque,
   setDestaque,
   raceChangeMode = 'default',
+  nameError = false,
+  nameErrorMessage,
+  onNameFocus,
+  raceError = false,
+  raceErrorMessage,
+  onRaceFocus,
 }) => {
 
   const characterAvatarCropPreset: CropPreset = {
@@ -120,6 +126,10 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
             label="Nome"
             value={userName}
             onChange={e => setUserName(e.target.value)}
+            onFocus={onNameFocus}
+            error={nameError}
+            errorMessage={nameErrorMessage}
+            required
             width="100%"
           />
 
@@ -130,6 +140,10 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
             options={raceOptions}
             value={race}
             onChange={(e) => setRace(Number(e.target.value))}
+            onFocus={onRaceFocus}
+            error={raceError}
+            errorMessage={raceErrorMessage}
+            required
             width="100%"
             disabled={loadingRaces || !canChangeRace}
           />

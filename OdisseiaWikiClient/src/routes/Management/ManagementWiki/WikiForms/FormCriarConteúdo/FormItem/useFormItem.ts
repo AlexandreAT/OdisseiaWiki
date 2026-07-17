@@ -167,8 +167,6 @@ export const useFormItem = (initialItem?: ItemPayload, contentType?: string) => 
       return false;
     }
 
-    if (imagemUrl == "") return false;
-
     setNomeError("");
     return true;
   };

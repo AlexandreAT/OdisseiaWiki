@@ -45,7 +45,6 @@ export const useFormCity = (initialCity?: CidadePayload, contentType?: string) =
 
   const [errors, setErrors] = useState<CityFormErrors>({});
   const [nomeError, setNomeError] = useState('');
-  const [imagemError, setImagemError] = useState('');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -70,31 +69,14 @@ export const useFormCity = (initialCity?: CidadePayload, contentType?: string) =
     return true;
   };
 
-  const validateImagem = (url: string, file: File | null): boolean => {
-    // Em modo edição (cidadeId existe), imagem não é obrigatória pois já existe
-    if (cidadeId) {
-      setImagemError('');
-      return true;
-    }
-    // Em modo criação, imagem é obrigatória
-    if (!url && !file) {
-      setImagemError('A imagem principal é obrigatória');
-      return false;
-    }
-    setImagemError('');
-    return true;
-  };
-
   const validateForm = (): boolean => {
     const isNomeValid = validateNome(nome);
-    const isImagemValid = validateImagem(imagemUrl, imagemFile);
 
     const newErrors: CityFormErrors = {};
     if (!isNomeValid) newErrors.nome = nomeError;
-    if (!isImagemValid) newErrors.imagem = imagemError;
 
     setErrors(newErrors);
-    return isNomeValid && isImagemValid;
+    return isNomeValid;
   };
 
   const handleNomeChange = (value: string) => {
@@ -111,16 +93,10 @@ export const useFormCity = (initialCity?: CidadePayload, contentType?: string) =
       }
       setImagemFile(null);
       setImagemUrl('');
-      if (imagemError) {
-        validateImagem('', null);
-      }
     } else {
       setImagemFile(file);
       const url = URL.createObjectURL(file);
       setImagemUrl(url);
-      if (imagemError) {
-        validateImagem(url, file);
-      }
     }
   };
 
@@ -214,7 +190,6 @@ export const useFormCity = (initialCity?: CidadePayload, contentType?: string) =
       setDestaque(false);
     setErrors({});
     setNomeError('');
-    setImagemError('');
   };
 
   const uploadImages = async (): Promise<{ imagemPath: string; galeriaPaths: string[] }> => {
@@ -343,7 +318,6 @@ export const useFormCity = (initialCity?: CidadePayload, contentType?: string) =
     isSubmitting,
     errors,
     nomeError,
-    imagemError,
     
     setNome: handleNomeChange,
     setNomeError,

@@ -9,6 +9,7 @@ import {
   RemoveImageButton,
 } from './ImageUpload.style';
 import CloseIcon from '@mui/icons-material/Close';
+import { FallbackImage } from '../FallbackImage/FallbackImage';
 
 interface ImageUploadProps {
   theme: 'dark' | 'light';
@@ -82,7 +83,11 @@ export const ImageUpload = ({
       >
         {imageUrl ? (
           <>
-            <img src={imageUrl} alt={label || 'Imagem selecionada'} />
+            <FallbackImage
+              src={imageUrl}
+              alt={label || 'Imagem selecionada'}
+              style={{ width: '100%', height: '100%' }}
+            />
             {showRemoveButton && (
               <RemoveImageButton
                 theme={theme}

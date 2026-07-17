@@ -136,10 +136,6 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
         onSaveSuccess();
       }
     } else {
-      if (imagemUrl == "") {
-        toast.error("É necessário fazer upload de uma imagem para a raça");
-        return;
-      }
       toast.error(result?.message || 'Erro ao salvar raça');
     }
   };

@@ -173,6 +173,11 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
   const [listMesas, setListMesas] = useState<Mesa[]>([]);
   const [selectedMesa, setSelectedMesa] = useState<number | undefined>(undefined);
   const [loadingMesas, setLoadingMesas] = useState(true);
+  const [mesaError, setMesaError] = useState(false);
+
+  useEffect(() => {
+    if (selectedMesa) setMesaError(false);
+  }, [selectedMesa]);
 
   const isFirstStep = step === 1;
   const isLastStep = step === TOTAL_STEPS;
@@ -671,6 +676,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     }
 
     if (!selectedMesa) {
+      setMesaError(true);
       toast.error('Selecione uma mesa válida.');
       return false;
     }
@@ -781,6 +787,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     }
 
     if (!selectedMesa) {
+      setMesaError(true);
       toast.error('Selecione uma mesa válida.');
       return;
     }
@@ -949,6 +956,8 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     setSearchItensTerm,
     selectedMesa,
     setSelectedMesa,
+    mesaError,
+    setMesaError,
     listMesas,
     loadingMesas,
     searchPersonagens,

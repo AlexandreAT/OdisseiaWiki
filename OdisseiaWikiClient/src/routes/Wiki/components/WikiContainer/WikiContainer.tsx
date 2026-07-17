@@ -20,9 +20,7 @@ import { WikiSearchLoading } from '../WikiSearchLoading';
 export const WikiContainer: React.FC<WikiContainerProps> = () => {
   const { theme, neon } = useSelector((state: any) => state.themesReducer);
   const [searchParams] = useSearchParams();
-  const [sidebarExpanded, setSidebarExpanded] = useState(() => (
-    typeof window === 'undefined' || window.innerWidth > 768
-  ));
+  const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [headerExpanded, setHeaderExpanded] = useState(true);
   
   const isDark = theme === 'dark';

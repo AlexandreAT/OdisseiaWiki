@@ -50,6 +50,7 @@ const CharacterCreateComponent = ({ theme, neon, userId, onSave }: UserCharacter
     defesas, setDefesas,
     listItens, handleSelectItem,
     selectedMesa, listMesas, setSelectedMesa, loadingMesas,
+    mesaError, setMesaError,
     isSubmitting,
   } = useFormUserCharacter(userId, onSave);
 
@@ -89,6 +90,10 @@ const CharacterCreateComponent = ({ theme, neon, userId, onSave }: UserCharacter
         options={listMesas.map(m => ({ value: m.idmesa, label: m.nome }))}
         value={selectedMesa}
         onChange={e => setSelectedMesa(Number(e.target.value))}
+        onFocus={() => setMesaError(false)}
+        error={mesaError}
+        errorMessage="Selecione uma mesa válida."
+        required
         width="100%"
         disabled={loadingMesas}
         allowEmptyOption={false}

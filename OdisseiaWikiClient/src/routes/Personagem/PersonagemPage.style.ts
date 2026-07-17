@@ -3,6 +3,7 @@ import { wikiHeading1Style, wikiHeading2Style, wikiHeading3Style, wikiParagraphS
 import HudCorner from '../../assets/svg/HudCorner.svg';
 import Hexagono from '../../assets/svg/Hexagono.svg';
 import HexagonoFill from '../../assets/svg/HexagonoFill.svg';
+import { FallbackImage } from '../../components/Generic/FallbackImage/FallbackImage';
 
 export const BackgroundVideoContainer = styled.div`
   position: fixed;
@@ -965,10 +966,9 @@ export const InfoSpan = styled.span`
   font-size: 13px;
 `
 
-export const ItemThumb = styled.img<{ $size?: number; $color?: string; $clearColor?: string }>`
+export const ItemThumb = styled(FallbackImage)<{ $size?: number; $color?: string; $clearColor?: string }>`
   width: ${({ $size }) => $size ?? 48}px;
   height: ${({ $size }) => $size ?? 48}px;
-  object-fit: cover;
   border-radius: 0;
   box-sizing: border-box;
   flex-shrink: 0;
@@ -1608,14 +1608,17 @@ export const DetailAttribute = styled.div`
   &.detail-special { grid-column: 1 / -1; }
 `;
 
-export const ItemDescriptionImage = styled.img`
+export const ItemDescriptionImage = styled(FallbackImage)`
   width: 200px;
   max-width: 100%;
   height: auto;
   max-height: 300px;
-  object-fit: contain;
   border: 1px solid var(--neonBlue);
   box-shadow: 0 0 10px var(--clearneonBlue);
+
+  > img {
+    object-fit: contain;
+  }
 
   @media (max-width: 767px) {
     width: min(100%, 220px);

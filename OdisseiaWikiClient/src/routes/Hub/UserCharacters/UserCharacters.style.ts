@@ -1,5 +1,6 @@
 import { styled } from 'styled-components';
 import { IconButton } from "@mui/material";
+import { FallbackImage } from '../../../components/Generic/FallbackImage/FallbackImage';
 
 interface Props {
     theme: 'dark' | 'light';
@@ -287,10 +288,10 @@ export const CardLeft = styled.div`
   }
 `
 
-export const CharacterImage = styled.img<Props>`
+export const CharacterImage = styled(FallbackImage)<Props>`
   width: 110px;
+  aspect-ratio: 1;
   border-radius: 50%;
-  object-fit: cover;
   border: 2px solid transparent;
   transition: all 0.3s ease;
 

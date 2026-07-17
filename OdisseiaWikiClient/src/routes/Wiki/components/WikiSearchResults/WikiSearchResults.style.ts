@@ -1,5 +1,6 @@
 import styled from 'styled-components';
 import { WikiSearchEntityType } from '../../types';
+import { FallbackImage } from '../../../../components/Generic/FallbackImage/FallbackImage';
 
 const getGroupColor = (type: WikiSearchEntityType) => ({
   pages: 'var(--clearneonBlue)',
@@ -141,11 +142,11 @@ export const ResultCard = styled.button<{
   }
 `;
 
-export const ResultCardImage = styled.img`
+export const ResultCardImage = styled(FallbackImage)<{ $type: WikiSearchEntityType }>`
   width: 100%;
   height: 160px;
-  object-fit: cover;
   background-color: #000;
+  color: ${({ $type }) => getGroupColor($type)};
 `;
 
 export const ResultCardContent = styled.div`

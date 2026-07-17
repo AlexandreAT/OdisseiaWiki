@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { SpanOption, AvatarCotroller, Avatar, NavigationLinks } from '.././Navbar.style';
+import { SpanOption, AvatarCotroller, Avatar, NavbarAvatarImage, NavigationLinks } from '.././Navbar.style';
 import { PerfilList } from '../PerfilList/PerfilList';
 import { useRef, useState } from 'react';
 
@@ -31,7 +31,7 @@ export  const NavbarLinks = ({ theme, neon, usuario }: Props) => {
                         neon={neon}
                         onClick={() => setShowPerfil(!showPerfil)}
                     >
-                        <img src={usuario.imagemUrl} alt="Avatar do usuário" />
+                        <NavbarAvatarImage src={usuario.imagemUrl} alt="Avatar do usuário" />
                     </Avatar>
                     {showPerfil && (
                         <PerfilList

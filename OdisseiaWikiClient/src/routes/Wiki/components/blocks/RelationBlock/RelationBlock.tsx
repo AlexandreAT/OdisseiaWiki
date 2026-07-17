@@ -250,6 +250,7 @@ const RelationTypeCarousel: React.FC<RelationTypeCarouselProps> = ({ tipo, items
           <RelationCardImage
             $entityType={relation.tipoEntidade}
             src={normalizeImagePath(img as string)}
+            fallbackIcon={typeIcons[relation.tipoEntidade as string] || <BiUserCircle />}
             alt={name || 'Relação'}
           />
         ) : (
