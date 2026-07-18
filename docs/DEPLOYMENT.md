@@ -87,7 +87,7 @@ conteúdo não possuem registros de teste.
 
 Crie um **Web Service**, selecione Docker e use:
 
-- branch inicial: `feat/preparacao-deploy` (trocar para a branch definitiva após o merge);
+- branch de produção: `main`;
 - repository root/build context: raiz do repositório;
 - Dockerfile: `OdisseiaWiki/Dockerfile`;
 - instance type: Free;
@@ -175,7 +175,7 @@ nem do startup. As imagens locais e URLs antigas do ImgBB continuam preservadas 
 
 ## 4. Frontend no Netlify Free
 
-Conecte o repositório e selecione a mesma branch do backend durante a preparação. O arquivo
+Conecte o repositório e selecione a branch `main`. O arquivo
 `netlify.toml` já define:
 
 ```text
@@ -241,7 +241,7 @@ Google não é utilizado e nunca deve ir para o frontend.
 - Conferir CORS: Netlify permitido e origem não cadastrada bloqueada.
 - Conferir logs sem senha, tokens, connection string ou API secrets.
 
-## 7. Limites que ficam para a Fase 4
+## 7. Limitações atuais dos planos gratuitos
 
 - Render Free entra em cold start após inatividade e pode levar cerca de um minuto para acordar.
 - O Aiven Free é single-node, limitado a 1 GB e pode ser pausado por inatividade.

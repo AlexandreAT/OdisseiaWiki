@@ -11,13 +11,18 @@ Wiki e gerenciador de personagens para o universo de RPG Odisseia.
 
 ## Início local
 
-1. Clone o repositório.
-2. Configure os dois arquivos locais a partir dos exemplos:
-   - `OdisseiaWiki/appsettings.Development.example.json` → `OdisseiaWiki/appsettings.Development.json`
-   - `OdisseiaWikiClient/.env.example` → `OdisseiaWikiClient/.env`
-3. Inicie MySQL, aplique as migrations e execute backend e frontend.
+1. Instale Git, .NET SDK 8, Node.js 20, MySQL 8 e `dotnet-ef` 8.0.13.
+2. Clone `https://github.com/AlexandreAT/OdisseiaWiki.git`.
+3. Crie os arquivos locais a partir de:
+   - `OdisseiaWiki/appsettings.Development.example.json`;
+   - `OdisseiaWikiClient/.env.example`.
+4. Crie o banco `odisseia`, aplique as migrations e execute backend e frontend.
 
-O passo a passo, valores necessários e origem das chaves estão em [docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md).
+`OdisseiaWiki/appsettings.Example.json` é apenas uma referência de produção; no Render, seus valores
+são cadastrados como variáveis de ambiente e esse arquivo não recebe segredos reais.
+
+Os comandos na ordem correta, cada valor necessário, origem das chaves, validações e erros comuns
+estão em [docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md).
 
 ## Segurança de configurações
 
