@@ -121,6 +121,8 @@ function DataTableComponent<T extends { [key: string]: any }>({
 
   const dataRef = useRef(data);
   dataRef.current = data;
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
 
   const createEmptyRow = useCallback(() => columns.reduce((acc, col) => {
     (acc as any)[col.key] = col.inputType === "number" ? 0 : "";
@@ -138,8 +140,8 @@ function DataTableComponent<T extends { [key: string]: any }>({
   const updateValue = useCallback((rowIndex: number, key: keyof T, value: any) => {
     const updated = [...dataRef.current];
     updated[rowIndex] = { ...updated[rowIndex], [key]: value };
-    onChange(updated);
-  }, [onChange]);
+    onChangeRef.current(updated);
+  }, []);
 
 
   const handleEnter = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -151,10 +153,10 @@ function DataTableComponent<T extends { [key: string]: any }>({
         inputs[currentIndex + 1].focus();
       } else {
       
-        onChange([...dataRef.current, createEmptyRow()]);
+        onChangeRef.current([...dataRef.current, createEmptyRow()]);
       }
     }
-  }, [createEmptyRow, onChange]);
+  }, [createEmptyRow]);
 
 
   const renderCell = useCallback((col: ColumnConfig<T>, rowIndex: number) => {
@@ -198,13 +200,13 @@ function DataTableComponent<T extends { [key: string]: any }>({
   })), [columns, renderCell]);
 
   const handleAddRow = useCallback(() => {
-    onChange([...dataRef.current, createEmptyRow()]);
-  }, [createEmptyRow, onChange]);
+    onChangeRef.current([...dataRef.current, createEmptyRow()]);
+  }, [createEmptyRow]);
 
   const handleRemoveRow = useCallback((index: number) => {
     const updated = dataRef.current.filter((_, i) => i !== index);
-    onChange(updated);
-  }, [onChange]);
+    onChangeRef.current(updated);
+  }, []);
 
   const searchSuggestions = useMemo(() => {
     if (!searchData || !searchKeys) return [];

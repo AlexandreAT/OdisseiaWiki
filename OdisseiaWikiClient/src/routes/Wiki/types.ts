@@ -8,9 +8,12 @@ export interface WikiSearchItem {
   title: string;
   description?: string;
   image?: string;
+  createdAt?: string;
   route: string;
   searchTerms?: string[];
 }
+
+export type WikiSearchSortOption = 'name' | 'createdAt';
 
 export type WikiSearchGroups = Record<WikiSearchEntityType, WikiSearchItem[]>;
 

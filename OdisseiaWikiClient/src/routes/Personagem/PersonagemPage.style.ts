@@ -1106,6 +1106,24 @@ export const MaskIcon = styled.div<{ src: string; color?: string; size?: number 
   mask-position: center;
 `;
 
+export const AuthorIcon = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  color: var(--neonBlue) !important;
+
+  > svg,
+  > svg path {
+    width: 20px;
+    height: 20px;
+    color: inherit !important;
+    fill: currentColor !important;
+  }
+`;
+
 export const ItemRow = styled.div<{ $clickable?: boolean; $color?: string; $clearColor?: string }>`
   display: flex;
   flex-direction: row;
