@@ -113,6 +113,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
   const [nameError, setNameError] = React.useState(false);
   const [raceError, setRaceError] = React.useState(false);
   const hasSnapshotInitializedRef = React.useRef(false);
+  const saveInFlightRef = React.useRef(false);
 
   const {
     userName,
@@ -526,6 +527,8 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
 
   const handleSave = React.useCallback(async (options?: { goBackAfterSave?: boolean }) => {
     if (!validateEdit()) return;
+    if (saveInFlightRef.current) return;
+    saveInFlightRef.current = true;
 
     try {
       setIsSaving(true);
@@ -677,7 +680,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
 
       setLastSavedSnapshot(snapshot);
       toast.success('NPC atualizado com sucesso!');
-      onSave?.();
+      await onSave?.();
 
       if (options?.goBackAfterSave) {
         onBack();
@@ -685,6 +688,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
     } catch (error: unknown) {
       toast.error(getApiErrorMessage(error, 'Erro ao atualizar personagem.'));
     } finally {
+      saveInFlightRef.current = false;
       setIsSaving(false);
     }
   }, [

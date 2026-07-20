@@ -11,7 +11,7 @@ const drawOutline = keyframes`
     stroke-dasharray: 0 160;
     opacity: 1;
   }
-  92% {
+  94% {
     stroke-dasharray: 160 0;
     opacity: 1;
   }
@@ -27,7 +27,7 @@ const drawWideOutline = keyframes`
     stroke-dashoffset: 1200;
     opacity: 1;
   }
-  92% {
+  94% {
     stroke-dasharray: 1200;
     stroke-dashoffset: 0;
     opacity: 1;
@@ -40,8 +40,8 @@ const drawWideOutline = keyframes`
 `;
 
 const revealFill = keyframes`
-  0%, 86% { opacity: 0; }
-  100% { opacity: 1; }
+  from { opacity: 0; }
+  to { opacity: 1; }
 `;
 
 const getTitleColor = ({ theme, neon }: TitleStyleProps) => {
@@ -73,14 +73,14 @@ export const AnimatedTitleSvg = styled.svg<TitleStyleProps>`
     stroke-dashoffset: ${({ $wide }) => $wide ? '1200' : '0'};
     opacity: 0;
     animation: ${({ $wide }) => $wide
-      ? css`${drawWideOutline} 3s linear forwards`
-      : css`${drawOutline} 3s linear forwards`};
+      ? css`${drawWideOutline} 4.1s linear forwards`
+      : css`${drawOutline} 4.1s linear forwards`};
   }
 
   .title-fill {
     fill: ${getTitleColor};
     opacity: 0;
-    animation: ${revealFill} 3s ease-out forwards;
+    animation: ${revealFill} 320ms ease-out 3.85s forwards;
   }
 
   @media (max-width: 768px) {
@@ -91,20 +91,5 @@ export const AnimatedTitleSvg = styled.svg<TitleStyleProps>`
   @media (max-width: 480px) {
     width: ${({ $wide }) => ($wide ? '90vw' : '190px')};
     height: ${({ $wide }) => ($wide ? '46px' : '30px')};
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .title-outline,
-    .title-fill {
-      animation: none;
-    }
-
-    .title-outline {
-      opacity: 0;
-    }
-
-    .title-fill {
-      opacity: 1;
-    }
   }
 `;

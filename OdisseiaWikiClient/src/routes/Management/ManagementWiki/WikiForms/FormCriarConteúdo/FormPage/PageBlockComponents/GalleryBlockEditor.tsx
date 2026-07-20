@@ -157,7 +157,7 @@ export const GalleryBlockEditor: React.FC<GalleryBlockEditorProps> = ({
                     }}
                   />
                 </div>
-                <DeleteButton onClick={() => handleRemoveImage(idx)}>
+                <DeleteButton type="button" onClick={() => handleRemoveImage(idx)} title="Remover imagem">
                   ✕
                 </DeleteButton>
               </ImageItem>

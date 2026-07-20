@@ -3,15 +3,11 @@ import styled, { css, keyframes } from 'styled-components';
 import { FallbackImage } from '../../components/Generic/FallbackImage/FallbackImage';
 import HudCorner from '../../assets/svg/HudCorner.svg';
 import { ImageDisplayShape } from '../../utils/imageDisplayShape';
+import { ScrollRevealBlock } from '../../components/Generic/ScrollRevealBlock/ScrollRevealBlock';
 
 const bannerArrival = keyframes`
   from { opacity: 0; transform: scale(1.035); }
   to { opacity: 1; transform: scale(1); }
-`;
-
-const panelArrival = keyframes`
-  from { opacity: 0; transform: translateY(18px); }
-  to { opacity: 1; transform: translateY(0); }
 `;
 
 const panelFrame = css<{ $neon?: boolean }>`
@@ -183,6 +179,25 @@ export const BannerContent = styled.div`
   overflow: visible;
   padding: 40px 18px;
   text-align: center;
+  isolation: isolate;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 24px 0;
+    z-index: -1;
+    pointer-events: none;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(0, 0, 0, 0.08) 14%,
+      rgba(0, 0, 0, 0.42) 36%,
+      rgba(0, 0, 0, 0.58) 50%,
+      rgba(0, 0, 0, 0.42) 64%,
+      rgba(0, 0, 0, 0.08) 86%,
+      transparent 100%
+    );
+  }
 `;
 
 export const BannerTagList = styled.div`
@@ -225,6 +240,16 @@ export const CityGrid = styled.div<{ $sectionCount: number }>`
   }
 `;
 
+export const CityRevealBlock = styled(ScrollRevealBlock)<{ $gallery?: boolean }>`
+  align-self: start;
+
+  ${({ $gallery }) => $gallery && css`
+    @media (min-width: 821px) and (max-width: 1280px) {
+      grid-column: 1 / -1;
+    }
+  `}
+`;
+
 export const HudPanel = styled.section<{ $gallery?: boolean; $neon: boolean; $standalone?: boolean }>`
   ${panelFrame}
   min-width: 0;
@@ -234,14 +259,6 @@ export const HudPanel = styled.section<{ $gallery?: boolean; $neon: boolean; $st
   overflow: ${({ $standalone }) => $standalone ? 'visible' : 'hidden'};
   padding: 18px;
   box-sizing: border-box;
-  animation: ${panelArrival} 0.55s ease-out both;
-
-  ${({ $gallery }) => $gallery && css`
-    @media (min-width: 821px) and (max-width: 1280px) {
-      grid-column: 1 / -1;
-    }
-  `}
-
   @media (max-width: 540px) {
     padding: 14px;
   }
@@ -383,21 +400,47 @@ export const CompactCardGrid = styled.div<{ $columns?: number }>`
   }
 `;
 
+export const PointList = styled.div`
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 8px;
+`;
+
 export const PointCard = styled.article`
   display: flex;
-  align-items: flex-start;
+  width: 100%;
+  height: 68px;
+  align-items: stretch;
   gap: 9px;
   min-width: 0;
   overflow: hidden;
-  border: 1px solid rgba(59, 187, 238, 0.34);
-  border-radius: 4px;
-  background: rgba(7, 22, 39, 0.72);
+  border: 1px solid transparent;
+  border-radius: 2px;
+  background: rgba(7, 22, 39, 0.42);
+  box-sizing: border-box;
+  cursor: pointer;
+  transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+
+  &:hover,
+  &:focus-within {
+    border-color: var(--clearneonBlue);
+    background: rgba(0, 184, 255, 0.08);
+    box-shadow: 0 0 10px rgba(0, 204, 255, 0.25);
+  }
+
+  &:focus-visible {
+    border-color: var(--clearneonBlue);
+    box-shadow: 0 0 10px rgba(0, 204, 255, 0.25);
+    outline: none;
+  }
 `;
 
 export const PointImageButton = styled.button<{ $modal?: boolean }>`
-  width: ${({ $modal }) => $modal ? '82px' : '58px'};
-  height: ${({ $modal }) => $modal ? '82px' : '58px'};
-  flex: 0 0 ${({ $modal }) => $modal ? '82px' : '58px'};
+  width: ${({ $modal }) => $modal ? 'auto' : '66px'};
+  height: ${({ $modal }) => $modal ? '100%' : '66px'};
+  aspect-ratio: 1;
+  flex: 0 0 auto;
   overflow: hidden;
   border: 1px solid rgba(59, 187, 238, 0.45);
   border-radius: 3px;
@@ -424,9 +467,12 @@ export const PointImage = styled(FallbackImage)`
 `;
 
 export const PointContent = styled.div`
+  display: flex;
   min-width: 0;
   flex: 1;
-  padding: 9px;
+  flex-direction: column;
+  justify-content: center;
+  padding: 8px 10px 8px 3px;
 `;
 
 export const CardName = styled.h3`
@@ -675,7 +721,30 @@ export const RelatedPageLink = styled(Link)`
 `;
 
 export const ModalPointCard = styled(PointCard)`
-  height: 100%;
+  height: 112px;
+  border-color: rgba(59, 187, 238, 0.22);
+  background: rgba(2, 13, 28, 0.76);
+
+  ${CardName} {
+    color: var(--clearneonBlue) !important;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px;
+  }
+
+  ${CardDescription} {
+    margin-top: 8px;
+    font-size: 12px;
+    -webkit-line-clamp: 3;
+  }
+
+  @media (max-width: 600px) {
+    height: 104px;
+
+    ${PointImageButton} {
+      width: auto;
+      height: 100%;
+    }
+  }
 `;
 
 export const ModalCharacterCard = styled(CharacterCard)`

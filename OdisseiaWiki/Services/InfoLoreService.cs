@@ -243,6 +243,7 @@ namespace OdisseiaWiki.Services
                     Visivel = p.Visivel,
                     Destaque = p.Destaque,
                     Slug = p.Slug,
+                    Tags = new List<string> { "Página" },
                     TipoEntidade = "Page"
                 }).ToList();
             }

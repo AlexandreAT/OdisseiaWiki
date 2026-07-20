@@ -226,6 +226,7 @@ export const useFormBuscarConteúdo = () => {
       if (success) {
         toast.success(`${item.tipoEntidade} excluído com sucesso`);
         setTotalResultados(prev => Math.max(0, prev - 1));
+        await handleSearch();
       } else {
         toast.error(`Erro ao excluir ${item.tipoEntidade?.toLowerCase()}`);
       }
@@ -236,7 +237,7 @@ export const useFormBuscarConteúdo = () => {
       setIsDeleting(false);
       setItemToDelete(null);
     }
-  }, [itemToDelete]);
+  }, [handleSearch, itemToDelete]);
 
   const handleCancelDelete = useCallback(() => {
     setOpenConfirmDelete(false);

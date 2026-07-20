@@ -2,7 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { InputText } from '../../../../../../components/Generic/InputText/InputText';
 import { Select } from '../../../../../../components/Generic/Select/Select';
-import { CheckBox } from '../../../../../../components/Generic/CheckBox/CheckBox';
+import { VisibilityToggle } from '../../../../../../components/Generic/VisibilityToggle';
 import { FeaturedToggle } from '../../../../../../components/Generic/FeaturedToggle';
 import { ImageUploader } from '../../../../../../components/Generic/ImageUploader/ImageUploader';
 import type { CropPreset } from '../../../../../../components/Generic/ImageUploader/types';
@@ -150,19 +150,26 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
   }), [nome, imagemUrl, imagemFile, galeriaUrls, galeriaFiles, galeriaCaptions, tags, visivel, destaque, vida, estamina, mana, capacidadeCarga, atributoInicial, passivas]);
   const [lastSavedSnapshot, setLastSavedSnapshot] = React.useState(snapshot);
   const isSynced = snapshot === lastSavedSnapshot;
+  const persistInFlightRef = React.useRef(false);
 
   const persist = async (stayOnPage: boolean, e?: React.FormEvent) => {
     e?.preventDefault();
-    const result = await handleSubmit(e);
+    if (persistInFlightRef.current) return;
+    persistInFlightRef.current = true;
+    try {
+      const result = await handleSubmit(e);
 
-    if (result?.success) {
-      toast.success(result.message);
-      setLastSavedSnapshot(snapshot);
-      if (onSaveSuccess) {
-        await onSaveSuccess({ stayOnPage });
+      if (result?.success) {
+        toast.success(result.message);
+        setLastSavedSnapshot(snapshot);
+        if (onSaveSuccess) {
+          await onSaveSuccess({ stayOnPage });
+        }
+      } else {
+        toast.error(result?.message || 'Erro ao salvar raça');
       }
-    } else {
-      toast.error(result?.message || 'Erro ao salvar raça');
+    } finally {
+      persistInFlightRef.current = false;
     }
   };
 
@@ -333,11 +340,10 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
       </StatusSection>
 
       <CheckboxSection>
-        <CheckBox
-          neon={neon}
+        <VisibilityToggle
           label="Raça visível"
-          checked={visivel}
-          onChange={(checked) => setVisivel(checked)}
+          visible={visivel}
+          onChange={setVisivel}
         />
         <FeaturedToggle featured={destaque} onChange={setDestaque} />
       </CheckboxSection>

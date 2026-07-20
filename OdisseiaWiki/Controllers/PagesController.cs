@@ -21,8 +21,19 @@ namespace OdisseiaWiki.Controllers
         [Authorize(Policy = AuthorizationPolicies.Admin)]
         public async Task<IActionResult> Create(CreatePageWithBlocksDto dto)
         {
-            var result = await _service.CreateAsync(dto);
-            return Ok(result);
+            try
+            {
+                var result = await _service.CreateAsync(dto);
+                return Ok(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new
+                {
+                    sucesso = false,
+                    mensagemErro = ex.Message
+                });
+            }
         }
 
         [HttpGet("search")]

@@ -4,7 +4,7 @@ import { useFormCity } from './useFormCity';
 import { InputText } from '../../../../../../components/Generic/InputText/InputText';
 import { RichTextEditor } from '../../../../../../components/Generic/RichTextEditor/RichTextEditor';
 import { CyberButton } from '../../../../../../components/Generic/HighlightButton/HighlightButton';
-import { CheckBox } from '../../../../../../components/Generic/CheckBox/CheckBox';
+import { VisibilityToggle } from '../../../../../../components/Generic/VisibilityToggle';
 import { FeaturedToggle } from '../../../../../../components/Generic/FeaturedToggle';
 import { ImageUploader } from '../../../../../../components/Generic/ImageUploader/ImageUploader';
 import type { CropPreset, CropResult } from '../../../../../../components/Generic/ImageUploader/types';
@@ -49,6 +49,7 @@ const POINT_IMAGE_CROP_PRESET: CropPreset = {
 
 export const FormCity = ({ theme, neon, initialCity, onSaveSuccess, contentType }: FormCityProps) => {
   const pointImageFilesRef = useRef<Map<string, File>>(new Map());
+  const persistInFlightRef = useRef(false);
   const {
     cidadeId,
     nome,
@@ -168,17 +169,23 @@ export const FormCity = ({ theme, neon, initialCity, onSaveSuccess, contentType 
 
   const persist = async (stayOnPage: boolean, e?: React.FormEvent) => {
     e?.preventDefault();
-    const result = await handleSubmit(e, pointImageFilesRef.current);
-    
-    if (result?.success) {
-      pointImageFilesRef.current.clear();
-      toast.success(result.message);
-      setLastSavedSnapshot(snapshot);
-      if (onSaveSuccess) {
-        await onSaveSuccess({ stayOnPage });
+    if (persistInFlightRef.current) return;
+    persistInFlightRef.current = true;
+    try {
+      const result = await handleSubmit(e, pointImageFilesRef.current);
+
+      if (result?.success) {
+        pointImageFilesRef.current.clear();
+        toast.success(result.message);
+        setLastSavedSnapshot(snapshot);
+        if (onSaveSuccess) {
+          await onSaveSuccess({ stayOnPage });
+        }
+      } else {
+        toast.error(result?.message || 'Erro ao salvar cidade');
       }
-    } else {
-      toast.error(result?.message || 'Erro ao salvar cidade');
+    } finally {
+      persistInFlightRef.current = false;
     }
   };
 
@@ -281,11 +288,10 @@ export const FormCity = ({ theme, neon, initialCity, onSaveSuccess, contentType 
       </DescriptionSection>
 
       <CheckboxSection>
-        <CheckBox
-          neon={neon}
+        <VisibilityToggle
           label="Cidade visível"
-          checked={visivel}
-          onChange={(checked) => setVisivel(checked)}
+          visible={visivel}
+          onChange={setVisivel}
         />
         <FeaturedToggle featured={destaque} onChange={setDestaque} />
       </CheckboxSection>

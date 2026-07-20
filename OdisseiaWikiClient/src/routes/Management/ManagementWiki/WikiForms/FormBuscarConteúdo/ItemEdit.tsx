@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import { CyberButton } from '../../../../../components/Generic/HighlightButton/HighlightButton';
 import { ConfirmDialog } from '../../../../../components/Generic/ConfirmDialog/ConfirmDialog';
 import { Select } from '../../../../../components/Generic/Select/Select';
-import { CheckBox } from '../../../../../components/Generic/CheckBox/CheckBox';
+import { VisibilityToggle } from '../../../../../components/Generic/VisibilityToggle';
 import { RichTextEditor } from '../../../../../components/Generic/RichTextEditor/RichTextEditor';
 import { ImageUploader } from '../../../../../components/Generic/ImageUploader/ImageUploader';
 import type { CropPreset } from '../../../../../components/Generic/ImageUploader/types';
@@ -214,18 +214,25 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
   }), [nome, tipo, descricao, quantidade, peso, efeito, imagemUrl, atributos, tags, visivel]);
   const [lastSavedSnapshot, setLastSavedSnapshot] = React.useState(snapshot);
   const isSynced = snapshot === lastSavedSnapshot;
+  const persistInFlightRef = React.useRef(false);
 
   const persist = async (stayOnPage: boolean, e?: React.FormEvent) => {
     e?.preventDefault();
-    const result = await handleSubmit();
+    if (persistInFlightRef.current) return;
+    persistInFlightRef.current = true;
+    try {
+      const result = await handleSubmit();
 
-    if (result?.success) {
-      toast.success(result.message);
-      setLastSavedSnapshot(snapshot);
-      await onSave?.();
-      if (!stayOnPage) onBack();
-    } else {
-      toast.error(result?.message || 'Erro ao atualizar item');
+      if (result?.success) {
+        toast.success(result.message);
+        setLastSavedSnapshot(snapshot);
+        await onSave?.();
+        if (!stayOnPage) onBack();
+      } else {
+        toast.error(result?.message || 'Erro ao atualizar item');
+      }
+    } finally {
+      persistInFlightRef.current = false;
     }
   };
 
@@ -398,11 +405,10 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
 
       {/* Seção de Visibilidade */}
       <CheckboxContainer>
-        <CheckBox
+        <VisibilityToggle
           label="Item visível"
-          checked={visivel}
-          onChange={(v: boolean) => setVisivel(v)}
-          neon={neon}
+          visible={visivel}
+          onChange={setVisivel}
         />
       </CheckboxContainer>
 

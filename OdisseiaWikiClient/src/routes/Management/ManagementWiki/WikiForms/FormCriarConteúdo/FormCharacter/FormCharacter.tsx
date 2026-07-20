@@ -10,7 +10,7 @@ import { RichTextEditor } from '../../../../../../components/Generic/RichTextEdi
 import { Search } from '../../../../../../components/Generic/Search/Search';
 import { BiSearchAlt } from 'react-icons/bi';
 import { CheckSelect } from '../../../../../../components/Generic/CheckSelect/CheckSelect';
-import { CheckBox } from '../../../../../../components/Generic/CheckBox/CheckBox';
+import { VisibilityToggle } from '../../../../../../components/Generic/VisibilityToggle';
 import { FeaturedToggle } from '../../../../../../components/Generic/FeaturedToggle';
 import { DataTable } from '../../../../../../components/Generic/DataTable/DataTable';
 import { HorizontalList } from '../../../../../../components/Generic/HorizontalList/HorizontalList';
@@ -431,11 +431,10 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
           </SectionTable>
 
           <CheckboxSection>
-            <CheckBox
-              neon={neon}
+            <VisibilityToggle
               label="Personagem visível"
-              checked={visivel}
-              onChange={(checked) => setVisivel(checked)}
+              visible={visivel}
+              onChange={setVisivel}
             />
             <FeaturedToggle featured={destaque} onChange={setDestaque} />
           </CheckboxSection>

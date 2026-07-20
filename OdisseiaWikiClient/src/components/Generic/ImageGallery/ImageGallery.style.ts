@@ -45,7 +45,7 @@ export const GalleryImageContainer = styled.div<{ shape?: 'square' | 'circle' | 
   border-radius: ${({ shape }) => (shape === 'circle' ? '50%' : '8px')};
   overflow: hidden;
   background: var(--lightBlack);
-  border: 1px solid var(--mediumgrey);
+  border: 1px solid transparent;
   transition: all 0.3s ease;
   display: flex;
   align-items: center;
@@ -63,7 +63,8 @@ export const GalleryImageContainer = styled.div<{ shape?: 'square' | 'circle' | 
     }
   }
 
-  &:hover {
+  &:hover,
+  &:focus-within {
     border-color: var(--neonBlue);
     box-shadow: 0 0 10px rgba(0, 200, 255, 0.3);
   }
@@ -102,7 +103,8 @@ export const RemoveImageButton = styled.button<Props>`
   transition: all 0.3s ease;
   z-index: 10;
 
-  ${GalleryImageContainer}:hover & {
+  ${GalleryImageContainer}:hover &,
+  ${GalleryImageContainer}:focus-within & {
     opacity: 1;
   }
 

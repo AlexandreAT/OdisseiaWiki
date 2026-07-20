@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { PageDto, PageBlock, CreatePageWithBlocksDto, PageBlockType, PageBlockDto } from '../../../../../../models/Pages';
 import { createPage, updatePage } from '../../../../../../services/pageService';
@@ -34,6 +34,7 @@ export const useFormPage = ({
   // --- Dados da página ---
   const [titulo, setTitulo] = useState(initialPage?.titulo || '');
   const [slug, setSlug] = useState(initialPage?.slug || '');
+  const slugManuallyEditedRef = useRef(Boolean(initialPage?.slug));
   const [descricao, setDescricao] = useState(initialPage?.descricao || '');
   const [coverImageUrl, setCoverImageUrl] = useState(initialPage?.coverImage || '');
   const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
@@ -60,6 +61,7 @@ export const useFormPage = ({
     if (initialPage) {
       setTitulo(initialPage.titulo || '');
       setSlug(initialPage.slug || '');
+      slugManuallyEditedRef.current = Boolean(initialPage.slug);
       setDescricao(initialPage.descricao || '');
       setCoverImageUrl(initialPage.coverImage || '');
       setVisivel(initialPage.visivel ?? true);
@@ -68,7 +70,6 @@ export const useFormPage = ({
   }, [initialPage]);
 
   useEffect(() => {
-    console.log("🚀 ~ useFormPage ~ initialBlocks:", initialBlocks)
     if (initialBlocks && initialBlocks.length > 0) {
       setBlocks(
         initialBlocks.map((b, idx) => ({
@@ -108,27 +109,39 @@ export const useFormPage = ({
 
   // --- Gerenciamento de blocos ---
   const addBlock = useCallback((tipo: PageBlockType) => {
-    const novoBloco: PageBlock = {
+    setBlocks((currentBlocks) => [...currentBlocks, {
       tipo,
       conteudo: getDefaultContent(tipo),
-      ordem: blocks.length,
+      ordem: currentBlocks.length,
       tempId: generateTempId(),
-    };
-
-    setBlocks([...blocks, novoBloco]);
-  }, [blocks]);
+    }]);
+  }, []);
 
   const removeBlock = useCallback((tempId: string) => {
-    const novosBlocos = blocks.filter(b => b.tempId !== tempId)
-      .map((b, idx) => ({ ...b, ordem: idx }));
-    setBlocks(novosBlocos);
-  }, [blocks]);
+    setBlocks((currentBlocks) => currentBlocks.filter(b => b.tempId !== tempId)
+      .map((b, idx) => ({ ...b, ordem: idx })));
+  }, []);
 
   const updateBlock = useCallback((tempId: string, conteudo: any) => {
-    setBlocks(blocks.map(b =>
+    setBlocks((currentBlocks) => currentBlocks.map(b =>
       b.tempId === tempId ? { ...b, conteudo } : b
     ));
-  }, [blocks]);
+  }, []);
+
+  const moveBlock = useCallback((draggedId: string, targetId: string) => {
+    if (draggedId === targetId) return;
+
+    setBlocks((currentBlocks) => {
+      const draggedIndex = currentBlocks.findIndex((block) => block.tempId === draggedId);
+      const targetIndex = currentBlocks.findIndex((block) => block.tempId === targetId);
+      if (draggedIndex < 0 || targetIndex < 0 || draggedIndex === targetIndex) return currentBlocks;
+
+      const reordered = [...currentBlocks];
+      const [draggedBlock] = reordered.splice(draggedIndex, 1);
+      reordered.splice(targetIndex, 0, draggedBlock);
+      return reordered.map((block, index) => ({ ...block, ordem: index }));
+    });
+  }, []);
 
   const moveBlockUp = useCallback((tempId: string) => {
     const idx = blocks.findIndex(b => b.tempId === tempId);
@@ -161,20 +174,26 @@ export const useFormPage = ({
   // --- Auto-gerar slug ---
   const generateSlug = useCallback((text: string): string => {
     return text
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
       .toLowerCase()
       .trim()
-      .replace(/[^\w\s-]/g, '')
+      .replace(/[^a-z0-9\s-]/g, '')
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-');
   }, []);
 
   const handleTituloChange = useCallback((newTitulo: string) => {
     setTitulo(newTitulo);
-    // Auto-gerar slug se estiver vazio
-    if (!slug) {
+    if (!slugManuallyEditedRef.current) {
       setSlug(generateSlug(newTitulo));
     }
-  }, [slug, generateSlug]);
+  }, [generateSlug]);
+
+  const handleSlugChange = useCallback((newSlug: string) => {
+    slugManuallyEditedRef.current = true;
+    setSlug(newSlug);
+  }, []);
 
   // --- Submit ---
   const handleSubmit = useCallback(async (e?: React.FormEvent) => {
@@ -245,7 +264,7 @@ export const useFormPage = ({
     titulo,
     setTitulo: handleTituloChange,
     slug,
-    setSlug,
+    setSlug: handleSlugChange,
     descricao,
     setDescricao,
     coverImageUrl,
@@ -263,6 +282,7 @@ export const useFormPage = ({
     addBlock,
     removeBlock,
     updateBlock,
+    moveBlock,
     moveBlockUp,
     moveBlockDown,
 

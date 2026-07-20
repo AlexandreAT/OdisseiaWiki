@@ -47,7 +47,6 @@ export const PageEdit: React.FC<PageEditProps> = ({ theme, neon, pageId, onBack,
         }
         
         if (pageData) {
-            console.log("🚀 ~ loadPage ~ pageData:", pageData)
           setPage(pageData);
           setBlocks(blocksData);
           setError(null);

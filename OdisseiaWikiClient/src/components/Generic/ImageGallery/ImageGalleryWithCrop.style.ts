@@ -1,4 +1,5 @@
 import styled from 'styled-components';
+import { RemoveImageButton } from './ImageGallery.style';
 
 interface Props {
   theme: 'dark' | 'light';
@@ -82,12 +83,13 @@ export const ImageItem = styled.div<ImageItemProps>`
   height: 150px;
   border-radius: ${({ isCircle, shape }) => {
     if (isCircle) return '50%';
-    if (shape === 'rectangle') return '0';
+    if (shape === 'rectangle') return '8px';
     return '8px';
   }};
   overflow: hidden;
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
+  box-sizing: border-box;
   transition: all 0.3s ease;
   display: flex;
   align-items: center;
@@ -115,8 +117,22 @@ export const ImageItem = styled.div<ImageItemProps>`
   }
 
   &:hover {
-    border-color: transparent;
+    border-color: ${({ neon }) => neon === 'on' ? 'var(--clearneonBlue)' : 'var(--mediumgrey)'};
     box-shadow: 0 0 10px rgba(0, 200, 255, 0.3);
+  }
+
+  &:focus-within {
+    border-color: ${({ neon }) => neon === 'on' ? 'var(--clearneonBlue)' : 'var(--mediumgrey)'};
+  }
+
+  ${RemoveImageButton} {
+    top: ${({ isCircle }) => isCircle ? '16px' : '6px'};
+    right: ${({ isCircle }) => isCircle ? '16px' : '6px'};
+  }
+
+  &:hover ${RemoveImageButton},
+  &:focus-within ${RemoveImageButton} {
+    opacity: 1;
   }
 
   img {
@@ -131,6 +147,11 @@ export const ImageItem = styled.div<ImageItemProps>`
       width: 100%;
       height: 100%;
       object-fit: contain;
+    }
+
+    ${RemoveImageButton} {
+      top: ${({ isCircle }) => isCircle ? '12%' : '4px'};
+      right: ${({ isCircle }) => isCircle ? '12%' : '4px'};
     }
   }
 `;

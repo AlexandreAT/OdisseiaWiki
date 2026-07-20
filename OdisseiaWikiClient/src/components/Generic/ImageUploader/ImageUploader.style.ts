@@ -59,7 +59,7 @@ export const ImageContainer = styled.div<ContainerProps>`
   align-items: center;
   justify-content: center;
   background: var(--lightBlack);
-  border: 2px dashed ${({ hasImage }) =>
+  border: 2px ${({ hasImage }) => hasImage ? 'solid' : 'dashed'} ${({ hasImage }) =>
     hasImage ? 'transparent' : 'var(--lightGrey)'};
   cursor: pointer;
   transition: all 0.3s ease;
@@ -79,7 +79,8 @@ export const ImageContainer = styled.div<ContainerProps>`
     }
   }
 
-  &:hover {
+  &:hover,
+  &:focus-within {
     border-color: ${({ neon }) =>
       neon === 'on' ? 'var(--neonBlue)' : 'var(--mediumgrey)'};
     ${({ neon }) =>
@@ -187,7 +188,8 @@ export const RemoveImageButton = styled.button<Props>`
   transition: all 0.3s ease;
   z-index: 10;
 
-  ${ImageContainer}:hover & {
+  ${ImageContainer}:hover &,
+  ${ImageContainer}:focus-within & {
     opacity: 1;
   }
 
@@ -232,7 +234,8 @@ export const EditButton = styled.button<Props>`
   z-index: 10;
   opacity: 0;
 
-  ${ImageContainer}:hover & {
+  ${ImageContainer}:hover &,
+  ${ImageContainer}:focus-within & {
     opacity: 1;
   }
 

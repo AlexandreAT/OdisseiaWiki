@@ -43,6 +43,7 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, initialStep = 1
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
   const hasSnapshotInitializedRef = React.useRef(false);
+  const saveInFlightRef = React.useRef(false);
 
     const {
         handleUpdate,
@@ -196,11 +197,17 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, initialStep = 1
 
     const handleSave = React.useCallback(async (goBackAfterSave = false) => {
       if (!validateEdit()) return;
+      if (saveInFlightRef.current) return;
+      saveInFlightRef.current = true;
 
-      const success = await handleUpdate();
-      if (success) {
-        setLastSavedSnapshot(snapshot);
-        if (goBackAfterSave) onBack();
+      try {
+        const success = await handleUpdate();
+        if (success) {
+          setLastSavedSnapshot(snapshot);
+          if (goBackAfterSave) onBack();
+        }
+      } finally {
+        saveInFlightRef.current = false;
       }
     }, [handleUpdate, onBack, snapshot, validateEdit]);
 

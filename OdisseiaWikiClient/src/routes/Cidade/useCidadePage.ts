@@ -37,6 +37,7 @@ export const useCidadePage = () => {
   const [activeModal, setActiveModal] = useState<CidadeModal>(null);
   const [galleryIndex, setGalleryIndex] = useState<number | null>(null);
   const [selectedPointImage, setSelectedPointImage] = useState<CidadePoint | null>(null);
+  const [selectedPoint, setSelectedPoint] = useState<CidadePoint | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -53,6 +54,7 @@ export const useCidadePage = () => {
       setError(null);
       setCity(null);
       setSelectedPointImage(null);
+      setSelectedPoint(null);
 
       const [cityResult, characterResult, pageResult] = await Promise.allSettled([
         getCidadeById(cityId),
@@ -137,13 +139,15 @@ export const useCidadePage = () => {
   const hasCharacters = characters.length > 0;
   const hasCenter = hasPoints || hasCharacters;
   const hasGallery = galleryImages.length > 0;
-  const pointPreviewLimit = hasCharacters ? 3 : 9;
+  const pointPreviewLimit = hasCharacters ? 2 : 5;
   const characterPreviewLimit = hasPoints ? 4 : 12;
 
   const closeModal = useCallback(() => setActiveModal(null), []);
   const closeGallery = useCallback(() => setGalleryIndex(null), []);
   const openPointImage = useCallback((point: CidadePoint) => setSelectedPointImage(point), []);
   const closePointImage = useCallback(() => setSelectedPointImage(null), []);
+  const openPoint = useCallback((point: CidadePoint) => setSelectedPoint(point), []);
+  const closePoint = useCallback(() => setSelectedPoint(null), []);
   const previousGalleryImage = useCallback(() => {
     setGalleryIndex((current) => current !== null && current > 0 ? current - 1 : current);
   }, []);
@@ -168,6 +172,7 @@ export const useCidadePage = () => {
     activeModal,
     galleryIndex,
     selectedPointImage,
+    selectedPoint,
     hasDescription,
     hasPoints,
     hasCharacters,
@@ -181,6 +186,8 @@ export const useCidadePage = () => {
     closeGallery,
     openPointImage,
     closePointImage,
+    openPoint,
+    closePoint,
     previousGalleryImage,
     nextGalleryImage,
     selectCharacter,

@@ -141,14 +141,6 @@ export const ScrollRevealSection = styled.section<ScrollRevealSectionProps>`
     opacity: 0;
   }
 
-  &.sr-initial-visible,
-  &.sr-initial-visible > *,
-  &.sr-initial-visible img,
-  &.sr-initial-visible * {
-    opacity: 1;
-    animation: none !important;
-  }
-
   &.sr-entered > * {
     opacity: 1;
     animation: ${fadeSlideIn} 0.55s ease-out;
@@ -196,20 +188,4 @@ export const ScrollRevealSection = styled.section<ScrollRevealSectionProps>`
     }
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    & > *,
-    & img {
-      opacity: 1 !important;
-      animation: none !important;
-    }
-
-    ${({ $variant }) => $variant !== 'personagemCard' && css`
-      & :is(h1, h2, h3, h4, p, ul, ol, blockquote),
-      & > * > div,
-      & > * > div > div {
-        opacity: 1 !important;
-        animation: none !important;
-      }
-    `}
-  }
 `;

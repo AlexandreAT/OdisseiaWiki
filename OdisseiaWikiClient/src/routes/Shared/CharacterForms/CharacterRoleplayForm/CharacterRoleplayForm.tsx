@@ -9,7 +9,7 @@ import { InputText } from '../../../../components/Generic/InputText/InputText';
 import { RichTextEditor } from '../../../../components/Generic/RichTextEditor/RichTextEditor';
 import { Search } from '../../../../components/Generic/Search/Search';
 import { Select } from '../../../../components/Generic/Select/Select';
-import { CheckBox } from '../../../../components/Generic/CheckBox/CheckBox';
+import { VisibilityToggle } from '../../../../components/Generic/VisibilityToggle';
 import { FeaturedToggle } from '../../../../components/Generic/FeaturedToggle';
 import { ALIGNMENT_OPTIONS, TRAITS_OPTIONS } from '../../../Hub/UserCharacters/CharacterCreate/constants';
 import {
@@ -292,10 +292,9 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
 
       {setVisivel && setDestaque && (
         <HistoryHeader>
-          <CheckBox
-            neon={neon}
+          <VisibilityToggle
             label="Personagem visível"
-            checked={visivel}
+            visible={visivel ?? false}
             onChange={setVisivel}
           />
           <FeaturedToggle featured={destaque ?? false} onChange={setDestaque} />

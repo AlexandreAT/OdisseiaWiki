@@ -30,11 +30,8 @@ namespace OdisseiaWiki.Repositories
 
             return await _context.Pages
                 .Where(p =>
-                    p.Visivel &&
-                    (
-                        p.Titulo.ToLower().Contains(termo) ||
-                        p.Slug.ToLower().Contains(termo)
-                    )
+                    p.Titulo.ToLower().Contains(termo) ||
+                    p.Slug.ToLower().Contains(termo)
                 )
                 .OrderBy(p => p.Titulo)
                 .ToListAsync();

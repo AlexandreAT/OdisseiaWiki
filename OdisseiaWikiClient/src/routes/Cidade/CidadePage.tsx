@@ -1,4 +1,6 @@
 import { useSelector } from 'react-redux';
+import { createPortal } from 'react-dom';
+import CloseIcon from '@mui/icons-material/Close';
 import {
   BiBookOpen,
   BiImage,
@@ -30,6 +32,7 @@ import {
   CharacterName,
   CityBanner,
   CityGrid,
+  CityRevealBlock,
   CityPageContainer,
   CityPageContent,
   CompactCardGrid,
@@ -57,12 +60,26 @@ import {
   PointContent,
   PointImage,
   PointImageButton,
+  PointList,
   RelatedPageLink,
   RelatedPages,
   RelatedPagesTitle,
   ViewAllButton,
 } from './CidadePage.style';
 import { isContentCategoryTag } from '../../utils/contentCategoryTag';
+import {
+  BoldLabel,
+  DetailText,
+  HistoryModalClose,
+  HistoryModalContent,
+  HistoryModalHeader,
+  HistoryModalOverlay,
+  HistoryModalSheet,
+  HistoryModalTitle,
+  ItemDescriptionImage,
+  ItemDescriptionLayout,
+  ItemDetailsBody,
+} from '../Personagem/PersonagemPage.style';
 
 interface ThemeReducerState {
   theme: 'dark' | 'light';
@@ -108,19 +125,34 @@ const CharacterCardContent = ({ character, onSelect, modal = false }: CharacterC
 interface PointCardContentProps {
   point: CidadePoint;
   onOpenImage: (point: CidadePoint) => void;
+  onOpenSummary: (point: CidadePoint) => void;
   modal?: boolean;
 }
 
-const PointCardContent = ({ point, onOpenImage, modal = false }: PointCardContentProps) => {
+const PointCardContent = ({ point, onOpenImage, onOpenSummary, modal = false }: PointCardContentProps) => {
   const Card = modal ? ModalPointCard : PointCard;
 
   return (
-    <Card>
+    <Card
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpenSummary(point)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onOpenSummary(point);
+        }
+      }}
+      aria-label={`Abrir resumo de ${point.nome}`}
+    >
       {point.imagem && (
         <PointImageButton
           type="button"
           $modal={modal}
-          onClick={() => onOpenImage(point)}
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpenImage(point);
+          }}
           aria-label={`Ampliar imagem de ${point.nome}`}
         >
           <PointImage
@@ -156,6 +188,7 @@ const CidadePage = () => {
     activeModal,
     galleryIndex,
     selectedPointImage,
+    selectedPoint,
     hasDescription,
     hasPoints,
     hasCharacters,
@@ -169,6 +202,8 @@ const CidadePage = () => {
     closeGallery,
     openPointImage,
     closePointImage,
+    openPoint,
+    closePoint,
     previousGalleryImage,
     nextGalleryImage,
     selectCharacter,
@@ -227,7 +262,8 @@ const CidadePage = () => {
         {sectionCount > 0 ? (
           <CityGrid $sectionCount={sectionCount}>
             {hasDescription && (
-              <HudPanel $neon={isNeonActive}>
+              <CityRevealBlock variant="infoBlock" threshold={0.22}>
+                <HudPanel $neon={isNeonActive}>
                 <HudCorners neon={isNeonActive} />
                 <PanelHeader>
                   <PanelTitle $neon={isNeonActive}><BiBookOpen aria-hidden="true" />Descrição</PanelTitle>
@@ -241,11 +277,13 @@ const CidadePage = () => {
                     <RichTextDisplay content={city.descricao} />
                   </DescriptionPreview>
                 </DescriptionButton>
-              </HudPanel>
+                </HudPanel>
+              </CityRevealBlock>
             )}
 
             {hasCenter && (
-              <MiddleColumn $single={!hasPoints || !hasCharacters}>
+              <CityRevealBlock variant="infoBlock" threshold={0.22}>
+                <MiddleColumn $single={!hasPoints || !hasCharacters}>
                 {hasPoints && (
                   <HudPanel $neon={isNeonActive}>
                     <HudCorners neon={isNeonActive} />
@@ -257,11 +295,11 @@ const CidadePage = () => {
                         </ViewAllButton>
                       )}
                     </PanelHeader>
-                    <CompactCardGrid>
+                    <PointList>
                       {previewPoints.map((point) => (
-                        <PointCardContent key={point.id} point={point} onOpenImage={openPointImage} />
+                        <PointCardContent key={point.id} point={point} onOpenImage={openPointImage} onOpenSummary={openPoint} />
                       ))}
-                    </CompactCardGrid>
+                    </PointList>
                   </HudPanel>
                 )}
 
@@ -287,11 +325,13 @@ const CidadePage = () => {
                     </CompactCardGrid>
                   </HudPanel>
                 )}
-              </MiddleColumn>
+                </MiddleColumn>
+              </CityRevealBlock>
             )}
 
             {hasGallery && (
-              <HudPanel $gallery $standalone={hasOnlyGallery} $neon={isNeonActive}>
+              <CityRevealBlock variant="infoCarousel" threshold={0.22} $gallery>
+                <HudPanel $gallery $standalone={hasOnlyGallery} $neon={isNeonActive}>
                 <HudCorners neon={isNeonActive} />
                 <PanelHeader>
                   <PanelTitle $neon={isNeonActive}><BiImages aria-hidden="true" />Galeria</PanelTitle>
@@ -320,7 +360,8 @@ const CidadePage = () => {
                     </GalleryButton>
                   ))}
                 </GalleryGrid>
-              </HudPanel>
+                </HudPanel>
+              </CityRevealBlock>
             )}
           </CityGrid>
         ) : (
@@ -390,6 +431,10 @@ const CidadePage = () => {
           color="var(--clearneonBlue)"
           emptyMessage="Nenhum ponto de interesse publicado."
           onClose={closeModal}
+          columns={1}
+          width="min(980px, calc(100vw - 40px))"
+          maxVisibleRows={4}
+          itemHeight={112}
           theme={theme}
           neon={neon}
           renderItem={(point) => (
@@ -397,6 +442,7 @@ const CidadePage = () => {
               key={point.id}
               point={point}
               onOpenImage={openPointImage}
+              onOpenSummary={openPoint}
               modal
             />
           )}
@@ -458,6 +504,43 @@ const CidadePage = () => {
         }] : []}
         onClose={closePointImage}
       />
+
+      {selectedPoint && createPortal(
+        <HistoryModalOverlay onClick={(event) => { if (event.target === event.currentTarget) closePoint(); }}>
+          <HistoryModalSheet theme={theme} neon={neon}>
+            <HistoryModalHeader theme={theme} neon={neon}>
+              <HistoryModalTitle theme={theme} neon={neon}>{selectedPoint.nome}</HistoryModalTitle>
+              <HistoryModalClose
+                theme={theme}
+                neon={neon}
+                onClick={closePoint}
+                title="Fechar"
+                aria-label="Fechar resumo do ponto de interesse"
+                autoFocus
+              >
+                <CloseIcon />
+              </HistoryModalClose>
+            </HistoryModalHeader>
+            <HistoryModalContent theme={theme} neon={neon}>
+              <ItemDescriptionLayout $withoutMedia={!selectedPoint.imagem}>
+                {selectedPoint.imagem && (
+                  <ItemDescriptionImage
+                    src={normalizeImagePath(selectedPoint.imagem)}
+                    alt={`Imagem de ${selectedPoint.nome}`}
+                  />
+                )}
+                <ItemDetailsBody>
+                  <DetailText>
+                    <BoldLabel>{'DESCRI\u00c7\u00c3O'}</BoldLabel>
+                    <p>{selectedPoint.descricao || 'Sem descri\u00e7\u00e3o registrada.'}</p>
+                  </DetailText>
+                </ItemDetailsBody>
+              </ItemDescriptionLayout>
+            </HistoryModalContent>
+          </HistoryModalSheet>
+        </HistoryModalOverlay>,
+        document.getElementById('modal-root') || document.body
+      )}
     </CityPageContainer>
   );
 };

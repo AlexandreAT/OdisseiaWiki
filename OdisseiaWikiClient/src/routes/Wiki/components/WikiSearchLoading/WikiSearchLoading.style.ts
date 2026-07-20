@@ -54,15 +54,6 @@ export const LoadingIcon = styled.span<{ $compact: boolean }>`
     will-change: transform;
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    animation: none;
-    filter: drop-shadow(0 0 5px var(--wiki-loading-glow-color));
-
-    svg {
-      animation-duration: 1.8s;
-    }
-  }
-
   @media (max-width: 768px) {
     svg {
       width: ${({ $compact }) => ($compact ? '20px' : '32px')};
@@ -99,10 +90,4 @@ export const AnimatedDots = styled.span`
     animation: ${cycleDots} 1.6s steps(1, end) infinite;
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    &::after {
-      content: '...';
-      animation: none;
-    }
-  }
 `;

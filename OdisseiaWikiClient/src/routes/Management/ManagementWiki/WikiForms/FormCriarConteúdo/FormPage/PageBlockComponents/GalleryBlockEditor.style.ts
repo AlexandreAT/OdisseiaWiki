@@ -78,9 +78,16 @@ export const ImageItem = styled.div<ThemeProps>`
   border-radius: 8px;
   overflow: hidden;
   background-color: ${props => (props.$isDark ? '#2a2a2a' : '#e0e0e0')};
-  border: 1px solid ${props => (props.$isDark ? '#444' : '#ccc')};
+  border: 1px solid transparent;
   display: flex;
   flex-direction: column;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover,
+  &:focus-within {
+    border-color: var(--clearneonBlue);
+    box-shadow: 0 0 9px rgba(0, 204, 255, 0.25);
+  }
 
   @media (max-width: 768px) {
     width: 100%;
@@ -120,8 +127,9 @@ export const DeleteButton = styled.button`
   padding: 4px 8px;
   border: none;
   border-radius: 4px;
-  background-color: #ff4444;
-  color: white;
+  border: 1px solid var(--neonPink);
+  background: rgba(0, 0, 0, 0.82);
+  color: var(--neonPink);
   cursor: pointer;
   font-size: 12px;
   font-weight: bold;
@@ -129,9 +137,16 @@ export const DeleteButton = styled.button`
   align-items: center;
   gap: 4px;
   transition: background-color 0.2s;
+  opacity: 0;
+
+  ${ImageItem}:hover &,
+  ${ImageItem}:focus-within & {
+    opacity: 1;
+  }
 
   &:hover {
-    background-color: #cc0000;
+    background: var(--neonPink);
+    color: var(--lightBlack);
   }
 
   @media (max-width: 768px) {
@@ -142,6 +157,7 @@ export const DeleteButton = styled.button`
     padding: 0;
     justify-content: center;
     font-size: 10px;
+    opacity: 1;
   }
 `;
 

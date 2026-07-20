@@ -6,7 +6,7 @@ import { PageBlockType } from '../../../../../../models/Pages';
 import { CyberButton } from '../../../../../../components/Generic/HighlightButton/HighlightButton';
 import { InputText } from '../../../../../../components/Generic/InputText/InputText';
 import { TextArea } from '../../../../../../components/Generic/TextArea/TextArea';
-import { CheckBox } from '../../../../../../components/Generic/CheckBox/CheckBox';
+import { VisibilityToggle } from '../../../../../../components/Generic/VisibilityToggle';
 import { FeaturedToggle } from '../../../../../../components/Generic/FeaturedToggle';
 import { ImageUploader } from '../../../../../../components/Generic/ImageUploader/ImageUploader';
 import type { CropPreset } from '../../../../../../components/Generic/ImageUploader/types';
@@ -23,12 +23,17 @@ import {
   SectionTitle,
   GridInputs,
   FullWidthInput,
+  PageVisibilityControls,
+  SlugField,
+  SlugInfoButton,
+  SlugInfoPopover,
   BlocksContainer,
   BlockItem,
   BlockHeader,
   BlockTitle,
   BlockActions,
   IconButton,
+  DragHandle,
   BlockContent,
   AddBlockContainer,
   BlockTypeSelector,
@@ -36,7 +41,7 @@ import {
   ActionButtonsContainer,
   EmptyBlocksMessage,
 } from './FormPage.style';
-import { BiTrash, BiChevronUp, BiChevronDown, BiPlus } from 'react-icons/bi';
+import { BiTrash, BiPlus, BiMoveVertical, BiInfoCircle } from 'react-icons/bi';
 import { EntityEditFloatingActions } from '../../FormBuscarConteúdo/EntityEditFloatingActions';
 
 const BLOCK_TYPES: PageBlockType[] = [
@@ -81,6 +86,7 @@ export const FormPage: React.FC<FormPageProps> = ({
     addBlock,
     removeBlock,
     updateBlock,
+    moveBlock,
     moveBlockUp,
     moveBlockDown,
     tituloError,
@@ -97,6 +103,29 @@ export const FormPage: React.FC<FormPageProps> = ({
 
   const [selectedBlockType, setSelectedBlockType] = useState<PageBlockType | null>(null);
   const [coverImageUrl, setCoverImageUrl] = useState(initialPage?.coverImage || '');
+  const [showSlugInfo, setShowSlugInfo] = useState(false);
+  const [draggingBlockId, setDraggingBlockId] = useState<string | null>(null);
+  const draggingBlockIdRef = React.useRef<string | null>(null);
+  const slugInfoRef = React.useRef<HTMLDivElement>(null);
+  const persistInFlightRef = React.useRef(false);
+
+  React.useEffect(() => {
+    if (!showSlugInfo) return;
+
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      if (!slugInfoRef.current?.contains(event.target as Node)) setShowSlugInfo(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setShowSlugInfo(false);
+    };
+
+    document.addEventListener('pointerdown', closeOnOutsideClick);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutsideClick);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [showSlugInfo]);
 
   const snapshot = React.useMemo(() => JSON.stringify({
     titulo,
@@ -112,11 +141,46 @@ export const FormPage: React.FC<FormPageProps> = ({
 
   const persist = async (stayOnPage: boolean, e?: React.FormEvent) => {
     e?.preventDefault();
-    const result = await handleSubmit();
-    if (!result?.success) return;
+    if (persistInFlightRef.current) return;
+    persistInFlightRef.current = true;
+    try {
+      const result = await handleSubmit();
+      if (!result?.success) return;
 
-    setLastSavedSnapshot(snapshot);
-    await onSaveSuccess?.({ stayOnPage });
+      setLastSavedSnapshot(snapshot);
+      await onSaveSuccess?.({ stayOnPage });
+    } finally {
+      persistInFlightRef.current = false;
+    }
+  };
+
+  const stopDragging = () => {
+    draggingBlockIdRef.current = null;
+    setDraggingBlockId(null);
+  };
+
+  const startDragging = (event: React.PointerEvent<HTMLButtonElement>, blockId: string) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    draggingBlockIdRef.current = blockId;
+    setDraggingBlockId(blockId);
+  };
+
+  const dragBlockOver = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const draggedId = draggingBlockIdRef.current;
+    if (!draggedId) return;
+    event.preventDefault();
+
+    const targetBlock = document
+      .elementFromPoint(event.clientX, event.clientY)
+      ?.closest<HTMLElement>('[data-block-id]');
+    const targetId = targetBlock?.dataset.blockId;
+    if (targetId && targetId !== draggedId) moveBlock(draggedId, targetId);
+
+    const scrollThreshold = 72;
+    if (event.clientY < scrollThreshold) window.scrollBy({ top: -14 });
+    if (event.clientY > window.innerHeight - scrollThreshold) window.scrollBy({ top: 14 });
   };
 
   const coverImageCropPreset: CropPreset = {
@@ -185,18 +249,42 @@ export const FormPage: React.FC<FormPageProps> = ({
             required
           />
 
-          <InputText
-            theme={theme}
-            neon={neon}
-            label="Slug *"
-            value={slug}
-            onChange={(e) => setSlug(e.target.value)}
-            onFocus={() => setSlugError('')}
-            width="100%"
-            error={!!slugError}
-            errorMessage={slugError}
-            required
-          />
+          <SlugField ref={slugInfoRef}>
+            <InputText
+              theme={theme}
+              neon={neon}
+              label="Slug *"
+              value={slug}
+              onChange={(e) => setSlug(e.target.value)}
+              onFocus={() => setSlugError('')}
+              width="100%"
+              error={!!slugError}
+              errorMessage={slugError}
+              required
+            />
+            <SlugInfoButton
+              type="button"
+              $isDark={theme === 'dark'}
+              $neon={neon === 'on'}
+              aria-label="Como o slug funciona"
+              aria-expanded={showSlugInfo}
+              onClick={() => setShowSlugInfo((visible) => !visible)}
+            >
+              <BiInfoCircle aria-hidden="true" />
+            </SlugInfoButton>
+            {showSlugInfo && (
+              <SlugInfoPopover $isDark={theme === 'dark'} $neon={neon === 'on'} role="status">
+                <strong>Como funciona o slug</strong>
+                <p>{'Ele forma o endere\u00e7o da p\u00e1gina. Enquanto voc\u00ea digita o t\u00edtulo, o valor \u00e9 criado automaticamente; ao edit\u00e1-lo manualmente, sua escolha passa a ser mantida.'}</p>
+                <ul>
+                  <li>{'Use palavras sem acentos, separadas por h\u00edfen: '}<code>teste-de-pagina</code>.</li>
+                  <li>{'Cada p\u00e1gina deve possuir um slug \u00fanico.'}</li>
+                  <li><code>MainPage</code>{' identifica a p\u00e1gina principal da wiki.'}</li>
+                  <li><code>search</code>{' \u00e9 reservado para a busca e n\u00e3o deve ser usado.'}</li>
+                </ul>
+              </SlugInfoPopover>
+            )}
+          </SlugField>
         </GridInputs>
 
         <FullWidthInput>
@@ -222,15 +310,14 @@ export const FormPage: React.FC<FormPageProps> = ({
           />
         </FullWidthInput>
 
-        <FullWidthInput>
-          <CheckBox
-            neon={neon}
+        <PageVisibilityControls>
+          <VisibilityToggle
             label="Página visível"
-            checked={visivel}
+            visible={visivel}
             onChange={setVisivel}
           />
           <FeaturedToggle featured={destaque} onChange={setDestaque} />
-        </FullWidthInput>
+        </PageVisibilityControls>
       </div>
 
       <div>
@@ -241,7 +328,7 @@ export const FormPage: React.FC<FormPageProps> = ({
           </p>
         </SectionHeader>
 
-        <BlocksContainer $isDark={theme === 'dark'}>
+        <BlocksContainer $isDark={theme === 'dark'} $neon={neon === 'on'}>
           {blocks.length === 0 ? (
             <EmptyBlocksMessage>
               <p>Nenhum bloco adicionado ainda.</p>
@@ -249,7 +336,13 @@ export const FormPage: React.FC<FormPageProps> = ({
             </EmptyBlocksMessage>
           ) : (
             blocks.map((block, idx) => (
-              <BlockItem key={block.tempId} $isDark={theme === 'dark'}>
+              <BlockItem
+                key={block.tempId}
+                data-block-id={block.tempId}
+                $isDark={theme === 'dark'}
+                $neon={neon === 'on'}
+                $isDragging={draggingBlockId === block.tempId}
+              >
                 <BlockHeader>
                   <BlockTitle>
                     <h3>{blockTypeLabels[block.tipo]}</h3>
@@ -257,26 +350,36 @@ export const FormPage: React.FC<FormPageProps> = ({
                   </BlockTitle>
 
                   <BlockActions>
-                    <IconButton
+                    <DragHandle
                       type="button"
-                      onClick={() => moveBlockUp(block.tempId!)}
-                      disabled={idx === 0}
-                      title="Mover para cima"
+                      $isDark={theme === 'dark'}
+                      $neon={neon === 'on'}
+                      $dragging={draggingBlockId === block.tempId}
+                      title="Segure e arraste para reordenar"
+                      aria-label={`Reordenar bloco ${idx + 1}. Use as setas para mover pelo teclado.`}
+                      onPointerDown={(event) => startDragging(event, block.tempId!)}
+                      onPointerMove={dragBlockOver}
+                      onPointerUp={stopDragging}
+                      onPointerCancel={stopDragging}
+                      onKeyDown={(event) => {
+                        if (event.key === 'ArrowUp') {
+                          event.preventDefault();
+                          moveBlockUp(block.tempId!);
+                        }
+                        if (event.key === 'ArrowDown') {
+                          event.preventDefault();
+                          moveBlockDown(block.tempId!);
+                        }
+                      }}
                     >
-                      <BiChevronUp />
-                    </IconButton>
-                    <IconButton
-                      type="button"
-                      onClick={() => moveBlockDown(block.tempId!)}
-                      disabled={idx === blocks.length - 1}
-                      title="Mover para baixo"
-                    >
-                      <BiChevronDown />
-                    </IconButton>
+                      <BiMoveVertical />
+                    </DragHandle>
                     <IconButton
                       type="button"
                       onClick={() => removeBlock(block.tempId!)}
                       danger
+                      $isDark={theme === 'dark'}
+                      $neon={neon === 'on'}
                       title="Remover bloco"
                     >
                       <BiTrash />
@@ -303,8 +406,10 @@ export const FormPage: React.FC<FormPageProps> = ({
                 type="button"
                 onClick={() => handleAddBlock(tipo)}
                 active={selectedBlockType === tipo}
+                $isDark={theme === 'dark'}
+                $neon={neon === 'on'}
               >
-                <BiPlus style={{ marginRight: '4px' }} />
+                <BiPlus />
                 {blockTypeLabels[tipo]}
               </BlockTypeButton>
             ))}

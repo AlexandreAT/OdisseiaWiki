@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { BiTrash, BiChevronUp, BiChevronDown } from 'react-icons/bi';
+import { BiTrash, BiChevronUp, BiChevronDown, BiInfoCircle } from 'react-icons/bi';
 import {
   PageBlock,
   RelatedEntityReference,
@@ -29,6 +29,9 @@ import {
   ReferenceTypeHeader,
   ReferenceOrderButtons,
   OrderButton,
+  ReferenceInfo,
+  ReferenceInfoButton,
+  ReferenceInfoPopover,
 } from './RelationBlockEditor.style';
 import { normalizeImagePath } from '../../../../../../../routes/Wiki/utils/imagePathHelper';
 
@@ -101,6 +104,8 @@ const extractEntityImage = (entity: any): string | undefined => {
   return entity?.Imagem || entity?.imagem || undefined;
 };
 
+const isEntityVisible = (entity: any): boolean => entity?.Visivel === true || entity?.visivel === true;
+
 export const RelationBlockEditor: React.FC<RelationBlockEditorProps> = ({
   block,
   theme,
@@ -118,6 +123,7 @@ export const RelationBlockEditor: React.FC<RelationBlockEditorProps> = ({
   const [selectedEntityId, setSelectedEntityId] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [showReferenceInfo, setShowReferenceInfo] = useState(false);
 
   // IDs já usados neste bloco (para evitar duplicatas)
   const usedIds = useMemo(() => {
@@ -161,7 +167,7 @@ export const RelationBlockEditor: React.FC<RelationBlockEditorProps> = ({
         }
 
         if (!cancelled) {
-          setEntities(list);
+          setEntities(list.filter(isEntityVisible));
         }
       } catch (err) {
         console.error('Erro ao carregar entidades:', err);
@@ -326,6 +332,23 @@ export const RelationBlockEditor: React.FC<RelationBlockEditorProps> = ({
 
   return (
     <RelationContainer>
+      <ReferenceInfo>
+        <span>Referências da página</span>
+        <ReferenceInfoButton
+          type="button"
+          $neon={neon === 'on'}
+          aria-label="Como funcionam as referências"
+          aria-expanded={showReferenceInfo}
+          onClick={() => setShowReferenceInfo((visible) => !visible)}
+        >
+          <BiInfoCircle aria-hidden="true" />
+        </ReferenceInfoButton>
+        {showReferenceInfo && (
+          <ReferenceInfoPopover $isDark={theme === 'dark'} $neon={neon === 'on'} role="status">
+            Uma referência conecta esta página à entidade escolhida. Depois de salvar, a página passa a aparecer entre os conteúdos relacionados dessa entidade. Apenas entidades visíveis podem ser referenciadas, inclusive por administradores.
+          </ReferenceInfoPopover>
+        )}
+      </ReferenceInfo>
       <AddReferenceRow>
         <div style={{ flex: 1, minWidth: '180px' }}>
           <Select
