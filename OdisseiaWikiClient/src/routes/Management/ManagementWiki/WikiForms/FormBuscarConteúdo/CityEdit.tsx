@@ -12,7 +12,7 @@ interface CityEditProps {
   neon: 'on' | 'off';
   cityId: number;
   onBack: () => void;
-  onSave?: () => void;
+  onSave?: () => void | Promise<void>;
 }
 
 export const CityEdit: React.FC<CityEditProps> = ({ theme, neon, cityId, onBack, onSave }) => {
@@ -26,50 +26,10 @@ export const CityEdit: React.FC<CityEditProps> = ({ theme, neon, cityId, onBack,
     const loadCity = async () => {
       try {
         setIsLoading(true);
-        const response = await getCidadeById(cityId);
-        console.log("🚀 ~ loadCity ~ response:", response)
-        
-        let cityData: CidadePayload | null = null;
-        
-        if (response && typeof response === 'object') {
-          if ('sucesso' in response && 'cidade' in response) {
-            if (response.sucesso && response.cidade) {
-              cityData = response.cidade;
-            } else {
-              setError(response.mensagemErro || 'Erro ao carregar cidade');
-            }
-          } else if ('idcidade' in response && 'nome' in response && 'visivel' in response) {
-            cityData = response as unknown as CidadePayload;
-          }
-        }
-        
-        // Parse galeriaImagem se for string (JSON stringificada)
-        if (cityData && typeof cityData.galeriaImagem === 'string') {
-          try {
-            cityData.galeriaImagem = JSON.parse(cityData.galeriaImagem);
-          } catch (e) {
-            console.error('Erro ao parsear galeriaImagem:', e);
-            cityData.galeriaImagem = [];
-          }
-        }
-
-        // Parse tags se for string (JSON stringificada)
-        if (cityData && typeof cityData.tags === 'string') {
-          try {
-            cityData.tags = JSON.parse(cityData.tags);
-          } catch (e) {
-            console.error('Erro ao parsear tags:', e);
-            cityData.tags = [];
-          }
-        }
-        
-        if (cityData) {
-          setCity(cityData);
-          setError(null);
-        } else if (!error) {
-          setError('Erro ao carregar cidade');
-        }
-      } catch (err: any) {
+        const cityData = await getCidadeById(cityId);
+        setCity(cityData);
+        setError(null);
+      } catch (err: unknown) {
         console.error('Erro ao carregar cidade:', err);
         setError('Erro ao carregar cidade para edição');
         toast.error('Erro ao carregar cidade');
@@ -102,7 +62,7 @@ export const CityEdit: React.FC<CityEditProps> = ({ theme, neon, cityId, onBack,
       } else {
         toast.error('Erro ao excluir cidade');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error('Erro ao excluir cidade');
       console.error('Erro ao excluir:', error);
     } finally {
@@ -163,10 +123,9 @@ export const CityEdit: React.FC<CityEditProps> = ({ theme, neon, cityId, onBack,
     );
   }
 
-  const handleSaveSuccess = () => {
-    if (onSave) {
-      onSave();
-    }
+  const handleSaveSuccess = async ({ stayOnPage }: { stayOnPage: boolean }) => {
+    await onSave?.();
+    if (!stayOnPage) onBack();
   };
 
   return (

@@ -15,6 +15,8 @@ import {
   ShapeButton,
   ErrorMessage,
   HiddenInput,
+  GalleryEntry,
+  CaptionInput,
 } from './ImageGalleryWithCrop.style';
 
 enum ImageShape {
@@ -34,8 +36,10 @@ interface ImageGalleryWithCropProps {
   label?: string;
   imageUrls: string[];
   imageShapes?: string[];
+  captions?: string[];
   onAdd: (files: File[], shapes: string[]) => void;
   onRemove: (index: number) => void;
+  onCaptionChange?: (index: number, caption: string) => void;
   accept?: string;
   maxImages?: number;
 }
@@ -46,8 +50,10 @@ export const ImageGalleryWithCrop = ({
   label,
   imageUrls,
   imageShapes = [],
+  captions = [],
   onAdd,
   onRemove,
+  onCaptionChange,
   accept = 'image/*',
   maxImages,
 }: ImageGalleryWithCropProps) => {
@@ -164,28 +170,39 @@ export const ImageGalleryWithCrop = ({
           const isCircle = shape === 'circle';
 
           return (
-            <ImageItem
-              key={url}
-              theme={theme}
-              neon={neon}
-              isCircle={isCircle}
-              shape={shape}
-            >
-              <FallbackImage
-                src={url}
-                alt={`Galeria ${index + 1}`}
-                style={{ width: '100%', height: '100%' }}
-              />
-              <RemoveImageButton
+            <GalleryEntry key={`${url}-${index}`} $shape={shape}>
+              <ImageItem
                 theme={theme}
                 neon={neon}
-                type="button"
-                onClick={(e) => handleRemoveImage(index, e)}
-                title="Remover imagem"
+                isCircle={isCircle}
+                shape={shape}
               >
-                <CloseIcon className="icon" />
-              </RemoveImageButton>
-            </ImageItem>
+                <FallbackImage
+                  src={url}
+                  alt={`Galeria ${index + 1}`}
+                />
+                <RemoveImageButton
+                  theme={theme}
+                  neon={neon}
+                  type="button"
+                  onClick={(e) => handleRemoveImage(index, e)}
+                  title="Remover imagem"
+                >
+                  <CloseIcon className="icon" />
+                </RemoveImageButton>
+              </ImageItem>
+              {onCaptionChange && (
+                <CaptionInput
+                  theme={theme}
+                  neon={neon}
+                  type="text"
+                  value={captions[index] || ''}
+                  onChange={(event) => onCaptionChange(index, event.target.value)}
+                  placeholder="Legenda (opcional)"
+                  aria-label={`Legenda da imagem ${index + 1}`}
+                />
+              )}
+            </GalleryEntry>
           );
         })}
 

@@ -18,6 +18,7 @@ import { getCidadeById } from '../../services/cidadesService';
 import { getRacaById } from '../../services/racasService';
 import { GalleryBlock } from '../Wiki/components/blocks/GalleryBlock/GalleryBlock';
 import { PageBlockType } from '../../models/Pages';
+import { normalizeGalleryImages } from '../../models/GalleryImage';
 import village from '../../assets/svg/village.svg';
 import scales from '../../assets/svg/scales.svg';
 import dna1 from '../../assets/svg/dna1.svg';
@@ -369,7 +370,7 @@ const PersonagemPage: React.FC = () => {
   const isOverloaded = currentLoad > loadCapacity;
 
   const rawGallery = (personagem as any)?.galeriaImagem;
-  const galleryImages = Array.isArray(rawGallery) ? rawGallery.filter((url: any) => typeof url === 'string' && url.trim()) : [];
+  const galleryImages = normalizeGalleryImages(rawGallery);
   const skills = Array.isArray((personagem as any)?.skills) ? (personagem as any).skills.filter(isMeaningfulAbility) : [];
   const magias = Array.isArray((personagem as any)?.magia) ? (personagem as any).magia.filter(isMeaningfulAbility) : [];
   const proficiencias = Array.isArray((personagem as any)?.proficiencias)
@@ -833,7 +834,7 @@ const PersonagemPage: React.FC = () => {
               {galleryOpen && (
                 <GalleryContent>
                   <GalleryBlock
-                      block={{ tipo: PageBlockType.GALLERY, conteudo: { imagens: galleryImages.map((url: string) => ({ url, legenda: '' })) }, ordem: 0 }}
+                      block={{ tipo: PageBlockType.GALLERY, conteudo: { imagens: galleryImages }, ordem: 0 }}
                       blockIndex={0}
                       theme={theme}
                       neon={neon}

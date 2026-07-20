@@ -73,6 +73,19 @@ namespace OdisseiaWiki.Controllers
             return Ok(ResultPage.Ok(pages));
         }
 
+        [HttpGet("referencing/{entityType}/{entityId}")]
+        public async Task<IActionResult> GetReferencing(
+            string entityType,
+            string entityId,
+            [FromQuery] bool? visivel = null)
+        {
+            if (!User.IsAdmin())
+                visivel = true;
+
+            List<PageDto> pages = await _service.GetReferencingAsync(entityType, entityId, visivel);
+            return Ok(ResultPage.Ok(pages));
+        }
+
         [HttpPut("{id:int}")]
         [Authorize(Policy = AuthorizationPolicies.Admin)]
         public async Task<IActionResult> Update(

@@ -20,6 +20,7 @@ const Hub = lazy(() => import('./routes/Hub/Hub.tsx').then(module => ({
   default: module.Hub,
 })));
 const PersonagemPage = lazy(() => import('./routes/Personagem/PersonagemPage'));
+const CidadePage = lazy(() => import('./routes/Cidade/CidadePage'));
 
 const withRouteLoading = (element: React.ReactNode) => (
   <Suspense fallback={<RouteLoading />}>{element}</Suspense>
@@ -68,6 +69,10 @@ const router = createBrowserRouter([{
         {
           path: 'personagem/:id',
           element: withRouteLoading(<PersonagemPage />)
+        },
+        {
+          path: 'cidade/:id',
+          element: withRouteLoading(<CidadePage />)
         },
         {
           path: 'erro',

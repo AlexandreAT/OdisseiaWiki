@@ -1,10 +1,11 @@
 import { RacaStatus } from "../../../../../../services/racasService";
+import { GalleryImage } from '../../../../../../models/GalleryImage';
 
 export interface RaceFormData {
   nome: string;
   statusJson: RacaStatus;
   imagem?: string;
-  galeriaImagem?: string[];
+  galeriaImagem?: GalleryImage[];
   tags?: string[];
   visivel: boolean;
 }
@@ -21,5 +22,5 @@ export interface RaceFormErrors {
 
 export interface UploadResult {
   imagemPath?: string;
-  galeriaPaths?: string[];
+  galeriaPaths?: GalleryImage[];
 }

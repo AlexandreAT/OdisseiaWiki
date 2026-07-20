@@ -84,6 +84,20 @@ namespace OdisseiaWiki.Services
             return pages.Select(MapPageToDto).ToList();
         }
 
+        public async Task<List<PageDto>> GetReferencingAsync(
+            string entityType,
+            string entityId,
+            bool? visivel = null)
+        {
+            List<Page> pages = await _repository.GetWithRelationBlocksAsync(visivel);
+
+            return pages
+                .Where(page => page.Blocks.Any(block => ReferencesEntity(block, entityType, entityId)))
+                .OrderBy(page => page.Titulo)
+                .Select(MapPageSummaryToDto)
+                .ToList();
+        }
+
         public async Task<PageDto> UpdateAsync(int id, CreatePageWithBlocksDto dto)
         {
             Page? page = await _repository.GetByIdAsync(id);
@@ -173,6 +187,71 @@ namespace OdisseiaWiki.Services
                     })
                     .ToList()
             };
+        }
+
+        private static PageDto MapPageSummaryToDto(Page page)
+        {
+            return new PageDto
+            {
+                IdPage = page.IdPage,
+                Titulo = page.Titulo,
+                Slug = page.Slug,
+                Descricao = page.Descricao,
+                CoverImage = page.CoverImage,
+                Visivel = page.Visivel,
+                Destaque = page.Destaque,
+                DataCriacao = page.DataCriacao
+            };
+        }
+
+        private static bool ReferencesEntity(PageBlock block, string entityType, string entityId)
+        {
+            try
+            {
+                using JsonDocument document = JsonDocument.Parse(block.Conteudo);
+                JsonElement root = document.RootElement;
+
+                if (root.ValueKind == JsonValueKind.Array)
+                    return root.EnumerateArray().Any(reference => ReferenceMatches(reference, entityType, entityId));
+
+                return ReferenceMatches(root, entityType, entityId);
+            }
+            catch (JsonException)
+            {
+                return false;
+            }
+        }
+
+        private static bool ReferenceMatches(JsonElement reference, string entityType, string entityId)
+        {
+            if (reference.ValueKind != JsonValueKind.Object
+                || !TryGetProperty(reference, "tipoEntidade", out JsonElement typeElement)
+                || !TryGetProperty(reference, "idEntidade", out JsonElement idElement)
+                || typeElement.ValueKind != JsonValueKind.String)
+                return false;
+
+            string? referenceType = typeElement.GetString();
+            string referenceId = idElement.ValueKind == JsonValueKind.String
+                ? idElement.GetString() ?? string.Empty
+                : idElement.GetRawText();
+
+            return string.Equals(referenceType, entityType, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(referenceId, entityId, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool TryGetProperty(JsonElement element, string propertyName, out JsonElement value)
+        {
+            foreach (JsonProperty property in element.EnumerateObject())
+            {
+                if (string.Equals(property.Name, propertyName, StringComparison.OrdinalIgnoreCase))
+                {
+                    value = property.Value;
+                    return true;
+                }
+            }
+
+            value = default;
+            return false;
         }
     }
 }

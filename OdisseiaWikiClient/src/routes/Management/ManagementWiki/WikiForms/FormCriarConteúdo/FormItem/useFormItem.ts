@@ -308,7 +308,6 @@ export const useFormItem = (initialItem?: ItemPayload, contentType?: string) => 
           };
         }
         
-        resetForm();
         setIsSubmitting(false);
         
         return {

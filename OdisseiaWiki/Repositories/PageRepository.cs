@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using OdisseiaWiki.Data;
+using OdisseiaWiki.Enums;
 using OdisseiaWiki.Models;
 using OdisseiaWiki.Repositories.Interfaces;
 
@@ -55,6 +56,18 @@ namespace OdisseiaWiki.Repositories
 
             if (visivel.HasValue)
                 query = query.Where(p => p.Visivel == visivel.Value);
+
+            return await query.ToListAsync();
+        }
+
+        public async Task<List<Page>> GetWithRelationBlocksAsync(bool? visivel = null)
+        {
+            IQueryable<Page> query = _context.Pages
+                .AsNoTracking()
+                .Include(page => page.Blocks.Where(block => block.Tipo == PageBlockType.Relation));
+
+            if (visivel.HasValue)
+                query = query.Where(page => page.Visivel == visivel.Value);
 
             return await query.ToListAsync();
         }

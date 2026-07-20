@@ -32,6 +32,7 @@ import {
   TagInput,
 } from '../FormCriarConteúdo/FormItem/FormItem.style';
 import { EditHeader, LoadingContainer } from './EditFormStyles';
+import { EntityEditFloatingActions } from './EntityEditFloatingActions';
 import { ITEM_TIPO_OPTIONS } from '../formOptions';
 
 interface ItemEditProps {
@@ -39,7 +40,7 @@ interface ItemEditProps {
   neon: 'on' | 'off';
   itemId: string;
   onBack: () => void;
-  onSave?: () => void;
+  onSave?: () => void | Promise<void>;
 }
 
 export const ItemEdit: React.FC<ItemEditProps> = ({ theme, neon, itemId, onBack, onSave }) => {
@@ -145,7 +146,7 @@ interface ItemEditFormComponentProps {
   neon: 'on' | 'off';
   initialItem: ItemPayload;
   onBack: () => void;
-  onSave?: () => void;
+  onSave?: () => void | Promise<void>;
 }
 
 const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
@@ -199,19 +200,36 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
     handleImagemUpload(result.file);
   };
 
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const snapshot = React.useMemo(() => JSON.stringify({
+    nome,
+    tipo,
+    descricao,
+    quantidade,
+    peso,
+    efeito,
+    imagemUrl,
+    atributos,
+    tags,
+    visivel,
+  }), [nome, tipo, descricao, quantidade, peso, efeito, imagemUrl, atributos, tags, visivel]);
+  const [lastSavedSnapshot, setLastSavedSnapshot] = React.useState(snapshot);
+  const isSynced = snapshot === lastSavedSnapshot;
+
+  const persist = async (stayOnPage: boolean, e?: React.FormEvent) => {
+    e?.preventDefault();
     const result = await handleSubmit();
 
     if (result?.success) {
       toast.success(result.message);
-      if (onSave) {
-        onSave();
-      }
+      setLastSavedSnapshot(snapshot);
+      await onSave?.();
+      if (!stayOnPage) onBack();
     } else {
       toast.error(result?.message || 'Erro ao atualizar item');
     }
   };
+
+  const onSubmit = (e: React.FormEvent) => persist(false, e);
 
   const handleDelete = async () => {
     if (!initialItem.iditem) return;
@@ -419,6 +437,13 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
         onConfirm={handleConfirmDelete}
         onCancel={handleCancelDelete}
         isLoading={isDeletingItem}
+      />
+      <EntityEditFloatingActions
+        theme={theme}
+        neon={neon}
+        synced={isSynced}
+        saving={isSubmitting}
+        onSave={() => void persist(true)}
       />
     </FormController>
   );

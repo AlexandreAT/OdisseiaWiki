@@ -60,7 +60,7 @@ export const getInfoLores = async (visivel?: boolean): Promise<ResultInfoLores> 
   return response.data;
 };
 
-export const getInfoLoreById = async (id: number): Promise<ResultInfoLore> => {
+export const getInfoLoreById = async (id: number): Promise<InfoLoreDto> => {
   const response = await api.get(`/infolore/${id}`);
   return response.data;
 };

@@ -191,6 +191,12 @@ export const RemoveImageButton = styled.button<Props>`
     opacity: 1;
   }
 
+  @media (max-width: 768px) {
+    top: 5px;
+    right: 5px;
+    opacity: 1;
+  }
+
   &:hover {
     background: ${({ neon }) =>
       neon === 'on' ? 'var(--neonPink)' : 'var(--lightGrey)'};
@@ -227,6 +233,13 @@ export const EditButton = styled.button<Props>`
   opacity: 0;
 
   ${ImageContainer}:hover & {
+    opacity: 1;
+  }
+
+  @media (max-width: 768px) {
+    right: 5px;
+    bottom: 5px;
+    padding: 4px 7px;
     opacity: 1;
   }
 

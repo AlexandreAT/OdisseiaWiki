@@ -14,6 +14,7 @@ interface ModalProps {
   onClose?: () => void;
   onSubmit?: () => void;
   width?: string;
+  mobileInset?: boolean;
 }
 
 const ModalComponent = ({
@@ -25,7 +26,8 @@ const ModalComponent = ({
     showFooter = true,
     onClose,
     onSubmit,
-    width
+    width,
+    mobileInset = false
 }: ModalProps) => {
     const [modalRoot, setModalRoot] = useState<HTMLElement | null>(null);
     const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -63,8 +65,8 @@ const ModalComponent = ({
     if (!modalRoot) return null;
 
     const modalContent = (
-        <ModalOverlay onClick={(event) => { if (event.target === event.currentTarget) handleDefaultClose(); }}>
-            <ModalContainer theme={theme} neon={neon} $width={width} role="dialog" aria-modal="true" aria-label={typeof title === 'string' ? title : undefined}>
+        <ModalOverlay $mobileInset={mobileInset} onClick={(event) => { if (event.target === event.currentTarget) handleDefaultClose(); }}>
+            <ModalContainer theme={theme} neon={neon} $width={width} $mobileInset={mobileInset} role="dialog" aria-modal="true" aria-label={typeof title === 'string' ? title : undefined}>
                 <ModalHeaderContainer theme={theme} neon={neon}>
                     <span>{title}</span>
                     <button ref={closeButtonRef} onClick={handleDefaultClose} title="Fechar" aria-label="Fechar modal"><CloseIcon /></button>

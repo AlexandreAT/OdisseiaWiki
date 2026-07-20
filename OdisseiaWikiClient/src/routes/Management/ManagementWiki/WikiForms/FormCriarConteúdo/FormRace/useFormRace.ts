@@ -4,6 +4,7 @@ import { RacaStatus, CreateRacaDto, createRaca, updateRaca, RacaPayload } from '
 import { saveAsset } from '../../../../../../services/assetsService';
 import { ATRIBUTO_OPTIONS } from '../../../../../../constants';
 import { ensureContentCategoryTag, isContentCategoryTag } from '../../../../../../utils/contentCategoryTag';
+import { normalizeGalleryImages } from '../../../../../../models/GalleryImage';
 
 export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => {
   const [racaId] = useState<number | undefined>(initialRaca?.idraca);
@@ -12,25 +13,15 @@ export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => 
   const [imagemFile, setImagemFile] = useState<File | null>(null);
   
   // Garantir que galeriaImagem é sempre um array
-  const parseGaleriaImagem = (): string[] => {
-    if (!initialRaca?.galeriaImagem) return [];
-    if (typeof initialRaca.galeriaImagem === 'string') {
-      try {
-        return JSON.parse(initialRaca.galeriaImagem);
-      } catch (e) {
-        console.error('Erro ao parsear galeriaImagem:', e);
-        return [];
-      }
-    }
-    return Array.isArray(initialRaca.galeriaImagem) ? initialRaca.galeriaImagem : [];
-  };
+  const parsedGaleria = normalizeGalleryImages(initialRaca?.galeriaImagem);
   
   // URLs existentes (do servidor) - rastreadas separadamente para não enviar BLOBs
-  const [existingGaleriaUrls, setExistingGaleriaUrls] = useState<string[]>(parseGaleriaImagem());
+  const [existingGaleriaUrls, setExistingGaleriaUrls] = useState<string[]>(parsedGaleria.map(image => image.url));
   // Inclui URLs existentes + BLOBs temporários (para preview)
-  const [galeriaUrls, setGaleriaUrls] = useState<string[]>(parseGaleriaImagem());
+  const [galeriaUrls, setGaleriaUrls] = useState<string[]>(parsedGaleria.map(image => image.url));
+  const [galeriaCaptions, setGaleriaCaptions] = useState<string[]>(parsedGaleria.map(image => image.legenda || ''));
   const [galeriaFiles, setGaleriaFiles] = useState<File[]>([]);
-  const [galeriaShapes, setGaleriaShapes] = useState<string[]>(Array(parseGaleriaImagem().length).fill('square'));
+  const [galeriaShapes, setGaleriaShapes] = useState<string[]>(Array(parsedGaleria.length).fill('square'));
   const [tags, setTags] = useState<string[]>(initialRaca?.tags || []);
   const [tagInput, setTagInput] = useState('');
     const [visivel, setVisivel] = useState(initialRaca?.visivel !== false);
@@ -139,6 +130,7 @@ export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => 
     const urls = files.map(file => URL.createObjectURL(file));
     setGaleriaUrls(prev => [...prev, ...urls]);
     setGaleriaShapes(prev => [...prev, ...shapes]);
+    setGaleriaCaptions(prev => [...prev, ...files.map(() => '')]);
   };
 
   const handleRemoveGaleriaImage = (indexToRemove: number) => {
@@ -162,6 +154,11 @@ export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => 
 
     
     setGaleriaShapes(prev => prev.filter((_, i) => i !== indexToRemove));
+    setGaleriaCaptions(prev => prev.filter((_, i) => i !== indexToRemove));
+  };
+
+  const handleGaleriaCaptionChange = (index: number, caption: string) => {
+    setGaleriaCaptions(previous => previous.map((value, itemIndex) => itemIndex === index ? caption : value));
   };
 
   const handleAddTag = () => {
@@ -226,7 +223,10 @@ export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => 
         }
       }
       if (galeriaPaths) {
-        result.galeriaPaths = galeriaPaths;
+        result.galeriaPaths = galeriaPaths.map((url, index) => ({
+          url,
+          legenda: galeriaCaptions[index]?.trim() || undefined,
+        }));
       }
 
       return result;
@@ -290,7 +290,9 @@ export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => 
       const result = racaId ? await updateRaca(racaId, dto) : await createRaca(dto);
 
       if (result.sucesso) {
-        resetForm();
+        if (!racaId) {
+          resetForm();
+        }
         return { success: true, message: racaId ? 'Raça atualizada com sucesso!' : 'Raça criada com sucesso!' };
       } else {
         return { success: false, message: result.mensagemErro || (racaId ? 'Erro ao atualizar raça' : 'Erro ao criar raça') };
@@ -310,6 +312,7 @@ export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => 
     setGaleriaUrls([]);
     setGaleriaFiles([]);
     setGaleriaShapes([]);
+    setGaleriaCaptions([]);
     setTags([]);
     setTagInput('');
     setVida(100);
@@ -332,6 +335,7 @@ export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => 
     imagemFile,
     galeriaUrls,
     galeriaFiles,
+    galeriaCaptions,
     tags,
     tagInput,
     visivel,
@@ -361,6 +365,7 @@ export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => 
     handleImagemUpload,
     handleGaleriaUpload,
     handleRemoveGaleriaImage,
+    handleGaleriaCaptionChange,
     handleAddTag,
     handleRemoveTag,
     handleAddPassiva,

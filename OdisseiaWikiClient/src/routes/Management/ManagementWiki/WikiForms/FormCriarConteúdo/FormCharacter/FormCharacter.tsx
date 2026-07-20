@@ -45,8 +45,10 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
     setAvatarFile,
     galeriaUrls,
     galeriaShapes,
+    galeriaCaptions,
     handleGaleriaUpload,
     handleRemoveGaleriaImage,
+    handleGaleriaCaptionChange,
     history, setHistory,
     costumes, setCostumes,
     nanites, setNanites,
@@ -444,8 +446,10 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
             label="Galeria de Imagens (Opcional)"
             imageUrls={galeriaUrls}
             imageShapes={galeriaShapes}
+            captions={galeriaCaptions}
             onAdd={handleGaleriaUpload}
             onRemove={handleRemoveGaleriaImage}
+            onCaptionChange={handleGaleriaCaptionChange}
           />
         </>
       )}

@@ -12,7 +12,7 @@ interface PageEditProps {
   neon: 'on' | 'off';
   pageId: number;
   onBack: () => void;
-  onSave?: () => void;
+  onSave?: () => void | Promise<void>;
 }
 
 export const PageEdit: React.FC<PageEditProps> = ({ theme, neon, pageId, onBack, onSave }) => {
@@ -148,6 +148,11 @@ export const PageEdit: React.FC<PageEditProps> = ({ theme, neon, pageId, onBack,
     );
   }
 
+  const handleSaveSuccess = async ({ stayOnPage }: { stayOnPage: boolean }) => {
+    await onSave?.();
+    if (!stayOnPage) onBack();
+  };
+
   return (
     <div>
       <EditHeader theme={theme} neon={neon}>
@@ -162,7 +167,14 @@ export const PageEdit: React.FC<PageEditProps> = ({ theme, neon, pageId, onBack,
           width="120px"
         />
       </EditHeader>
-      <FormPage theme={theme} neon={neon} initialPage={page} initialBlocks={blocks} pageId={pageId} />
+      <FormPage
+        theme={theme}
+        neon={neon}
+        initialPage={page}
+        initialBlocks={blocks}
+        pageId={pageId}
+        onSaveSuccess={handleSaveSuccess}
+      />
       <ActionButtonsContainer theme={theme} neon={neon}>
         <CyberButton
           type="button"

@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import { useFormCity } from './useFormCity';
 import { InputText } from '../../../../../../components/Generic/InputText/InputText';
@@ -7,9 +7,13 @@ import { CyberButton } from '../../../../../../components/Generic/HighlightButto
 import { CheckBox } from '../../../../../../components/Generic/CheckBox/CheckBox';
 import { FeaturedToggle } from '../../../../../../components/Generic/FeaturedToggle';
 import { ImageUploader } from '../../../../../../components/Generic/ImageUploader/ImageUploader';
-import type { CropPreset } from '../../../../../../components/Generic/ImageUploader/types';
+import type { CropPreset, CropResult } from '../../../../../../components/Generic/ImageUploader/types';
 import { ImageGalleryWithCrop } from '../../../../../../components/Generic/ImageGallery/ImageGalleryWithCrop';
 import { HorizontalList } from '../../../../../../components/Generic/HorizontalList/HorizontalList';
+import { DataTable } from '../../../../../../components/Generic/DataTable/DataTable';
+import { PontoDeInteresse } from '../../../../../../models/Cities';
+import { normalizeImagePath } from '../../../../../Wiki/utils/imagePathHelper';
+import { EntityEditFloatingActions } from '../../FormBuscarConteúdo/EntityEditFloatingActions';
 import {
   FormController,
   FormHeader,
@@ -20,31 +24,45 @@ import {
   TagsSection,
   CheckboxSection,
   PontosInteresseSection,
-  PontosInteresseInputContainer,
-  InfoLoresList,
-  InfoLoreItem,
+  PontosInteresseHeader,
+  PontosInteresseHelp,
+  PontosInteresseError,
+  PointImageCell,
+  SectionTitle,
 } from './FormCity.style';
 
 interface FormCityProps {
   theme: 'dark' | 'light';
   neon: 'on' | 'off';
   initialCity?: import('../../../../../../services/cidadesService').CidadePayload;
-  onSaveSuccess?: () => void;
+  onSaveSuccess?: (options: { stayOnPage: boolean }) => void | Promise<void>;
   contentType?: string;
 }
 
+const POINT_IMAGE_CROP_PRESET: CropPreset = {
+  mode: 'single',
+  aspectRatio: 1,
+  shape: 'square',
+  displayShape: 'square',
+  label: 'Quadrado (1:1)',
+};
+
 export const FormCity = ({ theme, neon, initialCity, onSaveSuccess, contentType }: FormCityProps) => {
+  const pointImageFilesRef = useRef<Map<string, File>>(new Map());
   const {
     cidadeId,
     nome,
     descricao,
     imagemUrl,
+    imagemFile,
     galeriaUrls,
+    galeriaFiles,
     galeriaShapes,
+    galeriaCaptions,
     tags,
     tagInput,
     pontosDeInteresse,
-    pontoInteresseSearch,
+    pontosDeInteresseError,
     visivel,
     destaque,
     isSubmitting,
@@ -53,17 +71,15 @@ export const FormCity = ({ theme, neon, initialCity, onSaveSuccess, contentType 
     setNomeError,
     setDescricao,
     setTagInput,
-    setPontoInteresseSearch,
+    setPontosDeInteresse,
     setVisivel,
     setDestaque,
     handleImagemUpload,
     handleGaleriaUpload,
     handleRemoveGaleriaImage,
+    handleGaleriaCaptionChange,
     handleAddTag,
     handleRemoveTag,
-    handleAddPontoInteresse,
-    handleRemovePontoInteresse,
-    getFilteredInfoLores,
     handleSubmit,
     resetForm,
   } = useFormCity(initialCity, contentType);
@@ -76,12 +92,49 @@ export const FormCity = ({ theme, neon, initialCity, onSaveSuccess, contentType 
     label: 'Retângulo (16:9)',
   };
 
-  const handleCityImageUpload = (result: any) => {
+  const handleCityImageUpload = (result: CropResult) => {
     handleImagemUpload(result.file);
   };
 
-  const tagInputRef = useRef<HTMLInputElement>(null);
+  const pontosDeInteresseColumns = useMemo(() => [
+    {
+      key: 'imagem' as const,
+      label: 'Imagem',
+      width: '18%',
+      customRender: (
+        value: unknown,
+        _row: PontoDeInteresse,
+        onChange: (value: string) => void,
+      ) => {
+        const currentImage = typeof value === 'string' ? value : '';
 
+        return (
+          <PointImageCell>
+            <ImageUploader
+              theme={theme}
+              neon={neon}
+              initialImage={normalizeImagePath(currentImage)}
+              cropPreset={POINT_IMAGE_CROP_PRESET}
+              mobileSize="compact"
+              onImageCropped={(result) => {
+                if (currentImage) pointImageFilesRef.current.delete(currentImage);
+                pointImageFilesRef.current.set(result.preview, result.file);
+                onChange(result.preview);
+              }}
+              onRemove={() => {
+                if (currentImage) pointImageFilesRef.current.delete(currentImage);
+                onChange('');
+              }}
+            />
+          </PointImageCell>
+        );
+      },
+    },
+    { key: 'nome' as const, label: 'Nome', width: '27%', inputType: 'text' as const },
+    { key: 'descricao' as const, label: 'Descrição simplificada', width: '55%', inputType: 'text' as const },
+  ], [theme, neon]);
+
+  const tagInputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     const input = tagInputRef.current;
     if (!input) return;
@@ -97,18 +150,43 @@ export const FormCity = ({ theme, neon, initialCity, onSaveSuccess, contentType 
     return () => input.removeEventListener('keydown', handleKeyDown);
   }, [handleAddTag]);
 
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const result = await handleSubmit(e);
+  const snapshot = React.useMemo(() => JSON.stringify({
+    nome,
+    descricao,
+    imagemUrl,
+    imagemFile: imagemFile ? [imagemFile.name, imagemFile.size, imagemFile.lastModified] : null,
+    galeriaUrls,
+    galeriaFiles: galeriaFiles.map(file => [file.name, file.size, file.lastModified]),
+    galeriaCaptions,
+    tags,
+    pontosDeInteresse,
+    visivel,
+    destaque,
+  }), [nome, descricao, imagemUrl, imagemFile, galeriaUrls, galeriaFiles, galeriaCaptions, tags, pontosDeInteresse, visivel, destaque]);
+  const [lastSavedSnapshot, setLastSavedSnapshot] = React.useState(snapshot);
+  const isSynced = snapshot === lastSavedSnapshot;
+
+  const persist = async (stayOnPage: boolean, e?: React.FormEvent) => {
+    e?.preventDefault();
+    const result = await handleSubmit(e, pointImageFilesRef.current);
     
     if (result?.success) {
+      pointImageFilesRef.current.clear();
       toast.success(result.message);
+      setLastSavedSnapshot(snapshot);
       if (onSaveSuccess) {
-        onSaveSuccess();
+        await onSaveSuccess({ stayOnPage });
       }
     } else {
       toast.error(result?.message || 'Erro ao salvar cidade');
     }
+  };
+
+  const onSubmit = (e: React.FormEvent) => persist(false, e);
+
+  const handleReset = () => {
+    pointImageFilesRef.current.clear();
+    resetForm();
   };
 
   return (
@@ -153,42 +231,6 @@ export const FormCity = ({ theme, neon, initialCity, onSaveSuccess, contentType 
         )}
       </TagsSection>
 
-      <PontosInteresseSection>
-        <PontosInteresseInputContainer>
-          <InputText
-            theme={theme}
-            neon={neon}
-            label="Buscar InfoLore"
-            value={pontoInteresseSearch}
-            onChange={(e) => setPontoInteresseSearch(e.target.value)}
-            width="100%"
-          />
-          {pontoInteresseSearch && getFilteredInfoLores().length > 0 && (
-            <InfoLoresList>
-              {getFilteredInfoLores().map((infoLore) => (
-                <InfoLoreItem
-                  key={infoLore.IdinfoLore}
-                  theme={theme}
-                  neon={neon}
-                  type="button"
-                  onClick={() => handleAddPontoInteresse(infoLore.IdinfoLore)}
-                  disabled={pontosDeInteresse.some(p => p.id === infoLore.IdinfoLore)}
-                >
-                  {infoLore.Titulo}
-                </InfoLoreItem>
-              ))}
-            </InfoLoresList>
-          )}
-        </PontosInteresseInputContainer>
-        {pontosDeInteresse.length > 0 && (
-          <HorizontalList
-            theme={theme}
-            neon={neon}
-            data={pontosDeInteresse.map((ponto) => ({ id: ponto.id, nome: ponto.titulo }))}
-            onDelete={(id) => handleRemovePontoInteresse(id as number)}
-          />
-        )}
-      </PontosInteresseSection>
         </HeaderInfo>
 
         <ImageSection>
@@ -203,6 +245,26 @@ export const FormCity = ({ theme, neon, initialCity, onSaveSuccess, contentType 
           />
         </ImageSection>
       </FormHeader>
+
+      <PontosInteresseSection>
+        <PontosInteresseHeader>
+          <SectionTitle theme={theme} neon={neon}>Pontos de interesse</SectionTitle>
+          <PontosInteresseHelp>
+            Adicione um nome e uma descrição curta para cada local importante da cidade.
+          </PontosInteresseHelp>
+        </PontosInteresseHeader>
+        <DataTable<PontoDeInteresse>
+          data={pontosDeInteresse}
+          onChange={setPontosDeInteresse}
+          columns={pontosDeInteresseColumns}
+          showEmptyRow
+          theme={theme}
+          neon={neon}
+        />
+        {pontosDeInteresseError && (
+          <PontosInteresseError>{pontosDeInteresseError}</PontosInteresseError>
+        )}
+      </PontosInteresseSection>
 
       <DescriptionSection>
         <RichTextEditor
@@ -234,8 +296,10 @@ export const FormCity = ({ theme, neon, initialCity, onSaveSuccess, contentType 
         label="Galeria de Imagens (Opcional)"
         imageUrls={galeriaUrls}
         imageShapes={galeriaShapes}
+        captions={galeriaCaptions}
         onAdd={handleGaleriaUpload}
         onRemove={handleRemoveGaleriaImage}
+        onCaptionChange={handleGaleriaCaptionChange}
       />
 
       <ButtonsContainer>
@@ -243,7 +307,7 @@ export const FormCity = ({ theme, neon, initialCity, onSaveSuccess, contentType 
           theme={theme}
           neon={neon}
           type="button"
-          onClick={resetForm}
+          onClick={handleReset}
           disabled={isSubmitting}
           colorType="secondary"
           text="Limpar"
@@ -258,6 +322,15 @@ export const FormCity = ({ theme, neon, initialCity, onSaveSuccess, contentType 
           width="200px"
         />
       </ButtonsContainer>
+      {cidadeId && (
+        <EntityEditFloatingActions
+          theme={theme}
+          neon={neon}
+          synced={isSynced}
+          saving={isSubmitting}
+          onSave={() => void persist(true)}
+        />
+      )}
     </FormController>
   );
 };

@@ -28,12 +28,13 @@ import {
   ButtonsContainer,
 } from './FormRace.style';
 import { ImageGalleryWithCrop } from '../../../../../../components/Generic/ImageGallery/ImageGalleryWithCrop';
+import { EntityEditFloatingActions } from '../../FormBuscarConteúdo/EntityEditFloatingActions';
 
 interface FormRaceProps {
   theme: 'dark' | 'light';
   neon: 'on' | 'off';
   initialRaca?: import('../../../../../../services/racasService').RacaPayload;
-  onSaveSuccess?: () => void;
+  onSaveSuccess?: (options: { stayOnPage: boolean }) => void | Promise<void>;
   contentType?: string;
 }
 
@@ -42,8 +43,11 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
     racaId,
     nome,
     imagemUrl,
+    imagemFile,
     galeriaUrls,
+    galeriaFiles,
     galeriaShapes,
+    galeriaCaptions,
     tags,
     tagInput,
     visivel,
@@ -73,6 +77,7 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
     handleImagemUpload,
     handleGaleriaUpload,
     handleRemoveGaleriaImage,
+    handleGaleriaCaptionChange,
     handleAddTag,
     handleRemoveTag,
     handleAddPassiva,
@@ -126,19 +131,42 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
     return () => input.removeEventListener('keydown', handleKeyDown);
   }, [handleAddPassiva]);
 
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const snapshot = React.useMemo(() => JSON.stringify({
+    nome,
+    imagemUrl,
+    imagemFile: imagemFile ? [imagemFile.name, imagemFile.size, imagemFile.lastModified] : null,
+    galeriaUrls,
+    galeriaFiles: galeriaFiles.map(file => [file.name, file.size, file.lastModified]),
+    galeriaCaptions,
+    tags,
+    visivel,
+    destaque,
+    vida,
+    estamina,
+    mana,
+    capacidadeCarga,
+    atributoInicial,
+    passivas,
+  }), [nome, imagemUrl, imagemFile, galeriaUrls, galeriaFiles, galeriaCaptions, tags, visivel, destaque, vida, estamina, mana, capacidadeCarga, atributoInicial, passivas]);
+  const [lastSavedSnapshot, setLastSavedSnapshot] = React.useState(snapshot);
+  const isSynced = snapshot === lastSavedSnapshot;
+
+  const persist = async (stayOnPage: boolean, e?: React.FormEvent) => {
+    e?.preventDefault();
     const result = await handleSubmit(e);
 
     if (result?.success) {
       toast.success(result.message);
+      setLastSavedSnapshot(snapshot);
       if (onSaveSuccess) {
-        onSaveSuccess();
+        await onSaveSuccess({ stayOnPage });
       }
     } else {
       toast.error(result?.message || 'Erro ao salvar raça');
     }
   };
+
+  const onSubmit = (e: React.FormEvent) => persist(false, e);
 
   return (
     <FormController onSubmit={onSubmit}>
@@ -320,8 +348,10 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
         label="Galeria de Imagens (Opcional)"
         imageUrls={galeriaUrls}
         imageShapes={galeriaShapes}
+        captions={galeriaCaptions}
         onAdd={handleGaleriaUpload}
         onRemove={handleRemoveGaleriaImage}
+        onCaptionChange={handleGaleriaCaptionChange}
       />
 
       <ButtonsContainer>
@@ -344,6 +374,15 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
           width="200px"
         />
       </ButtonsContainer>
+      {racaId && (
+        <EntityEditFloatingActions
+          theme={theme}
+          neon={neon}
+          synced={isSynced}
+          saving={isSubmitting}
+          onSave={() => void persist(true)}
+        />
+      )}
     </FormController>
   );
 };

@@ -37,6 +37,7 @@ import {
   EmptyBlocksMessage,
 } from './FormPage.style';
 import { BiTrash, BiChevronUp, BiChevronDown, BiPlus } from 'react-icons/bi';
+import { EntityEditFloatingActions } from '../../FormBuscarConteúdo/EntityEditFloatingActions';
 
 const BLOCK_TYPES: PageBlockType[] = [
   PageBlockType.RICH_TEXT,
@@ -60,6 +61,7 @@ export const FormPage: React.FC<FormPageProps> = ({
   initialPage,
   initialBlocks,
   pageId,
+  onSaveSuccess,
 }) => {
   const {
     titulo,
@@ -86,6 +88,7 @@ export const FormPage: React.FC<FormPageProps> = ({
     slugError,
     setSlugError,
     handleSubmit,
+    isSubmitting,
   } = useFormPage({
     initialPage,
     initialBlocks,
@@ -94,6 +97,27 @@ export const FormPage: React.FC<FormPageProps> = ({
 
   const [selectedBlockType, setSelectedBlockType] = useState<PageBlockType | null>(null);
   const [coverImageUrl, setCoverImageUrl] = useState(initialPage?.coverImage || '');
+
+  const snapshot = React.useMemo(() => JSON.stringify({
+    titulo,
+    slug,
+    descricao,
+    coverImageUrl,
+    visivel,
+    destaque,
+    blocks,
+  }), [titulo, slug, descricao, coverImageUrl, visivel, destaque, blocks]);
+  const [lastSavedSnapshot, setLastSavedSnapshot] = React.useState(snapshot);
+  const isSynced = snapshot === lastSavedSnapshot;
+
+  const persist = async (stayOnPage: boolean, e?: React.FormEvent) => {
+    e?.preventDefault();
+    const result = await handleSubmit();
+    if (!result?.success) return;
+
+    setLastSavedSnapshot(snapshot);
+    await onSaveSuccess?.({ stayOnPage });
+  };
 
   const coverImageCropPreset: CropPreset = {
     mode: 'single',
@@ -141,7 +165,7 @@ export const FormPage: React.FC<FormPageProps> = ({
   };
 
   return (
-    <FormPageContainer onSubmit={handleSubmit}>
+    <FormPageContainer onSubmit={(e) => void persist(false, e)}>
       <div>
         <SectionHeader $isDark={theme === 'dark'}>
           <SectionTitle>Informações da Página</SectionTitle>
@@ -304,8 +328,18 @@ export const FormPage: React.FC<FormPageProps> = ({
           text={pageId ? "Atualizar Página" : "Criar Página"}
           width="180px"
           type="submit"
+          loading={isSubmitting}
         />
       </ActionButtonsContainer>
+      {pageId && (
+        <EntityEditFloatingActions
+          theme={theme}
+          neon={neon}
+          synced={isSynced}
+          saving={isSubmitting}
+          onSave={() => void persist(true)}
+        />
+      )}
     </FormPageContainer>
   );
 };

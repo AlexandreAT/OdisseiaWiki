@@ -1,5 +1,6 @@
 import api from "../axios/api";
 import { ServiceRequestOptions } from './serviceRequestOptions';
+import { GalleryImage } from '../models/GalleryImage';
 
 export interface StatusBase {
   vida: number;
@@ -24,7 +25,7 @@ export interface RacaPayload {
   nome: string;
   statusJson: RacaStatus;
   imagem?: string;
-  galeriaImagem?: string[];
+  galeriaImagem?: GalleryImage[];
   tags?: string[];
   visivel: boolean;
   destaque?: boolean;
@@ -35,7 +36,7 @@ export interface CreateRacaDto {
   Nome: string;
   StatusJson: RacaStatus;
   Imagem?: string;
-  GaleriaImagem?: string[];
+  GaleriaImagem?: GalleryImage[];
   Tags?: string[];
   Visivel: boolean;
   Destaque?: boolean;

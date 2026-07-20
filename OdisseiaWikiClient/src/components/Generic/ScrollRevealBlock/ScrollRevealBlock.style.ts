@@ -197,12 +197,19 @@ export const ScrollRevealSection = styled.section<ScrollRevealSectionProps>`
   }
 
   @media (prefers-reduced-motion: reduce) {
-    & *,
-    & > * {
-      opacity: 1;
-      transform: none;
-      clip-path: none;
-      animation: none;
+    & > *,
+    & img {
+      opacity: 1 !important;
+      animation: none !important;
     }
+
+    ${({ $variant }) => $variant !== 'personagemCard' && css`
+      & :is(h1, h2, h3, h4, p, ul, ol, blockquote),
+      & > * > div,
+      & > * > div > div {
+        opacity: 1 !important;
+        animation: none !important;
+      }
+    `}
   }
 `;

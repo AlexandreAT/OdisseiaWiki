@@ -45,6 +45,7 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
   const [galeriaUrls, setGaleriaUrls] = useState<string[]>([]);
   const [galeriaFiles, setGaleriaFiles] = useState<File[]>([]);
   const [galeriaShapes, setGaleriaShapes] = useState<string[]>([]);
+  const [galeriaCaptions, setGaleriaCaptions] = useState<string[]>([]);
   const [history, setHistory] = useState<JSONContent | string>('');
   const [costumes, setCostumes] = useState('');
   const [nanites, setNanites] = useState('');
@@ -368,12 +369,18 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
     const urls = files.map(file => URL.createObjectURL(file));
     setGaleriaUrls(prev => [...prev, ...urls]);
     setGaleriaShapes(prev => [...prev, ...shapes]);
+    setGaleriaCaptions(prev => [...prev, ...files.map(() => '')]);
   }, []);
 
   const handleRemoveGaleriaImage = useCallback((indexToRemove: number) => {
     setGaleriaUrls(prev => prev.filter((_, i) => i !== indexToRemove));
     setGaleriaFiles(prev => prev.filter((_, i) => i !== indexToRemove));
     setGaleriaShapes(prev => prev.filter((_, i) => i !== indexToRemove));
+    setGaleriaCaptions(prev => prev.filter((_, i) => i !== indexToRemove));
+  }, []);
+
+  const handleGaleriaCaptionChange = useCallback((index: number, caption: string) => {
+    setGaleriaCaptions(previous => previous.map((value, itemIndex) => itemIndex === index ? caption : value));
   }, []);
 
   // --- validação ---
@@ -446,6 +453,20 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
         avatarPath = result.path;
       }
 
+      const galleryImages = [];
+      for (let index = 0; index < galeriaFiles.length; index += 1) {
+        const result = await saveAsset({
+          imageFile: galeriaFiles[index],
+          type: 'personagens',
+          entityName: userName,
+          folderName: 'galeria',
+        });
+        galleryImages.push({
+          url: result.path,
+          legenda: galeriaCaptions[index]?.trim() || undefined,
+        });
+      }
+
       const statusForPayload = {
         vida: statusBasico.vida,
         vidaMaxima: statusBasico.vidaMaxima,
@@ -514,6 +535,7 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
         idcidade: city,
         historia: prepareForAPI(history),
         imagem: avatarPath,
+        galeriaImagem: galleryImages,
         costumes: costumes ? [costumes] : [],
         nanites: nanites ? Number(nanites) : undefined,
         alinhamento: alignment,
@@ -556,7 +578,7 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
     } finally {
       setIsSubmitting(false);
     }
-  }, [avatarUrl, avatarFile, userName, statusBasico, itens, magias, skills, race, city, history, costumes, nanites, alignment, traits, idpassiva, ultimate, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, statusExtras, defesas, tags, contentType, visivel, destaque, validateStepOne]);
+  }, [avatarUrl, avatarFile, galeriaFiles, galeriaCaptions, userName, statusBasico, itens, magias, skills, race, city, history, costumes, nanites, alignment, traits, idpassiva, ultimate, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, statusExtras, defesas, tags, contentType, visivel, destaque, validateStepOne]);
 
   return {
     step, setStep,
@@ -568,6 +590,7 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
     galeriaUrls,
     galeriaFiles,
     galeriaShapes,
+    galeriaCaptions,
     history, setHistory,
     costumes, setCostumes,
     nanites, setNanites,
@@ -611,6 +634,7 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
     handleRemoveTag,
     handleGaleriaUpload,
     handleRemoveGaleriaImage,
+    handleGaleriaCaptionChange,
     handleNext,
     handleSubmit,
     isSubmitting,

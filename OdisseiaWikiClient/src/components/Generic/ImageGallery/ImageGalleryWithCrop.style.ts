@@ -45,8 +45,40 @@ export const ImagesGrid = styled.div`
   }
 `;
 
+export const GalleryEntry = styled.div<{ $shape?: string }>`
+  width: ${({ $shape }) => $shape === 'rectangle' ? '267px' : '150px'};
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 0 0 auto;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    grid-column: ${({ $shape }) => $shape === 'rectangle' ? 'span 2' : 'auto'};
+  }
+`;
+
+export const CaptionInput = styled.input<Props>`
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  border: 1px solid ${({ neon }) => neon === 'on' ? 'var(--clearneonBlue)' : 'var(--lightGrey)'};
+  border-radius: 4px;
+  background: ${({ theme }) => theme === 'dark' ? 'rgba(0, 7, 17, 0.82)' : 'var(--whitesmoke)'};
+  color: ${({ theme }) => theme === 'dark' ? 'var(--clearWhite)' : 'var(--deepgrey)'};
+  padding: 7px 8px;
+  font-size: 12px;
+  outline: none;
+
+  &:focus {
+    border-color: var(--neonBlue);
+    box-shadow: ${({ neon }) => neon === 'on' ? '0 0 5px rgba(0, 200, 255, 0.35)' : 'none'};
+  }
+`;
+
 export const ImageItem = styled.div<ImageItemProps>`
   position: relative;
+  width: ${({ shape }) => shape === 'rectangle' ? '267px' : '150px'};
   height: 150px;
   border-radius: ${({ isCircle, shape }) => {
     if (isCircle) return '50%';
@@ -62,6 +94,12 @@ export const ImageItem = styled.div<ImageItemProps>`
   justify-content: center;
   flex-shrink: 0;
 
+  > span {
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+  }
+
   @media (max-width: 768px) {
     width: 100%;
     max-width: none;
@@ -72,7 +110,7 @@ export const ImageItem = styled.div<ImageItemProps>`
     img {
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      object-fit: contain;
     }
   }
 
@@ -92,7 +130,7 @@ export const ImageItem = styled.div<ImageItemProps>`
     img {
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      object-fit: contain;
     }
   }
 `;

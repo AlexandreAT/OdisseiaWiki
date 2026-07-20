@@ -18,6 +18,7 @@ import { normalizeCharacterStatusExtras } from '../../../../../utils/characterSt
 import { useFormCharacter } from '../FormCriarConteúdo/FormCharacter/useFormCharacter';
 import { EditHeader } from './EditFormStyles';
 import { getApiErrorMessage } from '../../../../../utils/apiError';
+import { normalizeGalleryImages } from '../../../../../models/GalleryImage';
 
 interface NpcCharacterEditProps {
   theme: 'dark' | 'light';
@@ -184,6 +185,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
   const [extraInformation, setExtraInformation] = React.useState('');
   const [galeriaUrls, setGaleriaUrls] = React.useState<string[]>([]);
   const [galeriaShapes, setGaleriaShapes] = React.useState<string[]>([]);
+  const [galeriaCaptions, setGaleriaCaptions] = React.useState<string[]>([]);
   const [galeriaPreviewFileMap, setGaleriaPreviewFileMap] = React.useState<Record<string, File>>({});
 
   const raceImageUrl = React.useMemo(
@@ -271,7 +273,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
         });
         const loadedTags = parseJson<string[] | string>(payload.tags, []);
         const relacionados = parseJson<string[] | number[] | string | number>(payload.personagemsVinculados, []);
-        const loadedGaleria = parseJson<string[] | string>(payload.galeriaImagem, []);
+        const loadedGaleria = normalizeGalleryImages(payload.galeriaImagem);
 
         const relatedList = (Array.isArray(relacionados) ? relacionados : [relacionados])
           .map((item) => {
@@ -290,7 +292,8 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
         setRace(Number(payload.idraca));
         setCity(payload.idcidade ? Number(payload.idcidade) : undefined);
         setAvatarUrl(payload.imagem || '');
-        setGaleriaUrls(Array.isArray(loadedGaleria) ? loadedGaleria : []);
+        setGaleriaUrls(loadedGaleria.map(image => image.url));
+        setGaleriaCaptions(loadedGaleria.map(image => image.legenda || ''));
         setHistory(normalizeToJSONContent(tryParseRichText(payload.historia) || ''));
         setCostumes(Array.isArray(loadedCostumes) ? loadedCostumes[0] || '' : String(loadedCostumes || ''));
         setNanites(payload.nanites ? String(payload.nanites) : '');
@@ -393,6 +396,9 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
     traits,
     tags,
     visivel,
+    destaque,
+    idpassiva,
+    ultimate,
     listPersonagemRelacionado,
     statusBasico,
     xp,
@@ -405,6 +411,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
     magias,
     galeriaUrls,
     galeriaShapes,
+    galeriaCaptions,
   }), [
     userName,
     race,
@@ -418,6 +425,9 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
     traits,
     tags,
     visivel,
+    destaque,
+    idpassiva,
+    ultimate,
     listPersonagemRelacionado,
     statusBasico,
     xp,
@@ -430,6 +440,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
     magias,
     galeriaUrls,
     galeriaShapes,
+    galeriaCaptions,
   ]);
 
   React.useEffect(() => {
@@ -455,6 +466,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
 
     setGaleriaUrls((prev) => [...prev, ...urls]);
     setGaleriaShapes((prev) => [...prev, ...shapes]);
+    setGaleriaCaptions((prev) => [...prev, ...files.map(() => '')]);
 
     setGaleriaPreviewFileMap((prev) => {
       const next = { ...prev };
@@ -489,6 +501,11 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
       return prev.filter((_, i) => i !== index);
     });
     setGaleriaShapes((prev) => prev.filter((_, i) => i !== index));
+    setGaleriaCaptions((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const handleGaleriaCaptionChange = React.useCallback((index: number, caption: string) => {
+    setGaleriaCaptions(previous => previous.map((value, itemIndex) => itemIndex === index ? caption : value));
   }, []);
 
   const validateEdit = React.useCallback(() => {
@@ -538,7 +555,10 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
         galeriaNovasPaths.push(result.path);
       }
 
-      const galeriaFinal = [...galeriaPersistida, ...galeriaNovasPaths];
+      const galeriaFinal = [...galeriaPersistida, ...galeriaNovasPaths].map((url, index) => ({
+        url,
+        legenda: galeriaCaptions[index]?.trim() || undefined,
+      }));
 
 
 
@@ -677,9 +697,13 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
     city,
     costumes,
     defesas,
+    destaque,
     galeriaUrls,
+    galeriaCaptions,
+    galeriaPreviewFileMap,
     history,
     itens,
+    idpassiva,
     level,
     listPersonagemRelacionado,
     magias,
@@ -693,6 +717,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
     tags,
     traits,
     userName,
+    ultimate,
     validateEdit,
     visivel,
     xp,
@@ -803,8 +828,10 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
             setAvatarFile={setAvatarFile}
             galeriaUrls={galeriaUrls}
             galeriaShapes={galeriaShapes}
+            galeriaCaptions={galeriaCaptions}
             onAddGaleria={handleAddGaleria}
             onRemoveGaleria={handleRemoveGaleria}
+            onGaleriaCaptionChange={handleGaleriaCaptionChange}
             history={history}
             setHistory={setHistory}
             alignment={alignment}

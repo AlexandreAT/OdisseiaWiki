@@ -6,13 +6,14 @@ import { getRacaById, deleteRaca } from '../../../../../services/racasService';
 import { FormRace } from '../FormCriarConteúdo/FormRace/FormRace';
 import { RacaPayload } from '../../../../../services/racasService';
 import { EditHeader, LoadingContainer, ActionButtonsContainer } from './EditFormStyles';
+import { normalizeGalleryImages } from '../../../../../models/GalleryImage';
 
 interface RaceEditProps {
   theme: 'dark' | 'light';
   neon: 'on' | 'off';
   raceId: number;
   onBack: () => void;
-  onSave?: () => void;
+  onSave?: () => void | Promise<void>;
 }
 
 export const RaceEdit: React.FC<RaceEditProps> = ({ theme, neon, raceId, onBack, onSave }) => {
@@ -42,15 +43,7 @@ export const RaceEdit: React.FC<RaceEditProps> = ({ theme, neon, raceId, onBack,
           }
         }
         
-        // Parse galeriaImagem se for string (JSON stringificada)
-        if (raceData && typeof raceData.galeriaImagem === 'string') {
-          try {
-            raceData.galeriaImagem = JSON.parse(raceData.galeriaImagem);
-          } catch (e) {
-            console.error('Erro ao parsear galeriaImagem:', e);
-            raceData.galeriaImagem = [];
-          }
-        }
+        if (raceData) raceData.galeriaImagem = normalizeGalleryImages(raceData.galeriaImagem);
         
         if (raceData) {
           setRace(raceData);
@@ -152,10 +145,9 @@ export const RaceEdit: React.FC<RaceEditProps> = ({ theme, neon, raceId, onBack,
     );
   }
 
-  const handleSaveSuccess = () => {
-    if (onSave) {
-      onSave();
-    }
+  const handleSaveSuccess = async ({ stayOnPage }: { stayOnPage: boolean }) => {
+    await onSave?.();
+    if (!stayOnPage) onBack();
   };
 
   return (

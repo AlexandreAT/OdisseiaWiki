@@ -1,8 +1,9 @@
-import styled, { keyframes } from 'styled-components';
+import styled, { css, keyframes } from 'styled-components';
 
 interface TitleStyleProps {
   theme: 'dark' | 'light';
   neon: 'on' | 'off';
+  $wide?: boolean;
 }
 
 const drawOutline = keyframes`
@@ -20,6 +21,24 @@ const drawOutline = keyframes`
   }
 `;
 
+const drawWideOutline = keyframes`
+  0% {
+    stroke-dasharray: 1200;
+    stroke-dashoffset: 1200;
+    opacity: 1;
+  }
+  92% {
+    stroke-dasharray: 1200;
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  100% {
+    stroke-dasharray: 1200;
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+`;
+
 const revealFill = keyframes`
   0%, 86% { opacity: 0; }
   100% { opacity: 1; }
@@ -31,8 +50,8 @@ const getTitleColor = ({ theme, neon }: TitleStyleProps) => {
 };
 
 export const AnimatedTitleSvg = styled.svg<TitleStyleProps>`
-  width: clamp(240px, 22vw, 340px);
-  height: clamp(38px, 3.5vw, 54px);
+  width: ${({ $wide }) => ($wide ? 'min(88vw, 1100px)' : 'clamp(240px, 22vw, 340px)')};
+  height: ${({ $wide }) => ($wide ? 'clamp(52px, 8vw, 92px)' : 'clamp(38px, 3.5vw, 54px)')};
   display: block;
   overflow: visible;
 
@@ -41,18 +60,21 @@ export const AnimatedTitleSvg = styled.svg<TitleStyleProps>`
     font-size: 30px;
     font-weight: 100;
     letter-spacing: 3px;
-    text-anchor: start;
+    text-anchor: ${({ $wide }) => $wide ? 'middle' : 'start'};
   }
 
   .title-outline {
     fill: transparent;
     stroke: ${getTitleColor};
-    stroke-width: 1px;
+    stroke-width: ${({ $wide }) => $wide ? '1.25px' : '1px'};
     stroke-linecap: round;
     stroke-linejoin: round;
-    stroke-dasharray: 0 160;
+    stroke-dasharray: ${({ $wide }) => $wide ? '1200' : '0 160'};
+    stroke-dashoffset: ${({ $wide }) => $wide ? '1200' : '0'};
     opacity: 0;
-    animation: ${drawOutline} 3s linear forwards;
+    animation: ${({ $wide }) => $wide
+      ? css`${drawWideOutline} 3s linear forwards`
+      : css`${drawOutline} 3s linear forwards`};
   }
 
   .title-fill {
@@ -62,13 +84,13 @@ export const AnimatedTitleSvg = styled.svg<TitleStyleProps>`
   }
 
   @media (max-width: 768px) {
-    width: 220px;
-    height: 35px;
+    width: ${({ $wide }) => ($wide ? '86vw' : '220px')};
+    height: ${({ $wide }) => ($wide ? '58px' : '35px')};
   }
 
   @media (max-width: 480px) {
-    width: 190px;
-    height: 30px;
+    width: ${({ $wide }) => ($wide ? '90vw' : '190px')};
+    height: ${({ $wide }) => ($wide ? '46px' : '30px')};
   }
 
   @media (prefers-reduced-motion: reduce) {

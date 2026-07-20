@@ -54,6 +54,7 @@ export const useFormPage = ({
   // --- Erros ---
   const [tituloError, setTituloError] = useState('');
   const [slugError, setSlugError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (initialPage) {
@@ -180,9 +181,10 @@ export const useFormPage = ({
     if (e) e.preventDefault();
 
     if (!validateForm()) {
-      return;
+      return { success: false };
     }
 
+    setIsSubmitting(true);
     try {
       let coverImagePath = coverImageUrl;
 
@@ -225,12 +227,16 @@ export const useFormPage = ({
 
         if (!result.sucesso) {
         toast.error(result.mensagemErro || "Erro ao salvar página");
-        return;
+        return { success: false };
         }
 
         toast.success("Página salva com sucesso!");
+        return { success: true };
     } catch (err: any) {
       toast.error(getApiErrorMessage(err, 'Erro ao salvar página'));
+      return { success: false };
+    } finally {
+      setIsSubmitting(false);
     }
   }, [validateForm, coverImageUrl, coverImageFile, slug, titulo, descricao, visivel, destaque, blocks, pageId, initialPage?.dataCriacao]);
 
@@ -265,6 +271,7 @@ export const useFormPage = ({
     setTituloError,
     slugError,
     setSlugError,
+    isSubmitting,
 
     // Submit
     handleSubmit,

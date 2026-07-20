@@ -46,8 +46,10 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
   setAvatarFile,
   galeriaUrls,
   galeriaShapes,
+  galeriaCaptions,
   onAddGaleria,
   onRemoveGaleria,
+  onGaleriaCaptionChange,
   history,
   setHistory,
   alignment,
@@ -189,8 +191,10 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
         label="Galeria de imagens"
         imageUrls={galeriaUrls}
         imageShapes={galeriaShapes}
+        captions={galeriaCaptions}
         onAdd={onAddGaleria}
         onRemove={onRemoveGaleria}
+        onCaptionChange={onGaleriaCaptionChange}
       />
 
       <HistoryEditorWrapper theme={theme} neon={neon}>

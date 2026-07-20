@@ -1,4 +1,5 @@
 import { PersonagemStatus } from "../models/Characters";
+import { GalleryImage, normalizeGalleryImages } from '../models/GalleryImage';
 
 // ----- tipos auxiliares (adequa se já tiver algo parecido no teu projeto) -----
 export type Skill = {
@@ -45,7 +46,7 @@ export interface RawPersonagemApi {
   magia?: string | any[];
   personagemsVinculados?: string | any[];
   // ... outros campos que o back enviar
-  galeriaImagem?: string | string[];
+  galeriaImagem?: string | GalleryImage[];
   tags?: string | string[];
   racaNome?: string;
   cidadeNome?: string;
@@ -103,7 +104,7 @@ export function normalizePersonagem(raw: RawPersonagemApi) {
   const skills = parseJsonOr<Skill[]>(raw.skills, []);
   const magias = parseJsonOr<Magia[]>(raw.magia, []);
   const relacionados = parseJsonOr<any[]>(raw.personagemsVinculados, []);
-  const galeria = parseJsonOr<string[]>((raw as any).galeriaImagem ?? (raw as any).GaleriaImagem, []);
+  const galeria = normalizeGalleryImages((raw as any).galeriaImagem ?? (raw as any).GaleriaImagem);
   const tags = parseJsonOr<string[]>((raw as any).tags ?? (raw as any).Tags, []);
 
   return {

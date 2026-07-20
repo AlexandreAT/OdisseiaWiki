@@ -21,8 +21,10 @@ export interface CharacterRoleplayFormProps {
   setAvatarFile: (file: File | null) => void;
   galeriaUrls: string[];
   galeriaShapes?: string[];
+  galeriaCaptions?: string[];
   onAddGaleria: (files: File[], shapes: string[]) => void;
   onRemoveGaleria: (index: number) => void;
+  onGaleriaCaptionChange?: (index: number, caption: string) => void;
   history: JSONContent | string;
   setHistory: (value: JSONContent | string) => void;
   alignment: string;

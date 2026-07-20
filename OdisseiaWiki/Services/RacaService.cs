@@ -122,7 +122,7 @@ namespace OdisseiaWiki.Services
                 : null,
             Imagem = raca.Imagem,
             GaleriaImagem = !string.IsNullOrWhiteSpace(raca.GaleriaImagem)
-                ? JsonSerializer.Deserialize<List<string>>(raca.GaleriaImagem)
+                ? JsonSerializer.Deserialize<List<ImagemGaleriaDto>>(raca.GaleriaImagem)
                 : null,
             Tags = !string.IsNullOrWhiteSpace(raca.Tags)
                 ? JsonSerializer.Deserialize<List<string>>(raca.Tags)
