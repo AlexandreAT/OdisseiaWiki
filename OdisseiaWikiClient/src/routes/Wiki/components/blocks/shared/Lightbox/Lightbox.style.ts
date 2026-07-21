@@ -13,6 +13,7 @@ export const LightboxOverlay = styled.div<{ $backgroundImage?: string }>`
   isolation: isolate;
   overflow: hidden;
   box-sizing: border-box;
+  background-color: #02060b;
 
   @media (max-width: 768px) {
     padding: 12px;

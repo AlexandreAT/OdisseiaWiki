@@ -12,6 +12,8 @@ import {
   CheckDisplay
 } from './CheckSelect.style';
 import { CheckBox } from '../CheckBox/CheckBox';
+import { FormLabelText } from '../FormLabelText';
+import { revealFirstValidationError } from '../../../utils/formValidationFeedback';
 
 interface Option {
   value: string;
@@ -41,6 +43,7 @@ const CheckSelectComponent = ({
   onChange,
   error,
   errorMessage,
+  required,
   typeStyle = 'primary',
   width,
   height,
@@ -62,6 +65,10 @@ const CheckSelectComponent = ({
     setSelectedValues(value || []);
     if ((value || []).length > 0) setFocus(true);
   }, [value]);
+
+  useEffect(() => {
+    if (error) revealFirstValidationError(containerRef.current);
+  }, [error]);
 
 
   const computeRect = useCallback(() => {
@@ -200,7 +207,11 @@ const CheckSelectComponent = ({
   })();
 
   return (
-    <ContentController width={width} ref={containerRef}>
+    <ContentController
+      width={width}
+      ref={containerRef}
+      data-validation-error={error || undefined}
+    >
       <Label width={width} height={height} onClick={toggleOpen}>
         <CheckDisplay
           theme={theme}
@@ -217,7 +228,7 @@ const CheckSelectComponent = ({
             : ''}
         </CheckDisplay>
         <LabelSpan active={focus || selectedValues.length > 0} typeStyle={typeStyle}>
-          {label}
+          <FormLabelText label={label} required={required} />
         </LabelSpan>
       </Label>
 

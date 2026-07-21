@@ -160,15 +160,25 @@ export const SearchResultGroupTitle = styled.h2<{ $type: WikiSearchEntityType; $
   }
 `;
 
-export const SearchResultsGrid = styled.div`
+export const SearchResultsGrid = styled.div<{ $type: WikiSearchEntityType }>`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 16px;
+  grid-template-columns: ${({ $type }) => $type === 'races' || $type === 'items'
+    ? 'repeat(auto-fill, minmax(155px, 1fr))'
+    : 'repeat(auto-fill, minmax(250px, 1fr))'};
+  gap: ${({ $type }) => $type === 'races' || $type === 'items' ? '12px' : '16px'};
   width: 100%;
   min-width: 0;
 
   @media (max-width: 768px) {
-    grid-template-columns: 1fr;
+    grid-template-columns: ${({ $type }) => $type === 'races' || $type === 'items'
+      ? 'repeat(auto-fill, minmax(135px, 1fr))'
+      : '1fr'};
+  }
+
+  @media (max-width: 360px) {
+    grid-template-columns: ${({ $type }) => $type === 'races' || $type === 'items'
+      ? 'repeat(2, minmax(0, 1fr))'
+      : '1fr'};
   }
 `;
 
@@ -200,7 +210,6 @@ export const ResultCard = styled.button<{
     gap: 16px;
     padding: 18px;
     overflow: visible;
-    background-image: radial-gradient(circle at 62px 50%, rgba(255, 0, 204, 0.12), transparent 42%);
   `}
 
   &:hover {
@@ -227,11 +236,11 @@ export const ResultCardImage = styled(FallbackImage)<{ $type: WikiSearchEntityTy
   height: ${({ $type }) => $type === 'characters' ? '104px' : $type === 'races' || $type === 'items' ? 'auto' : '160px'};
   aspect-ratio: ${({ $type }) => $type === 'characters' || $type === 'races' || $type === 'items' ? '1 / 1' : 'auto'};
   flex: ${({ $type }) => $type === 'characters' ? '0 0 104px' : '0 0 auto'};
-  border: ${({ $type }) => $type === 'characters' ? `2px solid ${getGroupColor($type)}` : '0'};
+  border: ${({ $type }) => $type === 'characters' ? `2px solid var(--mediumgrey)` : '0'};
   border-radius: ${({ $type }) => $type === 'characters' ? '50%' : '0'};
   background-color: #000;
   color: ${({ $type }) => getGroupColor($type)};
-  box-shadow: ${({ $type }) => $type === 'characters' ? `0 0 18px ${getGroupColor($type)}` : 'none'};
+  box-shadow: none;
 
   @media (max-width: 480px) {
     width: ${({ $type }) => $type === 'characters' ? '84px' : '100%'};

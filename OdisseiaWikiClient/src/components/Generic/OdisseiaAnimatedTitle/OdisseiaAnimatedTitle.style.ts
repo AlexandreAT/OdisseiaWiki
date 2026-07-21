@@ -21,24 +21,6 @@ const drawOutline = keyframes`
   }
 `;
 
-const drawWideOutline = keyframes`
-  0% {
-    stroke-dasharray: 1200;
-    stroke-dashoffset: 1200;
-    opacity: 1;
-  }
-  94% {
-    stroke-dasharray: 1200;
-    stroke-dashoffset: 0;
-    opacity: 1;
-  }
-  100% {
-    stroke-dasharray: 1200;
-    stroke-dashoffset: 0;
-    opacity: 0;
-  }
-`;
-
 const revealFill = keyframes`
   from { opacity: 0; }
   to { opacity: 1; }
@@ -69,18 +51,20 @@ export const AnimatedTitleSvg = styled.svg<TitleStyleProps>`
     stroke-width: ${({ $wide }) => $wide ? '1.25px' : '1px'};
     stroke-linecap: round;
     stroke-linejoin: round;
-    stroke-dasharray: ${({ $wide }) => $wide ? '1200' : '0 160'};
-    stroke-dashoffset: ${({ $wide }) => $wide ? '1200' : '0'};
+    stroke-dasharray: 0 160;
+    stroke-dashoffset: 0;
     opacity: 0;
     animation: ${({ $wide }) => $wide
-      ? css`${drawWideOutline} 4.1s linear forwards`
+      ? css`${drawOutline} 5.6s linear forwards`
       : css`${drawOutline} 4.1s linear forwards`};
   }
 
   .title-fill {
     fill: ${getTitleColor};
     opacity: 0;
-    animation: ${revealFill} 320ms ease-out 3.85s forwards;
+    animation: ${({ $wide }) => $wide
+      ? css`${revealFill} 90ms linear 5.22s forwards`
+      : css`${revealFill} 320ms ease-out 3.85s forwards`};
   }
 
   @media (max-width: 768px) {

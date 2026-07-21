@@ -40,9 +40,11 @@ import {
   BlockTypeButton,
   ActionButtonsContainer,
   EmptyBlocksMessage,
+  BlocksValidationMessage,
 } from './FormPage.style';
 import { BiTrash, BiPlus, BiMoveVertical, BiInfoCircle } from 'react-icons/bi';
 import { EntityEditFloatingActions } from '../../FormBuscarConteúdo/EntityEditFloatingActions';
+import { revealFirstValidationError } from '../../../../../../utils/formValidationFeedback';
 
 const BLOCK_TYPES: PageBlockType[] = [
   PageBlockType.RICH_TEXT,
@@ -93,6 +95,7 @@ export const FormPage: React.FC<FormPageProps> = ({
     setTituloError,
     slugError,
     setSlugError,
+    blocksError,
     handleSubmit,
     isSubmitting,
   } = useFormPage({
@@ -108,6 +111,11 @@ export const FormPage: React.FC<FormPageProps> = ({
   const draggingBlockIdRef = React.useRef<string | null>(null);
   const slugInfoRef = React.useRef<HTMLDivElement>(null);
   const persistInFlightRef = React.useRef(false);
+  const blocksContainerRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (blocksError) revealFirstValidationError(blocksContainerRef.current);
+  }, [blocksError]);
 
   React.useEffect(() => {
     if (!showSlugInfo) return;
@@ -328,7 +336,13 @@ export const FormPage: React.FC<FormPageProps> = ({
           </p>
         </SectionHeader>
 
-        <BlocksContainer $isDark={theme === 'dark'} $neon={neon === 'on'}>
+        <BlocksContainer
+          ref={blocksContainerRef}
+          $isDark={theme === 'dark'}
+          $neon={neon === 'on'}
+          $error={!!blocksError}
+          data-validation-error={!!blocksError || undefined}
+        >
           {blocks.length === 0 ? (
             <EmptyBlocksMessage>
               <p>Nenhum bloco adicionado ainda.</p>
@@ -394,6 +408,7 @@ export const FormPage: React.FC<FormPageProps> = ({
             ))
           )}
         </BlocksContainer>
+        {blocksError && <BlocksValidationMessage role="alert">{blocksError}</BlocksValidationMessage>}
 
         <AddBlockContainer>
           <label style={{ fontWeight: 'bold', fontSize: '14px' }}>

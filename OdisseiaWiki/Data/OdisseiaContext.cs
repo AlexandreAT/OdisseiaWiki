@@ -250,9 +250,12 @@ public partial class OdisseiaContext : DbContext
                 .HasColumnType("int(11)")
                 .HasColumnName("IDRaca");
             entity.Property(e => e.DataCriacao).HasColumnType("datetime");
+            entity.Property(e => e.Descricao).HasColumnType("text");
             entity.Property(e => e.Imagem).HasMaxLength(255);
             entity.Property(e => e.Nome).HasMaxLength(100);
+            entity.Property(e => e.GaleriaImagem).HasColumnType("longtext");
             entity.Property(e => e.Tags).HasColumnType("longtext");
+            entity.Property(e => e.Variacoes).HasColumnType("longtext");
             entity.Property(e => e.Visivel).HasColumnType("tinyint(1)");
         });
 

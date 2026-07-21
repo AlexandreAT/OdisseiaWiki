@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.Json;
 
 namespace OdisseiaWiki.Dtos
 {
@@ -8,8 +9,10 @@ namespace OdisseiaWiki.Dtos
         public int Idraca { get; set; }
         public string Nome { get; set; } = null!;
         public RacaStatusDto? StatusJson { get; set; }
+        public JsonElement? Descricao { get; set; }
         public string? Imagem { get; set; }
         public List<ImagemGaleriaDto>? GaleriaImagem { get; set; }
+        public List<RacaVariacaoDto>? Variacoes { get; set; }
         public List<string>? Tags { get; set; }
         public bool Visivel { get; set; } = true;
         public bool Destaque { get; set; } = false;

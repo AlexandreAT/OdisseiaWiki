@@ -22,22 +22,9 @@ export const FormController = styled.form`
 export const FormHeader = styled.div`
   width: 100%;
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   align-items: flex-start;
-  justify-content: space-between;
   gap: 20px;
-
-  @media (min-width: 1101px) {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(340px, 430px);
-    justify-content: stretch;
-    column-gap: clamp(28px, 3vw, 48px);
-  }
-
-  @media (max-width: 768px) {
-    flex-direction: column;
-    align-items: center;
-  }
 `;
 
 export const HeaderInfo = styled.div`
@@ -49,31 +36,18 @@ export const HeaderInfo = styled.div`
   min-width: 0;
   overflow: hidden;
 
-  @media (min-width: 1101px) {
-    width: 100%;
-    max-width: none;
-  }
 `;
 
 export const ImageSection = styled.div`
-  width: 300px;
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   gap: 15px;
 
-  @media (min-width: 1101px) {
-    width: 100%;
-    max-width: 430px;
-  }
-
-  @media (max-width: 1100px) {
-    width: clamp(220px, 28vw, 280px);
-  }
-
-  @media (max-width: 768px) {
-    width: min(100%, 260px);
+  > div {
+    width: min(100%, 380px);
   }
 `;
 
@@ -105,9 +79,13 @@ export const StatusSection = styled.div<Props>`
 `;
 
 export const StatusTitle = styled.h3<Props>`
-  font-size: 18px;
-  font-weight: 600;
+  font-family: 'DO Futuristic', sans-serif;
+  font-size: clamp(0.88rem, 1.35vw, 1.08rem);
+  font-weight: 400;
+  letter-spacing: 0.16em;
+  line-height: 1.35;
   margin: 0;
+  text-transform: uppercase;
   color: ${(props) =>
     props.neon === 'on'
       ? props.theme === 'light'
@@ -116,6 +94,11 @@ export const StatusTitle = styled.h3<Props>`
       : props.theme === 'light'
         ? 'var(--black)'
         : 'var(--whitesmoke)'};
+  text-shadow: ${(props) => props.neon === 'on'
+    ? props.theme === 'light'
+      ? '0 0 7px var(--neonViolet)'
+      : '0 0 7px var(--neonBlue)'
+    : 'none'};
 `;
 
 export const StatusGrid = styled.div`
@@ -217,8 +200,14 @@ export const TagsSection = styled.div`
 export const CheckboxSection = styled.div`
   display: flex;
   align-items: center;
+  gap: 12px;
   width: 100%;
   padding: 10px 0;
+
+  @media (max-width: 480px) {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 `;
 
 export const ButtonsContainer = styled.div`
@@ -241,4 +230,97 @@ export const ErrorText = styled.span<Props>`
   font-size: 13px;
   color: var(--error);
   margin-top: -8px;
+`;
+
+export const ContentSection = styled.section`
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding: 18px;
+  box-sizing: border-box;
+  border: 1px solid rgba(104, 139, 160, 0.28);
+  border-radius: 7px;
+  background: linear-gradient(135deg, rgba(0, 19, 34, 0.34), rgba(2, 7, 15, 0.12));
+
+  @media (max-width: 768px) {
+    padding: 13px;
+  }
+`;
+
+export const SectionHeader = styled.div`
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 0 0 10px 14px;
+  border-bottom: 1px solid rgba(0, 205, 255, 0.2);
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    bottom: 10px;
+    left: 0;
+    width: 2px;
+    background: var(--clearneonBlue);
+    box-shadow: 0 0 7px var(--neonBlue);
+  }
+`;
+
+export const SectionHelp = styled.p`
+  margin: 0;
+  color: var(--lightGrey) !important;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0.055em;
+  line-height: 1.55;
+  text-wrap: pretty;
+`;
+
+export const SectionError = styled.span`
+  color: var(--red);
+  font-size: 12px;
+`;
+
+export const VariationImageCell = styled.div`
+  width: 94px;
+  margin: 0 auto;
+
+  > div {
+    gap: 0;
+  }
+
+  > div > div:first-child {
+    width: 88px;
+    max-width: 88px;
+    border-radius: 4px;
+  }
+
+  > div > span:last-child {
+    display: none;
+  }
+
+  p {
+    max-width: 68px;
+    font-size: 7px;
+    line-height: 1.05;
+    overflow-wrap: anywhere;
+  }
+
+  svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  @media (max-width: 768px) {
+    width: 76px;
+
+    > div > div:first-child {
+      width: 72px;
+      max-width: 72px;
+    }
+  }
 `;

@@ -18,6 +18,8 @@ import {
   SelectValue,
   SpanError,
 } from './Select.style';
+import { FormLabelText } from '../FormLabelText';
+import { revealFirstValidationError } from '../../../utils/formValidationFeedback';
 
 interface Option {
   value: number | string;
@@ -91,7 +93,7 @@ export const Select = forwardRef<HTMLSelectElement, Props>(({
 
   useEffect(() => {
     if (!hasError) return;
-    controllerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    revealFirstValidationError(controllerRef.current);
   }, [hasError]);
 
   useEffect(() => {
@@ -183,7 +185,7 @@ export const Select = forwardRef<HTMLSelectElement, Props>(({
   }, [activeIndex, disabled, hasValue, notifyFocus, open, options, selectOption, selectedIndex, toggleOpen]);
 
   return (
-    <ContentController ref={controllerRef} width={width}>
+    <ContentController ref={controllerRef} width={width} data-validation-error={hasError || undefined}>
       <Label width={width} height={height}>
         <NativeSelect
           ref={setSelectRef}
@@ -212,6 +214,8 @@ export const Select = forwardRef<HTMLSelectElement, Props>(({
           aria-haspopup="listbox"
           aria-expanded={open}
           aria-required={required}
+          aria-invalid={hasError}
+          data-validation-focus="true"
           onClick={toggleOpen}
           onFocus={notifyFocus}
           onBlur={() => !open && setFocus(hasValue)}
@@ -221,7 +225,9 @@ export const Select = forwardRef<HTMLSelectElement, Props>(({
           <SelectArrow $open={open} aria-hidden="true" />
         </SelectControl>
 
-        <LabelSpan active={focus || hasValue}>{label}</LabelSpan>
+        <LabelSpan active={focus || hasValue}>
+          <FormLabelText label={label} required={required} />
+        </LabelSpan>
 
         {open && (
           <SelectDropdown role="listbox" aria-label={label}>

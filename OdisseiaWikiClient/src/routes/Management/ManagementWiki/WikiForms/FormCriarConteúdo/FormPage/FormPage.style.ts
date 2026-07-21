@@ -1,10 +1,15 @@
-import styled from 'styled-components';
+import styled, { css, keyframes } from 'styled-components';
 import { managementEntityToolbarResponsive } from '../../ManagementEntityToolbar.style';
 
 interface ThemeProps {
   $isDark?: boolean;
   $neon?: boolean;
 }
+
+const validationPulse = keyframes`
+  0%, 100% { border-color: var(--clearneonRed); }
+  50% { border-color: var(--clearneonBlue); }
+`;
 
 export const FormPageContainer = styled.form`
   display: flex;
@@ -150,7 +155,7 @@ export const SlugInfoPopover = styled.aside<ThemeProps>`
 `;
 
 
-export const BlocksContainer = styled.div<ThemeProps>`
+export const BlocksContainer = styled.div<ThemeProps & { $error?: boolean }>`
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -163,6 +168,12 @@ export const BlocksContainer = styled.div<ThemeProps>`
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
+
+  ${({ $error }) => $error && css`
+    border: 2px solid var(--clearneonRed);
+    box-shadow: 0 0 10px 2px var(--neonRed), 0 0 20px 1px var(--neonBlue);
+    animation: ${validationPulse} 0.8s ease-in-out 2;
+  `}
 
   @media (max-width: 768px) {
     padding: 10px;
@@ -232,6 +243,17 @@ export const BlockActions = styled.div`
   gap: 8px;
   align-items: center;
   flex-wrap: wrap;
+`;
+
+export const BlocksValidationMessage = styled.span`
+  display: block;
+  margin-top: 7px;
+  padding-left: 8px;
+  border-left: 2px solid var(--clearneonRed);
+  color: var(--clearneonRed) !important;
+  font-size: 12px;
+  font-weight: 700;
+  text-shadow: 0 0 5px var(--neonRed);
 `;
 
 export const IconButton = styled.button<{ danger?: boolean; $neon?: boolean; $isDark?: boolean }>`

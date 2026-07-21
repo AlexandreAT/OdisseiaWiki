@@ -180,7 +180,7 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, initialStep = 1
     const isLastStep = editStep === 2;
 
     const validateEdit = React.useCallback(() => {
-      const hasNameError = !userName.trim();
+      const hasNameError = !userName.trim() || userName.trim().length > 100;
       const hasRaceError = !race || race === 0;
 
       setNameError(hasNameError);
@@ -351,7 +351,7 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, initialStep = 1
                   loadingPersonagens={loadingPersonagens}
                   searchPersonagens={searchPersonagens}
                   nameError={nameError}
-                  nameErrorMessage="Nome é obrigatório."
+                  nameErrorMessage={!userName.trim() ? 'Nome é obrigatório.' : 'O nome deve ter no máximo 100 caracteres.'}
                   onNameFocus={() => setNameError(false)}
                   raceError={raceError}
                   raceErrorMessage="Selecione uma raça válida."

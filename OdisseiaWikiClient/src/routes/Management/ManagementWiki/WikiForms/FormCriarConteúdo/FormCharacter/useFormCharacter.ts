@@ -389,6 +389,8 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
 
     if (!data.name || data.name.trim().length < 3) {
       errors.name = 'O nome deve ter pelo menos 3 caracteres.';
+    } else if (data.name.trim().length > 100) {
+      errors.name = 'O nome deve ter no máximo 100 caracteres.';
     }
 
     if (!data.race || data.race === 0) {

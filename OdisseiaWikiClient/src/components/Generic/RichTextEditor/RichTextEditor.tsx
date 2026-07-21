@@ -1,4 +1,4 @@
-import { useState, useEffect, memo } from 'react';
+import { useState, useEffect, memo, useRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -18,6 +18,8 @@ import {
   EditorWrapper,
   ExpandButton,
 } from './RichTextEditor.style';
+import { FormLabelText } from '../FormLabelText';
+import { revealFirstValidationError } from '../../../utils/formValidationFeedback';
 
 interface RichTextEditorProps {
   theme: 'dark' | 'light';
@@ -64,6 +66,11 @@ const RichTextEditorComponent = ({
   const [expandedContent, setExpandedContent] = useState<JSONContent | string>(
     value || createEmptyJSONContent(),
   );
+  const controllerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (error) revealFirstValidationError(controllerRef.current);
+  }, [error]);
 
   // Inicializa o editor TipTap
   const editor = useEditor({
@@ -150,7 +157,13 @@ const RichTextEditorComponent = ({
   };
 
   return (
-    <ContentController width={width} height={height} fullWidth={fullWidth}>
+    <ContentController
+      ref={controllerRef}
+      width={width}
+      height={height}
+      fullWidth={fullWidth}
+      data-validation-error={error || undefined}
+    >
       <EditorContainer width={width} height={height}>
         {expandable && (
           <ExpandButton
@@ -183,7 +196,7 @@ const RichTextEditorComponent = ({
 
           <EditorLabel>
             <EditorLabelSpan active={focus || hasContent}>
-              {label}
+              <FormLabelText label={label} required={required} />
             </EditorLabelSpan>
           </EditorLabel>
           

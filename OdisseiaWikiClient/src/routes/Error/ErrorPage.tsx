@@ -18,15 +18,15 @@ interface ErrorLocationState {
 const getPathContext = (pathname: string): ErrorLocationState => {
   if (pathname.startsWith('/cidade/')) {
     return {
-      errorTitle: 'Página de cidade ainda não disponível',
-      errorDescription: 'A página dinâmica desta cidade está em desenvolvimento.',
+      errorTitle: 'Cidade não encontrada',
+      errorDescription: 'Não foi possível carregar os dados desta cidade.',
     };
   }
 
   if (pathname.startsWith('/raca/')) {
     return {
-      errorTitle: 'Página de raça ainda não disponível',
-      errorDescription: 'A página dinâmica desta raça está em desenvolvimento.',
+      errorTitle: 'Raça não encontrada',
+      errorDescription: 'Não foi possível carregar os dados desta raça.',
     };
   }
 

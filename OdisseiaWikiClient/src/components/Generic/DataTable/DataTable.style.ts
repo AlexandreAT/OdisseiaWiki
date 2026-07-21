@@ -1,9 +1,21 @@
-import styled, { css } from "styled-components";
+import styled, { css, keyframes } from "styled-components";
 
 type Props = {
   theme: "dark" | "light";
   neon: "on" | "off";
+  $error?: boolean;
 };
+
+const validationPulse = keyframes`
+  0%, 100% {
+    border-color: var(--clearneonRed);
+    box-shadow: 0 0 8px 1px var(--neonRed), 0 0 16px rgba(0, 166, 255, 0.32);
+  }
+  45% {
+    border-color: var(--clearneonBlue);
+    box-shadow: 0 0 10px 2px var(--neonBlue), 0 0 18px rgba(255, 0, 65, 0.38);
+  }
+`;
 
 export const DataTableContainer = styled.div<Props>`
     width: 100%;
@@ -14,6 +26,13 @@ export const DataTableContainer = styled.div<Props>`
     min-width: 0;
     max-width: 100%;
     overflow: visible;
+
+    ${({ $error }) => $error && css`
+      padding: 5px;
+      border: 2px solid var(--clearneonRed);
+      border-radius: 9px;
+      animation: ${validationPulse} 0.85s ease-in-out 2;
+    `}
 
     .MuiPaper-root .icon{
         fill: ${({ theme, neon }) => theme === "dark" 
@@ -74,6 +93,20 @@ export const DataTableContainer = styled.div<Props>`
       ${({ theme }) =>
         theme === "dark" ? "var(--lightBlue)" : "var(--lightGrey)"};
     padding-right: 20px;
+    text-align: center !important;
+  }
+
+  && thead .MuiTableRow-root .MuiTableCell-head > div,
+  && thead .MuiTableRow-root .MuiTableCell-head button {
+    width: 100%;
+    justify-content: center !important;
+    text-align: center !important;
+  }
+
+  && thead .MuiTableRow-root .MuiTableCell-head [class*='MUIDataTableHeadCell-data'] {
+    display: block;
+    width: 100%;
+    text-align: center !important;
   }
 
   && thead .MuiTableRow-root .MuiTableCell-head .tss-1akey0g-MUIDataTableHeadCell-data {
@@ -116,6 +149,7 @@ export const DataTableContainer = styled.div<Props>`
     color: ${({ theme }) =>
       theme === "dark" ? "var(--whitesmoke)" : "var(--black)"};
     font-size: 13px;
+    text-align: left;
   }
 
   && .MuiInput-root:before {
@@ -158,6 +192,42 @@ export const DataTableContainer = styled.div<Props>`
       padding: 5px;
     }
   }
+`;
+
+export const CellEditor = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  min-width: 0;
+  gap: 2px;
+`;
+
+export const CharacterCounter = styled.span`
+  align-self: flex-end;
+  min-height: 11px;
+  padding-right: 1px;
+  color: var(--grey) !important;
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: 0.025em;
+  opacity: 0.68;
+  pointer-events: none;
+  user-select: none;
+`;
+
+export const ValidationMessage = styled.span`
+  align-self: flex-start;
+  padding: 4px 7px;
+  border-left: 2px solid var(--clearneonRed);
+  border-radius: 3px;
+  background: linear-gradient(90deg, rgba(255, 0, 55, 0.13), transparent);
+  color: var(--clearneonRed) !important;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+  text-shadow: 0 0 5px rgba(255, 0, 55, 0.58);
 `;
 
 export const TableScrollContainer = styled.div`

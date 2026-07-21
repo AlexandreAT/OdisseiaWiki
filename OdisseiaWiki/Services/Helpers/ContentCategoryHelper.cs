@@ -38,14 +38,15 @@ namespace OdisseiaWiki.Services.Helpers
             {
                 Raca => normalizedTerm == "raca",
                 InfoLore => normalizedTerm is "infolore" or "info lore" or "lore",
-                Page => normalizedTerm is "page" or "pagina",
+                Page => normalizedTerm is "page" or "pages" or "pagina" or "paginas",
                 _ => normalizedTerm == Normalize(category)
             };
         }
 
         private static string Normalize(string value)
         {
-            var decomposed = value.Trim().Normalize(NormalizationForm.FormD);
+            value = RepairMojibake(value.Trim());
+            var decomposed = value.Normalize(NormalizationForm.FormD);
             var builder = new StringBuilder(decomposed.Length);
 
             foreach (var character in decomposed)
@@ -55,6 +56,27 @@ namespace OdisseiaWiki.Services.Helpers
             }
 
             return builder.ToString().Normalize(NormalizationForm.FormC);
+        }
+
+        private static string RepairMojibake(string value)
+        {
+            var repaired = value;
+
+            // Alguns clientes Windows podem entregar UTF-8 interpretado como Latin-1
+            // (por exemplo, "página" chega como "p\u00C3\u00A1gina").
+            for (var attempt = 0; attempt < 2; attempt++)
+            {
+                if (!repaired.Contains('\u00C2') && !repaired.Contains('\u00C3'))
+                    break;
+
+                var candidate = Encoding.UTF8.GetString(Encoding.Latin1.GetBytes(repaired));
+                if (candidate.Contains('\uFFFD'))
+                    break;
+
+                repaired = candidate;
+            }
+
+            return repaired;
         }
     }
 }

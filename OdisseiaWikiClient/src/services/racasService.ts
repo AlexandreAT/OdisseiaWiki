@@ -1,6 +1,7 @@
 import api from "../axios/api";
 import { ServiceRequestOptions } from './serviceRequestOptions';
 import { GalleryImage } from '../models/GalleryImage';
+import { JSONContent } from '../models/Cities';
 
 export interface StatusBase {
   vida: number;
@@ -15,7 +16,19 @@ export interface StatusBase {
 export interface RacaStatus {
   status: StatusBase;
   atributoInicial: string;
-  passivas: string[];
+  passivas: RacaPassiva[];
+}
+
+export interface RacaPassiva {
+  nome: string;
+  efeito?: string;
+}
+
+export interface RacaVariacao {
+  nome: string;
+  descricao?: string;
+  efeito?: string;
+  imagem?: string;
 }
 
 export type RacaCharacterStatusDefaults = Required<StatusBase>;
@@ -24,8 +37,10 @@ export interface RacaPayload {
   idraca: number;
   nome: string;
   statusJson: RacaStatus;
+  descricao?: JSONContent | string;
   imagem?: string;
   galeriaImagem?: GalleryImage[];
+  variacoes?: RacaVariacao[];
   tags?: string[];
   visivel: boolean;
   destaque?: boolean;
@@ -35,8 +50,10 @@ export interface RacaPayload {
 export interface CreateRacaDto {
   Nome: string;
   StatusJson: RacaStatus;
+  Descricao?: JSONContent | string | null;
   Imagem?: string;
   GaleriaImagem?: GalleryImage[];
+  Variacoes?: RacaVariacao[];
   Tags?: string[];
   Visivel: boolean;
   Destaque?: boolean;
@@ -53,6 +70,51 @@ export interface ResultRaca {
   mensagemErro?: string;
   raca?: RacaPayload;
 }
+
+const normalizeRacaPassivas = (value: unknown): RacaPassiva[] => {
+  if (!Array.isArray(value)) return [];
+
+  return value.flatMap((item) => {
+    if (typeof item === 'string') {
+      const nome = item.trim();
+      return nome ? [{ nome }] : [];
+    }
+
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return [];
+    const passiva = item as Record<string, unknown>;
+    const nome = String(passiva.nome ?? passiva.Nome ?? '').trim();
+    const efeito = String(passiva.efeito ?? passiva.Efeito ?? passiva.descricao ?? passiva.Descricao ?? '').trim();
+    if (!nome && !efeito) return [];
+
+    return [{ nome, ...(efeito ? { efeito } : {}) }];
+  });
+};
+
+export const normalizeRacaVariacoes = (value: unknown): RacaVariacao[] => {
+  if (!Array.isArray(value)) return [];
+
+  return value.flatMap((item) => {
+    if (typeof item === 'string') {
+      const nome = item.trim();
+      return nome ? [{ nome }] : [];
+    }
+
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return [];
+    const variacao = item as Record<string, unknown>;
+    const nome = String(variacao.nome ?? variacao.Nome ?? '').trim();
+    const descricao = String(variacao.descricao ?? variacao.Descricao ?? '').trim();
+    const efeito = String(variacao.efeito ?? variacao.Efeito ?? '').trim();
+    const imagem = String(variacao.imagem ?? variacao.Imagem ?? '').trim();
+    if (!nome && !descricao && !efeito && !imagem) return [];
+
+    return [{
+      nome,
+      ...(descricao ? { descricao } : {}),
+      ...(efeito ? { efeito } : {}),
+      ...(imagem ? { imagem } : {}),
+    }];
+  });
+};
 
 export const normalizeRacaStatus = (value: unknown): RacaStatus | null => {
   if (value === undefined || value === null) return null;
@@ -89,11 +151,7 @@ export const normalizeRacaStatus = (value: unknown): RacaStatus | null => {
       capacidadeCarga: toNumber('capacidadeCarga') || toNumber('CapacidadeCarga'),
     },
     atributoInicial: String(raceValue.atributoInicial ?? raceValue.AtributoInicial ?? ''),
-    passivas: Array.isArray(raceValue.passivas)
-      ? raceValue.passivas.map(String)
-      : Array.isArray(raceValue.Passivas)
-        ? raceValue.Passivas.map(String)
-        : [],
+    passivas: normalizeRacaPassivas(raceValue.passivas ?? raceValue.Passivas),
   };
 };
 
@@ -138,7 +196,7 @@ export const getRacas = async (
   return response.data;
 };
 
-export const getRacaById = async (id: number, idMesa?: number): Promise<ResultRaca> => {
+export const getRacaById = async (id: number, idMesa?: number): Promise<ResultRaca | RacaPayload> => {
   const response = await api.get(`/racas/${id}`, {
     params: idMesa !== undefined ? { idMesa } : {},
   });

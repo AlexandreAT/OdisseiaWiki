@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useSelector } from 'react-redux';
 import { createPortal } from 'react-dom';
 import CloseIcon from '@mui/icons-material/Close';
@@ -6,7 +7,6 @@ import {
   BiImage,
   BiImages,
   BiMapPin,
-  BiRightArrowAlt,
   BiUserCircle,
 } from 'react-icons/bi';
 import { OdisseiaAnimatedTitle } from '../../components/Generic/OdisseiaAnimatedTitle';
@@ -61,6 +61,7 @@ import {
   PointImage,
   PointImageButton,
   PointList,
+  PointSummaryLayout,
   RelatedPageLink,
   RelatedPages,
   RelatedPagesTitle,
@@ -77,7 +78,6 @@ import {
   HistoryModalSheet,
   HistoryModalTitle,
   ItemDescriptionImage,
-  ItemDescriptionLayout,
   ItemDetailsBody,
 } from '../Personagem/PersonagemPage.style';
 
@@ -173,6 +173,7 @@ const PointCardContent = ({ point, onOpenImage, onOpenSummary, modal = false }: 
 };
 
 const CidadePage = () => {
+  const [mainImageOpen, setMainImageOpen] = useState(false);
   const { theme, neon } = useSelector<RootThemeState, ThemeReducerState>(
     (state) => state.themesReducer
   );
@@ -242,12 +243,25 @@ const CidadePage = () => {
     ...image,
     url: normalizeImagePath(image.url),
   }));
+  const mainCityImage = normalizeImagePath(city.imagem);
 
   return (
-    <CityPageContainer $theme={theme} $backgroundImage={normalizeImagePath(city.imagem)}>
+    <CityPageContainer $theme={theme} $backgroundImage={mainCityImage}>
       <CityPageContent>
-        <CityBanner $neon={isNeonActive}>
-          <BannerImage src={normalizeImagePath(city.imagem)} alt="" aria-hidden="true" />
+        <CityBanner
+          $neon={isNeonActive}
+          $clickable={Boolean(mainCityImage)}
+          role={mainCityImage ? 'button' : undefined}
+          tabIndex={mainCityImage ? 0 : undefined}
+          aria-label={mainCityImage ? `Ampliar imagem principal de ${city.nome}` : undefined}
+          onClick={() => mainCityImage && setMainImageOpen(true)}
+          onKeyDown={(event) => {
+            if (!mainCityImage || (event.key !== 'Enter' && event.key !== ' ')) return;
+            event.preventDefault();
+            setMainImageOpen(true);
+          }}
+        >
+          <BannerImage src={mainCityImage} alt="" aria-hidden="true" />
           <HudCorners neon={isNeonActive} />
           <BannerContent>
             <OdisseiaAnimatedTitle key={city.nome} theme={theme} neon={neon} text={city.nome} />
@@ -391,7 +405,6 @@ const CidadePage = () => {
                 {relatedPages.map((page) => (
                   <RelatedPageLink key={page.idPage} to={`/wiki/${encodeURIComponent(page.slug)}`}>
                     <span>{page.titulo}</span>
-                    <BiRightArrowAlt aria-hidden="true" />
                   </RelatedPageLink>
                 ))}
               </RelatedPages>
@@ -488,6 +501,12 @@ const CidadePage = () => {
       )}
 
       <Lightbox
+        isOpen={mainImageOpen}
+        images={mainCityImage ? [{ url: mainCityImage, caption: city.nome }] : []}
+        onClose={() => setMainImageOpen(false)}
+      />
+
+      <Lightbox
         isOpen={galleryIndex !== null}
         images={lightboxImages}
         selectedIndex={galleryIndex ?? 0}
@@ -522,7 +541,7 @@ const CidadePage = () => {
               </HistoryModalClose>
             </HistoryModalHeader>
             <HistoryModalContent theme={theme} neon={neon}>
-              <ItemDescriptionLayout $withoutMedia={!selectedPoint.imagem}>
+              <PointSummaryLayout $withoutMedia={!selectedPoint.imagem}>
                 {selectedPoint.imagem && (
                   <ItemDescriptionImage
                     src={normalizeImagePath(selectedPoint.imagem)}
@@ -535,7 +554,7 @@ const CidadePage = () => {
                     <p>{selectedPoint.descricao || 'Sem descri\u00e7\u00e3o registrada.'}</p>
                   </DetailText>
                 </ItemDetailsBody>
-              </ItemDescriptionLayout>
+              </PointSummaryLayout>
             </HistoryModalContent>
           </HistoryModalSheet>
         </HistoryModalOverlay>,

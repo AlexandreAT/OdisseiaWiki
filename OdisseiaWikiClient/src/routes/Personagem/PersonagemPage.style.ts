@@ -1532,6 +1532,7 @@ export const ItemDescriptionPreview = styled.div`
   max-height: 24px;
   overflow: hidden;
   color: var(--muted, #cfcfcf);
+  text-align: left !important;
 
   & > div {
     display: -webkit-box;
@@ -1539,10 +1540,19 @@ export const ItemDescriptionPreview = styled.div`
     overflow: hidden;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
+    text-align: left !important;
   }
 
-  p {
+  p,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  li {
     margin: 0;
+    text-align: left !important;
   }
 
   &::after {

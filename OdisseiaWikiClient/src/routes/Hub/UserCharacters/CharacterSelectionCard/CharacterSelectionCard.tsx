@@ -168,11 +168,14 @@ export const CharacterSelectionCard = ({
       </CharacterHeader>
 
       <InfoRow>
-        <InfoItem type="button" onClick={() => openDevelopmentPage(`/raca/${personagem.idraca}`, 'Página de raça ainda não disponível', 'A página dinâmica desta raça está em desenvolvimento.')}>
+        <InfoItem type="button" onClick={() => navigate(`/raca/${personagem.idraca}`)}>
           <InfoIcon $icon={dnaIcon} />
           <span><InfoLabel>Raça</InfoLabel><InfoValue>{personagem.racaNome || 'Não informada'}</InfoValue></span>
         </InfoItem>
-        <InfoItem type="button" onClick={() => openDevelopmentPage(`/cidade/${personagem.idcidade ?? 'sem-origem'}`, 'Página de cidade ainda não disponível', 'A página dinâmica desta cidade está em desenvolvimento.')}>
+        <InfoItem type="button" onClick={() => personagem.idcidade
+          ? navigate(`/cidade/${personagem.idcidade}`)
+          : openDevelopmentPage('/cidade/sem-origem', 'Cidade não informada', 'Este personagem não possui uma cidade de origem cadastrada.')}
+        >
           <InfoIcon $icon={villageIcon} />
           <span><InfoLabel>Cidade</InfoLabel><InfoValue>{personagem.cidadeNome || 'Sem origem'}</InfoValue></span>
         </InfoItem>

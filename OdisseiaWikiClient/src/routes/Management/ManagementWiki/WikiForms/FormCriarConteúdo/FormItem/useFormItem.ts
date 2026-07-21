@@ -167,6 +167,11 @@ export const useFormItem = (initialItem?: ItemPayload, contentType?: string) => 
       return false;
     }
 
+    if (value.trim().length > 100) {
+      setNomeError("O nome deve ter no máximo 100 caracteres");
+      return false;
+    }
+
     setNomeError("");
     return true;
   };
@@ -264,7 +269,14 @@ export const useFormItem = (initialItem?: ItemPayload, contentType?: string) => 
   const handleSubmit = async () => {
 
     if (!validateForm()) {
-      return { success: false, message: "Erro de validação" };
+      return {
+        success: false,
+        message: !nome.trim()
+          ? "Não foi possível salvar: o nome do item é obrigatório."
+          : nome.trim().length < 3
+            ? "Não foi possível salvar: o nome do item deve ter pelo menos 3 caracteres."
+            : "Não foi possível salvar: o nome do item deve ter no máximo 100 caracteres.",
+      };
     }
 
     setIsSubmitting(true);

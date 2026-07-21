@@ -12,8 +12,7 @@ interface Props {
 
 const glitchBorder = keyframes`
   0% { border-color: var(--clearneonRed); }
-  30% { border-color: var(--clearneonBlue); }
-  60% { border-color: var(--clearneonPink); }
+  50% { border-color: var(--clearneonBlue); }
   100% { border-color: var(--clearneonRed); }
 `;
 
@@ -90,8 +89,7 @@ export const LoginInput = styled.input<Props>`
     ${({ error, theme }) =>
         error && css`
             border: 2px solid var(--clearneonRed);
-            animation: ${glitchBorder} 0.7s linear;
-            animation-fill-mode: forwards;
+            animation: ${glitchBorder} 0.65s ease-in-out 2 forwards;
             ${theme === 'dark'
                 ? 'box-shadow: 0 0 10px 2px var(--neonRed), 0 0 20px 1px var(--neonBlue);'
                 : 'box-shadow: 0 0 10px 2px var(--neonRed), 0 0 20px 1px var(--clearneonPink);'}

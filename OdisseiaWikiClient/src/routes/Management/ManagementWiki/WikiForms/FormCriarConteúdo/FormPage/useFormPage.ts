@@ -55,6 +55,7 @@ export const useFormPage = ({
   // --- Erros ---
   const [tituloError, setTituloError] = useState('');
   const [slugError, setSlugError] = useState('');
+  const [blocksError, setBlocksError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -88,6 +89,9 @@ export const useFormPage = ({
     if (!titulo.trim()) {
       setTituloError('Título é obrigatório');
       isValid = false;
+    } else if (titulo.trim().length > 150) {
+      setTituloError('O título deve ter no máximo 150 caracteres');
+      isValid = false;
     } else {
       setTituloError('');
     }
@@ -95,13 +99,19 @@ export const useFormPage = ({
     if (!slug.trim()) {
       setSlugError('Slug é obrigatório');
       isValid = false;
+    } else if (slug.trim().length > 150) {
+      setSlugError('O slug deve ter no máximo 150 caracteres');
+      isValid = false;
     } else {
       setSlugError('');
     }
 
     if (blocks.length === 0) {
+      setBlocksError('Adicione pelo menos um bloco para salvar a página.');
       toast.error('Adicione pelo menos um bloco à página');
       isValid = false;
+    } else {
+      setBlocksError('');
     }
 
     return isValid;
@@ -109,6 +119,7 @@ export const useFormPage = ({
 
   // --- Gerenciamento de blocos ---
   const addBlock = useCallback((tipo: PageBlockType) => {
+    setBlocksError('');
     setBlocks((currentBlocks) => [...currentBlocks, {
       tipo,
       conteudo: getDefaultContent(tipo),
@@ -291,6 +302,7 @@ export const useFormPage = ({
     setTituloError,
     slugError,
     setSlugError,
+    blocksError,
     isSubmitting,
 
     // Submit

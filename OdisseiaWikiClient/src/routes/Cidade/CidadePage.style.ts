@@ -120,7 +120,7 @@ export const CityPageContent = styled.div`
   }
 `;
 
-export const CityBanner = styled.section<{ $neon: boolean }>`
+export const CityBanner = styled.section<{ $neon: boolean; $clickable?: boolean }>`
   position: relative;
   display: grid;
   place-items: center;
@@ -130,9 +130,15 @@ export const CityBanner = styled.section<{ $neon: boolean }>`
   background-color: rgba(0, 9, 21, 0.94);
   clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
   animation: ${bannerArrival} 0.8s ease-out both;
+  cursor: ${({ $clickable }) => $clickable ? 'zoom-in' : 'default'};
   box-shadow: ${({ $neon }) => $neon
     ? 'inset 0 0 18px rgba(0, 178, 255, 0.18), 0 0 8px rgba(0, 204, 255, 0.22)'
     : 'none'};
+
+  &:focus-visible {
+    outline: 2px solid var(--clearneonBlue);
+    outline-offset: 3px;
+  }
 
   &::before {
     content: '';
@@ -686,13 +692,18 @@ export const GalleryModalImage = styled(FallbackImage)`
 `;
 
 export const RelatedPages = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px;
   margin-top: 28px;
   padding-top: 20px;
   border-top: 1px solid rgba(65, 200, 255, 0.25);
 `;
 
 export const RelatedPagesTitle = styled.h3`
-  margin: 0 0 12px;
+  flex: 1 0 100%;
+  margin: 0 0 3px;
   color: var(--clearneonBlue) !important;
   font-family: 'DO Futuristic', sans-serif;
   font-size: 14px;
@@ -702,20 +713,27 @@ export const RelatedPagesTitle = styled.h3`
 `;
 
 export const RelatedPageLink = styled(Link)`
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  border-bottom: 1px solid rgba(65, 200, 255, 0.14);
-  padding: 10px 4px;
-  color: var(--whitesmoke);
+  justify-content: center;
+  border: 1px solid rgba(65, 200, 255, 0.58);
+  border-radius: 3px;
+  padding: 7px 11px;
+  color: var(--clearneonBlue);
+  background: rgba(1, 12, 25, 0.52);
+  font-family: 'Orbitron', sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.45px;
   text-decoration: none;
-
-  svg { flex: 0 0 auto; color: var(--clearneonBlue); }
+  transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 
   &:hover,
   &:focus-visible {
-    color: var(--clearneonBlue);
+    border-color: var(--clearneonBlue);
+    color: var(--whitesmoke);
+    background: rgba(0, 177, 255, 0.13);
+    box-shadow: 0 0 9px rgba(0, 187, 255, 0.2);
+    transform: translateY(-1px);
     outline: none;
   }
 `;
@@ -751,6 +769,40 @@ export const ModalCharacterCard = styled(CharacterCard)`
   width: 100%;
   height: 100%;
   box-sizing: border-box;
+`;
+
+export const PointSummaryLayout = styled.div<{ $withoutMedia?: boolean }>`
+  display: grid;
+  grid-template-columns: ${({ $withoutMedia }) => $withoutMedia ? 'minmax(0, 1fr)' : 'minmax(0, 1fr) auto'};
+  align-items: start;
+  column-gap: 18px;
+
+  ${({ $withoutMedia }) => !$withoutMedia && css`
+    > :first-child {
+      grid-column: 2;
+      grid-row: 1;
+    }
+
+    > :last-child {
+      grid-column: 1;
+      grid-row: 1;
+    }
+  `}
+
+  @media (max-width: 767px) {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 14px;
+
+    > :first-child,
+    > :last-child {
+      grid-column: 1;
+      grid-row: auto;
+    }
+
+    > :first-child:not(:last-child) {
+      justify-self: center;
+    }
+  }
 `;
 
 export const PageState = styled.div<{ $neon?: boolean }>`

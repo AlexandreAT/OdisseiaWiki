@@ -26,12 +26,16 @@ namespace OdisseiaWiki.Repositories
 
         public async Task<List<Page>> SearchAsync(string termo)
         {
-            termo = termo.ToLower();
+            string normalizedTerm = termo.Trim().ToLowerInvariant();
+
+            if (normalizedTerm.Length == 0)
+                return new List<Page>();
 
             return await _context.Pages
+                .AsNoTracking()
                 .Where(p =>
-                    p.Titulo.ToLower().Contains(termo) ||
-                    p.Slug.ToLower().Contains(termo)
+                    p.Titulo.ToLower().Contains(normalizedTerm) ||
+                    p.Slug.ToLower().Contains(normalizedTerm)
                 )
                 .OrderBy(p => p.Titulo)
                 .ToListAsync();

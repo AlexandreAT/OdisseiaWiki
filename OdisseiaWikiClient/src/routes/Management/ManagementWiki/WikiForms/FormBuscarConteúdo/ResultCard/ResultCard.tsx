@@ -13,6 +13,7 @@ import {
   CardActions,
   ActionButton,
   InfoText,
+  SlugText,
 } from './ResultCard.style';
 
 export const ResultCard: React.FC<CardProps> = ({ theme, neon, item, onEdit, onDelete }) => {
@@ -74,9 +75,16 @@ export const ResultCard: React.FC<CardProps> = ({ theme, neon, item, onEdit, onD
       
       case 'Page':
         return (
-          <InfoText theme={theme} neon={neon}>
-            Página da Wiki
-          </InfoText>
+          <>
+            <InfoText theme={theme} neon={neon}>
+              Página da Wiki
+            </InfoText>
+            {item.slug && (
+              <SlugText theme={theme} neon={neon} title={item.slug}>
+                Slug: {item.slug}
+              </SlugText>
+            )}
+          </>
         );
       
       default:

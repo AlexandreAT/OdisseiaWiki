@@ -26,7 +26,6 @@ import {
   PontosInteresseSection,
   PontosInteresseHeader,
   PontosInteresseHelp,
-  PontosInteresseError,
   PointImageCell,
   SectionTitle,
 } from './FormCity.style';
@@ -131,8 +130,8 @@ export const FormCity = ({ theme, neon, initialCity, onSaveSuccess, contentType 
         );
       },
     },
-    { key: 'nome' as const, label: 'Nome', width: '27%', inputType: 'text' as const },
-    { key: 'descricao' as const, label: 'Descrição simplificada', width: '55%', inputType: 'text' as const },
+    { key: 'nome' as const, label: 'Nome', width: '27%', inputType: 'text' as const, maxLength: 100 },
+    { key: 'descricao' as const, label: 'Descrição simplificada', width: '55%', inputType: 'text' as const, maxLength: 300 },
   ], [theme, neon]);
 
   const tagInputRef = useRef<HTMLInputElement>(null);
@@ -267,10 +266,9 @@ export const FormCity = ({ theme, neon, initialCity, onSaveSuccess, contentType 
           showEmptyRow
           theme={theme}
           neon={neon}
+          error={!!pontosDeInteresseError}
+          errorMessage={pontosDeInteresseError}
         />
-        {pontosDeInteresseError && (
-          <PontosInteresseError>{pontosDeInteresseError}</PontosInteresseError>
-        )}
       </PontosInteresseSection>
 
       <DescriptionSection>

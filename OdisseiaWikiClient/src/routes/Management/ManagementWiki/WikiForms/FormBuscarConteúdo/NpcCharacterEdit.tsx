@@ -510,7 +510,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
   }, []);
 
   const validateEdit = React.useCallback(() => {
-    const hasNameError = !userName.trim();
+    const hasNameError = !userName.trim() || userName.trim().length > 100;
     const hasRaceError = !race || race === 0;
 
     setNameError(hasNameError);
@@ -864,7 +864,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
             loadingPersonagens={loadingPersonagens}
             searchPersonagens={searchPersonagens}
             nameError={nameError}
-            nameErrorMessage="Nome é obrigatório."
+            nameErrorMessage={!userName.trim() ? 'Nome é obrigatório.' : 'O nome deve ter no máximo 100 caracteres.'}
             onNameFocus={() => setNameError(false)}
             raceError={raceError}
             raceErrorMessage="Selecione uma raça válida."

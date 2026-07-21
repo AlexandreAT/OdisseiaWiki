@@ -8,6 +8,7 @@ import {
   ErrorText,
   RemoveImageButton,
 } from './ImageUpload.style';
+import { FormLabelText } from '../FormLabelText';
 import CloseIcon from '@mui/icons-material/Close';
 import { FallbackImage } from '../FallbackImage/FallbackImage';
 
@@ -69,7 +70,7 @@ export const ImageUpload = ({
     <ImageUploadController width={width}>
       {label && (
         <ImageLabel theme={theme} neon={neon}>
-          {label} {required && '*'}
+          <FormLabelText label={label} required={required} />
         </ImageLabel>
       )}
       

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { globalSearch, SearchResultItem } from '../../../../../services/infoLoreService';
 import { excluirItem } from '../../../../../services/itensService';
 import { deleteCidade } from '../../../../../services/cidadesService';
@@ -7,6 +7,13 @@ import { deletePersonagem } from '../../../../../services/personagensService';
 import { deletePage } from '../../../../../services/pageService';
 import { GroupedResults, SearchFormErrors, EntityType } from './types';
 import toast from 'react-hot-toast';
+
+const isCanceledRequest = (error: unknown): boolean => (
+  typeof error === 'object'
+  && error !== null
+  && 'code' in error
+  && error.code === 'ERR_CANCELED'
+);
 
 export const useFormBuscarConteúdo = () => {
   const [termo, setTermo] = useState('');
@@ -26,6 +33,8 @@ export const useFormBuscarConteúdo = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [openConfirmDelete, setOpenConfirmDelete] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<SearchResultItem | null>(null);
+  const searchRequestIdRef = useRef(0);
+  const activeSearchControllerRef = useRef<AbortController | null>(null);
 
   // Função de busca
   const handleSearch = useCallback(async () => {
@@ -36,23 +45,33 @@ export const useFormBuscarConteúdo = () => {
       return;
     }
 
+    activeSearchControllerRef.current?.abort();
+    const controller = new AbortController();
+    activeSearchControllerRef.current = controller;
+    const requestId = ++searchRequestIdRef.current;
+
     setErrors({});
     setIsSearching(true);
 
     try {
-      const response = await globalSearch(trimmedTermo);
-      
-      setResults({
+      const response = await globalSearch(trimmedTermo, { signal: controller.signal });
+      if (requestId !== searchRequestIdRef.current) return;
+
+      const nextResults: GroupedResults = {
         cidades: response.cidades || [],
         personagens: response.personagens || [],
         itens: response.itens || [],
         infoLores: response.infoLores || [],
         racas: response.racas || [],
         pages: response.pages || [],
-      });
-      setTotalResultados(response.totalResultados || 0);
+      };
+
+      setResults(nextResults);
+      setTotalResultados(Object.values(nextResults).reduce((total, items) => total + items.length, 0));
       setHasSearched(true);
-    } catch (error) {
+    } catch (error: unknown) {
+      if (isCanceledRequest(error) || requestId !== searchRequestIdRef.current) return;
+
       console.error('Erro ao buscar:', error);
       setErrors({ termo: 'Erro ao realizar busca. Tente novamente.' });
       setResults({
@@ -65,12 +84,21 @@ export const useFormBuscarConteúdo = () => {
       });
       setTotalResultados(0);
     } finally {
-      setIsSearching(false);
+      if (requestId === searchRequestIdRef.current) {
+        setIsSearching(false);
+        if (activeSearchControllerRef.current === controller) {
+          activeSearchControllerRef.current = null;
+        }
+      }
     }
   }, [termo]);
 
   // Debounce para busca automática
   useEffect(() => {
+    activeSearchControllerRef.current?.abort();
+    activeSearchControllerRef.current = null;
+    searchRequestIdRef.current += 1;
+
     if (termo.trim().length === 0) {
       setResults({
         cidades: [],
@@ -82,10 +110,12 @@ export const useFormBuscarConteúdo = () => {
       });
       setTotalResultados(0);
       setHasSearched(false);
+      setIsSearching(false);
       return;
     }
 
     if (termo.trim().length < 2) {
+      setIsSearching(false);
       return;
     }
 
@@ -93,7 +123,10 @@ export const useFormBuscarConteúdo = () => {
       handleSearch();
     }, 500);
 
-    return () => clearTimeout(timeoutId);
+    return () => {
+      clearTimeout(timeoutId);
+      activeSearchControllerRef.current?.abort();
+    };
   }, [termo, handleSearch]);
 
   const getFilteredResults = useCallback((): SearchResultItem[] => {
@@ -230,7 +263,7 @@ export const useFormBuscarConteúdo = () => {
       } else {
         toast.error(`Erro ao excluir ${item.tipoEntidade?.toLowerCase()}`);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(`Erro ao excluir ${item.tipoEntidade}:`, error);
       toast.error(`Erro ao excluir ${item.tipoEntidade?.toLowerCase()}`);
     } finally {

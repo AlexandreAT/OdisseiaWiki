@@ -10,6 +10,7 @@ interface Props {
   initialImage?: string;
   size?: number;
   clickable?: boolean;
+  onClick?: () => void;
 }
 
 const AvatarIconComponent = ({
@@ -19,6 +20,7 @@ const AvatarIconComponent = ({
   initialImage = '',
   size = 100,
   clickable = true,
+  onClick,
 }: Props) => {
   const fileAvatar = useRef<HTMLInputElement>(null);
   const [avatarUrl, setAvatarUrl] = useState<string>(initialImage);
@@ -29,8 +31,12 @@ const AvatarIconComponent = ({
 
   const handleAvatarClick = useCallback(() => {
     if (!clickable) return;
+    if (onClick) {
+      onClick();
+      return;
+    }
     fileAvatar.current?.click();
-  }, [clickable]);
+  }, [clickable, onClick]);
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;

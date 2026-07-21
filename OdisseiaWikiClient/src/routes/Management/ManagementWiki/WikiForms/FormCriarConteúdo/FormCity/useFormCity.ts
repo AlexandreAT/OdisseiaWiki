@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { CityFormErrors, CidadeDto } from './FormCity.type';
 import { createCidade, updateCidade, CidadePayload } from '../../../../../../services/cidadesService';
 import { saveAsset } from '../../../../../../services/assetsService';
@@ -30,6 +30,7 @@ const normalizePontosDeInteresse = (points: PontoDeInteresse[]): PontoDeInteress
 );
 
 export const useFormCity = (initialCity?: CidadePayload, contentType?: string) => {
+  const lastValidationErrorsRef = useRef<string[]>([]);
   const [cidadeId] = useState<number | undefined>(initialCity?.idcidade);
   const [nome, setNome] = useState(initialCity?.nome || '');
   const [descricao, setDescricao] = useState<JSONContent | string>(initialCity?.descricao || '');
@@ -91,13 +92,17 @@ export const useFormCity = (initialCity?: CidadePayload, contentType?: string) =
       setNomeError('O nome deve ter no mínimo 3 caracteres');
       return false;
     }
+    if (value.trim().length > 100) {
+      setNomeError('O nome deve ter no máximo 100 caracteres');
+      return false;
+    }
     setNomeError('');
     return true;
   };
 
   const validateForm = (): boolean => {
     const isNomeValid = validateNome(nome);
-    const pointError = pontosDeInteresse.reduce<string>((currentError, point) => {
+    const pointError = pontosDeInteresse.reduce<string>((currentError, point, index) => {
       if (currentError) return currentError;
 
       const pointName = point.nome?.trim() ?? '';
@@ -105,19 +110,23 @@ export const useFormCity = (initialCity?: CidadePayload, contentType?: string) =
       const pointImage = point.imagem?.trim() ?? '';
 
       if (!pointName && (pointDescription || pointImage)) {
-        return 'Informe o nome dos pontos de interesse que possuem descrição ou imagem.';
+        return `Ponto de interesse ${index + 1}: informe o nome do local preenchido.`;
       }
       if (pointName.length > 100) {
-        return 'O nome do ponto de interesse deve ter no máximo 100 caracteres.';
+        return `Ponto de interesse ${index + 1}: o nome deve ter no máximo 100 caracteres.`;
       }
       if (pointDescription.length > 300) {
-        return 'A descrição do ponto de interesse deve ter no máximo 300 caracteres.';
+        return `Ponto de interesse ${index + 1}: a descrição deve ter no máximo 300 caracteres.`;
       }
 
       return '';
     }, '');
 
     setPontosDeInteresseError(pointError);
+    lastValidationErrorsRef.current = [
+      ...(!isNomeValid ? ['Revise o nome da cidade.'] : []),
+      ...(pointError ? [pointError] : []),
+    ];
 
     const newErrors: CityFormErrors = {};
     if (!isNomeValid) newErrors.nome = nomeError;
@@ -320,7 +329,10 @@ export const useFormCity = (initialCity?: CidadePayload, contentType?: string) =
       
       if (!dto) {
         setIsSubmitting(false);
-        return { success: false, message: 'Erro na validação do formulário' };
+        return {
+          success: false,
+          message: `Não foi possível salvar: ${lastValidationErrorsRef.current.join(' ')}`,
+        };
       }
 
       let response;

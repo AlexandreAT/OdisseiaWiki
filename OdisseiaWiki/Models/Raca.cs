@@ -17,10 +17,14 @@ public partial class Raca
     [Column(TypeName = "json")]
     public string? StatusJson { get; set; }
 
+    public string? Descricao { get; set; }
+
     [MaxLength(255, ErrorMessage = "O caminho da imagem deve ter no máximo 255 caracteres.")]
     public string? Imagem { get; set; }
 
     public string? GaleriaImagem { get; set; }
+
+    public string? Variacoes { get; set; }
 
     public string? Tags { get; set; }
 
