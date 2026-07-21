@@ -1,4 +1,4 @@
-import { useState, useRef, memo, useCallback } from 'react';
+import { useState, useRef, memo, useCallback, useEffect } from 'react';
 import {
   ContentController,
   TextAreaLabel,
@@ -6,6 +6,8 @@ import {
   TextAreaLabelSpan,
   SpanError
 } from './TextArea.style';
+import { FormLabelText } from '../FormLabelText';
+import { revealFirstValidationError } from '../../../utils/formValidationFeedback';
 
 interface Props {
   theme: 'dark' | 'light';
@@ -44,7 +46,14 @@ const TextAreaComponent = ({
 }: Props) => {
   const [focus, setFocus] = useState(false);
   const [atTop, setAtTop] = useState(true);
+  const [nativeError, setNativeError] = useState('');
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
+  const controllerRef = useRef<HTMLDivElement>(null);
+  const hasError = Boolean(error || nativeError);
+
+  useEffect(() => {
+    if (hasError) revealFirstValidationError(controllerRef.current);
+  }, [hasError]);
   
   const handleFocus = useCallback((e: React.FocusEvent<HTMLTextAreaElement>) => {
     setFocus(true);
@@ -60,19 +69,37 @@ const TextAreaComponent = ({
     setAtTop(textAreaRef.current.scrollTop === 0);
   };
 
+  const handleChange = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    if (nativeError) setNativeError('');
+    onChange?.(event);
+  }, [nativeError, onChange]);
+
+  const handleInvalid = useCallback((event: React.InvalidEvent<HTMLTextAreaElement>) => {
+    event.preventDefault();
+    setNativeError(errorMessage || 'Este campo é obrigatório.');
+  }, [errorMessage]);
+
   return (
-    <ContentController width={width} height={height} fullWidth={fullWidth}>
+    <ContentController
+      ref={controllerRef}
+      width={width}
+      height={height}
+      fullWidth={fullWidth}
+      data-validation-error={hasError || undefined}
+    >
       <TextAreaLabel width={width} height={height}>
         <TextAreaField
           ref={textAreaRef}
           theme={theme}
           neon={neon}
           value={value}
-          onChange={onChange}
+          onChange={handleChange}
+          onInvalid={handleInvalid}
           onFocus={handleFocus}
           onBlur={handleBlur}
           onScroll={handleScroll}
-          error={error}
+          error={hasError}
+          aria-invalid={hasError}
           required={required}
           typeStyle={typeStyle}
           width={width}
@@ -84,10 +111,10 @@ const TextAreaComponent = ({
           active={focus || !!value}
           style={{ opacity: atTop ? 1 : 0, transition: 'opacity 0.2s' }}
         >
-          {label}
+          <FormLabelText label={label} required={required} />
         </TextAreaLabelSpan>
       </TextAreaLabel>
-      {error && errorMessage && <SpanError>{errorMessage}</SpanError>}
+      {hasError && <SpanError>{errorMessage || nativeError}</SpanError>}
     </ContentController>
   );
 };

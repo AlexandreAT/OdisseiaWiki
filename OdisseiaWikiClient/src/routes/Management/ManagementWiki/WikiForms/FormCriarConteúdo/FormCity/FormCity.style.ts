@@ -317,66 +317,64 @@ export const PontosInteresseSection = styled.div`
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 12px;
+  min-width: 0;
 `;
 
-export const PontosInteresseInputContainer = styled.div`
+export const PontosInteresseHeader = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  width: 100%;
+  gap: 5px;
 `;
 
-export const InfoLoresList = styled.div`
-  max-height: 200px;
-  overflow-y: auto;
-  border: 1px solid var(--mediumgrey);
-  border-radius: 8px;
-  background: var(--lightBlack);
-  
-  &::-webkit-scrollbar {
-    width: 8px;
+export const PontosInteresseHelp = styled.p`
+  margin: 0;
+  color: var(--grey);
+  font-size: 12px;
+  line-height: 1.5;
+`;
+
+export const PontosInteresseError = styled.span`
+  color: var(--red);
+  font-size: 12px;
+`;
+
+export const PointImageCell = styled.div`
+  width: 94px;
+  margin: 0 auto;
+
+  > div {
+    gap: 0;
   }
-  
-  &::-webkit-scrollbar-track {
-    background: var(--lightBlack);
-  }
-  
-  &::-webkit-scrollbar-thumb {
-    background: var(--mediumgrey);
+
+  > div > div:first-child {
+    width: 88px;
+    max-width: 88px;
     border-radius: 4px;
   }
-`;
 
-export const InfoLoreItem = styled.button<Props>`
-  width: 100%;
-  padding: 12px 16px;
-  text-align: left;
-  border: none;
-  background: transparent;
-  color: ${({ theme }) => theme === 'dark' ? 'var(--clearWhite)' : 'var(--deepgrey)'};
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border-bottom: 1px solid var(--mediumgrey);
-  font-size: 14px;
-
-  &:hover:not(:disabled) {
-    background: ${({ theme, neon }) =>
-      theme === 'dark'
-        ? neon === 'on'
-          ? 'rgba(0, 200, 255, 0.1)'
-          : 'var(--mediumgrey)'
-        : neon === 'on'
-          ? 'rgba(138, 43, 226, 0.1)'
-          : 'var(--whitesmoke)'};
+  > div > span:last-child {
+    display: none;
   }
 
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+  p {
+    max-width: 68px;
+    font-size: 7px;
+    line-height: 1.05;
+    overflow-wrap: anywhere;
   }
 
-  &:last-child {
-    border-bottom: none;
+  svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  @media (max-width: 768px) {
+    width: 76px;
+
+    > div > div:first-child {
+      width: 72px;
+      max-width: 72px;
+    }
   }
 `;

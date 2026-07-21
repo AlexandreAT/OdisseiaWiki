@@ -22,6 +22,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   cropPreset,
   onImageCropped,
   initialImage,
+  onRemove,
   onCancel,
   accept = 'image/*',
   label,
@@ -87,6 +88,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     if (inputRef.current) {
       inputRef.current.value = '';
     }
+    onRemove?.();
   };
 
   const handleEditImage = (e: React.MouseEvent) => {

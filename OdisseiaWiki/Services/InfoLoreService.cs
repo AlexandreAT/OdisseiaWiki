@@ -21,6 +21,7 @@ namespace OdisseiaWiki.Services
         private readonly IRacaRepository _racaRepo;
         private readonly IPageRepository _pageRepo;
         private readonly IAssetService _assetService;
+        private readonly ILogger<InfoLoreService> _logger;
 
         public InfoLoreService(
             IInfoLoreRepository infoLoreRepo,
@@ -29,7 +30,8 @@ namespace OdisseiaWiki.Services
             IItemRepository itemRepo,
             IRacaRepository racaRepo,
             IPageRepository pageRepo,
-            IAssetService assetService)
+            IAssetService assetService,
+            ILogger<InfoLoreService> logger)
         {
             _infoLoreRepo = infoLoreRepo;
             _cidadeRepo = cidadeRepo;
@@ -38,6 +40,7 @@ namespace OdisseiaWiki.Services
             _racaRepo = racaRepo;
             _pageRepo = pageRepo;
             _assetService = assetService;
+            _logger = logger;
         }
 
         public async Task<ResultInfoLore> CreateAsync(InfoLoreDto dto)
@@ -120,6 +123,8 @@ namespace OdisseiaWiki.Services
             if (string.IsNullOrWhiteSpace(termo))
                 return new GlobalSearchResultDto();
 
+            termo = termo.Trim();
+
             var result = new GlobalSearchResultDto();
 
             // Busca sequencial com tratamento de erro individual
@@ -140,8 +145,9 @@ namespace OdisseiaWiki.Services
                     TipoEntidade = "Cidade"
                 }).ToList();
             }
-            catch
+            catch (Exception exception)
             {
+                _logger.LogError(exception, "Falha ao buscar cidades pelo termo {SearchTerm}.", termo);
                 result.Cidades = new List<SearchItemDto>();
             }
 
@@ -161,8 +167,9 @@ namespace OdisseiaWiki.Services
                     TipoEntidade = "Personagem"
                 }).ToList();
             }
-            catch
+            catch (Exception exception)
             {
+                _logger.LogError(exception, "Falha ao buscar personagens pelo termo {SearchTerm}.", termo);
                 result.Personagens = new List<SearchItemDto>();
             }
 
@@ -182,8 +189,9 @@ namespace OdisseiaWiki.Services
                     TipoEntidade = "Item"
                 }).ToList();
             }
-            catch
+            catch (Exception exception)
             {
+                _logger.LogError(exception, "Falha ao buscar itens pelo termo {SearchTerm}.", termo);
                 result.Itens = new List<SearchItemDto>();
             }
 
@@ -203,8 +211,9 @@ namespace OdisseiaWiki.Services
                     TipoEntidade = "InfoLore"
                 }).ToList();
             }
-            catch
+            catch (Exception exception)
             {
+                _logger.LogError(exception, "Falha ao buscar conteúdos de lore pelo termo {SearchTerm}.", termo);
                 result.InfoLores = new List<SearchItemDto>();
             }
 
@@ -224,8 +233,9 @@ namespace OdisseiaWiki.Services
                     TipoEntidade = "Raca"
                 }).ToList();
             }
-            catch
+            catch (Exception exception)
             {
+                _logger.LogError(exception, "Falha ao buscar raças pelo termo {SearchTerm}.", termo);
                 result.Racas = new List<SearchItemDto>();
             }
 
@@ -235,7 +245,9 @@ namespace OdisseiaWiki.Services
                     ? await _pageRepo.GetAllAsync()
                     : await _pageRepo.SearchAsync(termo);
 
-                result.Pages = pages.Select(p => new SearchItemDto
+                result.Pages = pages
+                    .OrderBy(page => page.Titulo, StringComparer.CurrentCultureIgnoreCase)
+                    .Select(p => new SearchItemDto
                 {
                     Id = p.IdPage,
                     Nome = p.Titulo,
@@ -243,11 +255,13 @@ namespace OdisseiaWiki.Services
                     Visivel = p.Visivel,
                     Destaque = p.Destaque,
                     Slug = p.Slug,
+                    Tags = new List<string> { "Página" },
                     TipoEntidade = "Page"
                 }).ToList();
             }
-            catch
+            catch (Exception exception)
             {
+                _logger.LogError(exception, "Falha ao buscar páginas pelo termo {SearchTerm}.", termo);
                 result.Pages = new List<SearchItemDto>();
             }
 

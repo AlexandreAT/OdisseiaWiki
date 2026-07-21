@@ -1,15 +1,36 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { CityFormErrors, CidadeDto } from './FormCity.type';
 import { createCidade, updateCidade, CidadePayload } from '../../../../../../services/cidadesService';
 import { saveAsset } from '../../../../../../services/assetsService';
 import { getApiErrorMessage } from '../../../../../../utils/apiError';
-import { JSONContent } from '../../../../../../models/Cities';
-import { PontoDeInteresse } from '../../../../../../models/InfoLore';
+import { GalleryImage, normalizeGalleryImages } from '../../../../../../models/GalleryImage';
+import { JSONContent, PontoDeInteresse } from '../../../../../../models/Cities';
 import { prepareForAPI } from '../../../../../../utils/richTextHelpers';
-import { infoLoresMock } from '../../../../../../Mock/infolore.mock';
 import { ensureContentCategoryTag, isContentCategoryTag } from '../../../../../../utils/contentCategoryTag';
+import { detectImageShapeFromUrl, ImageDisplayShape } from '../../../../../../utils/imageDisplayShape';
+
+const isKnownImageShape = (shape?: string): shape is ImageDisplayShape => (
+  shape === 'circle' || shape === 'square' || shape === 'rectangle'
+);
+
+const normalizePontosDeInteresse = (points: PontoDeInteresse[]): PontoDeInteresse[] => (
+  points.flatMap((point) => {
+    const nome = point.nome?.trim() ?? '';
+    const descricao = point.descricao?.trim() ?? '';
+    const imagem = point.imagem?.trim() ?? '';
+
+    if (!nome && !descricao && !imagem) return [];
+
+    return [{
+      nome,
+      ...(descricao ? { descricao } : {}),
+      ...(imagem ? { imagem } : {}),
+    }];
+  })
+);
 
 export const useFormCity = (initialCity?: CidadePayload, contentType?: string) => {
+  const lastValidationErrorsRef = useRef<string[]>([]);
   const [cidadeId] = useState<number | undefined>(initialCity?.idcidade);
   const [nome, setNome] = useState(initialCity?.nome || '');
   const [descricao, setDescricao] = useState<JSONContent | string>(initialCity?.descricao || '');
@@ -17,36 +38,42 @@ export const useFormCity = (initialCity?: CidadePayload, contentType?: string) =
   const [imagemFile, setImagemFile] = useState<File | null>(null);
   
   // Garantir que galeriaImagem é sempre um array
-  const parseGaleriaImagem = (): string[] => {
-    if (!initialCity?.galeriaImagem) return [];
-    if (typeof initialCity.galeriaImagem === 'string') {
-      try {
-        return JSON.parse(initialCity.galeriaImagem);
-      } catch (e) {
-        console.error('Erro ao parsear galeriaImagem:', e);
-        return [];
-      }
-    }
-    return Array.isArray(initialCity.galeriaImagem) ? initialCity.galeriaImagem : [];
-  };
+  const parsedGaleria = normalizeGalleryImages(initialCity?.galeriaImagem);
   
   // URLs existentes (do servidor) - rastreadas separadamente para não enviar BLOBs
-  const [existingGaleriaUrls, setExistingGaleriaUrls] = useState<string[]>(parseGaleriaImagem());
+  const [existingGaleriaUrls, setExistingGaleriaUrls] = useState<string[]>(parsedGaleria.map(image => image.url));
   // Inclui URLs existentes + BLOBs temporários (para preview)
-  const [galeriaUrls, setGaleriaUrls] = useState<string[]>(parseGaleriaImagem());
+  const [galeriaUrls, setGaleriaUrls] = useState<string[]>(parsedGaleria.map(image => image.url));
+  const [galeriaCaptions, setGaleriaCaptions] = useState<string[]>(parsedGaleria.map(image => image.legenda || ''));
   const [galeriaFiles, setGaleriaFiles] = useState<File[]>([]);
-  const [galeriaShapes, setGaleriaShapes] = useState<string[]>(Array(parseGaleriaImagem().length).fill('square'));
+  const [galeriaShapes, setGaleriaShapes] = useState<string[]>(Array(parsedGaleria.length).fill('auto'));
   const [tags, setTags] = useState<string[]>(initialCity?.tags || []);
   const [tagInput, setTagInput] = useState('');
   const [pontosDeInteresse, setPontosDeInteresse] = useState<PontoDeInteresse[]>(initialCity?.pontosDeInteresse || []);
-  const [pontoInteresseSearch, setPontoInteresseSearch] = useState('');
-    const [visivel, setVisivel] = useState(initialCity?.visivel !== false);
-    const [destaque, setDestaque] = useState(initialCity?.destaque === true);
+  const [visivel, setVisivel] = useState(initialCity?.visivel !== false);
+  const [destaque, setDestaque] = useState(initialCity?.destaque === true);
 
   const [errors, setErrors] = useState<CityFormErrors>({});
   const [nomeError, setNomeError] = useState('');
+  const [pontosDeInteresseError, setPontosDeInteresseError] = useState('');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+
+    Promise.all(galeriaUrls.map(detectImageShapeFromUrl)).then((detectedShapes) => {
+      if (!active) return;
+
+      setGaleriaShapes((currentShapes) => detectedShapes.map((detectedShape, index) => (
+        isKnownImageShape(currentShapes[index]) ? currentShapes[index] : detectedShape
+      )));
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [galeriaUrls]);
 
   // Auto-adiciona tag do tipo de conteúdo quando muda
   useEffect(() => {
@@ -65,18 +92,47 @@ export const useFormCity = (initialCity?: CidadePayload, contentType?: string) =
       setNomeError('O nome deve ter no mínimo 3 caracteres');
       return false;
     }
+    if (value.trim().length > 100) {
+      setNomeError('O nome deve ter no máximo 100 caracteres');
+      return false;
+    }
     setNomeError('');
     return true;
   };
 
   const validateForm = (): boolean => {
     const isNomeValid = validateNome(nome);
+    const pointError = pontosDeInteresse.reduce<string>((currentError, point, index) => {
+      if (currentError) return currentError;
+
+      const pointName = point.nome?.trim() ?? '';
+      const pointDescription = point.descricao?.trim() ?? '';
+      const pointImage = point.imagem?.trim() ?? '';
+
+      if (!pointName && (pointDescription || pointImage)) {
+        return `Ponto de interesse ${index + 1}: informe o nome do local preenchido.`;
+      }
+      if (pointName.length > 100) {
+        return `Ponto de interesse ${index + 1}: o nome deve ter no máximo 100 caracteres.`;
+      }
+      if (pointDescription.length > 300) {
+        return `Ponto de interesse ${index + 1}: a descrição deve ter no máximo 300 caracteres.`;
+      }
+
+      return '';
+    }, '');
+
+    setPontosDeInteresseError(pointError);
+    lastValidationErrorsRef.current = [
+      ...(!isNomeValid ? ['Revise o nome da cidade.'] : []),
+      ...(pointError ? [pointError] : []),
+    ];
 
     const newErrors: CityFormErrors = {};
     if (!isNomeValid) newErrors.nome = nomeError;
 
     setErrors(newErrors);
-    return isNomeValid;
+    return isNomeValid && !pointError;
   };
 
   const handleNomeChange = (value: string) => {
@@ -105,6 +161,7 @@ export const useFormCity = (initialCity?: CidadePayload, contentType?: string) =
     const urls = files.map(file => URL.createObjectURL(file));
     setGaleriaUrls(prev => [...prev, ...urls]);
     setGaleriaShapes(prev => [...prev, ...shapes]);
+    setGaleriaCaptions(prev => [...prev, ...files.map(() => '')]);
   };
 
   const handleRemoveGaleriaImage = (indexToRemove: number) => {
@@ -122,6 +179,11 @@ export const useFormCity = (initialCity?: CidadePayload, contentType?: string) =
     
     setGaleriaUrls(prev => prev.filter((_, i) => i !== indexToRemove));
     setGaleriaShapes(prev => prev.filter((_, i) => i !== indexToRemove));
+    setGaleriaCaptions(prev => prev.filter((_, i) => i !== indexToRemove));
+  };
+
+  const handleGaleriaCaptionChange = (index: number, caption: string) => {
+    setGaleriaCaptions(previous => previous.map((value, itemIndex) => itemIndex === index ? caption : value));
   };
 
   const handleAddTag = () => {
@@ -144,33 +206,9 @@ export const useFormCity = (initialCity?: CidadePayload, contentType?: string) =
     }
   };
 
-  const getFilteredInfoLores = () => {
-    if (!pontoInteresseSearch.trim()) {
-      return infoLoresMock;
-    }
-    return infoLoresMock.filter(info => 
-      info.Titulo.toLowerCase().includes(pontoInteresseSearch.toLowerCase())
-    );
-  };
-
-  const handleAddPontoInteresse = (infoLoreId: number) => {
-    const infoLore = infoLoresMock.find(info => info.IdinfoLore === infoLoreId);
-    if (!infoLore) return;
-
-    const alreadyAdded = pontosDeInteresse.some(p => p.id === infoLoreId);
-    if (alreadyAdded) return;
-
-    const novoPonto: PontoDeInteresse = {
-      id: infoLore.IdinfoLore,
-      titulo: infoLore.Titulo
-    };
-
-    setPontosDeInteresse(prev => [...prev, novoPonto]);
-    setPontoInteresseSearch('');
-  };
-
-  const handleRemovePontoInteresse = (pontoId: number) => {
-    setPontosDeInteresse(prev => prev.filter(p => p.id !== pontoId));
+  const updatePontosDeInteresse = (points: PontoDeInteresse[]) => {
+    setPontosDeInteresse(points);
+    if (pontosDeInteresseError) setPontosDeInteresseError('');
   };
 
   const resetForm = () => {
@@ -181,18 +219,18 @@ export const useFormCity = (initialCity?: CidadePayload, contentType?: string) =
     setGaleriaUrls([]);
     setGaleriaFiles([]);
     setGaleriaShapes([]);
+    setGaleriaCaptions([]);
     setExistingGaleriaUrls([]);
     setTags(contentType ? [contentType] : []);
     setTagInput('');
     setPontosDeInteresse([]);
-    setPontoInteresseSearch('');
-      setVisivel(true);
-      setDestaque(false);
+    setVisivel(true);
+    setDestaque(false);
     setErrors({});
     setNomeError('');
   };
 
-  const uploadImages = async (): Promise<{ imagemPath: string; galeriaPaths: string[] }> => {
+  const uploadImages = async (): Promise<{ imagemPath: string; galeriaPaths: GalleryImage[] }> => {
     const entityName = nome.toLowerCase().replace(/\s+/g, '_');
     
     let imagemPath = imagemUrl;
@@ -221,15 +259,46 @@ export const useFormCity = (initialCity?: CidadePayload, contentType?: string) =
       }
     }
 
-    return { imagemPath, galeriaPaths };
+    return {
+      imagemPath,
+      galeriaPaths: galeriaPaths.map((url, index) => ({
+        url,
+        legenda: galeriaCaptions[index]?.trim() || undefined,
+      })),
+    };
   };
 
-  const prepareDto = async (): Promise<CidadeDto | null> => {
+  const uploadPointImages = async (
+    points: PontoDeInteresse[],
+    imageFiles: ReadonlyMap<string, File>,
+  ): Promise<PontoDeInteresse[]> => {
+    const entityName = nome.toLowerCase().replace(/\s+/g, '_');
+
+    return Promise.all(points.map(async (point) => {
+      const imageFile = point.imagem ? imageFiles.get(point.imagem) : undefined;
+      if (!imageFile) return point;
+
+      const result = await saveAsset({
+        imageFile,
+        type: 'cidades',
+        entityName,
+        folderName: 'pontos-de-interesse',
+      });
+
+      return { ...point, imagem: result.path };
+    }));
+  };
+
+  const prepareDto = async (
+    pointImageFiles: ReadonlyMap<string, File>,
+  ): Promise<CidadeDto | null> => {
     if (!validateForm()) {
       return null;
     }
 
     const { imagemPath, galeriaPaths } = await uploadImages();
+    const normalizedPoints = normalizePontosDeInteresse(pontosDeInteresse);
+    const uploadedPoints = await uploadPointImages(normalizedPoints, pointImageFiles);
 
     const dto: CidadeDto = {
       Nome: nome.trim(),
@@ -237,15 +306,18 @@ export const useFormCity = (initialCity?: CidadePayload, contentType?: string) =
       Imagem: imagemPath,
       GaleriaImagem: galeriaPaths,
       Tags: ensureContentCategoryTag(tags, contentType),
-      PontosDeInteresse: pontosDeInteresse,
-        Visivel: visivel,
-        Destaque: destaque,
+      PontosDeInteresse: uploadedPoints,
+      Visivel: visivel,
+      Destaque: destaque,
     };
 
     return dto;
   };
 
-  const handleSubmit = async (e?: React.FormEvent) => {
+  const handleSubmit = async (
+    e?: React.FormEvent,
+    pointImageFiles: ReadonlyMap<string, File> = new Map(),
+  ) => {
     if (e) {
       e.preventDefault();
     }
@@ -253,15 +325,16 @@ export const useFormCity = (initialCity?: CidadePayload, contentType?: string) =
     setIsSubmitting(true);
 
     try {
-      const dto = await prepareDto();
+      const dto = await prepareDto(pointImageFiles);
       
       if (!dto) {
         setIsSubmitting(false);
-        return { success: false, message: 'Erro na validação do formulário' };
+        return {
+          success: false,
+          message: `Não foi possível salvar: ${lastValidationErrorsRef.current.join(' ')}`,
+        };
       }
 
-      console.log('DTO to be sent:', dto);
-      
       let response;
       if (cidadeId) {
         response = await updateCidade(cidadeId, dto);
@@ -277,7 +350,9 @@ export const useFormCity = (initialCity?: CidadePayload, contentType?: string) =
         };
       }
 
-      resetForm();
+      if (!cidadeId) {
+        resetForm();
+      }
       setIsSubmitting(false);
       
       return { 
@@ -308,12 +383,13 @@ export const useFormCity = (initialCity?: CidadePayload, contentType?: string) =
     galeriaUrls,
     galeriaFiles,
     galeriaShapes,
+    galeriaCaptions,
     tags,
     tagInput,
     pontosDeInteresse,
-    pontoInteresseSearch,
-      visivel,
-      destaque,
+    pontosDeInteresseError,
+    visivel,
+    destaque,
     
     isSubmitting,
     errors,
@@ -323,18 +399,16 @@ export const useFormCity = (initialCity?: CidadePayload, contentType?: string) =
     setNomeError,
     setDescricao,
     setTagInput,
-    setPontoInteresseSearch,
-      setVisivel,
-      setDestaque,
+    setPontosDeInteresse: updatePontosDeInteresse,
+    setVisivel,
+    setDestaque,
     handleImagemUpload,
     handleGaleriaUpload,
     handleRemoveGaleriaImage,
+    handleGaleriaCaptionChange,
     handleAddTag,
     handleRemoveTag,
     handleTagInputKeyDown,
-    handleAddPontoInteresse,
-    handleRemovePontoInteresse,
-    getFilteredInfoLores,
     handleSubmit,
     resetForm,
     validateForm,

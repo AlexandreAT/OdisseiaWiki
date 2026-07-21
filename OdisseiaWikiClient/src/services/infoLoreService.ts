@@ -1,5 +1,6 @@
 import api from "../axios/api";
 import { JSONContent } from "../models/Characters";
+import { ServiceRequestOptions } from './serviceRequestOptions';
 
 export interface InfoLoreDto {
   idinfoLore?: number;
@@ -20,6 +21,7 @@ export interface SearchResultItem {
   tags?: string[];
   visivel: boolean;
   destaque?: boolean;
+  slug?: string;
   tipoEntidade: "Cidade" | "Personagem" | "Item" | "InfoLore" | "Raca" | "Page";
 }
 
@@ -45,10 +47,29 @@ export interface ResultInfoLores {
   infoLores?: InfoLoreDto[];
 }
 
+const normalizeCategorySearchTerm = (term: string): string => (
+  term
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('pt-BR')
+);
+
+const pageCategoryTerms = new Set(['page', 'pages', 'pagina', 'paginas']);
+
 // Busca Global
-export const globalSearch = async (termo: string): Promise<GlobalSearchResultDto> => {
-  const response = await api.get("/infolore/search", {
-    params: { termo }
+export const globalSearch = async (
+  termo: string,
+  requestOptions: ServiceRequestOptions = {},
+): Promise<GlobalSearchResultDto> => {
+  const normalizedCategoryTerm = normalizeCategorySearchTerm(termo);
+  const requestTerm = pageCategoryTerms.has(normalizedCategoryTerm)
+    ? normalizedCategoryTerm
+    : termo.trim();
+
+  const response = await api.get("/infolore/search/management", {
+    params: { termo: requestTerm },
+    ...requestOptions,
   });
   return response.data;
 };
@@ -60,7 +81,7 @@ export const getInfoLores = async (visivel?: boolean): Promise<ResultInfoLores> 
   return response.data;
 };
 
-export const getInfoLoreById = async (id: number): Promise<ResultInfoLore> => {
+export const getInfoLoreById = async (id: number): Promise<InfoLoreDto> => {
   const response = await api.get(`/infolore/${id}`);
   return response.data;
 };

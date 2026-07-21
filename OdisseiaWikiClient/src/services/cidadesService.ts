@@ -1,14 +1,14 @@
 import api from "../axios/api";
-import { JSONContent } from "../models/Cities";
-import { PontoDeInteresse } from "../models/InfoLore";
+import { JSONContent, PontoDeInteresse } from "../models/Cities";
+import { GalleryImage, normalizeGalleryImages } from '../models/GalleryImage';
 import { ServiceRequestOptions } from './serviceRequestOptions';
 
 export interface CidadePayload {
   idcidade: number;
   nome: string;
-  descricao?: string;
+  descricao?: JSONContent | string;
   imagem?: string;
-  galeriaImagem?: string[];
+  galeriaImagem?: GalleryImage[];
   tags?: string[];
   pontosDeInteresse?: PontoDeInteresse[];
   visivel: boolean;
@@ -20,7 +20,7 @@ export interface CreateCidadeDto {
   Nome: string;
   Descricao?: JSONContent | string;
   Imagem: string;
-  GaleriaImagem?: string[];
+  GaleriaImagem?: GalleryImage[];
   Tags?: string[];
   PontosDeInteresse?: PontoDeInteresse[];
   Visivel: boolean;
@@ -39,6 +39,53 @@ export interface ResultCreateCidade {
   cidade?: CidadePayload;
 }
 
+interface RawCidadePayload extends Omit<CidadePayload, 'galeriaImagem' | 'tags' | 'pontosDeInteresse'> {
+  galeriaImagem?: GalleryImage[] | string[] | string;
+  tags?: string[] | string;
+  pontosDeInteresse?: PontoDeInteresse[] | string;
+}
+
+const parseList = <T>(value: T[] | string | undefined): T[] | undefined => {
+  if (Array.isArray(value)) return value;
+  if (!value?.trim()) return undefined;
+
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed as T[] : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+const parsePontosDeInteresse = (
+  value: PontoDeInteresse[] | string | undefined
+): PontoDeInteresse[] | undefined => {
+  const parsed = parseList<unknown>(value as unknown[] | string | undefined);
+  if (!parsed) return undefined;
+
+  const normalized = parsed.flatMap((point) => {
+    if (!point || typeof point !== 'object') return [];
+
+    const record = point as Record<string, unknown>;
+    const nameValue = record.nome ?? record.Nome ?? record.titulo ?? record.Titulo;
+    const descriptionValue = record.descricao ?? record.Descricao;
+    const imageValue = record.imagem ?? record.Imagem;
+    const nome = typeof nameValue === 'string' ? nameValue.trim() : '';
+    const descricao = typeof descriptionValue === 'string' ? descriptionValue.trim() : '';
+    const imagem = typeof imageValue === 'string' ? imageValue.trim() : '';
+
+    if (!nome) return [];
+
+    return [{
+      nome,
+      ...(descricao ? { descricao } : {}),
+      ...(imagem ? { imagem } : {}),
+    } satisfies PontoDeInteresse];
+  });
+
+  return normalized.length > 0 ? normalized : undefined;
+};
+
 export const getCidades = async (
   visivel?: boolean,
   requestOptions: ServiceRequestOptions = {}
@@ -53,9 +100,16 @@ export const createCidade = async (dto: CreateCidadeDto): Promise<ResultCreateCi
   return response.data;
 };
 
-export const getCidadeById = async (id: number): Promise<ResultCreateCidade> => {
+export const getCidadeById = async (id: number): Promise<CidadePayload> => {
   const response = await api.get(`/cidades/${id}`);
-  return response.data;
+  const city = response.data as RawCidadePayload;
+
+  return {
+    ...city,
+    galeriaImagem: normalizeGalleryImages(city.galeriaImagem),
+    tags: parseList(city.tags),
+    pontosDeInteresse: parsePontosDeInteresse(city.pontosDeInteresse),
+  };
 };
 
 export const getCidadesByIds = async (ids: number[]): Promise<CidadePayload[]> => {

@@ -1106,6 +1106,24 @@ export const MaskIcon = styled.div<{ src: string; color?: string; size?: number 
   mask-position: center;
 `;
 
+export const AuthorIcon = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  color: var(--neonBlue) !important;
+
+  > svg,
+  > svg path {
+    width: 20px;
+    height: 20px;
+    color: inherit !important;
+    fill: currentColor !important;
+  }
+`;
+
 export const ItemRow = styled.div<{ $clickable?: boolean; $color?: string; $clearColor?: string }>`
   display: flex;
   flex-direction: row;
@@ -1514,6 +1532,7 @@ export const ItemDescriptionPreview = styled.div`
   max-height: 24px;
   overflow: hidden;
   color: var(--muted, #cfcfcf);
+  text-align: left !important;
 
   & > div {
     display: -webkit-box;
@@ -1521,10 +1540,19 @@ export const ItemDescriptionPreview = styled.div`
     overflow: hidden;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
+    text-align: left !important;
   }
 
-  p {
+  p,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  li {
     margin: 0;
+    text-align: left !important;
   }
 
   &::after {

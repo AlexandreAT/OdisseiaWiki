@@ -10,7 +10,7 @@ namespace OdisseiaWiki.Dtos
         public string Nome { get; set; } = null!;
         public JsonElement? Descricao { get; set; }
         public string? Imagem { get; set; }
-        public List<string>? GaleriaImagem { get; set; }
+        public List<ImagemGaleriaDto>? GaleriaImagem { get; set; }
         public List<string>? Tags { get; set; }
         public List<PontoDeInteresseDto>? PontosDeInteresse { get; set; }
         public bool Visivel { get; set; } = true;

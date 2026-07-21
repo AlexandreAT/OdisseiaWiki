@@ -14,6 +14,8 @@ namespace OdisseiaWiki.Repositories.Interfaces
 
         Task<List<Page>> GetAllAsync(bool? visivel = null);
 
+        Task<List<Page>> GetWithRelationBlocksAsync(bool? visivel = null);
+
         Task<Page> UpdateAsync(Page page);
 
         Task<bool> DeleteAsync(int id);

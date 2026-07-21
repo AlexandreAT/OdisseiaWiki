@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { getPersonagemById } from '../../services/personagensService';
 import { getPersonagemJogadorById } from '../../services/personagemJogadorService';
 import { normalizePersonagem } from '../../utils/normalizePersonagem';
+import { PageDto } from '../../models/Pages';
+import { getPagesReferencingEntity } from '../../services/pageService';
 
 export type NormalizedPersonagem = ReturnType<typeof normalizePersonagem> | {
   // fallback shape for personagensService payloads (minimal)
@@ -15,6 +17,7 @@ export const usePersonagem = (idParam?: string | undefined, source: 'public' | '
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [personagem, setPersonagem] = useState<NormalizedPersonagem | null>(null);
+  const [relatedPages, setRelatedPages] = useState<PageDto[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -82,5 +85,31 @@ export const usePersonagem = (idParam?: string | undefined, source: 'public' | '
     return () => { cancelled = true; };
   }, [idParam, source]);
 
-  return { loading, error, personagem };
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!idParam || source !== 'public') {
+      setRelatedPages([]);
+      return undefined;
+    }
+
+    setRelatedPages([]);
+    getPagesReferencingEntity('Personagem', idParam)
+      .then((result) => {
+        if (cancelled) return;
+        const pages = result.sucesso !== false && Array.isArray(result.pages)
+          ? result.pages
+              .filter((page) => page.visivel !== false)
+              .sort((left, right) => left.titulo.localeCompare(right.titulo, 'pt-BR', { sensitivity: 'base' }))
+          : [];
+        setRelatedPages(pages);
+      })
+      .catch(() => {
+        if (!cancelled) setRelatedPages([]);
+      });
+
+    return () => { cancelled = true; };
+  }, [idParam, source]);
+
+  return { loading, error, personagem, relatedPages };
 };

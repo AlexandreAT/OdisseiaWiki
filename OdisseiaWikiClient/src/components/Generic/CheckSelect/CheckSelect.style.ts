@@ -1,4 +1,9 @@
-import styled, { css } from "styled-components";
+import styled, { css, keyframes } from "styled-components";
+
+const validationPulse = keyframes`
+  0%, 100% { border-color: var(--clearneonRed); }
+  50% { border-color: var(--clearneonBlue); }
+`;
 
 interface DropdownProps {
   theme: 'dark' | 'light';
@@ -81,5 +86,6 @@ export const CheckDisplay = styled.div<DisplayProps & { height?: string }>`
     css`
       border-color: var(--clearneonRed);
       box-shadow: 0 0 10px 2px var(--neonRed), 0 0 20px 1px var(--neonBlue);
+      animation: ${validationPulse} 0.65s ease-in-out 2 forwards;
     `}
 `;

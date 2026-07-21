@@ -146,6 +146,7 @@ export const useWikiSearch = () => {
             title: String(page.titulo ?? '').trim(),
             description: getPlainDescription(page.descricao),
             image: page.coverImage,
+            createdAt: page.dataCriacao,
             route: `/wiki/${encodeURIComponent(page.slug)}`,
             searchTerms: [],
           })).filter((page) => page.title && page.id),
@@ -157,6 +158,7 @@ export const useWikiSearch = () => {
               title: String(character.nome ?? '').trim(),
               description: tags.join(', ') || undefined,
               image: character.imagem,
+              createdAt: character.dataCriacao,
               route: `/personagem/${character.idpersonagem}`,
               searchTerms: tags,
             };
@@ -169,6 +171,7 @@ export const useWikiSearch = () => {
               title: String(city.nome ?? '').trim(),
               description: getPlainDescription(city.descricao) ?? (tags.join(', ') || undefined),
               image: city.imagem,
+              createdAt: city.dataCriacao,
               route: `/cidade/${city.idcidade}`,
               searchTerms: tags,
             };
@@ -181,6 +184,7 @@ export const useWikiSearch = () => {
               title: String(race.nome ?? '').trim(),
               description: tags.join(', ') || undefined,
               image: race.imagem,
+              createdAt: race.dataCriacao,
               route: `/raca/${race.idraca}`,
               searchTerms: tags,
             };
@@ -194,6 +198,7 @@ export const useWikiSearch = () => {
               title: String(item.nome ?? '').trim(),
               description: getPlainDescription(item.descricao) ?? item.tipo,
               image: item.imagem,
+              createdAt: item.dataCriacao,
               route: `/item/${item.iditem}`,
               searchTerms: tags,
             }];
@@ -299,15 +304,21 @@ export const useWikiSearch = () => {
           throw new Error(response.mensagemErro || 'Resposta inválida na busca de páginas.');
         }
 
-        nextResults.pages = rankGroup(response.pages.map((page) => ({
-          id: String(page.idPage ?? page.slug),
-          type: 'pages' as const,
-          title: String(page.titulo ?? '').trim(),
-          description: getPlainDescription(page.descricao),
-          image: page.coverImage,
-          route: `/wiki/${encodeURIComponent(page.slug)}`,
-          searchTerms: [],
-        })).filter((page) => page.title && page.id), query);
+        nextResults.pages = rankGroup(response.pages.map((page) => {
+          const id = String(page.idPage ?? page.slug);
+          const catalogPage = catalog.pages.find((item) => item.id === id);
+
+          return {
+            id,
+            type: 'pages' as const,
+            title: String(page.titulo ?? '').trim(),
+            description: getPlainDescription(page.descricao),
+            image: page.coverImage,
+            createdAt: catalogPage?.createdAt,
+            route: `/wiki/${encodeURIComponent(page.slug)}`,
+            searchTerms: [],
+          };
+        }).filter((page) => page.title && page.id), query);
         pageSearchSucceeded = true;
       } catch {
         pageSearchFailed = true;
@@ -367,7 +378,7 @@ export const useWikiSearch = () => {
   }, [navigate]);
 
   const handleResultSelect = useCallback((item: WikiSearchItem) => {
-    const isUnimplementedEntity = ['cities', 'races', 'items'].includes(item.type);
+    const isUnimplementedEntity = ['races', 'items'].includes(item.type);
 
     navigate(item.route, isUnimplementedEntity ? {
       state: {

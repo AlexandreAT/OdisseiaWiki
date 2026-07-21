@@ -300,3 +300,24 @@ export const InfoText = styled.p<StyledCardProps>`
     -webkit-line-clamp: 2;
   }
 `;
+
+export const SlugText = styled.p<StyledCardProps>`
+  margin: 0;
+  overflow: hidden;
+  color: ${({ theme, neon }) =>
+    neon === 'on'
+      ? theme === 'light'
+        ? 'var(--deepneonViolet)'
+        : 'var(--clearneonBlue)'
+      : theme === 'light'
+        ? 'var(--darkgray)'
+        : 'var(--lightgray)'};
+  font-size: 11px;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  @media (max-width: 768px) {
+    font-size: 8px;
+  }
+`;

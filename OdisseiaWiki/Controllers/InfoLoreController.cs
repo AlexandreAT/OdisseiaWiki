@@ -97,5 +97,17 @@ namespace OdisseiaWiki.Controllers
 
             return Ok(resultado);
         }
+
+        [HttpGet("search/management")]
+        [Authorize(Policy = AuthorizationPolicies.Admin)]
+        public async Task<IActionResult> SearchGlobalManagement([FromQuery] string termo)
+        {
+            if (string.IsNullOrWhiteSpace(termo))
+                return BadRequest("O termo de busca é obrigatório.");
+
+            // A busca do gerenciamento deve retornar também conteúdos invisíveis,
+            // pois é justamente nessa tela que o administrador altera a visibilidade.
+            return Ok(await _service.SearchGlobalAsync(termo));
+        }
     }
 }

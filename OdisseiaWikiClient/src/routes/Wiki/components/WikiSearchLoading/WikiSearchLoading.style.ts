@@ -42,17 +42,16 @@ export const LoadingIcon = styled.span<{ $compact: boolean }>`
   justify-content: center;
   flex: 0 0 auto;
   color: var(--wiki-loading-glow-color) !important;
-  animation: ${rotateLoader} 0.9s linear infinite, ${pulseGlow} 1.6s ease-in-out infinite;
+  animation: ${pulseGlow} 1.6s ease-in-out infinite;
 
   svg {
     width: ${({ $compact }) => ($compact ? '20px' : 'clamp(48px, 4.5vw, 68px)')};
     height: ${({ $compact }) => ($compact ? '20px' : 'clamp(48px, 4.5vw, 68px)')};
     fill: currentColor;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    animation: none;
-    filter: drop-shadow(0 0 5px var(--wiki-loading-glow-color));
+    animation: ${rotateLoader} 0.9s linear infinite;
+    transform-box: fill-box;
+    transform-origin: center;
+    will-change: transform;
   }
 
   @media (max-width: 768px) {
@@ -91,10 +90,4 @@ export const AnimatedDots = styled.span`
     animation: ${cycleDots} 1.6s steps(1, end) infinite;
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    &::after {
-      content: '...';
-      animation: none;
-    }
-  }
 `;

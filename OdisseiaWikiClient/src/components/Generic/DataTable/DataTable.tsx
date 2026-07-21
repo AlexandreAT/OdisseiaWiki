@@ -1,12 +1,19 @@
-import React, { useState, memo, useCallback, useMemo, useRef } from "react";
+import React, { useState, memo, useCallback, useMemo, useRef, useEffect } from "react";
 import MUIDataTable from "mui-datatables";
 import { TextField, IconButton } from "@mui/material";
 import { Add, Delete } from "@mui/icons-material";
 import { Search } from "../Search/Search";
 import { BiSearchAlt } from "react-icons/bi";
-import { DataTableContainer, TableScrollContainer } from "./DataTable.style";
+import {
+  CellEditor,
+  CharacterCounter,
+  DataTableContainer,
+  TableScrollContainer,
+  ValidationMessage,
+} from "./DataTable.style";
 import { Select } from "../Select/Select";
 import { CheckSelect } from "../CheckSelect/CheckSelect";
+import { revealFirstValidationError } from '../../../utils/formValidationFeedback';
 
 interface DataTableProps<T> {
   theme: 'dark' | 'light';
@@ -20,6 +27,8 @@ interface DataTableProps<T> {
   onSelectSearch?: (item: T) => void;
   searchKeys?: (keyof T)[];
   showEmptyRow?: boolean;
+  error?: boolean;
+  errorMessage?: string;
 }
 
 interface ColumnConfig<T> {
@@ -27,6 +36,7 @@ interface ColumnConfig<T> {
   label: string;
   width?: string | number;
   inputType?: "text" | "number" | "select" | "checkselect";
+  maxLength?: number;
   options?: { label: string; value: string }[];
   customRender?: (value: any, row: T, onChange: (val: any) => void) => React.ReactNode;
 }
@@ -86,21 +96,32 @@ const TableCell = memo(({
   }
 
 
+  const textValue = String(value ?? "");
+
   return (
-    <TextField
-      fullWidth
-      variant="standard"
-      value={value || ""}
-      onChange={(e) => handleChange(e.target.value)}
-      onKeyDown={onEnter}
-    />
+    <CellEditor>
+      <TextField
+        fullWidth
+        variant="standard"
+        value={textValue}
+        onChange={(e) => handleChange(e.target.value)}
+        onKeyDown={onEnter}
+        inputProps={column.maxLength ? { maxLength: column.maxLength } : undefined}
+      />
+      {column.maxLength && (
+        <CharacterCounter aria-live="polite">
+          {textValue.length}/{column.maxLength}
+        </CharacterCounter>
+      )}
+    </CellEditor>
   );
 }, (prev, next) => {
 
   return prev.value === next.value && 
          prev.rowIndex === next.rowIndex &&
          prev.theme === next.theme &&
-         prev.neon === next.neon;
+         prev.neon === next.neon &&
+         prev.column.maxLength === next.column.maxLength;
 });
 
 function DataTableComponent<T extends { [key: string]: any }>({
@@ -115,12 +136,21 @@ function DataTableComponent<T extends { [key: string]: any }>({
   onSelectSearch,
   searchKeys,
   showEmptyRow = false,
+  error = false,
+  errorMessage,
 }: DataTableProps<T>) {
   const [search, setSearch] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (error) revealFirstValidationError(containerRef.current);
+  }, [error]);
   
 
   const dataRef = useRef(data);
   dataRef.current = data;
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
 
   const createEmptyRow = useCallback(() => columns.reduce((acc, col) => {
     (acc as any)[col.key] = col.inputType === "number" ? 0 : "";
@@ -138,8 +168,8 @@ function DataTableComponent<T extends { [key: string]: any }>({
   const updateValue = useCallback((rowIndex: number, key: keyof T, value: any) => {
     const updated = [...dataRef.current];
     updated[rowIndex] = { ...updated[rowIndex], [key]: value };
-    onChange(updated);
-  }, [onChange]);
+    onChangeRef.current(updated);
+  }, []);
 
 
   const handleEnter = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -151,10 +181,10 @@ function DataTableComponent<T extends { [key: string]: any }>({
         inputs[currentIndex + 1].focus();
       } else {
       
-        onChange([...dataRef.current, createEmptyRow()]);
+        onChangeRef.current([...dataRef.current, createEmptyRow()]);
       }
     }
-  }, [createEmptyRow, onChange]);
+  }, [createEmptyRow]);
 
 
   const renderCell = useCallback((col: ColumnConfig<T>, rowIndex: number) => {
@@ -198,13 +228,13 @@ function DataTableComponent<T extends { [key: string]: any }>({
   })), [columns, renderCell]);
 
   const handleAddRow = useCallback(() => {
-    onChange([...dataRef.current, createEmptyRow()]);
-  }, [createEmptyRow, onChange]);
+    onChangeRef.current([...dataRef.current, createEmptyRow()]);
+  }, [createEmptyRow]);
 
   const handleRemoveRow = useCallback((index: number) => {
     const updated = dataRef.current.filter((_, i) => i !== index);
-    onChange(updated);
-  }, [onChange]);
+    onChangeRef.current(updated);
+  }, []);
 
   const searchSuggestions = useMemo(() => {
     if (!searchData || !searchKeys) return [];
@@ -245,7 +275,13 @@ function DataTableComponent<T extends { [key: string]: any }>({
   }), [tableData.length, handleAddRow, handleRemoveRow]);
 
   return (
-    <DataTableContainer theme={theme} neon={neon}>
+    <DataTableContainer
+      ref={containerRef}
+      theme={theme}
+      neon={neon}
+      $error={error}
+      data-validation-error={error || undefined}
+    >
       {searchable && searchData && onSelectSearch && (
         <Search
           theme={theme}
@@ -276,6 +312,7 @@ function DataTableComponent<T extends { [key: string]: any }>({
           }}
         />
       </TableScrollContainer>
+      {error && errorMessage && <ValidationMessage role="alert">{errorMessage}</ValidationMessage>}
     </DataTableContainer>
   );
 }

@@ -47,9 +47,18 @@ public sealed class AssetReferenceRepository : IAssetReferenceRepository
             return true;
 
         var racas = await _context.Racas.AsNoTracking()
-            .Select(entity => entity.GaleriaImagem)
+            .Select(entity => new
+            {
+                entity.GaleriaImagem,
+                entity.Variacoes,
+                entity.Descricao,
+            })
             .ToListAsync(cancellationToken);
-        if (racas.Any(value => ContainsAsset(assetUrl, value)))
+        if (racas.Any(entity => ContainsAsset(
+                assetUrl,
+                entity.GaleriaImagem,
+                entity.Variacoes,
+                entity.Descricao)))
             return true;
 
         if (await _context.Personagens.AsNoTracking()

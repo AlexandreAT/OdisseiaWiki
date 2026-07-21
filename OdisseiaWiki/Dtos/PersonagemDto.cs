@@ -11,7 +11,7 @@ namespace OdisseiaWiki.Dtos
         public int? Idcidade { get; set; }
         public JsonElement? Historia { get; set; }
         public string? Imagem { get; set; }
-        public List<string>? GaleriaImagem { get; set; }
+        public List<ImagemGaleriaDto>? GaleriaImagem { get; set; }
         public List<string>? Costumes { get; set; }
         public string? Alinhamento { get; set; }
         public List<string>? Tracos { get; set; }

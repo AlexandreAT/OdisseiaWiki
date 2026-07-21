@@ -2,7 +2,7 @@ import { useId } from 'react';
 import { AnimatedTitleSvg } from './OdisseiaAnimatedTitle.style';
 import { OdisseiaAnimatedTitleProps } from './OdisseiaAnimatedTitle.type';
 
-export const OdisseiaAnimatedTitle = ({ theme, neon }: OdisseiaAnimatedTitleProps) => {
+export const OdisseiaAnimatedTitle = ({ theme, neon, text = 'Odisseia' }: OdisseiaAnimatedTitleProps) => {
   const uniqueId = useId().replace(/:/g, '');
   const titleId = `odisseia-title-${uniqueId}`;
   const shadowFilterId = `odisseia-title-shadow-${uniqueId}`;
@@ -10,24 +10,28 @@ export const OdisseiaAnimatedTitle = ({ theme, neon }: OdisseiaAnimatedTitleProp
   const shadowOffset = neon === 'on' ? 1.5 : 0;
   const shadowBlur = neon === 'on' ? 2.5 : 3;
   const shadowOpacity = neon === 'on' ? 1 : 0.75;
+  const isCustomTitle = text !== 'Odisseia';
+  const viewBoxWidth = Math.max(240, text.length * 34 + 100);
+  const titlePosition = isCustomTitle ? viewBoxWidth / 2 : 0;
 
   return (
     <AnimatedTitleSvg
       theme={theme}
       neon={neon}
-      viewBox="0 0 240 38"
+      $wide={isCustomTitle}
+      viewBox={`0 0 ${viewBoxWidth} 38`}
       role="img"
       aria-labelledby={titleId}
-      preserveAspectRatio="xMinYMid meet"
+      preserveAspectRatio={isCustomTitle ? 'xMidYMid meet' : 'xMinYMid meet'}
     >
-      <title id={titleId}>Odisseia</title>
+      <title id={titleId}>{text}</title>
       <defs>
         <filter
           id={shadowFilterId}
           filterUnits="userSpaceOnUse"
-          x="-40"
+          x="-50"
           y="-30"
-          width="320"
+          width={viewBoxWidth + 100}
           height="100"
           colorInterpolationFilters="sRGB"
         >
@@ -41,16 +45,16 @@ export const OdisseiaAnimatedTitle = ({ theme, neon }: OdisseiaAnimatedTitleProp
         </filter>
       </defs>
       <g>
-        <text className="title-text title-outline" x="0" y="30">
-          Odisseia
+        <text className="title-text title-outline" x={titlePosition} y="30">
+          {text}
         </text>
         <text
           className="title-text title-fill"
-          x="0"
+          x={titlePosition}
           y="30"
           filter={`url(#${shadowFilterId})`}
         >
-          Odisseia
+          {text}
         </text>
       </g>
     </AnimatedTitleSvg>

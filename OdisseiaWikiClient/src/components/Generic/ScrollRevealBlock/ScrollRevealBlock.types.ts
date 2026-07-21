@@ -7,4 +7,5 @@ export interface ScrollRevealBlockProps {
   variant: ScrollRevealVariant;
   threshold?: number | number[];
   rootMargin?: string;
+  className?: string;
 }

@@ -730,6 +730,9 @@ namespace OdisseiaWiki.Migrations
                     b.Property<DateTime>("DataCriacao")
                         .HasColumnType("datetime");
 
+                    b.Property<string>("Descricao")
+                        .HasColumnType("text");
+
                     b.Property<bool>("Destaque")
                         .HasColumnType("tinyint(1)");
 
@@ -749,6 +752,9 @@ namespace OdisseiaWiki.Migrations
                         .HasColumnType("json");
 
                     b.Property<string>("Tags")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Variacoes")
                         .HasColumnType("longtext");
 
                     b.Property<bool>("Visivel")

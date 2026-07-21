@@ -1,5 +1,7 @@
 import { useState, forwardRef, useCallback, useEffect, useRef } from 'react';
 import { ContentController, LoginLabel, LoginInput, LoginLabelSpan, SpanError } from './InputText.style';
+import { FormLabelText } from '../FormLabelText';
+import { revealFirstValidationError } from '../../../utils/formValidationFeedback';
 
 interface Props {
     theme: 'dark' | 'light';
@@ -47,7 +49,7 @@ export const InputText = forwardRef<HTMLInputElement, Props>(
     useEffect(() => {
       if (!hasError) return;
 
-      controllerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      revealFirstValidationError(controllerRef.current);
     }, [hasError]);
 
     const handleFocus = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
@@ -70,7 +72,7 @@ export const InputText = forwardRef<HTMLInputElement, Props>(
     }, [errorMessage]);
 
     return (
-      <ContentController ref={controllerRef} width={width}>
+      <ContentController ref={controllerRef} width={width} data-validation-error={hasError || undefined}>
         <LoginLabel width={width} height={height}>
           <LoginInput
               theme={theme}
@@ -91,7 +93,9 @@ export const InputText = forwardRef<HTMLInputElement, Props>(
               aria-invalid={hasError}
               autoComplete={autoComplete}
           />
-          <LoginLabelSpan active={focus || hasValue}>{label}</LoginLabelSpan>
+          <LoginLabelSpan active={focus || hasValue}>
+            <FormLabelText label={label} required={required} />
+          </LoginLabelSpan>
         </LoginLabel>
         {hasError && <SpanError>{errorMessage || nativeError}</SpanError>}
       </ContentController>

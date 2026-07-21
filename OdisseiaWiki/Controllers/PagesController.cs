@@ -21,8 +21,19 @@ namespace OdisseiaWiki.Controllers
         [Authorize(Policy = AuthorizationPolicies.Admin)]
         public async Task<IActionResult> Create(CreatePageWithBlocksDto dto)
         {
-            var result = await _service.CreateAsync(dto);
-            return Ok(result);
+            try
+            {
+                var result = await _service.CreateAsync(dto);
+                return Ok(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new
+                {
+                    sucesso = false,
+                    mensagemErro = ex.Message
+                });
+            }
         }
 
         [HttpGet("search")]
@@ -70,6 +81,19 @@ namespace OdisseiaWiki.Controllers
 
             var pages = await _service.GetAllAsync(visivel);
 
+            return Ok(ResultPage.Ok(pages));
+        }
+
+        [HttpGet("referencing/{entityType}/{entityId}")]
+        public async Task<IActionResult> GetReferencing(
+            string entityType,
+            string entityId,
+            [FromQuery] bool? visivel = null)
+        {
+            if (!User.IsAdmin())
+                visivel = true;
+
+            List<PageDto> pages = await _service.GetReferencingAsync(entityType, entityId, visivel);
             return Ok(ResultPage.Ok(pages));
         }
 

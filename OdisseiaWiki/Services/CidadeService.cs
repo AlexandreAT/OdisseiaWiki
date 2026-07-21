@@ -27,6 +27,9 @@ namespace OdisseiaWiki.Services
             if (string.IsNullOrWhiteSpace(dto.Imagem))
                 return ResultCidade.Fail("A imagem padrão é obrigatória.");
 
+            if (!TryNormalizePontosDeInteresse(dto.PontosDeInteresse, out List<PontoDeInteresseDto>? pontos, out string? pontosError))
+                return ResultCidade.Fail(pontosError!);
+
             var cidade = new Cidade
             {
                 Nome = dto.Nome,
@@ -36,8 +39,8 @@ namespace OdisseiaWiki.Services
                     ? JsonSerializer.Serialize(dto.GaleriaImagem)
                     : null,
                 Tags = JsonSerializer.Serialize(ContentCategoryHelper.EnsureCategoryTag(dto.Tags, ContentCategoryHelper.Cidade)),
-                PontosDeInteresse = dto.PontosDeInteresse != null && dto.PontosDeInteresse.Any()
-                    ? JsonSerializer.Serialize(dto.PontosDeInteresse)
+                PontosDeInteresse = pontos != null && pontos.Count > 0
+                    ? JsonSerializer.Serialize(pontos)
                     : null,
                 Visivel = dto.Visivel,
                 Destaque = dto.Destaque,
@@ -73,8 +76,11 @@ namespace OdisseiaWiki.Services
                 ContentCategoryHelper.Cidade));
             if (dto.PontosDeInteresse is not null)
             {
-                cidade.PontosDeInteresse = dto.PontosDeInteresse.Count > 0
-                    ? JsonSerializer.Serialize(dto.PontosDeInteresse)
+                if (!TryNormalizePontosDeInteresse(dto.PontosDeInteresse, out List<PontoDeInteresseDto>? pontos, out string? pontosError))
+                    return ResultCidade.Fail(pontosError!);
+
+                cidade.PontosDeInteresse = pontos != null && pontos.Count > 0
+                    ? JsonSerializer.Serialize(pontos)
                     : null;
             }
             cidade.Visivel = dto.Visivel;
@@ -91,24 +97,7 @@ namespace OdisseiaWiki.Services
         {
             var cidades = await _repository.GetAllAsync(visivel);
 
-            var dtos = cidades.Select(c => new CidadeDto
-            {
-                Idcidade = c.Idcidade,
-                Nome = c.Nome,
-                Descricao = RichTextHelper.DeserializeRichText(c.Descricao),
-                Imagem = c.Imagem,
-                GaleriaImagem = !string.IsNullOrWhiteSpace(c.GaleriaImagem)
-                    ? JsonSerializer.Deserialize<List<string>>(c.GaleriaImagem)
-                    : null,
-                Tags = !string.IsNullOrWhiteSpace(c.Tags)
-                    ? JsonSerializer.Deserialize<List<string>>(c.Tags)
-                    : null,
-                PontosDeInteresse = !string.IsNullOrWhiteSpace(c.PontosDeInteresse)
-                    ? JsonSerializer.Deserialize<List<PontoDeInteresseDto>>(c.PontosDeInteresse)
-                    : null,
-                Visivel = c.Visivel
-                ,Destaque = c.Destaque
-            }).ToList();
+            var dtos = cidades.Select(MapToDto).ToList();
 
             return ResultCidade.Ok(dtos);
         }
@@ -117,29 +106,14 @@ namespace OdisseiaWiki.Services
         {
             List<Cidade> cidades = await _repository.GetBatchAsync(ids);
 
-            return cidades.Select(c => new CidadeDto
-            {
-                Idcidade = c.Idcidade,
-                Nome = c.Nome,
-                Descricao = RichTextHelper.DeserializeRichText(c.Descricao),
-                Imagem = c.Imagem,
-                GaleriaImagem = !string.IsNullOrWhiteSpace(c.GaleriaImagem)
-                    ? JsonSerializer.Deserialize<List<string>>(c.GaleriaImagem)
-                    : null,
-                Tags = !string.IsNullOrWhiteSpace(c.Tags)
-                    ? JsonSerializer.Deserialize<List<string>>(c.Tags)
-                    : null,
-                PontosDeInteresse = !string.IsNullOrWhiteSpace(c.PontosDeInteresse)
-                    ? JsonSerializer.Deserialize<List<PontoDeInteresseDto>>(c.PontosDeInteresse)
-                    : null,
-                Visivel = c.Visivel,
-                Destaque = c.Destaque,
-                DataCriacao = c.DataCriacao
-            }).ToList();
+            return cidades.Select(MapToDto).ToList();
         }
 
-        public async Task<Cidade?> GetByIdAsync(int id)
-            => await _repository.GetByIdAsync(id);
+        public async Task<CidadeDto?> GetByIdAsync(int id)
+        {
+            Cidade? cidade = await _repository.GetByIdAsync(id);
+            return cidade is null ? null : MapToDto(cidade);
+        }
 
         public async Task<bool> DeleteAsync(int id)
         {
@@ -153,6 +127,110 @@ namespace OdisseiaWiki.Services
             if (deleted)
                 await AssetReferenceHelper.DeleteAllAsync(_assetService, assets);
             return deleted;
+        }
+
+        private static CidadeDto MapToDto(Cidade cidade)
+        {
+            return new CidadeDto
+            {
+                Idcidade = cidade.Idcidade,
+                Nome = cidade.Nome,
+                Descricao = RichTextHelper.DeserializeRichText(cidade.Descricao),
+                Imagem = cidade.Imagem,
+                GaleriaImagem = !string.IsNullOrWhiteSpace(cidade.GaleriaImagem)
+                    ? JsonSerializer.Deserialize<List<ImagemGaleriaDto>>(cidade.GaleriaImagem)
+                    : null,
+                Tags = !string.IsNullOrWhiteSpace(cidade.Tags)
+                    ? JsonSerializer.Deserialize<List<string>>(cidade.Tags)
+                    : null,
+                PontosDeInteresse = DeserializePontosDeInteresse(cidade.PontosDeInteresse),
+                Visivel = cidade.Visivel,
+                Destaque = cidade.Destaque,
+                DataCriacao = cidade.DataCriacao
+            };
+        }
+
+        private static List<PontoDeInteresseDto>? DeserializePontosDeInteresse(string? json)
+        {
+            if (string.IsNullOrWhiteSpace(json))
+                return null;
+
+            try
+            {
+                List<PontoDeInteresseDto>? stored = JsonSerializer.Deserialize<List<PontoDeInteresseDto>>(
+                    json,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                return TryNormalizePontosDeInteresse(stored, out List<PontoDeInteresseDto>? normalized, out _)
+                    ? normalized
+                    : null;
+            }
+            catch (JsonException)
+            {
+                return null;
+            }
+        }
+
+        private static bool TryNormalizePontosDeInteresse(
+            IEnumerable<PontoDeInteresseDto>? source,
+            out List<PontoDeInteresseDto>? normalized,
+            out string? error)
+        {
+            normalized = null;
+            error = null;
+
+            if (source is null)
+                return true;
+
+            List<PontoDeInteresseDto> result = new();
+
+            foreach (PontoDeInteresseDto point in source)
+            {
+                string name = (point.Nome ?? point.Titulo ?? string.Empty).Trim();
+                string? description = string.IsNullOrWhiteSpace(point.Descricao)
+                    ? null
+                    : point.Descricao.Trim();
+                string? image = string.IsNullOrWhiteSpace(point.Imagem)
+                    ? null
+                    : point.Imagem.Trim();
+
+                if (name.Length == 0 && description is null && image is null)
+                    continue;
+
+                if (name.Length == 0)
+                {
+                    error = "Todo ponto de interesse deve possuir um nome.";
+                    return false;
+                }
+
+                if (name.Length > 100)
+                {
+                    error = "O nome do ponto de interesse deve ter no máximo 100 caracteres.";
+                    return false;
+                }
+
+                if (description?.Length > 300)
+                {
+                    error = "A descrição do ponto de interesse deve ter no máximo 300 caracteres.";
+                    return false;
+                }
+
+                if (image?.Length > 2048)
+                {
+                    error = "O caminho da imagem do ponto de interesse é inválido.";
+                    return false;
+                }
+
+                result.Add(new PontoDeInteresseDto
+                {
+                    Nome = name,
+                    Descricao = description,
+                    Imagem = image
+                });
+            }
+
+            normalized = result.Count > 0 ? result : null;
+            return true;
         }
     }
 }

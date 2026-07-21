@@ -632,6 +632,8 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
 
     if (!data.name || data.name.trim().length < 1) {
       errors.name = 'O nome deve ter pelo menos 1 caracter.';
+    } else if (data.name.trim().length > 100) {
+      errors.name = 'O nome deve ter no máximo 100 caracteres.';
     }
 
     if (!data.race || data.race === 0) {

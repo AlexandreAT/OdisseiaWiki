@@ -4,7 +4,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { usePersonagem } from './usePersonagem';
 import { PageContainer, TopSection, BottomSection, AvatarWrapper, MetaRow, Sections, CardContent, InfoList, InfoItem, MetaContent, SectionSpacer, AvatarDivController, SatusDivController, StatusList, StatusDiv, HeaderStatusController, StatusController, StatusHeader, StatusBarWrapper, StatusBarFill, InfoControllers, TitleDiv, TagItem, TagList, RelatedLink, HistoryWrapper, HistoryModalOverlay, HistoryModalSheet, HistoryModalHeader, HistoryModalTitle, HistoryModalClose, HistoryModalContent, InfoSpan, BottomInfoLeft, BottomInfoRight, StoryWithImage, StoryImage, HudCornerEl, HudTopLine, HudBottomLine, HudLeftLine, HudRightLine, StatusTopLine, StatusBottomLine, StatusLeftLine, StatusRightLine, BackgroundVideoContainer, BackgroundVideo, BackgroundOverlay, HexagonHud, HexagonBackground, HexagonBorder, HexagonContent, HexagonValue, PageController, PageLoadingState, SectionRow, InventoryList, LoadBar, LoadProgress, ImplantGrid, ImplantMods, SkillGrid, AbilityDescription, AbilityPair, AbilityCard, CooldownBar, CooldownFill, ItemDescriptionPreview, ItemDescriptionLayout, ItemDetailsBody, ViewMoreButton, DetailAttributes, DetailAttribute, DetailTextPair, DetailText, ItemDescriptionImage } from './PersonagemPage.style';
-import { PersonagemRichText, FlexRow, MutedText, BoldLabel, ItemThumb, ItemPlaceholder, GalleryToggle, GalleryContent, MaskIcon, ItemRow, FlexFill } from './PersonagemPage.style';
+import { PersonagemRichText, FlexRow, MutedText, BoldLabel, ItemThumb, ItemPlaceholder, GalleryToggle, GalleryContent, MaskIcon, AuthorIcon, ItemRow, FlexFill } from './PersonagemPage.style';
 import glassHeart from '../../assets/svg/glass-heart.svg';
 import rollingEnergy from '../../assets/svg/rolling-energy.svg';
 import electric from '../../assets/svg/electric.svg';
@@ -18,6 +18,7 @@ import { getCidadeById } from '../../services/cidadesService';
 import { getRacaById } from '../../services/racasService';
 import { GalleryBlock } from '../Wiki/components/blocks/GalleryBlock/GalleryBlock';
 import { PageBlockType } from '../../models/Pages';
+import { normalizeGalleryImages } from '../../models/GalleryImage';
 import village from '../../assets/svg/village.svg';
 import scales from '../../assets/svg/scales.svg';
 import dna1 from '../../assets/svg/dna1.svg';
@@ -36,6 +37,8 @@ import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import { ListModal } from '../../components/Generic/ListModal';
 import { BiChevronDown } from 'react-icons/bi';
 import { DEFAULT_MAX_CHARACTER_LEVEL, getDefaultXpRequiredForLevel } from '../../utils/characterProgression';
+import { Lightbox } from '../Wiki/components/blocks/shared/Lightbox/Lightbox';
+import { RelatedPageLink, RelatedPages, RelatedPagesTitle } from '../Cidade/CidadePage.style';
 
 const detailLabels: Record<string, string> = {
   curta: 'Dano Curto',
@@ -210,7 +213,7 @@ const PersonagemPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const id = params.id;
   const characterSource = searchParams.get('tipo') === 'jogador' ? 'player' : 'public';
-  const { loading, error, personagem } = usePersonagem(id, characterSource);
+  const { loading, error, personagem, relatedPages } = usePersonagem(id, characterSource);
   const { theme, neon } = useSelector((state: any) => state.themesReducer);
   const getField = (obj: any, keys: string[]) => {
     if (!obj) return undefined;
@@ -226,6 +229,7 @@ const PersonagemPage: React.FC = () => {
   const [racaNome, setRacaNome] = React.useState<string | null>(null);
   const [personagensVinculadosNomes, setPersonagensVinculadosNomes] = React.useState<{ id: number; nome: string }[]>([]);
   const [galleryOpen, setGalleryOpen] = React.useState(true);
+  const [mainImageOpen, setMainImageOpen] = React.useState(false);
   const [historyModalOpen, setHistoryModalOpen] = React.useState(false);
   const [selectedInventoryItem, setSelectedInventoryItem] = React.useState<Item | null>(null);
   const [activeAbilityTab, setActiveAbilityTab] = React.useState<'skills' | 'magias'>('skills');
@@ -369,7 +373,7 @@ const PersonagemPage: React.FC = () => {
   const isOverloaded = currentLoad > loadCapacity;
 
   const rawGallery = (personagem as any)?.galeriaImagem;
-  const galleryImages = Array.isArray(rawGallery) ? rawGallery.filter((url: any) => typeof url === 'string' && url.trim()) : [];
+  const galleryImages = normalizeGalleryImages(rawGallery);
   const skills = Array.isArray((personagem as any)?.skills) ? (personagem as any).skills.filter(isMeaningfulAbility) : [];
   const magias = Array.isArray((personagem as any)?.magia) ? (personagem as any).magia.filter(isMeaningfulAbility) : [];
   const proficiencias = Array.isArray((personagem as any)?.proficiencias)
@@ -446,7 +450,14 @@ const PersonagemPage: React.FC = () => {
             <TopSection>
                 <AvatarDivController>
                     <AvatarWrapper>
-                        <AvatarIcon theme={theme} neon={neon} initialImage={imagem ? normalizeImagePath(imagem) : ''} size={250} clickable={false} />
+                        <AvatarIcon
+                          theme={theme}
+                          neon={neon}
+                          initialImage={imagem ? normalizeImagePath(imagem) : ''}
+                          size={250}
+                          clickable={Boolean(imagem)}
+                          onClick={() => setMainImageOpen(true)}
+                        />
                     </AvatarWrapper>
 
                     <CardContent maxWidth='320px' neon={neon}>
@@ -479,7 +490,9 @@ const PersonagemPage: React.FC = () => {
                                   </FlexRow>
                                   {autorNome && (
                                     <FlexRow gap={8}>
-                                      <AccountCircleOutlinedIcon sx={{ color: 'var(--neonBlue)', fontSize: 20, flex: '0 0 auto' }} />
+                                      <AuthorIcon aria-hidden="true">
+                                        <AccountCircleOutlinedIcon />
+                                      </AuthorIcon>
                                       <BoldLabel>Autor:</BoldLabel> {autorNome}
                                     </FlexRow>
                                   )}
@@ -712,6 +725,16 @@ const PersonagemPage: React.FC = () => {
                 <div className="ProseMirror">
                   <RichTextDisplay content={historia} />
                 </div>
+                {relatedPages.length > 0 && (
+                  <RelatedPages>
+                    <RelatedPagesTitle>PÃ¡ginas que fazem referÃªncia a este personagem</RelatedPagesTitle>
+                    {relatedPages.map((page) => (
+                      <RelatedPageLink key={page.idPage ?? page.slug} to={`/wiki/${encodeURIComponent(page.slug)}`}>
+                        <span>{page.titulo}</span>
+                      </RelatedPageLink>
+                    ))}
+                  </RelatedPages>
+                )}
               </HistoryModalContent>
             </HistoryModalSheet>
           </HistoryModalOverlay>,
@@ -831,7 +854,7 @@ const PersonagemPage: React.FC = () => {
               {galleryOpen && (
                 <GalleryContent>
                   <GalleryBlock
-                      block={{ tipo: PageBlockType.GALLERY, conteudo: { imagens: galleryImages.map((url: string) => ({ url, legenda: '' })) }, ordem: 0 }}
+                      block={{ tipo: PageBlockType.GALLERY, conteudo: { imagens: galleryImages }, ordem: 0 }}
                       blockIndex={0}
                       theme={theme}
                       neon={neon}
@@ -999,6 +1022,12 @@ const PersonagemPage: React.FC = () => {
         </AbilityPair>
 
         </Sections>
+
+        <Lightbox
+          isOpen={mainImageOpen}
+          images={imagem ? [{ url: normalizeImagePath(imagem), caption: nome }] : []}
+          onClose={() => setMainImageOpen(false)}
+        />
     </PageContainer>
   );
 };

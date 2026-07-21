@@ -6,6 +6,6 @@ namespace OdisseiaWiki.Dtos
     {
         public StatusBaseDto status { get; set; } = new();
         public string? atributoInicial { get; set; }
-        public List<string>? passivas { get; set; }
+        public List<RacaPassivaDto>? passivas { get; set; }
     }
 }

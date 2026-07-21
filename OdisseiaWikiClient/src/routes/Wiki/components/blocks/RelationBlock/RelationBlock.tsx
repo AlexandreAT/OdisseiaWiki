@@ -29,7 +29,7 @@ import {
   CarouselViewport,
   CarouselArrow,
 } from './RelationBlock.style';
-import { getPersonagens, getPersonagensByIds } from '../../../../../services/personagensService';
+import { getPersonagensByIds } from '../../../../../services/personagensService';
 import { getCidadesByIds } from '../../../../../services/cidadesService';
 import { getRacasByIds } from '../../../../../services/racasService';
 import { getItensByIds } from '../../../../../services/itensService';
@@ -42,8 +42,55 @@ const typeIcons: Record<string, React.ReactNode> = {
   Raca: <BiShapeSquare />,
 };
 
-const normalizeRelations = (raw: any): RelatedEntityReference[] => {
-  if (Array.isArray(raw)) return raw;
+type EntityRecord = Record<string, unknown>;
+
+const asEntityRecord = (value: unknown): EntityRecord | null => (
+  value !== null && typeof value === 'object' ? value as EntityRecord : null
+);
+
+const normalizeEntityType = (value?: string) => value
+  ?.normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .trim()
+  .toLowerCase();
+
+const getEntityRoute = (entityType: string | undefined, entityId: string | number | undefined) => {
+  if (entityId === undefined || entityId === null || String(entityId).trim() === '') return null;
+
+  const routeSegmentByType: Record<string, string> = {
+    personagem: 'personagem',
+    cidade: 'cidade',
+    raca: 'raca',
+    item: 'item',
+  };
+  const routeSegment = routeSegmentByType[normalizeEntityType(entityType) ?? ''];
+
+  return routeSegment ? `/${routeSegment}/${encodeURIComponent(String(entityId))}` : null;
+};
+
+const getResolvedEntityId = (entityType: string | undefined, entity: unknown) => {
+  const entityRecord = asEntityRecord(entity);
+  if (!entityRecord) return undefined;
+
+  const normalizedType = normalizeEntityType(entityType);
+  const candidatesByType: Record<string, string[]> = {
+    personagem: ['idpersonagem', 'Idpersonagem', 'idPersonagem'],
+    cidade: ['idcidade', 'Idcidade', 'idCidade'],
+    raca: ['idraca', 'Idraca', 'idRaca'],
+    item: ['iditem', 'IdItem', 'idItem'],
+  };
+  const candidates = [...(candidatesByType[normalizedType ?? ''] ?? []), 'id', 'Id'];
+
+  for (const field of candidates) {
+    const value = entityRecord[field];
+    if (typeof value === 'string' || typeof value === 'number') return value;
+  }
+
+  return undefined;
+};
+
+const normalizeRelations = (raw: unknown): RelatedEntityReference[] => {
+  if (Array.isArray(raw)) return raw as RelatedEntityReference[];
   if (raw && typeof raw === 'object' && 'idEntidade' in raw) {
     return [raw as RelatedEntityReference];
   }
@@ -53,14 +100,12 @@ const normalizeRelations = (raw: any): RelatedEntityReference[] => {
 interface RelationTypeCarouselProps {
   tipo: string;
   items: RelatedEntityReference[];
-  theme?: 'dark' | 'light';
-  neon?: 'on' | 'off';
 }
 
-const RelationTypeCarousel: React.FC<RelationTypeCarouselProps> = ({ tipo, items, theme: _theme, neon: _neon }) => {
+const RelationTypeCarousel: React.FC<RelationTypeCarouselProps> = ({ tipo, items }) => {
   const CAROUSEL_LIMIT = 4;
   const navigate = useNavigate();
-  const [entityMap, setEntityMap] = useState<Record<string, any>>({});
+  const [entityMap, setEntityMap] = useState<Record<string, EntityRecord>>({});
 
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -88,7 +133,7 @@ const RelationTypeCarousel: React.FC<RelationTypeCarouselProps> = ({ tipo, items
   useEffect(() => {
     let cancelled = false;
     const fetchEntities = async () => {
-      const map: Record<string, any> = {};
+      const map: Record<string, EntityRecord> = {};
 
       // group ids per type
       const idsByType: Record<string, Set<string>> = {};
@@ -100,15 +145,18 @@ const RelationTypeCarousel: React.FC<RelationTypeCarouselProps> = ({ tipo, items
 
       const jobs: Promise<void>[] = [];
 
-      const pushToMap = (tipo: string, list: any[], idFieldCandidates: string[]) => {
+      const pushToMap = (tipo: string, list: unknown[], idFieldCandidates: string[]) => {
         list.forEach(ent => {
-          let idVal: any = undefined;
+          const entity = asEntityRecord(ent);
+          if (!entity) return;
+
+          let idVal: unknown;
           for (const f of idFieldCandidates) {
-            if (ent && ent[f] !== undefined && ent[f] !== null) { idVal = ent[f]; break; }
+            if (entity[f] !== undefined && entity[f] !== null) { idVal = entity[f]; break; }
           }
-          if (idVal === undefined || idVal === null) idVal = ent?.id ?? ent?.Id;
+          if (idVal === undefined || idVal === null) idVal = entity.id ?? entity.Id;
           const key = `${tipo}:${String(idVal)}`;
-          map[key] = ent;
+          map[key] = entity;
         });
       };
 
@@ -194,55 +242,38 @@ const RelationTypeCarousel: React.FC<RelationTypeCarouselProps> = ({ tipo, items
 
   const renderRelationItem = (relation: RelatedEntityReference, index: number) => {
     const key = `${tipo}:${String(relation.idEntidade)}:${index}`;
+    const ent = entityMap[`${relation.tipoEntidade}:${String(relation.idEntidade)}`];
     const handleClick = () => {
       if (didDrag.current) {
         didDrag.current = false;
         return;
       }
-      // navigate to entity page when clicking a personagem
-      if (relation.tipoEntidade === 'Personagem') {
-        // attempt direct navigation first
-        if (relation.idEntidade != null && String(relation.idEntidade).trim() !== '') {
-          navigate(`/personagem/${relation.idEntidade}`);
-          return;
-        }
+      const hasDirectEntityId = relation.idEntidade !== undefined
+        && relation.idEntidade !== null
+        && String(relation.idEntidade).trim() !== '';
+      const entityId = hasDirectEntityId
+        ? relation.idEntidade
+        : getResolvedEntityId(relation.tipoEntidade, ent);
+      const route = getEntityRoute(relation.tipoEntidade, entityId);
+      if (!route) return;
 
-        // if relation has no idEntidade or navigation didn't occur, try resolving from cached entityMap
-        const resolvedEnt = entityMap[`${relation.tipoEntidade}:${String(relation.idEntidade)}`];
-        if (resolvedEnt) {
-          const resolvedId = (resolvedEnt as any).idpersonagem ?? (resolvedEnt as any).Idpersonagem ?? (resolvedEnt as any).id ?? undefined;
-          if (resolvedId != null) {
-            navigate(`/personagem/${resolvedId}`);
-            return;
-          }
-        }
-
-        // defensive: try to resolve by image filename if id seems wrong/missing
-        if (relation.imagem) {
-          (async () => {
-            try {
-              const list = await getPersonagens();
-              const imageName = String(relation.imagem).split('/').pop();
-              const found = list.find((p: any) => {
-                const img = p?.imagem || p?.Imagem || '';
-                return String(img).endsWith(imageName || '');
-              });
-              if (found) {
-                const id = (found as any).idpersonagem ?? (found as any).Idpersonagem ?? (found as any).id ?? undefined;
-                if (id != null) navigate(`/personagem/${id}`);
-              }
-            } catch (err) {
-              // ignore resolution failure
-            }
-          })();
-        }
+      if (normalizeEntityType(relation.tipoEntidade) === 'item') {
+        navigate(route, {
+          state: {
+            errorTitle: 'PÃ¡gina ainda nÃ£o disponÃ­vel',
+            errorDescription: `A pÃ¡gina dinÃ¢mica de ${relation.nome || 'item'} ainda estÃ¡ em desenvolvimento.`,
+          },
+        });
         return;
       }
+
+      navigate(route);
     };
 
-    const ent = entityMap[`${relation.tipoEntidade}:${String(relation.idEntidade)}`];
-    const name = ent ? (ent.Nome || ent.nome || ent.nome) : (relation.nome || 'Sem nome');
-    const img = ent ? (ent.Imagem || ent.imagem || relation.imagem) : relation.imagem;
+    const resolvedName = ent?.Nome ?? ent?.nome;
+    const resolvedImage = ent?.Imagem ?? ent?.imagem;
+    const name = resolvedName ? String(resolvedName) : (relation.nome || 'Sem nome');
+    const img = resolvedImage ? String(resolvedImage) : relation.imagem;
 
     return (
       <RelationCard key={key} type="button" onClick={handleClick}>
@@ -336,7 +367,7 @@ export const RelationBlock: React.FC<RelationBlockProps> = ({ block, theme, neon
     );
   }
 
-  const grouped = useMemo(() => {
+  const grouped = (() => {
     const map = new Map<string, RelatedEntityReference[]>();
     relations.forEach(r => {
       const key = r.tipoEntidade || 'Outro';
@@ -344,7 +375,7 @@ export const RelationBlock: React.FC<RelationBlockProps> = ({ block, theme, neon
       map.get(key)!.push(r);
     });
     return Array.from(map.entries());
-  }, [relations]);
+  })();
 
   return (
     <RelationBlockContainer>
@@ -360,7 +391,7 @@ export const RelationBlock: React.FC<RelationBlockProps> = ({ block, theme, neon
             </TypeLabel>
           </RelationTypeGroupHeader>
 
-          <RelationTypeCarousel tipo={tipo} items={items} theme={theme} neon={neon} />
+          <RelationTypeCarousel tipo={tipo} items={items} />
         </RelationTypeGroup>
       ))}
     </RelationBlockContainer>

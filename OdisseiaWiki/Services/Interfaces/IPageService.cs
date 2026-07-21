@@ -15,6 +15,8 @@ namespace OdisseiaWiki.Services.Interfaces
 
         Task<List<PageDto>> GetAllAsync(bool? visivel = null);
 
+        Task<List<PageDto>> GetReferencingAsync(string entityType, string entityId, bool? visivel = null);
+
         Task<PageDto> UpdateAsync(int id, CreatePageWithBlocksDto dto);
 
         Task<bool> DeleteAsync(int id);
