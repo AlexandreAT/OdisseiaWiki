@@ -7,4 +7,10 @@ export interface ListModalProps<T> {
   emptyMessage: string;
   onClose: () => void;
   renderItem: (item: T, index: number) => ReactNode;
+  columns?: number;
+  width?: string;
+  maxVisibleRows?: number;
+  itemHeight?: number;
+  theme?: 'dark' | 'light';
+  neon?: 'on' | 'off';
 }

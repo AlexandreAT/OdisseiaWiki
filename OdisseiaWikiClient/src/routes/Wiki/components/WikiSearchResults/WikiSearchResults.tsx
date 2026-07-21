@@ -121,7 +121,7 @@ export const WikiSearchResults: React.FC<WikiSearchResultsProps> = ({
               <span>{groupResults.length}</span>
             </SearchResultGroupTitle>
 
-            <SearchResultsGrid>
+            <SearchResultsGrid $type={group}>
               {groupResults.map((item) => (
                 <ResultCard
                   key={`${item.type}-${item.id}`}

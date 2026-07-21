@@ -141,14 +141,6 @@ export const ScrollRevealSection = styled.section<ScrollRevealSectionProps>`
     opacity: 0;
   }
 
-  &.sr-initial-visible,
-  &.sr-initial-visible > *,
-  &.sr-initial-visible img,
-  &.sr-initial-visible * {
-    opacity: 1;
-    animation: none !important;
-  }
-
   &.sr-entered > * {
     opacity: 1;
     animation: ${fadeSlideIn} 0.55s ease-out;
@@ -196,13 +188,4 @@ export const ScrollRevealSection = styled.section<ScrollRevealSectionProps>`
     }
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    & *,
-    & > * {
-      opacity: 1;
-      transform: none;
-      clip-path: none;
-      animation: none;
-    }
-  }
 `;

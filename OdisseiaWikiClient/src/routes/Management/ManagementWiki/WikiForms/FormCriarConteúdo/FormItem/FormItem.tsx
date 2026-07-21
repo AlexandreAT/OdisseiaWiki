@@ -1,5 +1,5 @@
 import { Select } from "../../../../../../components/Generic/Select/Select";
-import { CheckBox } from "../../../../../../components/Generic/CheckBox/CheckBox";
+import { VisibilityToggle } from '../../../../../../components/Generic/VisibilityToggle';
 import { FeaturedToggle } from '../../../../../../components/Generic/FeaturedToggle';
 import { RichTextEditor } from "../../../../../../components/Generic/RichTextEditor/RichTextEditor";
 import { ImageUploader } from "../../../../../../components/Generic/ImageUploader/ImageUploader";
@@ -232,11 +232,10 @@ export const FormItem = ({ theme, neon, contentType }: FormItemProps) => {
       </div>
 
       <CheckboxContainer>
-        <CheckBox
+        <VisibilityToggle
           label="Item visível"
-          checked={visivel}
-          onChange={(v) => setVisivel(v)}
-          neon={neon}
+          visible={visivel}
+          onChange={setVisivel}
         />
         <FeaturedToggle featured={destaque} onChange={setDestaque} />
       </CheckboxContainer>

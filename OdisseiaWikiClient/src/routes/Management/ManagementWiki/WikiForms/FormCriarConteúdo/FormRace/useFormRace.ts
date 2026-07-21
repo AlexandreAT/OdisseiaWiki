@@ -1,55 +1,88 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { RaceFormErrors, UploadResult } from './FormRace.type';
-import { RacaStatus, CreateRacaDto, createRaca, updateRaca, RacaPayload } from '../../../../../../services/racasService';
+import {
+  CreateRacaDto,
+  createRaca,
+  normalizeRacaStatus,
+  normalizeRacaVariacoes,
+  RacaPassiva,
+  RacaPayload,
+  RacaStatus,
+  RacaVariacao,
+  updateRaca,
+} from '../../../../../../services/racasService';
 import { saveAsset } from '../../../../../../services/assetsService';
 import { ATRIBUTO_OPTIONS } from '../../../../../../constants';
 import { ensureContentCategoryTag, isContentCategoryTag } from '../../../../../../utils/contentCategoryTag';
+import { normalizeGalleryImages } from '../../../../../../models/GalleryImage';
+import { JSONContent } from '../../../../../../models/Cities';
+import { createEmptyJSONContent, prepareForAPI } from '../../../../../../utils/richTextHelpers';
+import { getApiErrorMessage } from '../../../../../../utils/apiError';
+
+const normalizePassivas = (passivas: RacaPassiva[]): RacaPassiva[] => (
+  passivas.flatMap((passiva) => {
+    const nome = passiva.nome?.trim() ?? '';
+    const efeito = passiva.efeito?.trim() ?? '';
+    if (!nome && !efeito) return [];
+
+    return [{ nome, ...(efeito ? { efeito } : {}) }];
+  })
+);
+
+const normalizeVariacoes = (variacoes: RacaVariacao[]): RacaVariacao[] => (
+  variacoes.flatMap((variacao) => {
+    const nome = variacao.nome?.trim() ?? '';
+    const descricao = variacao.descricao?.trim() ?? '';
+    const efeito = variacao.efeito?.trim() ?? '';
+    const imagem = variacao.imagem?.trim() ?? '';
+    if (!nome && !descricao && !efeito && !imagem) return [];
+
+    return [{
+      nome,
+      ...(descricao ? { descricao } : {}),
+      ...(efeito ? { efeito } : {}),
+      ...(imagem ? { imagem } : {}),
+    }];
+  })
+);
 
 export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => {
+  const lastValidationErrorsRef = useRef<string[]>([]);
+  const normalizedInitialStatus = normalizeRacaStatus(initialRaca?.statusJson);
+  const legacyVariations = (initialRaca as (RacaPayload & { Variantes?: unknown }) | undefined)?.Variantes;
+  const initialVariations = normalizeRacaVariacoes(initialRaca?.variacoes ?? legacyVariations);
+  const parsedGaleria = normalizeGalleryImages(initialRaca?.galeriaImagem);
+
   const [racaId] = useState<number | undefined>(initialRaca?.idraca);
   const [nome, setNome] = useState(initialRaca?.nome || '');
+  const [descricao, setDescricao] = useState<JSONContent | string>(initialRaca?.descricao || '');
   const [imagemUrl, setImagemUrl] = useState(initialRaca?.imagem || '');
   const [imagemFile, setImagemFile] = useState<File | null>(null);
-  
-  // Garantir que galeriaImagem é sempre um array
-  const parseGaleriaImagem = (): string[] => {
-    if (!initialRaca?.galeriaImagem) return [];
-    if (typeof initialRaca.galeriaImagem === 'string') {
-      try {
-        return JSON.parse(initialRaca.galeriaImagem);
-      } catch (e) {
-        console.error('Erro ao parsear galeriaImagem:', e);
-        return [];
-      }
-    }
-    return Array.isArray(initialRaca.galeriaImagem) ? initialRaca.galeriaImagem : [];
-  };
-  
-  // URLs existentes (do servidor) - rastreadas separadamente para não enviar BLOBs
-  const [existingGaleriaUrls, setExistingGaleriaUrls] = useState<string[]>(parseGaleriaImagem());
-  // Inclui URLs existentes + BLOBs temporários (para preview)
-  const [galeriaUrls, setGaleriaUrls] = useState<string[]>(parseGaleriaImagem());
+
+  const [existingGaleriaUrls, setExistingGaleriaUrls] = useState<string[]>(parsedGaleria.map(image => image.url));
+  const [galeriaUrls, setGaleriaUrls] = useState<string[]>(parsedGaleria.map(image => image.url));
+  const [galeriaCaptions, setGaleriaCaptions] = useState<string[]>(parsedGaleria.map(image => image.legenda || ''));
   const [galeriaFiles, setGaleriaFiles] = useState<File[]>([]);
-  const [galeriaShapes, setGaleriaShapes] = useState<string[]>(Array(parseGaleriaImagem().length).fill('square'));
+  const [galeriaShapes, setGaleriaShapes] = useState<string[]>(Array(parsedGaleria.length).fill('square'));
   const [tags, setTags] = useState<string[]>(initialRaca?.tags || []);
   const [tagInput, setTagInput] = useState('');
-    const [visivel, setVisivel] = useState(initialRaca?.visivel !== false);
-    const [destaque, setDestaque] = useState(initialRaca?.destaque === true);
+  const [visivel, setVisivel] = useState(initialRaca?.visivel !== false);
+  const [destaque, setDestaque] = useState(initialRaca?.destaque === true);
 
-  // Status
-  const [vida, setVida] = useState(initialRaca?.statusJson?.status?.vida || 100);
-  const [estamina, setEstamina] = useState(initialRaca?.statusJson?.status?.estamina || 100);
-  const [mana, setMana] = useState(initialRaca?.statusJson?.status?.mana || 100);
-  const [capacidadeCarga, setCapacidadeCarga] = useState(initialRaca?.statusJson?.status?.capacidadeCarga || 50);
-  const [atributoInicial, setAtributoInicial] = useState(initialRaca?.statusJson?.atributoInicial || '');
-  const [passivas, setPassivas] = useState<string[]>(initialRaca?.statusJson?.passivas || []);
-  const [passivaInput, setPassivaInput] = useState('');
+  const [vida, setVida] = useState(normalizedInitialStatus?.status.vida ?? 100);
+  const [estamina, setEstamina] = useState(normalizedInitialStatus?.status.estamina ?? 100);
+  const [mana, setMana] = useState(normalizedInitialStatus?.status.mana ?? 100);
+  const [capacidadeCarga, setCapacidadeCarga] = useState(normalizedInitialStatus?.status.capacidadeCarga ?? 50);
+  const [atributoInicial, setAtributoInicial] = useState(normalizedInitialStatus?.atributoInicial || '');
+  const [passivas, setPassivas] = useState<RacaPassiva[]>(normalizedInitialStatus?.passivas || []);
+  const [variacoes, setVariacoes] = useState<RacaVariacao[]>(initialVariations);
 
   const [errors, setErrors] = useState<RaceFormErrors>({});
   const [nomeError, setNomeError] = useState('');
+  const [passivasError, setPassivasError] = useState('');
+  const [variacoesError, setVariacoesError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Auto-adiciona tag do tipo de conteúdo quando muda
   useEffect(() => {
     if (contentType) {
       setTags(previousTags => ensureContentCategoryTag(previousTags, contentType));
@@ -66,251 +99,272 @@ export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => 
       setNomeError('Nome deve ter pelo menos 3 caracteres');
       return false;
     }
+    if (value.trim().length > 100) {
+      setNomeError('Nome deve ter no máximo 100 caracteres');
+      return false;
+    }
     setNomeError('');
     return true;
   };
 
   const validateStatus = (): boolean => {
     const newErrors: RaceFormErrors = {};
-    let isValid = true;
 
-    if (vida < 0) {
-      newErrors.statusVida = 'Vida não pode ser negativa';
-      isValid = false;
-    }
-    if (estamina < 0) {
-      newErrors.statusEstamina = 'Estamina não pode ser negativa';
-      isValid = false;
-    }
-    if (mana < 0) {
-      newErrors.statusMana = 'Mana não pode ser negativa';
-      isValid = false;
-    }
-    if (capacidadeCarga < 0) {
-      newErrors.statusCapacidadeCarga = 'Capacidade de carga não pode ser negativa';
-      isValid = false;
-    }
-    if (!atributoInicial || atributoInicial.trim() === '') {
-      newErrors.atributoInicial = 'Selecione um atributo inicial';
-      isValid = false;
-    }
+    if (vida < 0) newErrors.statusVida = 'Vida não pode ser negativa';
+    if (estamina < 0) newErrors.statusEstamina = 'Estamina não pode ser negativa';
+    if (mana < 0) newErrors.statusMana = 'Mana não pode ser negativa';
+    if (capacidadeCarga < 0) newErrors.statusCapacidadeCarga = 'Capacidade de carga não pode ser negativa';
+    if (!atributoInicial.trim()) newErrors.atributoInicial = 'Selecione um atributo inicial';
 
     setErrors(newErrors);
-    return isValid;
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validateTables = (): { passiveError: string; variationError: string } => {
+    const passiveError = passivas.reduce<string>((currentError, passiva, index) => {
+      if (currentError) return currentError;
+      const passiveName = passiva.nome?.trim() ?? '';
+      const passiveEffect = passiva.efeito?.trim() ?? '';
+      if (!passiveName && passiveEffect) return `Passiva ${index + 1}: informe o nome da habilidade.`;
+      if (passiveName.length > 100) return `Passiva ${index + 1}: o nome deve ter no máximo 100 caracteres.`;
+      if (passiveEffect.length > 2000) return `Passiva ${index + 1}: o efeito deve ter no máximo 2.000 caracteres.`;
+      return '';
+    }, '');
+
+    const variationError = variacoes.reduce<string>((currentError, variacao, index) => {
+      if (currentError) return currentError;
+      const variationName = variacao.nome?.trim() ?? '';
+      const variationDescription = variacao.descricao?.trim() ?? '';
+      const variationEffect = variacao.efeito?.trim() ?? '';
+      const variationImage = variacao.imagem?.trim() ?? '';
+      if (!variationName && (variationDescription || variationEffect || variationImage)) {
+        return `Variação ${index + 1}: informe o nome da variação preenchida.`;
+      }
+      if (variationName.length > 100) return `Variação ${index + 1}: o nome deve ter no máximo 100 caracteres.`;
+      if (variationDescription.length > 500) return `Variação ${index + 1}: a descrição deve ter no máximo 500 caracteres.`;
+      if (variationEffect.length > 500) return `Variação ${index + 1}: o efeito deve ter no máximo 500 caracteres.`;
+      return '';
+    }, '');
+
+    setPassivasError(passiveError);
+    setVariacoesError(variationError);
+    return { passiveError, variationError };
   };
 
   const validateForm = (): boolean => {
-    const isNomeValid = validateNome(nome);
+    const isNameValid = validateNome(nome);
     const isStatusValid = validateStatus();
-
-    return isNomeValid && isStatusValid;
+    const { passiveError, variationError } = validateTables();
+    const validationErrors = [
+      ...(!isNameValid ? ['Revise o nome da raça.'] : []),
+      ...(!isStatusValid ? ['Revise os status base e o atributo inicial.'] : []),
+      ...(passiveError ? [passiveError] : []),
+      ...(variationError ? [variationError] : []),
+    ];
+    lastValidationErrorsRef.current = validationErrors;
+    return validationErrors.length === 0;
   };
 
   const handleNomeChange = (value: string) => {
     setNome(value);
-    if (nomeError) {
-      validateNome(value);
-    }
+    if (nomeError) validateNome(value);
   };
 
   const handleAtributoInicialChange = (value: string) => {
     setAtributoInicial(value);
     if (errors.atributoInicial) {
-      setErrors((previous) => ({ ...previous, atributoInicial: undefined }));
+      setErrors(previous => ({ ...previous, atributoInicial: undefined }));
     }
   };
 
   const handleImagemUpload = (file: File | null) => {
-    if (file === null) {
-      if (imagemUrl) {
-        URL.revokeObjectURL(imagemUrl);
-      }
+    if (imagemUrl.startsWith('blob:')) URL.revokeObjectURL(imagemUrl);
+    if (!file) {
       setImagemUrl('');
       setImagemFile(null);
-    } else {
-      const url = URL.createObjectURL(file);
-      setImagemUrl(url);
-      setImagemFile(file);
+      return;
     }
+
+    setImagemUrl(URL.createObjectURL(file));
+    setImagemFile(file);
   };
 
   const handleGaleriaUpload = (files: File[], shapes: string[]) => {
-    setGaleriaFiles(prev => [...prev, ...files]);
-    const urls = files.map(file => URL.createObjectURL(file));
-    setGaleriaUrls(prev => [...prev, ...urls]);
-    setGaleriaShapes(prev => [...prev, ...shapes]);
+    setGaleriaFiles(previous => [...previous, ...files]);
+    setGaleriaUrls(previous => [...previous, ...files.map(file => URL.createObjectURL(file))]);
+    setGaleriaShapes(previous => [...previous, ...shapes]);
+    setGaleriaCaptions(previous => [...previous, ...files.map(() => '')]);
   };
 
   const handleRemoveGaleriaImage = (indexToRemove: number) => {
-    // Número de URLs existentes do servidor
     const existingCount = existingGaleriaUrls.length;
-    
     if (indexToRemove < existingCount) {
-      // Remover de URLs existentes
-      setExistingGaleriaUrls(prev => prev.filter((_, i) => i !== indexToRemove));
+      setExistingGaleriaUrls(previous => previous.filter((_, index) => index !== indexToRemove));
     } else {
-      // Remover de arquivos novos (galeriaFiles)
       const fileIndex = indexToRemove - existingCount;
-      setGaleriaFiles(prev => prev.filter((_, i) => i !== fileIndex));
+      setGaleriaFiles(previous => previous.filter((_, index) => index !== fileIndex));
     }
-    
-    setGaleriaUrls(prev => {
-      const newUrls = prev.filter((_, i) => i !== indexToRemove);
-      URL.revokeObjectURL(prev[indexToRemove]);
-      return newUrls;
-    });
 
-    
-    setGaleriaShapes(prev => prev.filter((_, i) => i !== indexToRemove));
+    setGaleriaUrls(previous => {
+      const removedUrl = previous[indexToRemove];
+      if (removedUrl?.startsWith('blob:')) URL.revokeObjectURL(removedUrl);
+      return previous.filter((_, index) => index !== indexToRemove);
+    });
+    setGaleriaShapes(previous => previous.filter((_, index) => index !== indexToRemove));
+    setGaleriaCaptions(previous => previous.filter((_, index) => index !== indexToRemove));
+  };
+
+  const handleGaleriaCaptionChange = (index: number, caption: string) => {
+    setGaleriaCaptions(previous => previous.map((value, itemIndex) => itemIndex === index ? caption : value));
   };
 
   const handleAddTag = () => {
     const trimmedTag = tagInput.trim();
     if (trimmedTag && !tags.includes(trimmedTag)) {
-      setTags(prev => [...prev, trimmedTag]);
+      setTags(previous => [...previous, trimmedTag]);
       setTagInput('');
     }
   };
 
   const handleRemoveTag = (tagToRemove: string) => {
     if (isContentCategoryTag(tagToRemove, contentType)) return;
-    setTags(prev => prev.filter(tag => tag !== tagToRemove));
+    setTags(previous => previous.filter(tag => tag !== tagToRemove));
   };
 
-  const handleAddPassiva = () => {
-    const trimmedPassiva = passivaInput.trim();
-    if (trimmedPassiva && !passivas.includes(trimmedPassiva)) {
-      setPassivas(prev => [...prev, trimmedPassiva]);
-      setPassivaInput('');
-    }
+  const updatePassivas = (values: RacaPassiva[]) => {
+    setPassivas(values);
+    if (passivasError) setPassivasError('');
   };
 
-  const handleRemovePassiva = (passivaToRemove: string) => {
-    setPassivas(prev => prev.filter(passiva => passiva !== passivaToRemove));
+  const updateVariacoes = (values: RacaVariacao[]) => {
+    setVariacoes(values);
+    if (variacoesError) setVariacoesError('');
   };
 
   const uploadImages = async (): Promise<UploadResult> => {
-    const result: UploadResult = {};
-
-    try {
-      // Upload imagem principal - preserva URL existente se não houver novo arquivo
-      let imagemPath = imagemUrl;
-      if (imagemFile) {
-        const response = await saveAsset({
-          imageFile: imagemFile,
-          type: 'raca',
-          entityName: nome,
-        });
-        imagemPath = response.path;
-      }
-      if (imagemPath) {
-        result.imagemPath = imagemPath;
-      }
-
-      // Upload galeria - começa apenas com URLs existentes (do servidor), sem BLOBs temporários
-      let galeriaPaths: string[] | undefined = existingGaleriaUrls.length > 0 ? [...existingGaleriaUrls] : undefined;
-      
-      // Adiciona novos uploads
-      if (galeriaFiles.length > 0) {
-        if (!galeriaPaths) {
-          galeriaPaths = [];
-        }
-        for (const file of galeriaFiles) {
-          const response = await saveAsset({
-            imageFile: file,
-            type: 'raca',
-            entityName: nome,
-            folderName: 'galeria',
-          });
-          galeriaPaths.push(response.path);
-        }
-      }
-      if (galeriaPaths) {
-        result.galeriaPaths = galeriaPaths;
-      }
-
-      return result;
-    } catch (error) {
-      console.error('Erro ao fazer upload das imagens:', error);
-      throw error;
+    let imagemPath = imagemUrl;
+    if (imagemFile) {
+      const response = await saveAsset({ imageFile: imagemFile, type: 'raca', entityName: nome });
+      imagemPath = response.path;
     }
+
+    const galeriaPaths: string[] = [...existingGaleriaUrls];
+    for (const file of galeriaFiles) {
+      const response = await saveAsset({
+        imageFile: file,
+        type: 'raca',
+        entityName: nome,
+        folderName: 'galeria',
+      });
+      galeriaPaths.push(response.path);
+    }
+
+    return {
+      imagemPath: imagemPath || undefined,
+      galeriaPaths: galeriaPaths.map((url, index) => ({
+        url,
+        legenda: galeriaCaptions[index]?.trim() || undefined,
+      })),
+    };
   };
 
-  const prepareDto = async (): Promise<CreateRacaDto | null> => {
-    try {
-      const uploadResult = await uploadImages();
+  const uploadVariationImages = async (
+    values: RacaVariacao[],
+    imageFiles: ReadonlyMap<string, File>,
+  ): Promise<RacaVariacao[]> => Promise.all(values.map(async (variacao) => {
+    const imageFile = variacao.imagem ? imageFiles.get(variacao.imagem) : undefined;
+    if (!imageFile) return variacao;
 
-      const statusJson: RacaStatus = {
-        status: {
-          vida,
-          estamina,
-          mana,
-          capacidadeCarga,
-        },
-        atributoInicial,
-        passivas,
-      };
+    const response = await saveAsset({
+      imageFile,
+      type: 'raca',
+      entityName: nome,
+      folderName: 'variacoes',
+    });
+    return { ...variacao, imagem: response.path };
+  }));
 
-      const dto: CreateRacaDto = {
-        Nome: nome,
-        StatusJson: statusJson,
-        Imagem: uploadResult.imagemPath || '',
-        GaleriaImagem: uploadResult.galeriaPaths || [],
-        Tags: tags,
-          Visivel: visivel,
-          Destaque: destaque,
-      };
+  const prepareDto = async (
+    variationImageFiles: ReadonlyMap<string, File>,
+  ): Promise<CreateRacaDto | null> => {
+    if (!validateForm()) return null;
 
-      return dto;
-    } catch (error) {
-      console.error('Erro ao preparar DTO:', error);
-      return null;
-    }
+    const uploadResult = await uploadImages();
+    const normalizedVariations = normalizeVariacoes(variacoes);
+    const uploadedVariations = await uploadVariationImages(normalizedVariations, variationImageFiles);
+    const statusJson: RacaStatus = {
+      status: { vida, estamina, mana, capacidadeCarga },
+      atributoInicial,
+      passivas: normalizePassivas(passivas),
+    };
+
+    return {
+      Nome: nome.trim(),
+      StatusJson: statusJson,
+      Descricao: prepareForAPI(descricao) ?? createEmptyJSONContent(),
+      Imagem: uploadResult.imagemPath || '',
+      GaleriaImagem: uploadResult.galeriaPaths || [],
+      Variacoes: uploadedVariations,
+      Tags: ensureContentCategoryTag(tags, contentType),
+      Visivel: visivel,
+      Destaque: destaque,
+    };
   };
 
-  const handleSubmit = async (e?: React.FormEvent) => {
-    if (e) {
-      e.preventDefault();
-    }
-
-    if (!validateForm()) {
-      return { success: false, message: 'Por favor, corrija os erros no formulário' };
-    }
-
+  const handleSubmit = async (
+    e?: React.FormEvent,
+    variationImageFiles: ReadonlyMap<string, File> = new Map(),
+  ) => {
+    e?.preventDefault();
     setIsSubmitting(true);
 
     try {
-      const dto = await prepareDto();
-
+      const dto = await prepareDto(variationImageFiles);
       if (!dto) {
-        setIsSubmitting(false);
-        return { success: false, message: 'Erro ao preparar dados da raça' };
+        return {
+          success: false,
+          message: `Não foi possível salvar: ${lastValidationErrorsRef.current.join(' ')}`,
+        };
       }
 
       const result = racaId ? await updateRaca(racaId, dto) : await createRaca(dto);
-
-      if (result.sucesso) {
-        resetForm();
-        return { success: true, message: racaId ? 'Raça atualizada com sucesso!' : 'Raça criada com sucesso!' };
-      } else {
+      if (!result.sucesso) {
         return { success: false, message: result.mensagemErro || (racaId ? 'Erro ao atualizar raça' : 'Erro ao criar raça') };
       }
-    } catch (error) {
-      console.error('Erro ao criar raça:', error);
-      return { success: false, message: racaId ? 'Erro ao atualizar raça. Tente novamente.' : 'Erro ao criar raça. Tente novamente.' };
+
+      if (!racaId) resetForm();
+      return {
+        success: true,
+        message: racaId ? 'Raça atualizada com sucesso!' : 'Raça criada com sucesso!',
+        data: result.raca,
+      };
+    } catch (error: unknown) {
+      console.error('Erro ao salvar raça:', error);
+      return {
+        success: false,
+        message: getApiErrorMessage(
+          error,
+          racaId ? 'Erro ao atualizar raça. Tente novamente.' : 'Erro ao criar raça. Tente novamente.',
+        ),
+      };
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const resetForm = () => {
+    if (imagemUrl.startsWith('blob:')) URL.revokeObjectURL(imagemUrl);
+    galeriaUrls.filter(url => url.startsWith('blob:')).forEach(url => URL.revokeObjectURL(url));
     setNome('');
+    setDescricao('');
     setImagemUrl('');
     setImagemFile(null);
+    setExistingGaleriaUrls([]);
     setGaleriaUrls([]);
     setGaleriaFiles([]);
     setGaleriaShapes([]);
-    setTags([]);
+    setGaleriaCaptions([]);
+    setTags(contentType ? [contentType] : []);
     setTagInput('');
     setVida(100);
     setEstamina(100);
@@ -318,20 +372,25 @@ export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => 
     setCapacidadeCarga(50);
     setAtributoInicial('');
     setPassivas([]);
-    setPassivaInput('');
-      setVisivel(true);
-      setDestaque(false);
+    setVariacoes([]);
+    setVisivel(true);
+    setDestaque(false);
     setErrors({});
     setNomeError('');
+    setPassivasError('');
+    setVariacoesError('');
   };
 
   return {
     racaId,
     nome,
+    descricao,
     imagemUrl,
     imagemFile,
     galeriaUrls,
     galeriaFiles,
+    galeriaShapes,
+    galeriaCaptions,
     tags,
     tagInput,
     visivel,
@@ -342,15 +401,17 @@ export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => 
     capacidadeCarga,
     atributoInicial,
     passivas,
-    passivaInput,
+    variacoes,
     isSubmitting,
     errors,
     nomeError,
+    passivasError,
+    variacoesError,
     atributoOptions: ATRIBUTO_OPTIONS,
     setNome: handleNomeChange,
     setNomeError,
+    setDescricao,
     setTagInput,
-    setPassivaInput,
     setVisivel,
     setDestaque,
     setVida,
@@ -358,16 +419,16 @@ export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => 
     setMana,
     setCapacidadeCarga,
     setAtributoInicial: handleAtributoInicialChange,
+    setPassivas: updatePassivas,
+    setVariacoes: updateVariacoes,
     handleImagemUpload,
     handleGaleriaUpload,
     handleRemoveGaleriaImage,
+    handleGaleriaCaptionChange,
     handleAddTag,
     handleRemoveTag,
-    handleAddPassiva,
-    handleRemovePassiva,
     handleSubmit,
     resetForm,
     validateForm,
-    galeriaShapes,
   };
 };

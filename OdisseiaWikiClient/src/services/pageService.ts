@@ -7,6 +7,16 @@ import {
 } from "../models/Pages";
 import { ServiceRequestOptions } from "./serviceRequestOptions";
 
+interface PageSearchApiItem {
+  id: number;
+  nome: string;
+  slug: string;
+  imagem?: string;
+  visivel: boolean;
+  destaque?: boolean;
+  tags?: string;
+}
+
 export const createPage = async (
   dto: CreatePageWithBlocksDto
 ): Promise<ResultPage> => {
@@ -47,6 +57,18 @@ export const getPageById = async (
   return response.data;
 };
 
+export const getPagesReferencingEntity = async (
+  entityType: 'Cidade' | 'Personagem' | 'Item' | 'Raca',
+  entityId: number | string,
+  requestOptions: ServiceRequestOptions = {}
+): Promise<ResultPages> => {
+  const response = await api.get(
+    `/pages/referencing/${encodeURIComponent(entityType)}/${encodeURIComponent(String(entityId))}`,
+    requestOptions
+  );
+  return response.data;
+};
+
 export const deletePage = async (
   id: number
 ): Promise<boolean> => {
@@ -65,7 +87,7 @@ export const searchPages = async (
   });
   
   if (response.data.sucesso && response.data.pages) {
-      const mappedPages = response.data.pages.map((page: any) => {
+      const mappedPages = (response.data.pages as PageSearchApiItem[]).map((page) => {
         return {
         idPage: page.id,
         titulo: page.nome,

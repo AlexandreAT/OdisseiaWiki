@@ -7,6 +7,7 @@ export interface FormPageProps {
   initialBlocks?: PageBlock[];
   pageId?: number;
   contentType?: string;
+  onSaveSuccess?: (options: { stayOnPage: boolean }) => void | Promise<void>;
 }
 
 export interface FormPageErrors {

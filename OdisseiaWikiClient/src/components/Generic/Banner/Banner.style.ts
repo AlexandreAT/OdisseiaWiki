@@ -85,11 +85,6 @@ const BannerBackground = styled.div<Props>`
     background-repeat: no-repeat;
     animation: ${revealBannerImage} 1.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 
-    @media (prefers-reduced-motion: reduce) {
-        animation: none;
-        filter: none;
-        transform: none;
-    }
 `;
 
 const BannerEfect = styled.div<Props>`
@@ -132,13 +127,6 @@ const BannerContent = styled.div<Props>`
         pointer-events: none;
     }
 
-    @media (prefers-reduced-motion: reduce) {
-        &::before {
-            animation: none;
-            transform: scaleX(1);
-        }
-    }
-
     @media (max-width: 480px) {
         gap: 12px;
         padding: 15px 2px 15px 28px;
@@ -168,11 +156,6 @@ const BannerRevealItem = styled.div<{ $delay: number }>`
     animation: ${revealBannerText} 650ms cubic-bezier(0.22, 1, 0.36, 1)
         ${({ $delay }) => $delay}ms forwards;
 
-    @media (prefers-reduced-motion: reduce) {
-        animation: none;
-        opacity: 1;
-        transform: none;
-    }
 `;
 
 const Title = styled.h1<Props>`

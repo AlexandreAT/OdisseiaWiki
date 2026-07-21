@@ -3,16 +3,20 @@ interface ApiErrorResponse {
   data?: unknown;
 }
 
-const getFirstValidationError = (value: unknown): string | undefined => {
-  if (!value || typeof value !== 'object') return undefined;
+const getValidationErrors = (value: unknown): string[] => {
+  if (!value || typeof value !== 'object') return [];
 
-  for (const errors of Object.values(value as Record<string, unknown>)) {
-    if (Array.isArray(errors) && typeof errors[0] === 'string' && errors[0].trim()) {
-      return errors[0];
-    }
-  }
+  return Object.entries(value as Record<string, unknown>).flatMap(([field, errors]) => {
+    if (!Array.isArray(errors)) return [];
 
-  return undefined;
+    return errors.flatMap((message) => {
+      if (typeof message !== 'string' || !message.trim()) return [];
+      const readableField = field
+        .replace(/\[(\d+)\]/g, (_match, index: string) => ` (item ${Number(index) + 1})`)
+        .replace(/\./g, ' › ');
+      return [`${readableField}: ${message.trim()}`];
+    });
+  });
 };
 
 export const getApiErrorMessage = (error: unknown, fallback: string): string => {
@@ -30,13 +34,13 @@ export const getApiErrorMessage = (error: unknown, fallback: string): string => 
 
   if (data && typeof data === 'object') {
     const payload = data as Record<string, unknown>;
+    const validationErrors = getValidationErrors(payload.errors);
+    if (validationErrors.length > 0) return validationErrors.join(' ');
+
     const candidate = payload.mensagemErro ?? payload.mensagem ?? payload.detail ?? payload.title;
     if (typeof candidate === 'string' && candidate.trim()) {
       return candidate;
     }
-
-    const validationError = getFirstValidationError(payload.errors);
-    if (validationError) return validationError;
   }
 
   if (!response && error instanceof Error && error.message.trim()) {

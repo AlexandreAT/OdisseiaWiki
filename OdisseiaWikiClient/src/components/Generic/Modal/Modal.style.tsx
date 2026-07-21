@@ -5,7 +5,7 @@ interface ThemeProps {
   neon: 'on' | 'off';
 }
 
-export const ModalOverlay = styled.div`
+export const ModalOverlay = styled.div<{ $mobileInset?: boolean }>`
   position: fixed;
   inset: 0;
   width: 100vw;
@@ -19,11 +19,16 @@ export const ModalOverlay = styled.div`
   box-sizing: border-box;
 
   @media (max-width: 767px) {
-    padding: 0;
+    padding: ${({ $mobileInset }) => $mobileInset ? '12px' : '0'};
   }
 `;
 
-export const ModalContainer = styled.div<{ theme: 'light' | 'dark'; neon: 'on' | 'off'; $width?: string }>`
+export const ModalContainer = styled.div<{
+  theme: 'light' | 'dark';
+  neon: 'on' | 'off';
+  $width?: string;
+  $mobileInset?: boolean;
+}>`
   background: ${({ theme }) => (theme === 'dark' ? 'var(--deepgray)' : 'var(--whitesmoke)')};
   border-radius: 8px;
   width: ${({ $width }) => $width ?? '500px'};
@@ -44,12 +49,12 @@ export const ModalContainer = styled.div<{ theme: 'light' | 'dark'; neon: 'on' |
   };
 
   @media (max-width: 767px) {
-    width: 100vw;
-    max-width: 100vw;
-    height: 100dvh;
-    max-height: 100dvh;
+    width: ${({ $mobileInset }) => $mobileInset ? '100%' : '100vw'};
+    max-width: ${({ $mobileInset }) => $mobileInset ? '100%' : '100vw'};
+    height: ${({ $mobileInset }) => $mobileInset ? 'auto' : '100dvh'};
+    max-height: ${({ $mobileInset }) => $mobileInset ? 'calc(100dvh - 24px)' : '100dvh'};
     margin: 0;
-    border-radius: 0;
+    border-radius: ${({ $mobileInset }) => $mobileInset ? '8px' : '0'};
 
     input,
     select,

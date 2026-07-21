@@ -1,6 +1,7 @@
 import { Principais, Secundarios, JSONContent } from './../models/Characters';
 import api from "../axios/api";
 import { ServiceRequestOptions } from './serviceRequestOptions';
+import { GalleryImage } from '../models/GalleryImage';
 
 export interface PersonagemPayload {
   idpersonagem: string;
@@ -9,7 +10,7 @@ export interface PersonagemPayload {
   idcidade: number;
   historia?: JSONContent | string;
   imagem?: string;
-  galeriaImagem?: string[];
+  galeriaImagem?: GalleryImage[];
   costumes: string[];
   nanites?: number;
   alinhamento?: string;
@@ -67,7 +68,7 @@ export interface PersonagemCreatePayload {
   idcidade?: number;
   historia?: JSONContent | string;
   imagem?: string;
-  galeriaImagem?: string[];
+  galeriaImagem?: GalleryImage[];
   costumes?: string[];
   nanites?: number;
   alinhamento?: string;
@@ -112,7 +113,7 @@ export interface PersonagemUpdatePayload {
   idcidade?: number;
   historia?: JSONContent | string;
   imagem?: string;
-  galeriaImagem?: string[];
+  galeriaImagem?: GalleryImage[];
   costumes?: string[];
   alinhamento?: string;
   tracos?: string[];

@@ -21,6 +21,64 @@ export const RelationContainer = styled.div`
   gap: 12px;
 `;
 
+export const ReferenceInfo = styled.div`
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 28px;
+  color: var(--whitesmoke);
+  font-family: 'DO Futuristic', sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+`;
+
+export const ReferenceInfoButton = styled.button<{ $neon: boolean }>`
+  display: inline-flex;
+  width: 25px;
+  height: 25px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid ${({ $neon }) => $neon ? 'var(--clearneonBlue)' : 'var(--lightGrey)'};
+  border-radius: 5px;
+  background: transparent;
+  color: ${({ $neon }) => $neon ? 'var(--clearneonBlue)' : 'var(--lightGrey)'};
+  cursor: pointer;
+  transition: 0.2s ease;
+
+  &:hover,
+  &:focus-visible,
+  &[aria-expanded='true'] {
+    border-color: var(--clearneonBlue);
+    color: var(--clearneonBlue);
+    box-shadow: ${({ $neon }) => $neon ? '0 0 8px rgba(0, 204, 255, 0.3)' : 'none'};
+    outline: none;
+  }
+`;
+
+export const ReferenceInfoPopover = styled.aside<ThemeProps & { $neon: boolean }>`
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  width: min(520px, calc(100vw - 40px));
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border: 1px solid ${({ $neon }) => $neon ? 'var(--clearneonBlue)' : 'var(--lightGrey)'};
+  border-radius: 7px;
+  background: ${({ $isDark }) => $isDark ? 'rgba(1, 10, 24, 0.98)' : 'rgba(248, 252, 255, 0.99)'};
+  color: ${({ $isDark }) => $isDark ? 'var(--whitesmoke)' : 'var(--deepgrey)'};
+  box-shadow: ${({ $neon }) => $neon ? '0 0 14px rgba(0, 204, 255, 0.2)' : '0 8px 24px rgba(0, 0, 0, 0.22)'};
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: normal;
+  line-height: 1.5;
+  text-transform: none;
+`;
+
 export const AddReferenceRow = styled.div`
   display: flex;
   flex-wrap: wrap;

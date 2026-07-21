@@ -59,7 +59,7 @@ namespace OdisseiaWiki.Controllers
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int id)
         {
-            Cidade? cidade = await _service.GetByIdAsync(id);
+            CidadeDto? cidade = await _service.GetByIdAsync(id);
 
             return cidade is null || (!cidade.Visivel && !User.IsAdmin())
                 ? NotFound($"Cidade com id {id} não encontrada.")

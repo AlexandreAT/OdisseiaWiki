@@ -1,10 +1,14 @@
-import { RacaStatus } from "../../../../../../services/racasService";
+import { RacaStatus, RacaVariacao } from "../../../../../../services/racasService";
+import { GalleryImage } from '../../../../../../models/GalleryImage';
+import { JSONContent } from '../../../../../../models/Cities';
 
 export interface RaceFormData {
   nome: string;
   statusJson: RacaStatus;
+  descricao?: JSONContent | string;
   imagem?: string;
-  galeriaImagem?: string[];
+  galeriaImagem?: GalleryImage[];
+  variacoes?: RacaVariacao[];
   tags?: string[];
   visivel: boolean;
 }
@@ -21,5 +25,5 @@ export interface RaceFormErrors {
 
 export interface UploadResult {
   imagemPath?: string;
-  galeriaPaths?: string[];
+  galeriaPaths?: GalleryImage[];
 }

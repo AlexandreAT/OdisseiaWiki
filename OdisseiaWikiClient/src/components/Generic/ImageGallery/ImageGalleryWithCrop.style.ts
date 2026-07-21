@@ -1,4 +1,5 @@
 import styled from 'styled-components';
+import { RemoveImageButton } from './ImageGallery.style';
 
 interface Props {
   theme: 'dark' | 'light';
@@ -45,22 +46,61 @@ export const ImagesGrid = styled.div`
   }
 `;
 
+export const GalleryEntry = styled.div<{ $shape?: string }>`
+  width: ${({ $shape }) => $shape === 'rectangle' ? '267px' : '150px'};
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 0 0 auto;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    grid-column: ${({ $shape }) => $shape === 'rectangle' ? 'span 2' : 'auto'};
+  }
+`;
+
+export const CaptionInput = styled.input<Props>`
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  border: 1px solid ${({ neon }) => neon === 'on' ? 'var(--clearneonBlue)' : 'var(--lightGrey)'};
+  border-radius: 4px;
+  background: ${({ theme }) => theme === 'dark' ? 'rgba(0, 7, 17, 0.82)' : 'var(--whitesmoke)'};
+  color: ${({ theme }) => theme === 'dark' ? 'var(--clearWhite)' : 'var(--deepgrey)'};
+  padding: 7px 8px;
+  font-size: 12px;
+  outline: none;
+
+  &:focus {
+    border-color: var(--neonBlue);
+    box-shadow: ${({ neon }) => neon === 'on' ? '0 0 5px rgba(0, 200, 255, 0.35)' : 'none'};
+  }
+`;
+
 export const ImageItem = styled.div<ImageItemProps>`
   position: relative;
+  width: ${({ shape }) => shape === 'rectangle' ? '267px' : '150px'};
   height: 150px;
   border-radius: ${({ isCircle, shape }) => {
     if (isCircle) return '50%';
-    if (shape === 'rectangle') return '0';
+    if (shape === 'rectangle') return '8px';
     return '8px';
   }};
   overflow: hidden;
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
+  box-sizing: border-box;
   transition: all 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+
+  > span {
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+  }
 
   @media (max-width: 768px) {
     width: 100%;
@@ -72,13 +112,27 @@ export const ImageItem = styled.div<ImageItemProps>`
     img {
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      object-fit: contain;
     }
   }
 
   &:hover {
-    border-color: transparent;
+    border-color: ${({ neon }) => neon === 'on' ? 'var(--clearneonBlue)' : 'var(--mediumgrey)'};
     box-shadow: 0 0 10px rgba(0, 200, 255, 0.3);
+  }
+
+  &:focus-within {
+    border-color: ${({ neon }) => neon === 'on' ? 'var(--clearneonBlue)' : 'var(--mediumgrey)'};
+  }
+
+  ${RemoveImageButton} {
+    top: ${({ isCircle }) => isCircle ? '16px' : '6px'};
+    right: ${({ isCircle }) => isCircle ? '16px' : '6px'};
+  }
+
+  &:hover ${RemoveImageButton},
+  &:focus-within ${RemoveImageButton} {
+    opacity: 1;
   }
 
   img {
@@ -92,7 +146,12 @@ export const ImageItem = styled.div<ImageItemProps>`
     img {
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      object-fit: contain;
+    }
+
+    ${RemoveImageButton} {
+      top: ${({ isCircle }) => isCircle ? '12%' : '4px'};
+      right: ${({ isCircle }) => isCircle ? '12%' : '4px'};
     }
   }
 `;

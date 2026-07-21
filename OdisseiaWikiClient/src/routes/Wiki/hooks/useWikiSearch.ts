@@ -378,7 +378,7 @@ export const useWikiSearch = () => {
   }, [navigate]);
 
   const handleResultSelect = useCallback((item: WikiSearchItem) => {
-    const isUnimplementedEntity = ['cities', 'races', 'items'].includes(item.type);
+    const isUnimplementedEntity = ['races', 'items'].includes(item.type);
 
     navigate(item.route, isUnimplementedEntity ? {
       state: {

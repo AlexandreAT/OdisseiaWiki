@@ -2,17 +2,18 @@ import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { CyberButton } from '../../../../../components/Generic/HighlightButton/HighlightButton';
 import { ConfirmDialog } from '../../../../../components/Generic/ConfirmDialog/ConfirmDialog';
-import { getRacaById, deleteRaca } from '../../../../../services/racasService';
+import { getRacaById, deleteRaca, normalizeRacaStatus, normalizeRacaVariacoes } from '../../../../../services/racasService';
 import { FormRace } from '../FormCriarConteúdo/FormRace/FormRace';
 import { RacaPayload } from '../../../../../services/racasService';
 import { EditHeader, LoadingContainer, ActionButtonsContainer } from './EditFormStyles';
+import { normalizeGalleryImages } from '../../../../../models/GalleryImage';
 
 interface RaceEditProps {
   theme: 'dark' | 'light';
   neon: 'on' | 'off';
   raceId: number;
   onBack: () => void;
-  onSave?: () => void;
+  onSave?: () => void | Promise<void>;
 }
 
 export const RaceEdit: React.FC<RaceEditProps> = ({ theme, neon, raceId, onBack, onSave }) => {
@@ -42,23 +43,21 @@ export const RaceEdit: React.FC<RaceEditProps> = ({ theme, neon, raceId, onBack,
           }
         }
         
-        // Parse galeriaImagem se for string (JSON stringificada)
-        if (raceData && typeof raceData.galeriaImagem === 'string') {
-          try {
-            raceData.galeriaImagem = JSON.parse(raceData.galeriaImagem);
-          } catch (e) {
-            console.error('Erro ao parsear galeriaImagem:', e);
-            raceData.galeriaImagem = [];
-          }
+        if (raceData) {
+          raceData.galeriaImagem = normalizeGalleryImages(raceData.galeriaImagem);
+          raceData.statusJson = normalizeRacaStatus(raceData.statusJson) ?? raceData.statusJson;
+          raceData.variacoes = normalizeRacaVariacoes(
+            raceData.variacoes ?? (raceData as RacaPayload & { Variantes?: unknown }).Variantes,
+          );
         }
         
         if (raceData) {
           setRace(raceData);
           setError(null);
-        } else if (!error) {
-          setError('Erro ao carregar raça');
+        } else {
+          setError(currentError => currentError || 'Erro ao carregar raça');
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Erro ao carregar raça:', err);
         setError('Erro ao carregar raça para edição');
         toast.error('Erro ao carregar raça');
@@ -91,7 +90,7 @@ export const RaceEdit: React.FC<RaceEditProps> = ({ theme, neon, raceId, onBack,
       } else {
         toast.error('Erro ao excluir raça');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error('Erro ao excluir raça');
       console.error('Erro ao excluir:', error);
     } finally {
@@ -152,10 +151,9 @@ export const RaceEdit: React.FC<RaceEditProps> = ({ theme, neon, raceId, onBack,
     );
   }
 
-  const handleSaveSuccess = () => {
-    if (onSave) {
-      onSave();
-    }
+  const handleSaveSuccess = async ({ stayOnPage }: { stayOnPage: boolean }) => {
+    await onSave?.();
+    if (!stayOnPage) onBack();
   };
 
   return (

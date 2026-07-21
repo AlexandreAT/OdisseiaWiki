@@ -26,6 +26,7 @@ export interface ImageUploaderProps {
   cropPreset: CropPreset;
   onImageCropped: (result: CropResult) => void;
   initialImage?: string;
+  onRemove?: () => void;
   onCancel?: () => void;
   accept?: string;
   label?: string;

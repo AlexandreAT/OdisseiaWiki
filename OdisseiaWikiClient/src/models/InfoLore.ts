@@ -8,8 +8,3 @@ export interface InfoLore {
   Visivel: boolean;
   DataCriacao: string;
 }
-
-export interface PontoDeInteresse {
-  id: number;
-  titulo: string;
-}

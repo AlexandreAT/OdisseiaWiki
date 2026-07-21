@@ -1,11 +1,10 @@
-import { JSONContent } from '../../../../../../models/Cities';
-import { PontoDeInteresse } from '../../../../../../models/InfoLore';
+import { JSONContent, PontoDeInteresse } from '../../../../../../models/Cities';
 
 export interface CityFormData {
   nome: string;
   descricao: string;
   imagem: string;
-  galeriaImagem: string[];
+  galeriaImagem: GalleryImage[];
   imagemFile?: File;
   galeriaFiles?: File[];
 }
@@ -20,10 +19,11 @@ export interface CidadeDto {
   Nome: string;
   Descricao?: JSONContent | string;
   Imagem: string;
-  GaleriaImagem?: string[];
+  GaleriaImagem?: GalleryImage[];
   Tags?: string[];
   PontosDeInteresse?: PontoDeInteresse[];
   Visivel: boolean;
   Destaque?: boolean;
   DataCriacao?: string;
 }
+import { GalleryImage } from '../../../../../../models/GalleryImage';

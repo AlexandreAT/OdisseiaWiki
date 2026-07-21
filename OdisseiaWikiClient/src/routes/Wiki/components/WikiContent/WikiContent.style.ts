@@ -164,10 +164,10 @@ export const WikiBlockWrapper = styled.div`
   box-sizing: border-box;
 
   @media (max-width: 768px) {
-    padding: 16px 12px;
+    padding: 16px;
   }
 
   @media (max-width: 480px) {
-    padding-inline: 8px;
+    padding: 14px;
   }
 `;

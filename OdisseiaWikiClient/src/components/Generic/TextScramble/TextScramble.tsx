@@ -28,9 +28,7 @@ export const TextScramble = ({
   const [displayedText, setDisplayedText] = useState(text);
 
   useEffect(() => {
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-    if (reducedMotion || !text) {
+    if (!text) {
       setDisplayedText(text);
       return undefined;
     }

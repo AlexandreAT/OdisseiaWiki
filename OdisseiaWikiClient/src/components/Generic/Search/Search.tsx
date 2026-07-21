@@ -9,6 +9,8 @@ import {
   SuggestionsList
 } from './Search.style';
 import { getRankedSuggestions, getSuggestionDisplayLabel } from '../../../utils/searchSuggestions';
+import { FormLabelText } from '../FormLabelText';
+import { revealFirstValidationError } from '../../../utils/formValidationFeedback';
 
 interface Props {
   theme: 'dark' | 'light';
@@ -53,7 +55,9 @@ const SearchComponent = ({
 }: Props) => {
   const [focus, setFocus] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [nativeError, setNativeError] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
+  const hasError = Boolean(error || nativeError);
   const rankedSuggestions = useMemo(() => (
     getRankedSuggestions(suggestions, value ?? '', 5, getSuggestionDisplayLabel)
   ), [suggestions, value]);
@@ -67,6 +71,10 @@ const SearchComponent = ({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (hasError) revealFirstValidationError(containerRef.current);
+  }, [hasError]);
 
   const handleFocus = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
     setFocus(true);
@@ -83,8 +91,23 @@ const SearchComponent = ({
     setShowSuggestions(false);
   }, [onSelectSuggestion]);
 
+  const handleChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    if (nativeError) setNativeError('');
+    onChange?.(event);
+  }, [nativeError, onChange]);
+
+  const handleInvalid = useCallback((event: React.InvalidEvent<HTMLInputElement>) => {
+    event.preventDefault();
+    setNativeError(errorMessage || 'Este campo é obrigatório.');
+  }, [errorMessage]);
+
   return (
-    <ContentController ref={containerRef} width={width} height={height}>
+    <ContentController
+      ref={containerRef}
+      width={width}
+      height={height}
+      data-validation-error={hasError || undefined}
+    >
       <SearchLabel width={width} height={height}>
         <SearchField
           theme={theme}
@@ -92,8 +115,10 @@ const SearchComponent = ({
           onFocus={handleFocus}
           onBlur={handleBlur}
           value={value}
-          onChange={onChange}
-          error={error}
+          onChange={handleChange}
+          onInvalid={handleInvalid}
+          error={hasError}
+          aria-invalid={hasError}
           required={required}
           typeStyle={typeStyle}
           width={width}
@@ -102,7 +127,9 @@ const SearchComponent = ({
           iconSize={iconSize}
           disabled={disabled}
         />
-        <SearchLabelSpan active={focus || !!value}>{label}</SearchLabelSpan>
+        <SearchLabelSpan active={focus || !!value}>
+          <FormLabelText label={label} required={required} />
+        </SearchLabelSpan>
         {icon && (
           <IconWrapper theme={theme} neon={neon} active={focus || !!value} size={iconSize}>
             {icon}
@@ -124,7 +151,7 @@ const SearchComponent = ({
         </SuggestionsList>
       )}
 
-      {error && errorMessage && <SpanError>{errorMessage}</SpanError>}
+      {hasError && <SpanError>{errorMessage || nativeError}</SpanError>}
     </ContentController>
   );
 };

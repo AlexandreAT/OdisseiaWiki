@@ -9,7 +9,7 @@ import { InputText } from '../../../../components/Generic/InputText/InputText';
 import { RichTextEditor } from '../../../../components/Generic/RichTextEditor/RichTextEditor';
 import { Search } from '../../../../components/Generic/Search/Search';
 import { Select } from '../../../../components/Generic/Select/Select';
-import { CheckBox } from '../../../../components/Generic/CheckBox/CheckBox';
+import { VisibilityToggle } from '../../../../components/Generic/VisibilityToggle';
 import { FeaturedToggle } from '../../../../components/Generic/FeaturedToggle';
 import { ALIGNMENT_OPTIONS, TRAITS_OPTIONS } from '../../../Hub/UserCharacters/CharacterCreate/constants';
 import {
@@ -46,8 +46,10 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
   setAvatarFile,
   galeriaUrls,
   galeriaShapes,
+  galeriaCaptions,
   onAddGaleria,
   onRemoveGaleria,
+  onGaleriaCaptionChange,
   history,
   setHistory,
   alignment,
@@ -189,8 +191,10 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
         label="Galeria de imagens"
         imageUrls={galeriaUrls}
         imageShapes={galeriaShapes}
+        captions={galeriaCaptions}
         onAdd={onAddGaleria}
         onRemove={onRemoveGaleria}
+        onCaptionChange={onGaleriaCaptionChange}
       />
 
       <HistoryEditorWrapper theme={theme} neon={neon}>
@@ -288,10 +292,9 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
 
       {setVisivel && setDestaque && (
         <HistoryHeader>
-          <CheckBox
-            neon={neon}
+          <VisibilityToggle
             label="Personagem visível"
-            checked={visivel}
+            visible={visivel ?? false}
             onChange={setVisivel}
           />
           <FeaturedToggle featured={destaque ?? false} onChange={setDestaque} />
