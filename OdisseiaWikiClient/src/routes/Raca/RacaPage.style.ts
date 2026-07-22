@@ -21,6 +21,7 @@ export {
   GalleryModalTrack,
   GalleryModalViewport,
   HudCornerAccent,
+  HudBorderLine,
   ModalCharacterCard,
   ModalDescription,
   PanelHeader,
@@ -61,7 +62,7 @@ export const RaceRevealBlock = styled(ScrollRevealBlock)`
 export const RacePanel = styled(HudPanel)`
   max-height: none;
   overflow: visible;
-  transition: border-color 260ms ease, box-shadow 320ms ease, background-color 260ms ease;
+  transition: clip-path 180ms ease, border-color 260ms ease, box-shadow 320ms ease, background-color 260ms ease;
 `;
 
 export const HeroPanel = styled(RacePanel)`
@@ -255,7 +256,18 @@ export const SecondaryStats = styled.div`
   }
 `;
 
-export const StatCard = styled.div<{ $accent?: 'blue' | 'purple' | 'gold' }>`
+type StatAccent = 'red' | 'green' | 'blue' | 'purple' | 'gold';
+
+const statAccentColor = ($accent: StatAccent = 'blue') => {
+  if ($accent === 'red') return 'var(--clearneonRed)';
+  if ($accent === 'green') return 'var(--clearneonGreen)';
+  if ($accent === 'purple') return 'var(--clearneonPurple)';
+  if ($accent === 'gold') return '#ffe22e';
+  return 'var(--clearneonBlue)';
+};
+
+export const StatCard = styled.div<{ $accent?: StatAccent; $neon?: boolean; $iconGlow?: boolean }>`
+  --race-stat-color: ${({ $accent }) => statAccentColor($accent)};
   display: flex;
   min-height: 100px;
   min-width: 0;
@@ -263,34 +275,42 @@ export const StatCard = styled.div<{ $accent?: 'blue' | 'purple' | 'gold' }>`
   align-items: center;
   justify-content: center;
   gap: 7px;
-  border: 1px solid ${({ $accent }) => $accent === 'gold'
-    ? 'rgba(255, 218, 42, 0.62)'
-    : $accent === 'purple'
-      ? 'rgba(195, 83, 255, 0.5)'
-      : 'rgba(48, 193, 255, 0.48)'};
+  border: 1px solid color-mix(in srgb, var(--race-stat-color) 58%, transparent);
   border-radius: 4px;
   padding: 12px 8px;
   background: rgba(2, 14, 29, 0.76);
-  box-shadow: inset 0 0 18px rgba(0, 165, 255, 0.035);
+  color: var(--race-stat-color);
+  box-shadow: ${({ $neon }) => $neon
+    ? `inset 0 0 18px color-mix(in srgb, var(--race-stat-color) 12%, transparent),
+       0 0 8px color-mix(in srgb, var(--race-stat-color) 24%, transparent)`
+    : 'inset 0 0 18px rgba(0, 165, 255, 0.035)'};
   text-align: center;
+  transition: border-color 220ms ease, box-shadow 260ms ease, background-color 220ms ease;
 
   svg {
     width: 27px;
     height: 27px;
-    color: ${({ $accent }) => $accent === 'gold'
-      ? '#ffe22e'
-      : $accent === 'purple'
-        ? 'var(--clearneonPurple)'
-        : 'var(--clearneonBlue)'};
+    color: var(--race-stat-color) !important;
+    fill: currentColor !important;
+    stroke: currentColor;
+    filter: ${({ $neon, $iconGlow }) => $neon && $iconGlow !== false
+      ? 'drop-shadow(0 0 5px var(--race-stat-color))'
+      : 'none'};
+  }
+
+  svg path {
+    color: var(--race-stat-color) !important;
     fill: currentColor;
+    stroke: currentColor;
   }
 `;
 
 export const StatLabel = styled.span`
-  color: var(--clearneonBlue);
+  color: var(--race-stat-color) !important;
   font-family: 'DO Futuristic', sans-serif;
   font-size: 9px;
   letter-spacing: 0.65px;
+  text-shadow: 0 0 6px color-mix(in srgb, currentColor 40%, transparent);
   text-transform: uppercase;
 `;
 
@@ -308,9 +328,13 @@ export const StatHint = styled.span`
   font-size: 10px;
 `;
 
-export const MiddleGrid = styled.div`
+export const MiddleGrid = styled.div<{ $sectionCount: number }>`
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: ${({ $sectionCount }) => {
+    if ($sectionCount <= 1) return 'minmax(0, 1fr)';
+    if ($sectionCount === 2) return 'minmax(280px, 0.92fr) minmax(360px, 1.18fr)';
+    return 'repeat(3, minmax(0, 1fr))';
+  }};
   align-items: stretch;
   gap: 18px;
   margin-top: 20px;
@@ -318,9 +342,13 @@ export const MiddleGrid = styled.div`
   > * { min-width: 0; }
 
   @media (max-width: 1120px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: ${({ $sectionCount }) => $sectionCount <= 1
+      ? 'minmax(0, 1fr)'
+      : 'repeat(2, minmax(0, 1fr))'};
 
-    > :last-child { grid-column: 1 / -1; }
+    ${({ $sectionCount }) => $sectionCount >= 3 && css`
+      > :last-child { grid-column: 1 / -1; }
+    `}
   }
 
   @media (max-width: 760px) {

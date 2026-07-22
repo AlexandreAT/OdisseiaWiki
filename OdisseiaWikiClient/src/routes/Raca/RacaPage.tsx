@@ -58,6 +58,7 @@ import {
   HeroGrid,
   HeroPanel,
   HudCornerAccent,
+  HudBorderLine,
   MiddleGrid,
   MiddlePanel,
   ModalCharacterCard,
@@ -117,6 +118,14 @@ const HudCorners = ({ neon }: { neon: boolean }) => (
   <>
     <HudCornerAccent $position="top-right" $neon={neon} aria-hidden="true" />
     <HudCornerAccent $position="bottom-left" $neon={neon} aria-hidden="true" />
+    {neon && <>
+      <HudCornerAccent $position="top-left" $neon aria-hidden="true" />
+      <HudCornerAccent $position="bottom-right" $neon aria-hidden="true" />
+    </>}
+    <HudBorderLine $position="top" $isActive={neon} aria-hidden="true" />
+    <HudBorderLine $position="right" $isActive={neon} aria-hidden="true" />
+    <HudBorderLine $position="bottom" $isActive={neon} aria-hidden="true" />
+    <HudBorderLine $position="left" $isActive={neon} aria-hidden="true" />
   </>
 );
 
@@ -253,6 +262,11 @@ const RacaPage = () => {
   const previewVariations = variations.slice(0, 3);
   const previewGallery = galleryImages.slice(0, 6);
   const previewCharacters = characters.slice(0, 8);
+  const hasPassives = passives.length > 0;
+  const hasVariations = variations.length > 0;
+  const hasGallery = galleryImages.length > 0;
+  const hasCharacters = characters.length > 0;
+  const middleSectionCount = Number(hasPassives) + Number(hasVariations) + Number(hasGallery);
   const baseStatus = status?.status;
   const lightboxImages = galleryImages.map((image) => ({
     ...image,
@@ -316,29 +330,29 @@ const RacaPage = () => {
               <StatusArea>
                 <StatusHeading>Valores raciais</StatusHeading>
                 <PrimaryStats>
-                  <StatCard>
-                    <MaskIcon src={glassHeart} color="var(--clearneonRed)" size={27} />
+                  <StatCard $accent="red" $neon={isNeonActive}>
+                    <MaskIcon src={glassHeart} color="var(--race-stat-color)" size={27} />
                     <StatLabel>Vida</StatLabel>
                     <StatValue>{baseStatus?.vida ?? '—'}</StatValue>
                   </StatCard>
-                  <StatCard>
-                    <MaskIcon src={electric} color="var(--clearneonGreen)" size={27} />
+                  <StatCard $accent="green" $neon={isNeonActive}>
+                    <MaskIcon src={electric} color="var(--race-stat-color)" size={27} />
                     <StatLabel>Estamina</StatLabel>
                     <StatValue>{baseStatus?.estamina ?? '—'}</StatValue>
                   </StatCard>
-                  <StatCard>
-                    <MaskIcon src={rollingEnergy} color="var(--clearneonBlue)" size={27} />
+                  <StatCard $accent="blue" $neon={isNeonActive}>
+                    <MaskIcon src={rollingEnergy} color="var(--race-stat-color)" size={27} />
                     <StatLabel>Mana</StatLabel>
                     <StatValue>{baseStatus?.mana ?? '—'}</StatValue>
                   </StatCard>
                 </PrimaryStats>
                 <SecondaryStats>
-                  <StatCard $accent="purple">
+                  <StatCard $accent="purple" $neon={isNeonActive} $iconGlow={false}>
                     <BiPackage aria-hidden="true" />
                     <StatLabel>Capacidade de carga</StatLabel>
                     <StatValue>{baseStatus?.capacidadeCarga ?? '—'}</StatValue>
                   </StatCard>
-                  <StatCard $accent="gold">
+                  <StatCard $accent="gold" $neon={isNeonActive} $iconGlow={false}>
                     <BiTargetLock aria-hidden="true" />
                     <StatLabel>Atributo inicial</StatLabel>
                     <StatValue>{status?.atributoInicial || '—'}</StatValue>
@@ -350,8 +364,8 @@ const RacaPage = () => {
           </HeroPanel>
         </RaceRevealBlock>
 
-        <MiddleGrid>
-          <RaceRevealBlock variant="infoBlock" threshold={0.2}>
+        {middleSectionCount > 0 && <MiddleGrid $sectionCount={middleSectionCount}>
+          {hasPassives && <RaceRevealBlock variant="infoBlock" threshold={0.2}>
             <MiddlePanel $neon={isNeonActive}>
               <HudCorners neon={isNeonActive} />
               <PanelHeader>
@@ -368,9 +382,9 @@ const RacaPage = () => {
                 </DetailList>
               ) : <EmptyPanel>Nenhuma habilidade passiva cadastrada.</EmptyPanel>}
             </MiddlePanel>
-          </RaceRevealBlock>
+          </RaceRevealBlock>}
 
-          <RaceRevealBlock variant="infoBlock" threshold={0.2}>
+          {hasVariations && <RaceRevealBlock variant="infoBlock" threshold={0.2}>
             <MiddlePanel $neon={isNeonActive}>
               <HudCorners neon={isNeonActive} />
               <PanelHeader>
@@ -387,9 +401,9 @@ const RacaPage = () => {
                 </DetailList>
               ) : <EmptyPanel>Nenhuma variação cadastrada.</EmptyPanel>}
             </MiddlePanel>
-          </RaceRevealBlock>
+          </RaceRevealBlock>}
 
-          <RaceRevealBlock variant="infoCarousel" threshold={0.2}>
+          {hasGallery && <RaceRevealBlock variant="infoCarousel" threshold={0.2}>
             <MiddlePanel $neon={isNeonActive}>
               <HudCorners neon={isNeonActive} />
               <PanelHeader>
@@ -419,10 +433,10 @@ const RacaPage = () => {
                 </GalleryGrid>
               ) : <EmptyPanel>Nenhuma imagem cadastrada na galeria.</EmptyPanel>}
             </MiddlePanel>
-          </RaceRevealBlock>
-        </MiddleGrid>
+          </RaceRevealBlock>}
+        </MiddleGrid>}
 
-        <RelatedSection>
+        {hasCharacters && <RelatedSection>
           <RaceRevealBlock variant="infoBlock" threshold={0.18}>
             <RelatedPanel $neon={isNeonActive}>
               <HudCorners neon={isNeonActive} />
@@ -445,7 +459,7 @@ const RacaPage = () => {
               ) : <EmptyPanel>Nenhum personagem visível relacionado a esta raça.</EmptyPanel>}
             </RelatedPanel>
           </RaceRevealBlock>
-        </RelatedSection>
+        </RelatedSection>}
       </RacePageContent>
 
       {activeModal === 'description' && (

@@ -20,6 +20,7 @@ export type Item = {
   descricao?: string;
   quantidade?: number;
   peso?: number;
+  discricao?: number;
   tipo?: string;
   atributos?: any;
 };

@@ -4,12 +4,12 @@ const RECTANGLE_RATIO_THRESHOLD = 1.2;
 const SAMPLE_SIZE = 40;
 const TRANSPARENT_ALPHA_THRESHOLD = 36;
 
-const hasTransparentCorners = (image: HTMLImageElement): boolean => {
+const hasTransparentCorners = (image: HTMLImageElement): boolean | null => {
   const canvas = document.createElement('canvas');
   canvas.width = SAMPLE_SIZE;
   canvas.height = SAMPLE_SIZE;
   const context = canvas.getContext('2d', { willReadFrequently: true });
-  if (!context) return false;
+  if (!context) return null;
 
   try {
     context.drawImage(image, 0, 0, SAMPLE_SIZE, SAMPLE_SIZE);
@@ -34,8 +34,7 @@ const hasTransparentCorners = (image: HTMLImageElement): boolean => {
 
     return transparentCorners >= 3;
   } catch {
-    // Imagens externas sem CORS ainda podem ser classificadas pela proporção.
-    return false;
+    return null;
   }
 };
 
@@ -52,11 +51,57 @@ export const detectLoadedImageShape = (image: HTMLImageElement): ImageDisplaySha
   return hasTransparentCorners(image) ? 'circle' : 'square';
 };
 
+const detectLoadedImageShapeStrict = (image: HTMLImageElement): ImageDisplayShape | null => {
+  const width = image.naturalWidth;
+  const height = image.naturalHeight;
+  if (!width || !height) return null;
+
+  const ratio = width / height;
+  if (ratio >= RECTANGLE_RATIO_THRESHOLD || ratio <= 1 / RECTANGLE_RATIO_THRESHOLD) {
+    return 'rectangle';
+  }
+
+  const hasTransparentBackground = hasTransparentCorners(image);
+  if (hasTransparentBackground === null) return null;
+  return hasTransparentBackground ? 'circle' : 'square';
+};
+
 export const detectImageShapeFromUrl = (url: string): Promise<ImageDisplayShape> => (
   new Promise((resolve) => {
     const image = new Image();
     image.onload = () => resolve(detectLoadedImageShape(image));
     image.onerror = () => resolve('square');
+    image.src = url;
+  })
+);
+
+export const detectImageShapeForBackgroundFromUrl = (
+  url: string,
+): Promise<ImageDisplayShape | null> => (
+  new Promise((resolve) => {
+    const image = new Image();
+    image.crossOrigin = 'anonymous';
+    image.onload = () => resolve(detectLoadedImageShapeStrict(image));
+    image.onerror = () => {
+      const fallbackImage = new Image();
+      fallbackImage.onload = () => {
+        const width = fallbackImage.naturalWidth;
+        const height = fallbackImage.naturalHeight;
+        if (!width || !height) {
+          resolve(null);
+          return;
+        }
+
+        const ratio = width / height;
+        resolve(
+          ratio >= RECTANGLE_RATIO_THRESHOLD || ratio <= 1 / RECTANGLE_RATIO_THRESHOLD
+            ? 'rectangle'
+            : null,
+        );
+      };
+      fallbackImage.onerror = () => resolve(null);
+      fallbackImage.src = url;
+    };
     image.src = url;
   })
 );

@@ -8,6 +8,7 @@ export interface ItemPayload {
   tipo: string;
   descricao?: string | JSONContent;
   peso?: number;
+  discricao?: number;
   quantidade: number;
   efeito?: string;
   imagem?: string;

@@ -24,7 +24,8 @@ import { Skills } from '../../../../../../models/Skills';
 import { Item } from '../../../../../../models/Itens';
 import { Magia } from '../../../../../../models/Magias';
 import { TRAITS_OPTIONS, ALIGNMENT_OPTIONS } from '../../formOptions';
-import { getInventarioItems, getProtesesItems, getProtesesTableItems, replaceItemSection } from '../../../../../../utils/itemInventorySections';
+import { getInventarioItems, getProtesesItems, getProtesesTableItems, isEmptyItemRow, replaceItemSection } from '../../../../../../utils/itemInventorySections';
+import { openItemPreview } from '../../../../../../utils/itemPreview';
 //import OrcBack from '../../../../../../assets/racas/orc/OrcBackground.jpeg';
 
 interface FormProps {
@@ -385,6 +386,8 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
               searchData={getInventarioItems(listItens)}
               searchKeys={['nome', 'tipo', 'descricao']}
               onSelectSearch={(item) => item.tipo !== 'implante' && handleSelectItem(item)}
+              isRowEmpty={isEmptyItemRow}
+              onViewRow={openItemPreview}
               theme={theme}
               neon={neon}
             />
@@ -401,6 +404,8 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
               searchData={getProtesesItems(listItens)}
               searchKeys={['nome', 'tipo', 'descricao']}
               onSelectSearch={(item) => item.tipo === 'implante' && handleSelectItem(item)}
+              isRowEmpty={isEmptyItemRow}
+              onViewRow={openItemPreview}
               theme={theme}
               neon={neon}
             />

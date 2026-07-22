@@ -296,6 +296,9 @@ public partial class OdisseiaContext : DbContext
 
             entity.Property(e => e.DataCriacao)
                 .HasColumnType("datetime");
+
+            entity.Property(e => e.Discricao)
+                .HasDefaultValue(0);
             
             entity.Property(e => e.Tags).HasColumnType("longtext");
             entity.Property(e => e.Visivel).HasColumnType("tinyint(1)");

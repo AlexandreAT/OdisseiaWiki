@@ -30,10 +30,13 @@ import {
   ImageSection,
   TagsInputContainer,
   TagInput,
+  TagSectionHeader,
 } from '../FormCriarConteúdo/FormItem/FormItem.style';
+import { ItemTagInfo } from '../FormCriarConteúdo/FormItem/ItemTagInfo';
 import { EditHeader, LoadingContainer } from './EditFormStyles';
 import { EntityEditFloatingActions } from './EntityEditFloatingActions';
 import { ITEM_TIPO_OPTIONS } from '../formOptions';
+import { handleNumericInputFocus } from '../../../../../utils/numericInput';
 
 interface ItemEditProps {
   theme: 'dark' | 'light';
@@ -170,8 +173,8 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
     setQuantidade,
     peso,
     setPeso,
-    efeito,
-    setEfeito,
+    discricao,
+    setDiscricao,
     imagemUrl,
     handleImagemUpload,
     atributos,
@@ -206,12 +209,12 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
     descricao,
     quantidade,
     peso,
-    efeito,
+    discricao,
     imagemUrl,
     atributos,
     tags,
     visivel,
-  }), [nome, tipo, descricao, quantidade, peso, efeito, imagemUrl, atributos, tags, visivel]);
+  }), [nome, tipo, descricao, quantidade, peso, discricao, imagemUrl, atributos, tags, visivel]);
   const [lastSavedSnapshot, setLastSavedSnapshot] = React.useState(snapshot);
   const isSynced = snapshot === lastSavedSnapshot;
   const persistInFlightRef = React.useRef(false);
@@ -301,26 +304,33 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
             <LabelStatus>Quantidade</LabelStatus>
             <MinimalInput 
               value={quantidade} 
+              type="number"
+              onFocus={handleNumericInputFocus}
               onChange={(e) => setQuantidade(Number(e.target.value))}
             />
           </LabelInfoBox>
 
           <LabelInfoBox theme={theme} neon={neon}>
-            <LabelStatus>Peso (kg)</LabelStatus>
+            <LabelStatus>Espaço ocupado</LabelStatus>
             <MinimalInput 
-              value={peso || ""} 
+              value={peso ?? ""}
+              type="number"
+              onFocus={handleNumericInputFocus}
               onChange={(e) => setPeso(Number(e.target.value) || undefined)}
+            />
+          </LabelInfoBox>
+
+          <LabelInfoBox theme={theme} neon={neon}>
+            <LabelStatus>Discrição (-/+)</LabelStatus>
+            <MinimalInput
+              value={discricao}
+              type="number"
+              onFocus={handleNumericInputFocus}
+              onChange={(e) => setDiscricao(e.target.value === '' ? 0 : Number(e.target.value))}
             />
           </LabelInfoBox>
         </GridInputsRow>
 
-        <InputText
-          label="Efeito"
-          value={efeito}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEfeito(e.target.value)}
-          theme={theme}
-          neon={neon}
-        />
       </FormHeader>
 
       {/* Seção de Atributos Dinâmicos */}
@@ -333,6 +343,7 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
               onChange={setAtributos}
               theme={theme}
               neon={neon}
+              managementLayout
             />
           </AtributosGrid>
         </AtributosSection>
@@ -370,7 +381,10 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
 
       {/* Seção de Tags */}
       <div>
-        <SectionTitle theme={theme} neon={neon}>Tags (Opcional)</SectionTitle>
+        <TagSectionHeader>
+          <SectionTitle theme={theme} neon={neon}>Tags (Opcional)</SectionTitle>
+          <ItemTagInfo theme={theme} neon={neon} />
+        </TagSectionHeader>
         <TagsInputContainer>
           <TagInput
             theme={theme}

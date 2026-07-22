@@ -225,7 +225,14 @@ export const Sections = styled.div`
   min-width: 0;
 `;
 
-export const CardContent = styled.div<{ gap?: number, maxWidth?: string, maxHeight?: string, neon: 'on' | 'off'; $color?: string }>`
+export const CardContent = styled.div<{
+  gap?: number;
+  maxWidth?: string;
+  maxHeight?: string;
+  neon: 'on' | 'off';
+  $color?: string;
+  $secondary?: boolean;
+}>`
   padding: 16px;
   width: 100%;
   max-width: ${({ maxWidth }) => maxWidth || 'none'};
@@ -238,6 +245,11 @@ export const CardContent = styled.div<{ gap?: number, maxWidth?: string, maxHeig
   background: rgba(0, 0, 10, 0.65);
   min-width: 0;
   box-sizing: border-box;
+  border: ${({ $secondary, neon, $color }) => {
+    if (!$secondary) return '0 solid transparent';
+    if (neon === 'on') return '2px solid transparent';
+    return `1px solid color-mix(in srgb, ${$color ?? 'var(--neonBlue)'} 54%, transparent)`;
+  }};
   box-shadow: ${({ neon, $color }) => neon === 'on' ? `inset 0 0 20px ${$color ?? 'var(--neonBlue)'}` : 'none'};
   clip-path: polygon(
     12px 0, calc(100% - 12px) 0, 100% 12px,

@@ -16,6 +16,7 @@ import {
 interface LightboxImageData {
   url: string;
   caption?: string;
+  backgroundUrl?: string | null;
 }
 
 interface LightboxProps {
@@ -68,9 +69,12 @@ export const Lightbox: React.FC<LightboxProps> = ({
   const isSingle = images.length <= 1;
   const hasPrevious = !isSingle && selectedIndex > 0;
   const hasNext = !isSingle && selectedIndex < images.length - 1;
+  const backgroundImage = currentImage.backgroundUrl === null
+    ? undefined
+    : currentImage.backgroundUrl || currentImage.url;
 
   return createPortal(
-    <LightboxOverlay $backgroundImage={currentImage.url} onClick={onClose}>
+    <LightboxOverlay $backgroundImage={backgroundImage} onClick={onClose}>
       <LightboxCloseButton onClick={onClose} type="button" title="Fechar">
         <BiX />
       </LightboxCloseButton>

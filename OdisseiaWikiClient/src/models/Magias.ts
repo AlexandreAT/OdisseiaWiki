@@ -1,3 +1,4 @@
+import { DadoAcerto } from './Dados';
 import { JSONContent } from './Characters';
 
 export type MagiaTipoString = "ataque" | "suporte" | "buff" | "debuff";
@@ -24,23 +25,23 @@ export interface AtaqueAtributos {
     dano?: number;
     especial: string;
     bonus: string;
-    acerto: string;
+    acerto?: DadoAcerto;
 }
 
 export interface SuporteAtributos {
     especial: string;
     bonus: string;
-    acerto: string;
+    acerto?: DadoAcerto;
 }
 
 export interface BuffAtributos {
     especial: string;
     bonus: string;
-    acerto: string;
+    acerto?: DadoAcerto;
 }
 
 export interface DebuffAtributos {
     especial: string;
     bonus: string;
-    acerto: string;
+    acerto?: DadoAcerto;
 }

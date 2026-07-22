@@ -32,8 +32,8 @@ const getPathContext = (pathname: string): ErrorLocationState => {
 
   if (pathname.startsWith('/item/')) {
     return {
-      errorTitle: 'Página de item ainda não disponível',
-      errorDescription: 'A página dinâmica deste item está em desenvolvimento.',
+      errorTitle: 'Item não encontrado',
+      errorDescription: 'Não foi possível carregar os dados deste item.',
     };
   }
 

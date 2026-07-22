@@ -1,17 +1,16 @@
-import { ItemTipo, JSONContent } from "../../../../../../models/Itens";
+import { ItemAtributos, ItemTipo, JSONContent } from "../../../../../../models/Itens";
 
 export interface ItemFormData {
   nome: string;
   tipo: ItemTipo;
   descricao?: JSONContent | string;
   peso?: number;
+  discricao?: number;
   quantidade: number;
-  efeito?: string;
-
   imagem?: string;
   imagemFile?: File;
 
-  atributos?: Record<string, any>;
+  atributos?: ItemAtributos;
 
   tags?: string[];
   visivel: boolean;
@@ -28,10 +27,10 @@ export interface ItemDto {
   tipo: ItemTipo;
   descricao?: JSONContent | string;
   peso?: number;
+  discricao?: number;
   quantidade: number;
-  efeito?: string;
   imagem?: string;
-  atributosJson?: Record<string, any>;
+  atributosJson?: ItemAtributos;
   tags?: string[];
   visivel: boolean;
 }

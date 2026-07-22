@@ -33,6 +33,14 @@ export const WIKI_SEARCH_GROUP_LABELS: Record<WikiSearchEntityType, string> = {
   items: 'Itens',
 };
 
+export const WIKI_SEARCH_PAGE_SIZES: Record<WikiSearchEntityType, number> = {
+  pages: 15,
+  characters: 20,
+  cities: 15,
+  races: 21,
+  items: 21,
+};
+
 export const createEmptyWikiSearchGroups = (): WikiSearchGroups => ({
   pages: [],
   characters: [],

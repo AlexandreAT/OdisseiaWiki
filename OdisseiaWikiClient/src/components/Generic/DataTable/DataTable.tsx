@@ -1,12 +1,13 @@
 import React, { useState, memo, useCallback, useMemo, useRef, useEffect } from "react";
 import MUIDataTable from "mui-datatables";
 import { TextField, IconButton } from "@mui/material";
-import { Add, Delete } from "@mui/icons-material";
+import { Add, Delete, Visibility } from "@mui/icons-material";
 import { Search } from "../Search/Search";
 import { BiSearchAlt } from "react-icons/bi";
 import {
   CellEditor,
   CharacterCounter,
+  RowActions,
   DataTableContainer,
   TableScrollContainer,
   ValidationMessage,
@@ -14,6 +15,7 @@ import {
 import { Select } from "../Select/Select";
 import { CheckSelect } from "../CheckSelect/CheckSelect";
 import { revealFirstValidationError } from '../../../utils/formValidationFeedback';
+import { handleNumericInputFocus } from '../../../utils/numericInput';
 
 interface DataTableProps<T> {
   theme: 'dark' | 'light';
@@ -29,6 +31,9 @@ interface DataTableProps<T> {
   showEmptyRow?: boolean;
   error?: boolean;
   errorMessage?: string;
+  isRowEmpty?: (row: T) => boolean;
+  onViewRow?: (row: T) => void;
+  canViewRow?: (row: T) => boolean;
 }
 
 interface ColumnConfig<T> {
@@ -38,7 +43,12 @@ interface ColumnConfig<T> {
   inputType?: "text" | "number" | "select" | "checkselect";
   maxLength?: number;
   options?: { label: string; value: string }[];
-  customRender?: (value: any, row: T, onChange: (val: any) => void) => React.ReactNode;
+  customRender?: (
+    value: any,
+    row: T,
+    onChange: (val: any) => void,
+    onRowChange: (row: T) => void,
+  ) => React.ReactNode;
 }
 
 const TableCell = memo(({ 
@@ -61,7 +71,8 @@ const TableCell = memo(({
         type="number"
         fullWidth
         variant="standard"
-        value={value || ""}
+        value={value ?? ""}
+        onFocus={handleNumericInputFocus}
         onChange={(e) => handleChange(e.target.value === "" ? "" : Number(e.target.value))}
       />
     );
@@ -77,6 +88,7 @@ const TableCell = memo(({
         onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleChange(e.target.value)}
         options={column.options || []}
         width="100%"
+        portal
       />
     );
   }
@@ -138,6 +150,9 @@ function DataTableComponent<T extends { [key: string]: any }>({
   showEmptyRow = false,
   error = false,
   errorMessage,
+  isRowEmpty,
+  onViewRow,
+  canViewRow,
 }: DataTableProps<T>) {
   const [search, setSearch] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
@@ -164,10 +179,30 @@ function DataTableComponent<T extends { [key: string]: any }>({
   const tableDataRef = useRef(tableData);
   tableDataRef.current = tableData;
 
+  const rowIsEmpty = useCallback((row: T) => {
+    if (isRowEmpty) return isRowEmpty(row);
+
+    return Object.values(row).every((value) => {
+      if (value === null || value === undefined || value === "") return true;
+      if (typeof value === "string") return value.trim().length === 0;
+      if (typeof value === "number") return value === 0;
+      if (typeof value === "boolean") return value === false;
+      if (Array.isArray(value)) return value.length === 0;
+      if (typeof value === "object") return Object.keys(value).length === 0;
+      return false;
+    });
+  }, [isRowEmpty]);
+
 
   const updateValue = useCallback((rowIndex: number, key: keyof T, value: any) => {
     const updated = [...dataRef.current];
     updated[rowIndex] = { ...updated[rowIndex], [key]: value };
+    onChangeRef.current(updated);
+  }, []);
+
+  const updateRow = useCallback((rowIndex: number, row: T) => {
+    const updated = [...dataRef.current];
+    updated[rowIndex] = row;
     onChangeRef.current(updated);
   }, []);
 
@@ -180,19 +215,29 @@ function DataTableComponent<T extends { [key: string]: any }>({
       if (currentIndex + 1 < inputs.length) {
         inputs[currentIndex + 1].focus();
       } else {
-      
-        onChangeRef.current([...dataRef.current, createEmptyRow()]);
+        const currentRows = tableDataRef.current;
+        const lastRow = currentRows[currentRows.length - 1];
+        if (!lastRow || !rowIsEmpty(lastRow)) {
+          onChangeRef.current([...dataRef.current, createEmptyRow()]);
+        }
       }
     }
-  }, [createEmptyRow]);
+  }, [createEmptyRow, rowIsEmpty]);
 
 
   const renderCell = useCallback((col: ColumnConfig<T>, rowIndex: number) => {
     const row = tableDataRef.current[rowIndex];
+    if (!row) return null;
+
     const value = row[col.key];
 
     if (col.customRender) {
-      return col.customRender(value, row, (val) => updateValue(rowIndex, col.key, val));
+      return col.customRender(
+        value,
+        row,
+        (val) => updateValue(rowIndex, col.key, val),
+        (nextRow) => updateRow(rowIndex, nextRow),
+      );
     }
 
     return (
@@ -207,7 +252,7 @@ function DataTableComponent<T extends { [key: string]: any }>({
         onEnter={handleEnter}
       />
     );
-  }, [theme, neon, updateValue, handleEnter]);
+  }, [theme, neon, updateValue, updateRow, handleEnter]);
 
 
   const muiColumns = useMemo(() => columns.map((col) => ({
@@ -228,10 +273,15 @@ function DataTableComponent<T extends { [key: string]: any }>({
   })), [columns, renderCell]);
 
   const handleAddRow = useCallback(() => {
+    const currentRows = tableDataRef.current;
+    const lastRow = currentRows[currentRows.length - 1];
+    if (lastRow && rowIsEmpty(lastRow)) return;
+
     onChangeRef.current([...dataRef.current, createEmptyRow()]);
-  }, [createEmptyRow]);
+  }, [createEmptyRow, rowIsEmpty]);
 
   const handleRemoveRow = useCallback((index: number) => {
+    if (index < 0 || index >= dataRef.current.length) return;
     const updated = dataRef.current.filter((_, i) => i !== index);
     onChangeRef.current(updated);
   }, []);
@@ -263,16 +313,47 @@ function DataTableComponent<T extends { [key: string]: any }>({
       sort: false,
       customBodyRenderLite: (dataIndex: number) => {
         const isLastRow = dataIndex === tableData.length - 1;
+        const row = tableData[dataIndex];
+        const isEmpty = !row || rowIsEmpty(row);
+        const isPersistedRow = dataIndex < data.length;
+        const showView = Boolean(row && onViewRow && !isEmpty && (canViewRow?.(row) ?? true));
         return (
-          <IconButton
-            onClick={() => isLastRow ? handleAddRow() : handleRemoveRow(dataIndex)}
-          >
-            {isLastRow ? <Add className="icon" /> : <Delete className="iconDelete" />}
-          </IconButton>
+          <RowActions>
+            {showView && (
+              <IconButton
+                type="button"
+                onClick={() => onViewRow?.(row)}
+                title="Visualizar"
+                aria-label="Visualizar registro"
+              >
+                <Visibility className="iconView" />
+              </IconButton>
+            )}
+            {isPersistedRow && (
+              <IconButton
+                type="button"
+                onClick={() => handleRemoveRow(dataIndex)}
+                title="Excluir"
+                aria-label="Excluir linha"
+              >
+                <Delete className="iconDelete" />
+              </IconButton>
+            )}
+            {isLastRow && !isEmpty && (
+              <IconButton
+                type="button"
+                onClick={handleAddRow}
+                title="Adicionar linha"
+                aria-label="Adicionar linha"
+              >
+                <Add className="icon" />
+              </IconButton>
+            )}
+          </RowActions>
         );
       },
     },
-  }), [tableData.length, handleAddRow, handleRemoveRow]);
+  }), [tableData, data.length, rowIsEmpty, onViewRow, canViewRow, handleAddRow, handleRemoveRow]);
 
   return (
     <DataTableContainer
@@ -293,6 +374,7 @@ function DataTableComponent<T extends { [key: string]: any }>({
           iconSize={20}
           suggestions={searchSuggestions}
           onSelectSuggestion={handleSelectSuggestion}
+          portal
         />
       )}
       <TableScrollContainer>

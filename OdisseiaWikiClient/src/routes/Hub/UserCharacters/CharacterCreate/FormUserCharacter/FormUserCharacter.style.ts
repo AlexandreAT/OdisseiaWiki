@@ -1,4 +1,5 @@
 import styled from "styled-components";
+import { handleNumericInputFocus } from '../../../../../utils/numericInput';
 
 interface Props {
     theme?: 'dark' | 'light';
@@ -588,7 +589,7 @@ export const LabelStatus = styled.h2<{ width?: string }>`
     }
 `
 
-export const MinimalInput = styled.input.attrs({ type: "number" })`
+export const MinimalInput = styled.input.attrs({ type: "number", onFocus: handleNumericInputFocus })`
   width: 30px;
   max-width: 60px;
   height: 100%;

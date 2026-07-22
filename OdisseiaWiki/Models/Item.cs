@@ -20,6 +20,8 @@ public partial class Item
 
     public decimal? Peso { get; set; }
 
+    public int Discricao { get; set; } = 0;
+
     public int Quantidade { get; set; } = 1;
 
     [MaxLength(100)]

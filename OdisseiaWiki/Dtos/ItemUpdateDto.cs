@@ -10,6 +10,7 @@ namespace OdisseiaWiki.Dtos
         public ItemTipo Tipo { get; set; }
         public JsonElement? Descricao { get; set; }
         public decimal? Peso { get; set; }
+        public int Discricao { get; set; } = 0;
         public int Quantidade { get; set; }
         public string? Efeito { get; set; }
         public string? Imagem { get; set; }

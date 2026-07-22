@@ -1,12 +1,14 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { BiBookmark, BiSortAlt2 } from 'react-icons/bi';
+import { BiBookmark, BiChevronLeft, BiChevronRight, BiSortAlt2 } from 'react-icons/bi';
 import { normalizeImagePath } from '../../utils/imagePathHelper';
 import {
   WikiSearchItem,
+  WikiSearchEntityType,
   WikiSearchSortOption,
   WIKI_SEARCH_GROUP_LABELS,
   WIKI_SEARCH_GROUP_ORDER,
+  WIKI_SEARCH_PAGE_SIZES,
 } from '../../types';
 import { WikiSearchResultsProps } from './types';
 import {
@@ -25,7 +27,18 @@ import {
   ResultCardContent,
   ResultCardTitle,
   ResultCardDescription,
+  SearchResultFooter,
+  PaginationButton,
+  PaginationStatus,
 } from './WikiSearchResults.style';
+
+const createInitialPages = (): Record<WikiSearchEntityType, number> => ({
+  pages: 1,
+  characters: 1,
+  cities: 1,
+  races: 1,
+  items: 1,
+});
 
 export const WikiSearchResults: React.FC<WikiSearchResultsProps> = ({
   results,
@@ -35,6 +48,7 @@ export const WikiSearchResults: React.FC<WikiSearchResultsProps> = ({
 }) => {
   const [searchParams] = useSearchParams();
   const [sortBy, setSortBy] = useState<WikiSearchSortOption>('name');
+  const [currentPages, setCurrentPages] = useState(createInitialPages);
   const query = searchParams.get('q') || '';
   const selectedGroupParam = searchParams.get('type');
   const selectedGroup = WIKI_SEARCH_GROUP_ORDER.find((group) => group === selectedGroupParam) ?? null;
@@ -68,6 +82,20 @@ export const WikiSearchResults: React.FC<WikiSearchResultsProps> = ({
       items: [],
     } as typeof results);
   }, [results, sortBy]);
+
+  useEffect(() => {
+    setCurrentPages(createInitialPages());
+  }, [query, results, selectedGroup, sortBy]);
+
+  const changePage = (group: WikiSearchEntityType, page: number) => {
+    setCurrentPages((current) => ({ ...current, [group]: page }));
+    requestAnimationFrame(() => {
+      document.getElementById(`wiki-results-${group}`)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    });
+  };
 
   if (totalResults === 0) {
     return (
@@ -113,16 +141,21 @@ export const WikiSearchResults: React.FC<WikiSearchResultsProps> = ({
       {WIKI_SEARCH_GROUP_ORDER.map((group) => {
         const groupResults = sortedResults[group];
         if (groupResults.length === 0) return null;
+        const pageSize = WIKI_SEARCH_PAGE_SIZES[group];
+        const totalPages = Math.ceil(groupResults.length / pageSize);
+        const currentPage = Math.min(currentPages[group], totalPages);
+        const pageStart = (currentPage - 1) * pageSize;
+        const visibleResults = groupResults.slice(pageStart, pageStart + pageSize);
 
         return (
-          <SearchResultGroup key={group}>
+          <SearchResultGroup key={group} id={`wiki-results-${group}`}>
             <SearchResultGroupTitle $type={group} $neon={neon === 'on'}>
               {WIKI_SEARCH_GROUP_LABELS[group]}
               <span>{groupResults.length}</span>
             </SearchResultGroupTitle>
 
             <SearchResultsGrid $type={group}>
-              {groupResults.map((item) => (
+              {visibleResults.map((item) => (
                 <ResultCard
                   key={`${item.type}-${item.id}`}
                   type="button"
@@ -144,6 +177,36 @@ export const WikiSearchResults: React.FC<WikiSearchResultsProps> = ({
                 </ResultCard>
               ))}
             </SearchResultsGrid>
+
+            {totalPages > 1 && (
+              <SearchResultFooter $type={group}>
+                <PaginationButton
+                  type="button"
+                  $type={group}
+                  $neon={neon === 'on'}
+                  disabled={currentPage === 1}
+                  onClick={() => changePage(group, currentPage - 1)}
+                  aria-label={`Página anterior de ${WIKI_SEARCH_GROUP_LABELS[group]}`}
+                  title="Página anterior"
+                >
+                  <BiChevronLeft aria-hidden="true" />
+                </PaginationButton>
+                <PaginationStatus>
+                  Página {currentPage} de {totalPages}
+                </PaginationStatus>
+                <PaginationButton
+                  type="button"
+                  $type={group}
+                  $neon={neon === 'on'}
+                  disabled={currentPage === totalPages}
+                  onClick={() => changePage(group, currentPage + 1)}
+                  aria-label={`Próxima página de ${WIKI_SEARCH_GROUP_LABELS[group]}`}
+                  title="Próxima página"
+                >
+                  <BiChevronRight aria-hidden="true" />
+                </PaginationButton>
+              </SearchResultFooter>
+            )}
           </SearchResultGroup>
         );
       })}

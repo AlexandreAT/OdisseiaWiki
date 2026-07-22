@@ -39,28 +39,58 @@ import { BiChevronDown } from 'react-icons/bi';
 import { DEFAULT_MAX_CHARACTER_LEVEL, getDefaultXpRequiredForLevel } from '../../utils/characterProgression';
 import { Lightbox } from '../Wiki/components/blocks/shared/Lightbox/Lightbox';
 import { RelatedPageLink, RelatedPages, RelatedPagesTitle } from '../Cidade/CidadePage.style';
+import { detectImageShapeForBackgroundFromUrl } from '../../utils/imageDisplayShape';
+import { ARMA_TIPO_DANO_OPTIONS, ARMA_TIPO_OPTIONS, normalizeDadoAcerto } from '../../constants';
 
 const detailLabels: Record<string, string> = {
   curta: 'Dano Curto',
   media: 'Dano Médio',
   longa: 'Dano Longo',
+  emArea: 'Dano em Área',
+  preciso: 'Dano Preciso',
+  danoBase: 'Dano Base',
+  tipoArma: 'Tipo de Arma',
+  tipoDano: 'Tipo de Dano',
+  cadencia: 'Cadência por Turno',
+  capacidadeUso: 'Capacidade de Uso antes da Pausa',
+  capacidadeMunicao: 'Capacidade de Munição',
+  gastoEstaminaPorAtaque: 'Estamina por Ataque/Rajada',
+  acerto: 'Sistema de Acerto',
+  duracaoEfeito: 'Duração do Efeito',
   capacidade: 'Capacidade Munição',
-  acerto: 'Acerto',
   dano: 'Dano',
 };
 
 const formatDetailLabel = (key: string) => detailLabels[key] ?? key.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ').trim();
 
+const formatDetailValue = (key: string, value: unknown) => {
+  if (key === 'tipoArma') {
+    return ARMA_TIPO_OPTIONS.find((option) => option.value === value)?.label ?? String(value);
+  }
+
+  if (key === 'tipoDano') {
+    return ARMA_TIPO_DANO_OPTIONS.find((option) => option.value === value)?.label ?? String(value);
+  }
+
+  if (key === 'acerto') {
+    return normalizeDadoAcerto(value) || String(value);
+  }
+
+  return Array.isArray(value) ? value.join(', ') : String(value);
+};
+
 const getAttributeEntries = (attributes: Record<string, any> | undefined, prefix = ''): Array<{ label: string; value: string }> => {
   if (!attributes) return [];
 
   return Object.entries(attributes).flatMap(([key, value]) => {
-    if (key.startsWith('__') || key.toLowerCase().includes('efeitorichtext') || ['atual', 'ataquesPorTurno', 'especial', 'especiais'].includes(key) || value === undefined || value === null || value === '' || value === false || value === 0 || (Array.isArray(value) && value.length === 0)) return [];
+    if (key === 'ataquesPorTurno' && attributes.cadencia !== undefined) return [];
+    if (key === 'municao' && attributes.capacidadeMunicao !== undefined) return [];
+    if (key.startsWith('__') || key.toLowerCase().includes('efeitorichtext') || ['atual', 'ataquesPorTurno', 'efeito', 'especial', 'especiais'].includes(key) || value === undefined || value === null || value === '' || value === false || value === 0 || (Array.isArray(value) && value.length === 0)) return [];
     const label = ['danoPorAlcance', 'municao'].includes(key) ? prefix : (prefix ? `${prefix} ${formatDetailLabel(key)}` : formatDetailLabel(key));
 
     if (typeof value === 'object' && !Array.isArray(value)) return getAttributeEntries(value, label);
 
-    return [{ label, value: Array.isArray(value) ? value.join(', ') : String(value) }];
+    return [{ label, value: formatDetailValue(key, value) }];
   });
 };
 
@@ -194,11 +224,13 @@ const HudContentSection: React.FC<HudContentSectionProps> = ({
   clearColor,
   children,
 }) => (
-  <CardContent gap={12} neon={neon} $color={color}>
-    <HudCornerEl $position="top-left" $color={color} $clearColor={clearColor} $neon={neon === 'on'} />
+  <CardContent gap={12} neon={neon} $color={color} $secondary>
     <HudCornerEl $position="top-right" $color={color} $clearColor={clearColor} $neon={neon === 'on'} />
     <HudCornerEl $position="bottom-left" $color={color} $clearColor={clearColor} $neon={neon === 'on'} />
-    <HudCornerEl $position="bottom-right" $color={color} $clearColor={clearColor} $neon={neon === 'on'} />
+    {neon === 'on' && <>
+      <HudCornerEl $position="top-left" $color={color} $clearColor={clearColor} $neon />
+      <HudCornerEl $position="bottom-right" $color={color} $clearColor={clearColor} $neon />
+    </>}
     <HudTopLine $isActive={neon === 'on'} $color={color} $clearColor={clearColor} $neon={neon === 'on'} />
     <HudBottomLine $isActive={neon === 'on'} $color={color} $clearColor={clearColor} $neon={neon === 'on'} />
     <HudLeftLine $isActive={neon === 'on'} $color={color} $clearColor={clearColor} $neon={neon === 'on'} />
@@ -230,11 +262,39 @@ const PersonagemPage: React.FC = () => {
   const [personagensVinculadosNomes, setPersonagensVinculadosNomes] = React.useState<{ id: number; nome: string }[]>([]);
   const [galleryOpen, setGalleryOpen] = React.useState(true);
   const [mainImageOpen, setMainImageOpen] = React.useState(false);
+  const [mainImageBackground, setMainImageBackground] = React.useState<string | null>(null);
   const [historyModalOpen, setHistoryModalOpen] = React.useState(false);
   const [selectedInventoryItem, setSelectedInventoryItem] = React.useState<Item | null>(null);
   const [activeAbilityTab, setActiveAbilityTab] = React.useState<'skills' | 'magias'>('skills');
   const [itemBaseImages, setItemBaseImages] = React.useState<Record<string, string>>({});
   const [listModal, setListModal] = React.useState<'inventory' | 'implants' | 'abilities' | 'proficiencies' | null>(null);
+  const characterGalleryImages = React.useMemo(
+    () => normalizeGalleryImages(
+      personagem && 'galeriaImagem' in personagem ? personagem.galeriaImagem : undefined,
+    ),
+    [personagem],
+  );
+
+  React.useEffect(() => {
+    let active = true;
+    setMainImageBackground(null);
+
+    const selectBackground = async () => {
+      for (const galleryImage of characterGalleryImages) {
+        const candidateUrl = normalizeImagePath(galleryImage.url);
+        const shape = await detectImageShapeForBackgroundFromUrl(candidateUrl);
+
+        if (!active) return;
+        if (shape === 'square' || shape === 'rectangle') {
+          setMainImageBackground(candidateUrl);
+          return;
+        }
+      }
+    };
+
+    void selectBackground();
+    return () => { active = false; };
+  }, [characterGalleryImages]);
 
   React.useEffect(() => {
     let mounted = true;
@@ -372,8 +432,7 @@ const PersonagemPage: React.FC = () => {
   const loadPercentage = Math.round((currentLoad / loadCapacity) * 100);
   const isOverloaded = currentLoad > loadCapacity;
 
-  const rawGallery = (personagem as any)?.galeriaImagem;
-  const galleryImages = normalizeGalleryImages(rawGallery);
+  const galleryImages = characterGalleryImages;
   const skills = Array.isArray((personagem as any)?.skills) ? (personagem as any).skills.filter(isMeaningfulAbility) : [];
   const magias = Array.isArray((personagem as any)?.magia) ? (personagem as any).magia.filter(isMeaningfulAbility) : [];
   const proficiencias = Array.isArray((personagem as any)?.proficiencias)
@@ -416,7 +475,8 @@ const PersonagemPage: React.FC = () => {
   const isSelectedAbility = (selectedInventoryItem as any)?.__detailType === 'ability';
   const selectedEffect = isSelectedAbility
     ? getAbilityEffect(selectedInventoryItem)
-    : selectedInventoryItem?.efeito;
+    : (selectedInventoryItem?.atributos as Record<string, unknown> | undefined)?.efeito
+      ?? selectedInventoryItem?.efeito;
   const selectedSpecial = (selectedInventoryItem?.atributos as any)?.especial ?? (selectedInventoryItem?.atributos as any)?.especiais?.filter(Boolean).join(', ');
   const selectedAttributeEntries = getAttributeEntries(selectedInventoryItem?.atributos as Record<string, any> | undefined);
   const selectedAbilityEntries = isSelectedAbility ? [
@@ -1025,7 +1085,11 @@ const PersonagemPage: React.FC = () => {
 
         <Lightbox
           isOpen={mainImageOpen}
-          images={imagem ? [{ url: normalizeImagePath(imagem), caption: nome }] : []}
+          images={imagem ? [{
+            url: normalizeImagePath(imagem),
+            caption: nome,
+            backgroundUrl: mainImageBackground || normalizeImagePath(imagem),
+          }] : []}
           onClose={() => setMainImageOpen(false)}
         />
     </PageContainer>
