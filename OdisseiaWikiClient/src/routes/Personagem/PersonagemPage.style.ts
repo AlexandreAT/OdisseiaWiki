@@ -251,11 +251,13 @@ export const CardContent = styled.div<{
     return `1px solid color-mix(in srgb, ${$color ?? 'var(--neonBlue)'} 54%, transparent)`;
   }};
   box-shadow: ${({ neon, $color }) => neon === 'on' ? `inset 0 0 20px ${$color ?? 'var(--neonBlue)'}` : 'none'};
-  clip-path: polygon(
-    12px 0, calc(100% - 12px) 0, 100% 12px,
-    100% calc(100% - 12px), calc(100% - 12px) 100%,
-    12px 100%, 0 calc(100% - 12px), 0 12px
-  );
+  clip-path: ${({ $secondary, neon }) => $secondary && neon === 'off'
+    ? 'polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px))'
+    : `polygon(
+        12px 0, calc(100% - 12px) 0, 100% 12px,
+        100% calc(100% - 12px), calc(100% - 12px) 100%,
+        12px 100%, 0 calc(100% - 12px), 0 12px
+      )`};
 
   &::before {
     content: '';
@@ -263,11 +265,13 @@ export const CardContent = styled.div<{
     inset: 0;
     z-index: 2;
     pointer-events: none;
-    clip-path: polygon(
-      12px 0, calc(100% - 12px) 0, 100% 12px,
-      100% calc(100% - 12px), calc(100% - 12px) 100%,
-      12px 100%, 0 calc(100% - 12px), 0 12px
-    );
+    clip-path: ${({ $secondary, neon }) => $secondary && neon === 'off'
+      ? 'polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px))'
+      : `polygon(
+          12px 0, calc(100% - 12px) 0, 100% 12px,
+          100% calc(100% - 12px), calc(100% - 12px) 100%,
+          12px 100%, 0 calc(100% - 12px), 0 12px
+        )`};
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
@@ -674,6 +678,39 @@ export const HistoryModalHeader = styled.div<{ theme: 'dark' | 'light'; neon: 'o
   display: flex;
   justify-content: space-between;
   align-items: center;
+`;
+
+export const HistoryModalActions = styled.div`
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+`;
+
+export const ItemModalViewButton = styled.button<{ theme: 'dark' | 'light'; neon: 'on' | 'off' }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 8px;
+  border: 1px solid ${({ neon }) => neon === 'on' ? 'var(--clearneonBlue)' : 'rgba(0, 179, 255, 0.52)'};
+  border-radius: 4px;
+  color: ${({ theme }) => theme === 'dark' ? 'var(--whitesmoke)' : 'var(--deepgray)'};
+  background: ${({ theme }) => theme === 'dark' ? 'rgba(0, 12, 28, 0.72)' : 'rgba(255, 255, 255, 0.72)'};
+  cursor: pointer;
+  transition: color 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+
+  svg { font-size: 1.35rem; }
+
+  &:hover,
+  &:focus-visible {
+    color: var(--clearneonBlue);
+    border-color: var(--clearneonBlue);
+    box-shadow: ${({ neon }) => neon === 'on' ? '0 0 9px rgba(0, 204, 255, 0.52)' : 'none'};
+    transform: translateY(-1px);
+    outline: none;
+  }
 `;
 
 export const HistoryModalTitle = styled.h2<{ theme: 'dark' | 'light'; neon: 'on' | 'off' }>`
@@ -1624,11 +1661,17 @@ export const DetailAttributes = styled.div<{ $inline?: boolean }>`
   `}
 `;
 
-export const DetailTextPair = styled.div`
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+export const DetailTextPair = styled.div<{ $stacked?: boolean }>`
+  display: ${({ $stacked }) => $stacked ? 'block' : 'grid'};
+  grid-template-columns: ${({ $stacked }) => $stacked ? 'minmax(0, 1fr)' : 'repeat(2, minmax(0, 1fr))'};
   gap: 12px;
   margin-top: 16px;
+
+  ${({ $stacked }) => $stacked && `
+    > * + * {
+      margin-top: 12px;
+    }
+  `}
 
   @media (max-width: 767px) {
     grid-template-columns: minmax(0, 1fr);

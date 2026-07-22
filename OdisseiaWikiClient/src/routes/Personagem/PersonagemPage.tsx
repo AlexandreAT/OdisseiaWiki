@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { usePersonagem } from './usePersonagem';
-import { PageContainer, TopSection, BottomSection, AvatarWrapper, MetaRow, Sections, CardContent, InfoList, InfoItem, MetaContent, SectionSpacer, AvatarDivController, SatusDivController, StatusList, StatusDiv, HeaderStatusController, StatusController, StatusHeader, StatusBarWrapper, StatusBarFill, InfoControllers, TitleDiv, TagItem, TagList, RelatedLink, HistoryWrapper, HistoryModalOverlay, HistoryModalSheet, HistoryModalHeader, HistoryModalTitle, HistoryModalClose, HistoryModalContent, InfoSpan, BottomInfoLeft, BottomInfoRight, StoryWithImage, StoryImage, HudCornerEl, HudTopLine, HudBottomLine, HudLeftLine, HudRightLine, StatusTopLine, StatusBottomLine, StatusLeftLine, StatusRightLine, BackgroundVideoContainer, BackgroundVideo, BackgroundOverlay, HexagonHud, HexagonBackground, HexagonBorder, HexagonContent, HexagonValue, PageController, PageLoadingState, SectionRow, InventoryList, LoadBar, LoadProgress, ImplantGrid, ImplantMods, SkillGrid, AbilityDescription, AbilityPair, AbilityCard, CooldownBar, CooldownFill, ItemDescriptionPreview, ItemDescriptionLayout, ItemDetailsBody, ViewMoreButton, DetailAttributes, DetailAttribute, DetailTextPair, DetailText, ItemDescriptionImage } from './PersonagemPage.style';
+import { PageContainer, TopSection, BottomSection, AvatarWrapper, MetaRow, Sections, CardContent, InfoList, InfoItem, MetaContent, SectionSpacer, AvatarDivController, SatusDivController, StatusList, StatusDiv, HeaderStatusController, StatusController, StatusHeader, StatusBarWrapper, StatusBarFill, InfoControllers, TitleDiv, TagItem, TagList, RelatedLink, HistoryWrapper, HistoryModalOverlay, HistoryModalSheet, HistoryModalHeader, HistoryModalTitle, HistoryModalClose, HistoryModalContent, HistoryModalActions, ItemModalViewButton, InfoSpan, BottomInfoLeft, BottomInfoRight, StoryWithImage, StoryImage, HudCornerEl, HudTopLine, HudBottomLine, HudLeftLine, HudRightLine, StatusTopLine, StatusBottomLine, StatusLeftLine, StatusRightLine, BackgroundVideoContainer, BackgroundVideo, BackgroundOverlay, HexagonHud, HexagonBackground, HexagonBorder, HexagonContent, HexagonValue, PageController, PageLoadingState, SectionRow, InventoryList, LoadBar, LoadProgress, ImplantGrid, ImplantMods, SkillGrid, AbilityDescription, AbilityPair, AbilityCard, CooldownBar, CooldownFill, ItemDescriptionPreview, ItemDescriptionLayout, ItemDetailsBody, ViewMoreButton, DetailAttributes, DetailAttribute, DetailTextPair, DetailText, ItemDescriptionImage } from './PersonagemPage.style';
 import { PersonagemRichText, FlexRow, MutedText, BoldLabel, ItemThumb, ItemPlaceholder, GalleryToggle, GalleryContent, MaskIcon, AuthorIcon, ItemRow, FlexFill } from './PersonagemPage.style';
 import glassHeart from '../../assets/svg/glass-heart.svg';
 import rollingEnergy from '../../assets/svg/rolling-energy.svg';
@@ -25,6 +25,7 @@ import dna1 from '../../assets/svg/dna1.svg';
 import { SpanLink } from '../../components/Generic/SpanLink/SpanLink';
 import { getPersonagensByIds } from '../../services/personagensService';
 import CloseIcon from '@mui/icons-material/Close';
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import AccountCircleOutlinedIcon from '@mui/icons-material/AccountCircleOutlined';
 import backgroundVideo from '../../assets/backgroundLinesScifiAnimation.mp4';
 import { ScrollRevealBlock } from '../../components/Generic/ScrollRevealBlock';
@@ -40,7 +41,94 @@ import { DEFAULT_MAX_CHARACTER_LEVEL, getDefaultXpRequiredForLevel } from '../..
 import { Lightbox } from '../Wiki/components/blocks/shared/Lightbox/Lightbox';
 import { RelatedPageLink, RelatedPages, RelatedPagesTitle } from '../Cidade/CidadePage.style';
 import { detectImageShapeForBackgroundFromUrl } from '../../utils/imageDisplayShape';
-import { ARMA_TIPO_DANO_OPTIONS, ARMA_TIPO_OPTIONS, normalizeDadoAcerto } from '../../constants';
+import {
+  ARMA_TIPO_DANO_OPTIONS,
+  ARMA_TIPO_OPTIONS,
+  ITEM_TIPO_OPTIONS,
+  normalizeArmaTipo,
+  normalizeDadoAcerto,
+  normalizeTrajeTipo,
+  TRAJE_TIPO_OPTIONS,
+} from '../../constants';
+import { mapToItem } from '../../utils/mapItem';
+import { openItemPreview } from '../../utils/itemPreview';
+
+const isObjectRecord = (value: unknown): value is Record<string, unknown> => (
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+);
+
+const mergeItemRecords = (
+  base: Record<string, unknown>,
+  custom: Record<string, unknown>,
+): Record<string, unknown> => Object.entries(custom).reduce<Record<string, unknown>>((result, [key, value]) => {
+  const baseValue = result[key];
+  result[key] = isObjectRecord(baseValue) && isObjectRecord(value)
+    ? mergeItemRecords(baseValue, value)
+    : value;
+  return result;
+}, { ...base });
+
+const mergeItemWithBase = (item: Item, baseItem?: Item): Item => {
+  if (!baseItem) return item;
+
+  const baseAttributes = isObjectRecord(baseItem.atributos) ? baseItem.atributos : {};
+  const customAttributes = isObjectRecord(item.atributos) ? item.atributos : {};
+
+  return {
+    ...baseItem,
+    ...item,
+    id: item.id ?? baseItem.id,
+    idItemBase: item.idItemBase ?? baseItem.id,
+    nome: item.nome?.trim() || baseItem.nome,
+    tipo: item.tipo ?? baseItem.tipo,
+    quantidade: item.quantidade ?? baseItem.quantidade,
+    descricao: item.descricao ?? baseItem.descricao,
+    efeito: item.efeito ?? baseItem.efeito,
+    imagem: item.imagem?.trim() || baseItem.imagem,
+    atributos: mergeItemRecords(baseAttributes, customAttributes),
+    tags: item.tags?.length ? item.tags : baseItem.tags,
+  };
+};
+
+const parseStoredValue = (value: unknown): unknown => {
+  if (typeof value !== 'string') return value;
+  const trimmed = value.trim();
+  if (!trimmed || (!trimmed.startsWith('{') && !trimmed.startsWith('['))) return value;
+
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return value;
+  }
+};
+
+const normalizeCharacterItem = (source: unknown): Item => {
+  const raw = isObjectRecord(source) ? source : {};
+  const read = (...keys: string[]) => keys
+    .map((key) => raw[key])
+    .find((value) => value !== undefined && value !== null);
+  const tagsValue = parseStoredValue(read('tags', 'Tags'));
+
+  return mapToItem({
+    iditem: String(read('id', 'Id', 'iditem', 'Iditem') ?? '') || undefined,
+    iditemBase: String(read('idItemBase', 'IdItemBase', 'iditemBase', 'IditemBase') ?? '') || undefined,
+    nome: String(read('nome', 'Nome', 'nomeItem', 'NomeItem') ?? 'Item sem nome'),
+    tipo: read('tipo', 'Tipo') as string,
+    quantidade: Number(read('quantidade', 'Quantidade', 'qtd', 'qtde') ?? 1),
+    peso: read('peso', 'Peso') === undefined ? undefined : Number(read('peso', 'Peso')),
+    discricao: Number(read('discricao', 'Discricao') ?? 0),
+    descricao: parseStoredValue(read('descricao', 'Descricao')) as Item['descricao'],
+    efeito: read('efeito', 'Efeito') as string | undefined,
+    imagem: read('imagem', 'Imagem') as string | undefined,
+    atributosJson: parseStoredValue(read('atributos', 'Atributos', 'atributosJson', 'AtributosJson')) as Record<string, unknown>,
+    tags: Array.isArray(tagsValue) ? tagsValue.map(String) : undefined,
+    visivel: read('visivel', 'Visivel') as boolean | undefined,
+    dataCriacao: read('dataCriacao', 'DataCriacao') as string | undefined,
+    idpersonagem: read('idPersonagem', 'IdPersonagem', 'idpersonagem', 'Idpersonagem') === undefined
+      ? undefined
+      : Number(read('idPersonagem', 'IdPersonagem', 'idpersonagem', 'Idpersonagem')),
+  });
+};
 
 const detailLabels: Record<string, string> = {
   curta: 'Dano Curto',
@@ -51,6 +139,7 @@ const detailLabels: Record<string, string> = {
   danoBase: 'Dano Base',
   tipoArma: 'Tipo de Arma',
   tipoDano: 'Tipo de Dano',
+  tipoTraje: 'Tipo de Traje',
   cadencia: 'Cadência por Turno',
   capacidadeUso: 'Capacidade de Uso antes da Pausa',
   capacidadeMunicao: 'Capacidade de Munição',
@@ -65,11 +154,23 @@ const formatDetailLabel = (key: string) => detailLabels[key] ?? key.replace(/([A
 
 const formatDetailValue = (key: string, value: unknown) => {
   if (key === 'tipoArma') {
-    return ARMA_TIPO_OPTIONS.find((option) => option.value === value)?.label ?? String(value);
+    const normalizedType = normalizeArmaTipo(value);
+    const fullLabel = ARMA_TIPO_OPTIONS.find((option) => option.value === normalizedType)?.label;
+    return fullLabel
+      ?.replace(/^Arma de fogo\s+—\s+/i, '')
+      .replace(/^Arma branca\s+—\s+/i, 'Arma ')
+      .replace(/^Corpo a corpo\s+—\s+/i, '')
+      .replace(/^Arma pesada\s+—\s+/i, 'Pesada: ')
+      ?? String(value);
   }
 
   if (key === 'tipoDano') {
     return ARMA_TIPO_DANO_OPTIONS.find((option) => option.value === value)?.label ?? String(value);
+  }
+
+  if (key === 'tipoTraje') {
+    const normalizedType = normalizeTrajeTipo(value);
+    return TRAJE_TIPO_OPTIONS.find((option) => option.value === normalizedType)?.label ?? String(value);
   }
 
   if (key === 'acerto') {
@@ -106,9 +207,12 @@ const InventarioItem: React.FC<InventarioItemProps> = ({ item, itemBaseImage, on
   const quantidade = item.quantidade ?? item.qtd ?? item.qtde ?? null;
   const imagem = getItemImage(item, itemBaseImage ? { imagem: itemBaseImage } : undefined);
   const { color, clearColor } = getColorVars(colorScheme);
+  const summary = hasRichTextValue(item.descricao)
+    ? item.descricao
+    : item.atributos?.efeito ?? item.efeito;
 
   return (
-    <ItemRow $clickable={Boolean(item.descricao)} $color={color} $clearColor={clearColor} onClick={() => item.descricao && onOpenDescription(item)}>
+    <ItemRow $clickable $color={color} $clearColor={clearColor} onClick={() => onOpenDescription(item)}>
       {imagem ? (
         <ItemThumb $color={color} $clearColor={clearColor} src={normalizeImagePath(imagem)} alt={nomeItem} />
       ) : (
@@ -116,7 +220,7 @@ const InventarioItem: React.FC<InventarioItemProps> = ({ item, itemBaseImage, on
       )}
       <FlexFill>
         <BoldLabel $color={color}>{nomeItem}</BoldLabel>
-        {item.descricao && <ItemDescriptionPreview><RichTextDisplay content={item.descricao} /></ItemDescriptionPreview>}
+        {summary && <ItemDescriptionPreview><RichTextDisplay content={summary} /></ItemDescriptionPreview>}
       </FlexFill>
       <MutedText>{quantidade ? `x${quantidade}` : ''}</MutedText>
     </ItemRow>
@@ -127,14 +231,16 @@ const ImplantItem: React.FC<{ item: Item; itemBaseImage?: string; onOpenDescript
   const attributes = item.atributos as { material?: string; modificacoes?: Array<{ nome: string }>; lacrimas?: Array<{ nome: string }> } | undefined;
   const mods = [...(attributes?.modificacoes ?? []), ...(attributes?.lacrimas ?? [])];
   const imagem = getItemImage(item, itemBaseImage ? { imagem: itemBaseImage } : undefined);
-  const hasDetails = Boolean(item.descricao || Object.values((attributes ?? {}) as Record<string, unknown>).some((value) => value !== undefined && value !== null && value !== '' && value !== false));
+  const summary = hasRichTextValue(item.descricao)
+    ? item.descricao
+    : (attributes as Record<string, unknown> | undefined)?.efeito ?? item.efeito;
 
   return (
-    <ItemRow $clickable={Boolean(onOpenDescription && hasDetails)} $color="var(--neonPurple)" $clearColor="var(--clearneonPurple)" onClick={() => onOpenDescription && hasDetails && onOpenDescription(item)}>
+    <ItemRow $clickable={Boolean(onOpenDescription)} $color="var(--neonPurple)" $clearColor="var(--clearneonPurple)" onClick={() => onOpenDescription?.(item)}>
       {imagem ? <ItemThumb $color="var(--neonPurple)" $clearColor="var(--clearneonPurple)" src={normalizeImagePath(imagem)} alt={item.nome} /> : <ItemPlaceholder $color="var(--neonPurple)" $clearColor="var(--clearneonPurple)" aria-label="Implante sem imagem"><Inventory2OutlinedIcon /></ItemPlaceholder>}
       <FlexFill>
       <BoldLabel $color="var(--neonPurple)">{item.nome || 'Implante sem nome'}</BoldLabel>
-      {item.descricao && <ItemDescriptionPreview><RichTextDisplay content={item.descricao} /></ItemDescriptionPreview>}
+      {summary && <ItemDescriptionPreview><RichTextDisplay content={summary} /></ItemDescriptionPreview>}
       <ImplantMods>{mods.length > 0 ? mods.map((mod, index) => <span key={`${mod.nome}-${index}`}>◊ {mod.nome}</span>) : 'Sem modificacoes'}</ImplantMods>
       </FlexFill>
     </ItemRow>
@@ -266,7 +372,7 @@ const PersonagemPage: React.FC = () => {
   const [historyModalOpen, setHistoryModalOpen] = React.useState(false);
   const [selectedInventoryItem, setSelectedInventoryItem] = React.useState<Item | null>(null);
   const [activeAbilityTab, setActiveAbilityTab] = React.useState<'skills' | 'magias'>('skills');
-  const [itemBaseImages, setItemBaseImages] = React.useState<Record<string, string>>({});
+  const [itemBaseItems, setItemBaseItems] = React.useState<Record<string, Item>>({});
   const [listModal, setListModal] = React.useState<'inventory' | 'implants' | 'abilities' | 'proficiencies' | null>(null);
   const characterGalleryImages = React.useMemo(
     () => normalizeGalleryImages(
@@ -340,12 +446,12 @@ const PersonagemPage: React.FC = () => {
 
   React.useEffect(() => {
     const inventory = Array.isArray((personagem as any)?.inventarioJson)
-      ? (personagem as any).inventarioJson as Item[]
+      ? ((personagem as any).inventarioJson as unknown[]).map(normalizeCharacterItem)
       : [];
     const itemBaseIds = [...new Set(inventory.map((item) => item.idItemBase).filter(Boolean))] as string[];
 
     if (itemBaseIds.length === 0) {
-      setItemBaseImages({});
+      setItemBaseItems({});
       return;
     }
 
@@ -354,13 +460,13 @@ const PersonagemPage: React.FC = () => {
       .then((items) => {
         if (!active) return;
 
-        setItemBaseImages(items.reduce<Record<string, string>>((images, item) => {
-          if (item.iditem && item.imagem) images[item.iditem] = item.imagem;
-          return images;
+        setItemBaseItems(items.reduce<Record<string, Item>>((baseItems, itemPayload) => {
+          if (itemPayload.iditem) baseItems[itemPayload.iditem] = mapToItem(itemPayload);
+          return baseItems;
         }, {}));
       })
       .catch(() => {
-        if (active) setItemBaseImages({});
+        if (active) setItemBaseItems({});
       });
 
     return () => { active = false; };
@@ -422,7 +528,11 @@ const PersonagemPage: React.FC = () => {
   const hasInformation = Boolean(tagsList || costumesList || hasVinculados || tracosList || hasInfoExtras);
 
   const rawItems = (personagem as any)?.inventarioJson;
-  const allItems: Item[] = Array.isArray(rawItems) ? rawItems : [];
+  const allItems: Item[] = Array.isArray(rawItems)
+    ? rawItems
+        .map(normalizeCharacterItem)
+        .map((item) => mergeItemWithBase(item, item.idItemBase ? itemBaseItems[item.idItemBase] : undefined))
+    : [];
   const inventoryItems = getInventarioItems(allItems);
   const implantItems = getProtesesItems(allItems);
   const currentLoad = inventoryItems.reduce((total, item) => (
@@ -469,16 +579,23 @@ const PersonagemPage: React.FC = () => {
     : 'Sem descricao registrada.';
   const cooldownValue = Number((personagem as any)?.cooldownUltimate ?? ultimate?.cooldown) || 0;
   const selectedInventoryItemImage = selectedInventoryItem
-    ? getItemImage(selectedInventoryItem, selectedInventoryItem.idItemBase ? { imagem: itemBaseImages[selectedInventoryItem.idItemBase] } : undefined)
+    ? getItemImage(selectedInventoryItem, selectedInventoryItem.idItemBase ? itemBaseItems[selectedInventoryItem.idItemBase] : undefined)
     : undefined;
   const selectedDescription = selectedInventoryItem?.descricao;
   const isSelectedAbility = (selectedInventoryItem as any)?.__detailType === 'ability';
+  const isSelectedInventoryItem = !(selectedInventoryItem as any)?.__detailType;
   const selectedEffect = isSelectedAbility
     ? getAbilityEffect(selectedInventoryItem)
     : (selectedInventoryItem?.atributos as Record<string, unknown> | undefined)?.efeito
       ?? selectedInventoryItem?.efeito;
   const selectedSpecial = (selectedInventoryItem?.atributos as any)?.especial ?? (selectedInventoryItem?.atributos as any)?.especiais?.filter(Boolean).join(', ');
-  const selectedAttributeEntries = getAttributeEntries(selectedInventoryItem?.atributos as Record<string, any> | undefined);
+  const selectedItemTypeLabel = isSelectedInventoryItem
+    ? ITEM_TIPO_OPTIONS.find((option) => option.value === selectedInventoryItem?.tipo)?.label
+    : undefined;
+  const selectedAttributeEntries = [
+    ...(selectedItemTypeLabel ? [{ label: 'Tipo de Item', value: selectedItemTypeLabel }] : []),
+    ...getAttributeEntries(selectedInventoryItem?.atributos as Record<string, any> | undefined),
+  ];
   const selectedAbilityEntries = isSelectedAbility ? [
     Array.isArray((selectedInventoryItem as any)?.elemento) && (selectedInventoryItem as any).elemento.length > 0
       ? { label: 'Elemento', value: (selectedInventoryItem as any).elemento.join(', ') }
@@ -806,9 +923,23 @@ const PersonagemPage: React.FC = () => {
             <HistoryModalSheet theme={theme} neon={neon}>
               <HistoryModalHeader theme={theme} neon={neon}>
                 <HistoryModalTitle theme={theme} neon={neon}>{selectedInventoryItem.nome}</HistoryModalTitle>
-                <HistoryModalClose theme={theme} neon={neon} onClick={() => setSelectedInventoryItem(null)} title="Fechar" aria-label="Fechar descrição do item" autoFocus>
-                  <CloseIcon />
-                </HistoryModalClose>
+                <HistoryModalActions>
+                  {isSelectedInventoryItem && (
+                    <ItemModalViewButton
+                      type="button"
+                      theme={theme}
+                      neon={neon}
+                      onClick={() => openItemPreview(selectedInventoryItem)}
+                      title="Abrir página do item"
+                      aria-label="Abrir página completa do item em outra guia"
+                    >
+                      <VisibilityOutlinedIcon />
+                    </ItemModalViewButton>
+                  )}
+                  <HistoryModalClose theme={theme} neon={neon} onClick={() => setSelectedInventoryItem(null)} title="Fechar" aria-label="Fechar descrição do item" autoFocus>
+                    <CloseIcon />
+                  </HistoryModalClose>
+                </HistoryModalActions>
               </HistoryModalHeader>
               <HistoryModalContent theme={theme} neon={neon}>
                 <ItemDescriptionLayout $withoutMedia={isSelectedAbility || !selectedInventoryItemImage}>
@@ -818,19 +949,19 @@ const PersonagemPage: React.FC = () => {
                   <ItemDetailsBody>
                     {selectedDescription && <div className="ProseMirror"><RichTextDisplay content={selectedDescription} /></div>}
                     {isSelectedAbility && selectedEffect && <DetailText><BoldLabel>EFEITO</BoldLabel><RichTextDisplay content={selectedEffect} /></DetailText>}
-                    {(detailAttributeEntries.length > 0 || selectedSpecial) && (
+                    {detailAttributeEntries.length > 0 && (
                       <DetailAttributes $inline={isSelectedAbility}>
                         {detailAttributeEntries.map((entry) => <DetailAttribute key={`${entry.label}-${entry.value}`}><span>{entry.label}</span><strong>{entry.value}</strong></DetailAttribute>)}
-                        {selectedSpecial && <DetailAttribute className="detail-special"><span>Especial</span><strong>{selectedSpecial}</strong></DetailAttribute>}
                       </DetailAttributes>
+                    )}
+                    {!isSelectedAbility && (selectedSpecial || (selectedEffect && selectedEffect !== selectedDescription)) && (
+                      <DetailTextPair $stacked>
+                        {selectedSpecial && <DetailText className="detail-special"><BoldLabel>ESPECIAL</BoldLabel><RichTextDisplay content={selectedSpecial} /></DetailText>}
+                        {selectedEffect && selectedEffect !== selectedDescription && <DetailText><BoldLabel>EFEITO</BoldLabel><RichTextDisplay content={selectedEffect} /></DetailText>}
+                      </DetailTextPair>
                     )}
                   </ItemDetailsBody>
                 </ItemDescriptionLayout>
-                {!isSelectedAbility && selectedEffect && selectedEffect !== selectedDescription && (
-                  <DetailTextPair>
-                    {selectedEffect && selectedEffect !== selectedDescription && <DetailText><BoldLabel>EFEITO</BoldLabel><RichTextDisplay content={selectedEffect} /></DetailText>}
-                  </DetailTextPair>
-                )}
               </HistoryModalContent>
             </HistoryModalSheet>
           </HistoryModalOverlay>,
@@ -848,7 +979,7 @@ const PersonagemPage: React.FC = () => {
               <InventarioItem
                 key={item.id ?? `${item.nome}-${index}`}
                 item={item}
-                itemBaseImage={item.idItemBase ? itemBaseImages[item.idItemBase] : undefined}
+                itemBaseImage={item.idItemBase ? itemBaseItems[item.idItemBase]?.imagem : undefined}
                 onOpenDescription={setSelectedInventoryItem}
               />
             )}
@@ -862,7 +993,7 @@ const PersonagemPage: React.FC = () => {
             color="var(--neonPurple)"
             emptyMessage="Sem proteses ou implantes"
             onClose={() => setListModal(null)}
-            renderItem={(item, index) => <ImplantItem key={item.id ?? `${item.nome}-${index}`} item={item} itemBaseImage={item.idItemBase ? itemBaseImages[item.idItemBase] : undefined} onOpenDescription={setSelectedInventoryItem} />}
+            renderItem={(item, index) => <ImplantItem key={item.id ?? `${item.nome}-${index}`} item={item} itemBaseImage={item.idItemBase ? itemBaseItems[item.idItemBase]?.imagem : undefined} onOpenDescription={setSelectedInventoryItem} />}
           />
         )}
 
@@ -936,7 +1067,7 @@ const PersonagemPage: React.FC = () => {
                 {inventoryItems.length > 0 ? <>
                   <InventoryList>
                     {visibleInventoryItems.map((item, index) => (
-                      <InventarioItem key={item.id ?? `${item.nome}-${index}`} item={item} itemBaseImage={item.idItemBase ? itemBaseImages[item.idItemBase] : undefined} onOpenDescription={setSelectedInventoryItem} />
+                      <InventarioItem key={item.id ?? `${item.nome}-${index}`} item={item} itemBaseImage={item.idItemBase ? itemBaseItems[item.idItemBase]?.imagem : undefined} onOpenDescription={setSelectedInventoryItem} />
                     ))}
                   </InventoryList>
                   {inventoryItems.length > visibleInventoryItems.length && (
@@ -955,7 +1086,7 @@ const PersonagemPage: React.FC = () => {
                 {implantItems.length > 0 ? <>
                 <ImplantGrid>
                   {visibleImplantItems.map((item, index) => {
-                    return <ImplantItem key={item.id ?? `${item.nome}-${index}`} item={item} itemBaseImage={item.idItemBase ? itemBaseImages[item.idItemBase] : undefined} onOpenDescription={setSelectedInventoryItem} />;
+                    return <ImplantItem key={item.id ?? `${item.nome}-${index}`} item={item} itemBaseImage={item.idItemBase ? itemBaseItems[item.idItemBase]?.imagem : undefined} onOpenDescription={setSelectedInventoryItem} />;
 
                     /*
                     return (
