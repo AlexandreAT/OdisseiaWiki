@@ -26,6 +26,7 @@ const getEmptyAtributos = (tipo: ItemTipo): any => {
       };
     case "traje":
       return {
+        tipoTraje: undefined,
         armaduraBase: 0,
         protecaoBase: 0,
         escudoBase: 0,
@@ -126,6 +127,7 @@ export const useFormItem = (initialItem?: ItemPayload, contentType?: string) => 
   );
 
   const [peso, setPeso] = useState<number | undefined>(initialItem?.peso);
+  const [discricao, setDiscricao] = useState<number>(initialItem?.discricao ?? 0);
   const [quantidade, setQuantidade] = useState(initialItem?.quantidade || 1);
 
   const [imagemUrl, setImagemUrl] = useState(initialItem?.imagem || "");
@@ -262,6 +264,7 @@ export const useFormItem = (initialItem?: ItemPayload, contentType?: string) => 
     setDescricao("");
 
     setPeso(undefined);
+    setDiscricao(0);
     setQuantidade(1);
     setImagemUrl("");
     setImagemFile(null);
@@ -314,6 +317,7 @@ export const useFormItem = (initialItem?: ItemPayload, contentType?: string) => 
         tipo: capitalizeFirst(tipo),
         descricao: prepareForAPI(descricao),
         peso,
+        discricao,
         quantidade,
         efeito: undefined,
         imagem: imagemPath,
@@ -388,6 +392,8 @@ export const useFormItem = (initialItem?: ItemPayload, contentType?: string) => 
     setDescricao,
     peso,
     setPeso,
+    discricao,
+    setDiscricao,
     quantidade,
     setQuantidade,
     imagemUrl,

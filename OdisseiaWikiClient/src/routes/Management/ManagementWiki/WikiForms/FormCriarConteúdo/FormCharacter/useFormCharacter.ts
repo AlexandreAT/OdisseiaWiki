@@ -18,6 +18,7 @@ import { TOTAL_STEPS } from '../../../../../../constants';
 import { ensureContentCategoryTag, isContentCategoryTag } from '../../../../../../utils/contentCategoryTag';
 import { CharacterStatusExtras, DEFAULT_CHARACTER_STATUS_EXTRAS } from '../../../../../../utils/characterStatus';
 import { getApiErrorMessage } from '../../../../../../utils/apiError';
+import { addOrReplaceEmptyItem } from '../../../../../../utils/itemInventorySections';
 
 const serializeRichText = (value: any): string => {
   if (value === undefined || value === null) return '';
@@ -319,17 +320,7 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
   }, [searchItensTerm, allItens]);
 
   const handleSelectItem = useCallback((item: Item) => {
-    console.log("🚀 ~ handleSelectItem ~ item:", item)
-    setItens(prev => {
-      const updated = [...prev, {
-        ...item,
-        id: crypto.randomUUID(),
-        idItemBase: item.id,
-        quantidade: 1,
-      }];
-      console.log("🚀 ~ handleSelectItem ~ updated:", updated)
-      return updated;
-    });
+    setItens((previousItems) => addOrReplaceEmptyItem(previousItems, item));
   }, []);
 
   const searchPersonagens = useCallback((query: string) => {

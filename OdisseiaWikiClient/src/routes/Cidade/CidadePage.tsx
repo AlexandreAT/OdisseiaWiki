@@ -48,6 +48,7 @@ import {
   GalleryModalViewport,
   HudPanel,
   HudCornerAccent,
+  HudBorderLine,
   MiddleColumn,
   ModalCharacterCard,
   ModalDescription,
@@ -98,6 +99,14 @@ const HudCorners = ({ neon }: { neon: boolean }) => (
   <>
     <HudCornerAccent $position="top-right" $neon={neon} aria-hidden="true" />
     <HudCornerAccent $position="bottom-left" $neon={neon} aria-hidden="true" />
+    {neon && <>
+      <HudCornerAccent $position="top-left" $neon aria-hidden="true" />
+      <HudCornerAccent $position="bottom-right" $neon aria-hidden="true" />
+    </>}
+    <HudBorderLine $position="top" $isActive={neon} aria-hidden="true" />
+    <HudBorderLine $position="right" $isActive={neon} aria-hidden="true" />
+    <HudBorderLine $position="bottom" $isActive={neon} aria-hidden="true" />
+    <HudBorderLine $position="left" $isActive={neon} aria-hidden="true" />
   </>
 );
 

@@ -31,6 +31,16 @@ const ModalComponent = ({
 }: ModalProps) => {
     const [modalRoot, setModalRoot] = useState<HTMLElement | null>(null);
     const closeButtonRef = useRef<HTMLButtonElement>(null);
+    const onCloseRef = useRef(onClose);
+    const onSubmitRef = useRef(onSubmit);
+
+    useEffect(() => {
+        onCloseRef.current = onClose;
+    }, [onClose]);
+
+    useEffect(() => {
+        onSubmitRef.current = onSubmit;
+    }, [onSubmit]);
 
     useEffect(() => {
         // Busca ou cria o elemento modal-root
@@ -44,12 +54,12 @@ const ModalComponent = ({
     }, []);
 
     const handleDefaultClose = useCallback(() => {
-        onClose?.();
-    }, [onClose]);
+        onCloseRef.current?.();
+    }, []);
 
     const handleDefaultSubmit = useCallback(() => {
-        onSubmit?.();
-    }, [onSubmit]);
+        onSubmitRef.current?.();
+    }, []);
 
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {

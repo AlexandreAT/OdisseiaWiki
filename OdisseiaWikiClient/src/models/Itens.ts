@@ -34,6 +34,8 @@ export type ArmaTipoDano =
   | "verdadeiro"
   | "queda";
 
+export type TrajeTipo = "colete" | "traje" | "armor_core";
+
 export type JSONContent = {
   type?: string;
   attrs?: Record<string, any>;
@@ -55,6 +57,7 @@ export interface Item {
   tipo: ItemTipo;
   quantidade: number;
   peso?: number;
+  discricao?: number;
   descricao?: JSONContent | string;
   /** @deprecated O valor canônico agora fica em atributos.efeito. */
   efeito?: string;
@@ -107,6 +110,7 @@ export interface ArmaAtributos {
 
 export interface TrajeAtributos {
   efeito?: string;
+  tipoTraje?: TrajeTipo;
   armaduraBase: number;
   protecaoBase: number;
   escudoBase: number;

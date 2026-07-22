@@ -30,6 +30,7 @@ namespace OdisseiaWiki.Services
                 Tipo = i.Tipo,
                 Quantidade = i.Quantidade,
                 Peso = i.Peso,
+                Discricao = i.Discricao,
                 Descricao = RichTextHelper.DeserializeRichText(i.Descricao),
                 Efeito = i.Efeito,
                 Imagem = i.Imagem,
@@ -59,6 +60,7 @@ namespace OdisseiaWiki.Services
                 Tipo = item.Tipo,
                 Quantidade = item.Quantidade,
                 Peso = item.Peso,
+                Discricao = item.Discricao,
                 Descricao = RichTextHelper.DeserializeRichText(item.Descricao),
                 Efeito = item.Efeito,
                 Imagem = item.Imagem,
@@ -85,6 +87,7 @@ namespace OdisseiaWiki.Services
                 Tipo = dto.Tipo,
                 Descricao = RichTextHelper.SerializeRichText(dto.Descricao),
                 Peso = dto.Peso,
+                Discricao = dto.Discricao,
                 Quantidade = dto.Quantidade,
                 Efeito = dto.Efeito,
                 Imagem = dto.Imagem,
@@ -117,6 +120,7 @@ namespace OdisseiaWiki.Services
                 ? RichTextHelper.SerializeRichText(dto.Descricao)
                 : item.Descricao;
             item.Peso = dto.Peso;
+            item.Discricao = dto.Discricao;
             item.Quantidade = dto.Quantidade;
             item.Efeito = dto.Efeito;
             item.Imagem = dto.Imagem;
@@ -162,6 +166,7 @@ namespace OdisseiaWiki.Services
                 Tipo = i.Tipo,
                 Quantidade = i.Quantidade,
                 Peso = i.Peso,
+                Discricao = i.Discricao,
                 Descricao = RichTextHelper.DeserializeRichText(i.Descricao),
                 Efeito = i.Efeito,
                 Imagem = i.Imagem,

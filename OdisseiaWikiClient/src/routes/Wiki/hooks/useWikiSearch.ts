@@ -378,14 +378,7 @@ export const useWikiSearch = () => {
   }, [navigate]);
 
   const handleResultSelect = useCallback((item: WikiSearchItem) => {
-    const isUnimplementedEntity = ['races', 'items'].includes(item.type);
-
-    navigate(item.route, isUnimplementedEntity ? {
-      state: {
-        errorTitle: 'Página ainda não disponível',
-        errorDescription: `A página dinâmica de ${item.title} ainda está em desenvolvimento.`,
-      },
-    } : undefined);
+    navigate(item.route);
   }, [navigate]);
 
   return {

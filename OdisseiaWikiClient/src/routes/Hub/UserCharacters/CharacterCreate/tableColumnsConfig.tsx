@@ -7,21 +7,23 @@ import { CyberButton } from '../../../../components/Generic/HighlightButton/High
 import { Modal } from '../../../../components/Generic/Modal/Modal';
 import RichTextModal from '../../../../components/Generic/RichTextModal';
 import { atributosFormMap, atributosMagiaFormMap, atributosSkillFormMap } from '../../../Management/ManagementWiki/WikiForms/FormCriarConteúdo/FormCharacter/MapItensForm';
+import { ItemTableGeneralAttributes } from '../../../Management/ManagementWiki/WikiForms/FormCriarConteúdo/FormCharacter/FormCharacter.style';
 import { getTextPreview } from '../../../../utils/richTextHelpers';
+import { InputText } from '../../../../components/Generic/InputText/InputText';
 
 const RichTextCellEditor = memo(({ 
   value, 
-  onChange, 
-  theme, 
+  onChange,
+  theme,
   neon,
   title,
   placeholder,
   emptyLabel,
   previewLength = 40,
 }: { 
-  value: any; 
-  onChange: (v: any) => void; 
-  theme: 'dark' | 'light'; 
+  value: any;
+  onChange: (v: any) => void;
+  theme: 'dark' | 'light';
   neon: 'on' | 'off';
   title: string;
   placeholder: string;
@@ -108,17 +110,19 @@ const RichTextCellEditor = memo(({
   );
 });
 
-const ItemAtributosEditor = memo(({ 
-  row, 
-  value, 
-  onChange, 
-  theme, 
+const ItemAtributosEditor = memo(({
+  row,
+  value,
+  onChange,
+  onRowChange,
+  theme,
   neon 
 }: { 
   row: Item; 
-  value: any; 
-  onChange: (v: any) => void; 
-  theme: 'dark' | 'light'; 
+  value: any;
+  onChange: (v: any) => void;
+  onRowChange: (row: Item) => void;
+  theme: 'dark' | 'light';
   neon: 'on' | 'off';
 }) => {
   const [open, setOpen] = React.useState(false);
@@ -145,6 +149,20 @@ const ItemAtributosEditor = memo(({
           width="1100px"
           mobileInset
         >
+          <ItemTableGeneralAttributes theme={theme} neon={neon}>
+            <InputText
+              label="Discrição (-/+)"
+              type="number"
+              value={row.discricao ?? 0}
+              onChange={(event) => onRowChange({
+                ...row,
+                discricao: event.target.value === '' ? 0 : Number(event.target.value),
+              })}
+              theme={theme}
+              neon={neon}
+              width="100%"
+            />
+          </ItemTableGeneralAttributes>
           <FormComponent value={attributesWithEffect} onChange={onChange} theme={theme} neon={neon} />
         </Modal>
       )}
@@ -155,7 +173,8 @@ const ItemAtributosEditor = memo(({
   return prevProps.value === nextProps.value && 
          prevProps.row.tipo === nextProps.row.tipo &&
          prevProps.row.nome === nextProps.row.nome &&
-         prevProps.row.efeito === nextProps.row.efeito;
+         prevProps.row.efeito === nextProps.row.efeito &&
+         prevProps.row.discricao === nextProps.row.discricao;
 });
 
 const SkillAtributosEditor = memo(({ 
@@ -245,7 +264,7 @@ const MagiaAtributosEditor = memo(({
 const baseItemColumns = [
   { key: "nome", label: "Nome", inputType: "text", width: 200 },
   { key: "quantidade", label: "Qtd", inputType: "number", width: 80 },
-  { key: "peso", label: "Peso", inputType: "number", width: 80 },
+  { key: "peso", label: "Espaço", inputType: "number", width: 80 },
   {
     key: "tipo",
     label: "Tipo",
@@ -351,8 +370,15 @@ export const createItemColumns = (theme: 'dark' | 'light', neon: 'on' | 'off') =
   {
     key: "atributos",
     label: "Atributos",
-    customRender: (value: any, row: Item, onChange: (v: any) => void) => (
-      <ItemAtributosEditor row={row} value={value} onChange={onChange} theme={theme} neon={neon} />
+    customRender: (value: any, row: Item, onChange: (v: any) => void, onRowChange: (row: Item) => void) => (
+      <ItemAtributosEditor
+        row={row}
+        value={value}
+        onChange={onChange}
+        onRowChange={onRowChange}
+        theme={theme}
+        neon={neon}
+      />
     )
   } as any,
 ];

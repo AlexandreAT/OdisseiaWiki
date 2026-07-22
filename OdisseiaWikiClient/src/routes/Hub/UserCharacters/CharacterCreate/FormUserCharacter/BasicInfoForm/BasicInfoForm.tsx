@@ -18,7 +18,8 @@ import { HorizontalList } from '../../../../../../components/Generic/HorizontalL
 import { DataTable } from '../../../../../../components/Generic/DataTable/DataTable';
 import { TRAITS_OPTIONS, ALIGNMENT_OPTIONS } from '../../constants';
 import { BasicInfoFormProps } from './BasicInfoForm.type';
-import { getInventarioItems, getProtesesItems, getProtesesTableItems, replaceItemSection } from '../../../../../../utils/itemInventorySections';
+import { getInventarioItems, getProtesesItems, getProtesesTableItems, isEmptyItemRow, replaceItemSection } from '../../../../../../utils/itemInventorySections';
+import { openItemPreview } from '../../../../../../utils/itemPreview';
 
 export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
   theme,
@@ -333,6 +334,8 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
           searchData={getInventarioItems(listItens)}
           searchKeys={['nome', 'tipo', 'descricao']}
           onSelectSearch={(item) => item.tipo !== 'implante' && handleSelectItem(item)}
+          isRowEmpty={isEmptyItemRow}
+          onViewRow={openItemPreview}
           theme={theme}
           neon={neon}
         />
@@ -349,6 +352,8 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
           searchData={getProtesesItems(listItens)}
           searchKeys={['nome', 'tipo', 'descricao']}
           onSelectSearch={(item) => item.tipo === 'implante' && handleSelectItem(item)}
+          isRowEmpty={isEmptyItemRow}
+          onViewRow={openItemPreview}
           theme={theme}
           neon={neon}
         />
