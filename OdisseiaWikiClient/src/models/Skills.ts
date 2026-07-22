@@ -1,3 +1,4 @@
+import { DadoAcerto } from './Dados';
 import { JSONContent } from './Characters';
 
 export type SkillTipoString = "ataque" | "suporte" | "buff" | "debuff";
@@ -26,26 +27,26 @@ export interface AtaqueAtributos {
     especial: string;
     cooldown: string;
     bonus: string;
-    acerto: string;
+    acerto?: DadoAcerto;
 }
 
 export interface SuporteAtributos {
     especial: string;
     cooldown: string;
     bonus: string;
-    acerto: string;
+    acerto?: DadoAcerto;
 }
 
 export interface BuffAtributos {
     especial: string;
     cooldown: string;
     bonus: string;
-    acerto: string;
+    acerto?: DadoAcerto;
 }
 
 export interface DebuffAtributos {
     especial: string;
     cooldown: string;
     bonus: string;
-    acerto: string;
+    acerto?: DadoAcerto;
 }

@@ -49,8 +49,6 @@ export const FormItem = ({ theme, neon, contentType }: FormItemProps) => {
     setQuantidade,
     peso,
     setPeso,
-    efeito,
-    setEfeito,
     imagemUrl,
     handleImagemUpload,
     atributos,
@@ -145,13 +143,6 @@ export const FormItem = ({ theme, neon, contentType }: FormItemProps) => {
           </LabelInfoBox>
         </GridInputsRow>
 
-        <InputText
-          label="Efeito"
-          value={efeito}
-          onChange={(e) => setEfeito(e.target.value)}
-          theme={theme}
-          neon={neon}
-        />
       </FormHeader>
 
       {AtributosForm && (
@@ -163,6 +154,7 @@ export const FormItem = ({ theme, neon, contentType }: FormItemProps) => {
               onChange={setAtributos}
               theme={theme}
               neon={neon}
+              managementLayout
             />
           </AtributosGrid>
         </AtributosSection>

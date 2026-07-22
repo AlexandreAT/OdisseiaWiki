@@ -490,7 +490,7 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
             ? Number(it.peso)
             : undefined,
         descricao: serializeRichText(it.descricao),
-        efeito: it.efeito ?? undefined,
+        efeito: ((it.atributos as Record<string, unknown> | undefined)?.efeito as string | undefined) ?? it.efeito,
         imagem: it.imagem ?? undefined,
         atributos: it.atributos ?? {},
       }));

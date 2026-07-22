@@ -1,4 +1,5 @@
 import {
+  CSSProperties,
   forwardRef,
   useCallback,
   useEffect,
@@ -6,6 +7,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ContentController,
   Label,
@@ -42,6 +44,7 @@ interface Props {
   options: Option[];
   disabled?: boolean;
   allowEmptyOption?: boolean;
+  portal?: boolean;
 }
 
 const valuesMatch = (left: number | string | undefined, right: number | string) => (
@@ -64,13 +67,22 @@ export const Select = forwardRef<HTMLSelectElement, Props>(({
   options,
   disabled,
   allowEmptyOption = true,
+  portal = false,
 }, forwardedRef) => {
   const [focus, setFocus] = useState(false);
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [nativeError, setNativeError] = useState('');
   const controllerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const nativeSelectRef = useRef<HTMLSelectElement | null>(null);
+  const [anchorRect, setAnchorRect] = useState<{
+    top: number;
+    bottom: number;
+    left: number;
+    width: number;
+  } | null>(null);
+  const [dropdownTop, setDropdownTop] = useState<number | null>(null);
 
   const selectedIndex = useMemo(
     () => options.findIndex((option) => valuesMatch(value, option.value)),
@@ -96,14 +108,29 @@ export const Select = forwardRef<HTMLSelectElement, Props>(({
     revealFirstValidationError(controllerRef.current);
   }, [hasError]);
 
+  const updateDropdownPosition = useCallback(() => {
+    const element = controllerRef.current;
+    if (!element) return;
+
+    const rect = element.getBoundingClientRect();
+    setAnchorRect({
+      top: rect.top,
+      bottom: rect.bottom,
+      left: rect.left,
+      width: rect.width,
+    });
+    setDropdownTop(rect.bottom + 4);
+  }, []);
+
   useEffect(() => {
     if (!open) return;
 
     const handleOutsideInteraction = (event: MouseEvent | TouchEvent) => {
-      if (!controllerRef.current?.contains(event.target as Node)) {
-        setOpen(false);
-        setFocus(hasValue);
-      }
+      const target = event.target as Node;
+      if (controllerRef.current?.contains(target)) return;
+      if (dropdownRef.current?.contains(target)) return;
+      setOpen(false);
+      setFocus(hasValue);
     };
 
     document.addEventListener('mousedown', handleOutsideInteraction);
@@ -113,6 +140,41 @@ export const Select = forwardRef<HTMLSelectElement, Props>(({
       document.removeEventListener('touchstart', handleOutsideInteraction);
     };
   }, [hasValue, open]);
+
+  useEffect(() => {
+    if (!open || !portal) return;
+
+    updateDropdownPosition();
+    window.addEventListener('resize', updateDropdownPosition);
+    window.addEventListener('scroll', updateDropdownPosition, true);
+    return () => {
+      window.removeEventListener('resize', updateDropdownPosition);
+      window.removeEventListener('scroll', updateDropdownPosition, true);
+    };
+  }, [open, portal, updateDropdownPosition]);
+
+  useEffect(() => {
+    if (!open || !portal || !anchorRect) return;
+
+    const animationFrame = window.requestAnimationFrame(() => {
+      const dropdown = dropdownRef.current;
+      if (!dropdown) return;
+
+      const safeMargin = 12;
+      const gap = 4;
+      const dropdownHeight = dropdown.offsetHeight;
+      const spaceBelow = window.innerHeight - anchorRect.bottom - safeMargin;
+      const fitsAbove = anchorRect.top - safeMargin >= dropdownHeight + gap;
+
+      setDropdownTop(
+        spaceBelow < dropdownHeight && fitsAbove
+          ? Math.max(safeMargin, anchorRect.top - dropdownHeight - gap)
+          : anchorRect.bottom + gap,
+      );
+    });
+
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, [anchorRect, open, portal]);
 
   const notifyFocus = useCallback(() => {
     setFocus(true);
@@ -125,12 +187,13 @@ export const Select = forwardRef<HTMLSelectElement, Props>(({
   const toggleOpen = useCallback(() => {
     if (disabled) return;
     notifyFocus();
+    if (!open && portal) updateDropdownPosition();
     setOpen((current) => {
       const next = !current;
       if (next) setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0);
       return next;
     });
-  }, [disabled, notifyFocus, selectedIndex]);
+  }, [disabled, notifyFocus, open, portal, selectedIndex, updateDropdownPosition]);
 
   const selectOption = useCallback((option: Option) => {
     if (nativeError) setNativeError('');
@@ -184,6 +247,46 @@ export const Select = forwardRef<HTMLSelectElement, Props>(({
     }
   }, [activeIndex, disabled, hasValue, notifyFocus, open, options, selectOption, selectedIndex, toggleOpen]);
 
+  const renderDropdown = (style?: CSSProperties) => (
+    <SelectDropdown ref={dropdownRef} role="listbox" aria-label={label} style={style}>
+      {options.map((option, index) => (
+        <SelectOption
+          type="button"
+          role="option"
+          key={option.value}
+          $selected={valuesMatch(value, option.value)}
+          $active={activeIndex === index}
+          aria-selected={valuesMatch(value, option.value)}
+          onMouseEnter={() => setActiveIndex(index)}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => selectOption(option)}
+        >
+          {option.label}
+        </SelectOption>
+      ))}
+    </SelectDropdown>
+  );
+
+  const portalDropdown = (() => {
+    if (!open || !portal || !anchorRect || typeof document === 'undefined') return null;
+
+    const safeMargin = 12;
+    const dropdownWidth = Math.min(anchorRect.width, window.innerWidth - safeMargin * 2);
+    const safeLeft = Math.min(
+      Math.max(anchorRect.left, safeMargin),
+      Math.max(safeMargin, window.innerWidth - dropdownWidth - safeMargin),
+    );
+
+    return createPortal(renderDropdown({
+      position: 'fixed',
+      top: dropdownTop ?? anchorRect.bottom + 4,
+      left: safeLeft,
+      width: dropdownWidth,
+      maxWidth: `calc(100vw - ${safeMargin * 2}px)`,
+      zIndex: 99999,
+    }), document.body);
+  })();
+
   return (
     <ContentController ref={controllerRef} width={width} data-validation-error={hasError || undefined}>
       <Label width={width} height={height}>
@@ -229,26 +332,9 @@ export const Select = forwardRef<HTMLSelectElement, Props>(({
           <FormLabelText label={label} required={required} />
         </LabelSpan>
 
-        {open && (
-          <SelectDropdown role="listbox" aria-label={label}>
-            {options.map((option, index) => (
-              <SelectOption
-                type="button"
-                role="option"
-                key={option.value}
-                $selected={valuesMatch(value, option.value)}
-                $active={activeIndex === index}
-                aria-selected={valuesMatch(value, option.value)}
-                onMouseEnter={() => setActiveIndex(index)}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => selectOption(option)}
-              >
-                {option.label}
-              </SelectOption>
-            ))}
-          </SelectDropdown>
-        )}
+        {open && !portal && renderDropdown()}
       </Label>
+      {portalDropdown}
       {hasError && <SpanError>{errorMessage || nativeError}</SpanError>}
     </ContentController>
   );

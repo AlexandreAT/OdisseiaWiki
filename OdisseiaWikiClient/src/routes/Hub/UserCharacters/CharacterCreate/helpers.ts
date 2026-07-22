@@ -16,7 +16,7 @@ export const mapInventoryForPayload = (itens: Item[]): Item[] => {
     quantidade: Number(it.quantidade) || 1,
     peso: it.peso !== undefined && it.peso !== 0 ? Number(it.peso) : undefined,
     descricao: it.descricao ?? "",
-    efeito: it.efeito ?? undefined,
+    efeito: ((it.atributos as Record<string, unknown> | undefined)?.efeito as string | undefined) ?? it.efeito,
     imagem: it.imagem ?? undefined,
     atributos: it.atributos ?? {},
   }));

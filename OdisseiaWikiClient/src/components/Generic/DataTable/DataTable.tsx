@@ -14,6 +14,7 @@ import {
 import { Select } from "../Select/Select";
 import { CheckSelect } from "../CheckSelect/CheckSelect";
 import { revealFirstValidationError } from '../../../utils/formValidationFeedback';
+import { handleNumericInputFocus } from '../../../utils/numericInput';
 
 interface DataTableProps<T> {
   theme: 'dark' | 'light';
@@ -61,7 +62,8 @@ const TableCell = memo(({
         type="number"
         fullWidth
         variant="standard"
-        value={value || ""}
+        value={value ?? ""}
+        onFocus={handleNumericInputFocus}
         onChange={(e) => handleChange(e.target.value === "" ? "" : Number(e.target.value))}
       />
     );
@@ -77,6 +79,7 @@ const TableCell = memo(({
         onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleChange(e.target.value)}
         options={column.options || []}
         width="100%"
+        portal
       />
     );
   }
@@ -293,6 +296,7 @@ function DataTableComponent<T extends { [key: string]: any }>({
           iconSize={20}
           suggestions={searchSuggestions}
           onSelectSuggestion={handleSelectSuggestion}
+          portal
         />
       )}
       <TableScrollContainer>

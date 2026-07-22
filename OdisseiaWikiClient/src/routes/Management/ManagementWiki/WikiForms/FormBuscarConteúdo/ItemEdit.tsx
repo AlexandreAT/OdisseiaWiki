@@ -170,8 +170,6 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
     setQuantidade,
     peso,
     setPeso,
-    efeito,
-    setEfeito,
     imagemUrl,
     handleImagemUpload,
     atributos,
@@ -206,12 +204,11 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
     descricao,
     quantidade,
     peso,
-    efeito,
     imagemUrl,
     atributos,
     tags,
     visivel,
-  }), [nome, tipo, descricao, quantidade, peso, efeito, imagemUrl, atributos, tags, visivel]);
+  }), [nome, tipo, descricao, quantidade, peso, imagemUrl, atributos, tags, visivel]);
   const [lastSavedSnapshot, setLastSavedSnapshot] = React.useState(snapshot);
   const isSynced = snapshot === lastSavedSnapshot;
   const persistInFlightRef = React.useRef(false);
@@ -314,13 +311,6 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
           </LabelInfoBox>
         </GridInputsRow>
 
-        <InputText
-          label="Efeito"
-          value={efeito}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEfeito(e.target.value)}
-          theme={theme}
-          neon={neon}
-        />
       </FormHeader>
 
       {/* Seção de Atributos Dinâmicos */}
@@ -333,6 +323,7 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
               onChange={setAtributos}
               theme={theme}
               neon={neon}
+              managementLayout
             />
           </AtributosGrid>
         </AtributosSection>

@@ -33,6 +33,11 @@ export const mapToItem = (payload: ItemPayload): Item => {
     }
   }
 
+  atributos = {
+    ...(atributos ?? {}),
+    efeito: atributos?.efeito ?? payload.efeito ?? '',
+  };
+
   // Processa descricao: mantém como JSONContent se for objeto, ou string se for string
   let descricao: any = undefined;
   if (payload.descricao) {
@@ -58,7 +63,7 @@ export const mapToItem = (payload: ItemPayload): Item => {
     quantidade: payload.quantidade,
     peso: payload.peso ?? undefined,
     descricao,
-    efeito: payload.efeito ?? undefined,
+    efeito: atributos.efeito || payload.efeito || undefined,
     imagem: payload.imagem ?? undefined,
     atributos,
     tags: payload.tags ?? undefined,
@@ -95,7 +100,7 @@ export const mapToPayload = (item: Item): ItemPayload => {
     quantidade: item.quantidade,
     peso: item.peso,
     descricao,
-    efeito: item.efeito,
+    efeito: undefined,
     imagem: item.imagem,
     atributosJson,
     tags: item.tags,

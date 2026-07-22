@@ -16,6 +16,7 @@ import {
   StatusMiniInputWrapper,
   StatusValueGroup,
 } from "./StatusInput.style";
+import { selectNumericInputValue } from '../../../utils/numericInput';
 
 type StatusType = "vida" | "estamina" | "mana";
 
@@ -70,6 +71,13 @@ export const StatusInput = forwardRef<HTMLInputElement, Props>(
       () => enableCalculator && editable && !!onChange,
       [enableCalculator, editable, onChange]
     );
+
+    const handleNumericFocus = (
+      callback?: (event: React.FocusEvent<HTMLInputElement>) => void
+    ) => (event: React.FocusEvent<HTMLInputElement>) => {
+      selectNumericInputValue(event.currentTarget);
+      callback?.(event);
+    };
 
     const applyCalculatedValue = (rawExpression: string) => {
       if (!onChange) return;
@@ -179,7 +187,7 @@ export const StatusInput = forwardRef<HTMLInputElement, Props>(
                     value={value}
                     onChange={onChange}
                     onBlur={onBlur}
-                    onFocus={onFocus}
+                    onFocus={handleNumericFocus(onFocus)}
                     readOnly={!editable || !onChange}
                     ref={ref}
                     type="number"
@@ -194,6 +202,7 @@ export const StatusInput = forwardRef<HTMLInputElement, Props>(
                   emphasis="max"
                   value={maxValue}
                   onChange={onMaxChange}
+                  onFocus={handleNumericFocus()}
                   readOnly={!editable || !onMaxChange}
                   type="number"
                 />
@@ -208,11 +217,12 @@ export const StatusInput = forwardRef<HTMLInputElement, Props>(
             value={value}
             onChange={onChange}
             onBlur={onBlur}
-            onFocus={onFocus}
+            onFocus={handleNumericFocus(onFocus)}
             readOnly={!editable}
             ref={ref}
             width={width}
             height={height}
+            type="number"
           />
         )}
       </ContentController>

@@ -1,5 +1,6 @@
 import styled from "styled-components";
 import { managementEntityToolbarResponsive } from '../../ManagementEntityToolbar.style';
+import { handleNumericInputFocus } from '../../../../../../utils/numericInput';
 
 interface Props {
     theme?: 'dark' | 'light';
@@ -609,7 +610,7 @@ export const CheckboxSection = styled.div`
   gap: 10px;
 `;
 
-export const MinimalInput = styled.input.attrs({ type: "number" })`
+export const MinimalInput = styled.input.attrs({ type: "number", onFocus: handleNumericInputFocus })`
   width: 30px;
   max-width: 60px;
   height: 100%;
@@ -697,70 +698,151 @@ export const FormItemAtributos = styled.div`
     display: flex;
     flex-direction: column;
     width: 100%;
-    height: 100%;
-    align-items: center;
-    justify-content: center;
+    min-width: 0;
+    align-items: stretch;
+    justify-content: flex-start;
     gap: 15px;
 `
 
-export const ProsthesisActions = styled.div`
+export const AttributeRow = styled.div<{ $columns?: number }>`
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(${({ $columns = 1 }) => $columns}, minmax(0, 1fr));
+    gap: 14px;
+    width: 100%;
+    min-width: 0;
+    align-items: start;
+
+    > * {
+        width: 100% !important;
+        min-width: 0;
+    }
+
+    @media (min-width: 1600px) {
+        gap: 18px;
+    }
+
+    @media (min-width: 641px) and (max-width: 1100px) {
+        grid-template-columns: ${({ $columns = 1 }) => $columns === 1
+            ? '1fr'
+            : 'repeat(2, minmax(0, 1fr))'};
+    }
+
+    @media (max-width: 640px) {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+`;
+
+export const AttributeSubsection = styled.section<Props>`
+    display: flex;
+    flex-direction: column;
+    gap: 13px;
+    width: 100%;
+    min-width: 0;
+    padding: 12px 14px 14px;
+    box-sizing: border-box;
+    border-left: 2px solid ${({ theme, neon }) =>
+        theme === 'dark'
+            ? neon === 'on' ? 'var(--clearneonBlue)' : 'var(--lightBlack)'
+            : neon === 'on' ? 'var(--neonViolet)' : 'var(--lightGrey)'};
+    border-top: 1px solid ${({ theme }) =>
+        theme === 'dark' ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.08)'};
+    border-radius: 3px;
+    background: ${({ theme }) => theme === 'dark'
+        ? 'linear-gradient(90deg, rgba(0, 229, 255, 0.035), transparent 68%)'
+        : 'linear-gradient(90deg, rgba(112, 53, 166, 0.045), transparent 68%)'};
+
+    @media (max-width: 640px) {
+        gap: 10px;
+        padding: 10px 10px 12px;
+    }
+`;
+
+export const AttributeSubsectionTitle = styled.h3<Props>`
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    color: ${({ theme, neon }) =>
+        theme === 'dark'
+            ? neon === 'on' ? 'var(--clearneonBlue)' : 'var(--clearWhite)'
+            : neon === 'on' ? 'var(--neonViolet)' : 'var(--deepgrey)'};
+    font-family: 'DO Futuristic', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 100;
+    letter-spacing: 2.5px;
+    line-height: 1.2;
+    text-transform: uppercase;
+
+    &::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        opacity: 0.32;
+        background: currentColor;
+    }
+
+    @media (max-width: 640px) {
+        font-size: 0.7rem;
+        letter-spacing: 1.8px;
+    }
+`;
+
+export const ProsthesisActions = styled.div<{ $compact?: boolean }>`
+    display: grid;
+    grid-template-columns: ${({ $compact }) => $compact
+        ? 'repeat(3, minmax(0, 220px))'
+        : 'repeat(3, minmax(0, 1fr))'};
+    justify-content: center;
+    gap: ${({ $compact }) => $compact ? '8px' : '12px'};
     width: 100%;
 
     > * {
         width: 100% !important;
         min-width: 0;
-        height: 62px !important;
+        height: ${({ $compact }) => $compact ? '53px' : '61px'} !important;
     }
 
     > * > div,
     > * > button {
-        width: 100% !important;
-        height: 56px !important;
+        width: calc(100% - 15px) !important;
+        height: ${({ $compact }) => $compact ? '38px' : '46px'} !important;
     }
 
     > * > button {
-        padding: 10px 18px;
+        padding: ${({ $compact }) => $compact ? '6px 10px' : '8px 14px'};
         white-space: normal;
         text-align: center;
+        font-size: ${({ $compact }) => $compact ? '0.76rem' : 'inherit'};
     }
 
     @media (min-width: 1400px) {
         gap: 16px;
 
-        > * {
-            height: 68px !important;
-        }
-
-        > * > div,
         > * > button {
-            height: 62px !important;
-        }
-
-        > * > button {
-            padding-inline: 22px;
+            padding-inline: ${({ $compact }) => $compact ? '12px' : '18px'};
         }
     }
 
     @media (max-width: 768px) {
         grid-template-columns: 1fr;
         gap: 8px;
+        max-width: ${({ $compact }) => $compact ? '220px' : '100%'};
+        margin-inline: auto;
 
         > * {
             width: 100% !important;
-            height: 64px !important;
+            height: ${({ $compact }) => $compact ? '53px' : '61px'} !important;
         }
 
         > * > div,
         > * > button {
-            width: 100% !important;
-            height: 58px !important;
+            width: calc(100% - 15px) !important;
+            height: ${({ $compact }) => $compact ? '38px' : '46px'} !important;
         }
 
         > * > button {
-            padding: 12px 18px;
+            padding: ${({ $compact }) => $compact ? '6px 10px' : '9px 14px'};
         }
     }
 `

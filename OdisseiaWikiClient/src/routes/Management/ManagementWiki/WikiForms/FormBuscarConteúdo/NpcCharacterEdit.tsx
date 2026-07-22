@@ -575,7 +575,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
           ? Number(item.peso)
           : undefined,
         descricao: serializeRichText(item.descricao),
-        efeito: item.efeito ?? undefined,
+        efeito: ((item.atributos as Record<string, unknown> | undefined)?.efeito as string | undefined) ?? item.efeito,
         imagem: item.imagem ?? undefined,
         atributos: item.atributos ?? {},
       }));

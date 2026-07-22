@@ -123,6 +123,10 @@ const ItemAtributosEditor = memo(({
 }) => {
   const [open, setOpen] = React.useState(false);
   const FormComponent = atributosFormMap[row.tipo as ItemTipo];
+  const attributesWithEffect = {
+    ...(value && typeof value === 'object' ? value : {}),
+    efeito: value?.efeito ?? row.efeito ?? '',
+  };
 
   if (!FormComponent) return <label>Selecione o tipo</label>;
 
@@ -138,8 +142,10 @@ const ItemAtributosEditor = memo(({
           onSubmit={() => setOpen(false)}
           theme={theme}
           neon={neon}
+          width="1100px"
+          mobileInset
         >
-          <FormComponent value={value} onChange={onChange} theme={theme} neon={neon} />
+          <FormComponent value={attributesWithEffect} onChange={onChange} theme={theme} neon={neon} />
         </Modal>
       )}
     </>
@@ -148,7 +154,8 @@ const ItemAtributosEditor = memo(({
 
   return prevProps.value === nextProps.value && 
          prevProps.row.tipo === nextProps.row.tipo &&
-         prevProps.row.nome === nextProps.row.nome;
+         prevProps.row.nome === nextProps.row.nome &&
+         prevProps.row.efeito === nextProps.row.efeito;
 });
 
 const SkillAtributosEditor = memo(({ 

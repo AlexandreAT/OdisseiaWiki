@@ -112,6 +112,14 @@ export const StatusInputField = styled.input<Props>`
   outline: none;
   font-size: 1em;
   font-weight: 600;
+  appearance: textfield;
+  -moz-appearance: textfield;
+
+  &::-webkit-outer-spin-button,
+  &::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
 
   ${({ theme, neon, typeStatus }) => {
     const colors = statusColors[typeStatus || "vida"];

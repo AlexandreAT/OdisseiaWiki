@@ -10,12 +10,19 @@ const getEmptyAtributos = (tipo: ItemTipo): any => {
   switch (tipo) {
     case "arma":
       return {
-        danoPorAlcance: { curta: 0, media: 0, longa: 0 },
-        municao: { capacidade: 0, atual: 0 },
-        ataquesPorTurno: 1,
+        tipoArma: undefined,
+        tipoDano: undefined,
+        danoBase: 0,
+        danoPorAlcance: { curta: 0, media: 0, longa: 0, emArea: 0, preciso: 0 },
+        cadencia: 1,
+        capacidadeUso: 0,
+        capacidadeMunicao: 0,
+        gastoEstaminaPorAtaque: 0,
+        acerto: "",
+        duracaoEfeito: "",
         bonus: [],
         especial: "",
-        acerto: "1D20"
+        efeito: ""
       };
     case "traje":
       return {
@@ -24,18 +31,22 @@ const getEmptyAtributos = (tipo: ItemTipo): any => {
         escudoBase: 0,
         resistencias: [],
         penalidades: [],
-        especial: ""
+        especial: "",
+        efeito: ""
       };
     case "consumiveis":
       return {
         restaura: { vida: 0, estamina: 0, mana: 0 },
-        duracao: ""
+        duracao: "",
+        especial: "",
+        efeito: ""
       };
     case "acessorio":
       return {
         bonus: [],
         slot: "",
-        duracao: ""
+        duracao: "",
+        efeito: ""
       };
     case "implante":
       return {
@@ -50,11 +61,13 @@ const getEmptyAtributos = (tipo: ItemTipo): any => {
         especiais: [],
         modificacoes: [],
         lacrimas: [],
+        efeito: "",
       };
     default:
       return {
         especial: "",
-        duracao: ""
+        duracao: "",
+        efeito: ""
       };
   }
 };
@@ -114,16 +127,20 @@ export const useFormItem = (initialItem?: ItemPayload, contentType?: string) => 
 
   const [peso, setPeso] = useState<number | undefined>(initialItem?.peso);
   const [quantidade, setQuantidade] = useState(initialItem?.quantidade || 1);
-  const [efeito, setEfeito] = useState(initialItem?.efeito || "");
 
   const [imagemUrl, setImagemUrl] = useState(initialItem?.imagem || "");
   const [imagemFile, setImagemFile] = useState<File | null>(null);
 
-  const [atributos, setAtributos] = useState<any>(
-    initialItem?.atributosJson 
+  const [atributos, setAtributos] = useState<any>(() => {
+    const parsedAttributes = initialItem?.atributosJson
       ? parseJson(initialItem.atributosJson, getEmptyAtributos(tipo))
-      : getEmptyAtributos(tipo)
-  );
+      : getEmptyAtributos(tipo);
+
+    return {
+      ...parsedAttributes,
+      efeito: parsedAttributes?.efeito ?? initialItem?.efeito ?? '',
+    };
+  });
 
   const [tags, setTags] = useState<string[]>(initialItem?.tags || []);
   const [tagInput, setTagInput] = useState("");
@@ -148,7 +165,10 @@ export const useFormItem = (initialItem?: ItemPayload, contentType?: string) => 
 
   const handleTipoChange = (novoTipo: ItemTipo) => {
     setTipo(novoTipo);
-    setAtributos(getEmptyAtributos(novoTipo));
+    setAtributos((currentAttributes: Record<string, unknown>) => ({
+      ...getEmptyAtributos(novoTipo),
+      efeito: currentAttributes?.efeito ?? '',
+    }));
   };
 
   // ------------------------
@@ -243,8 +263,6 @@ export const useFormItem = (initialItem?: ItemPayload, contentType?: string) => 
 
     setPeso(undefined);
     setQuantidade(1);
-    setEfeito("");
-
     setImagemUrl("");
     setImagemFile(null);
 
@@ -297,7 +315,7 @@ export const useFormItem = (initialItem?: ItemPayload, contentType?: string) => 
         descricao: prepareForAPI(descricao),
         peso,
         quantidade,
-        efeito,
+        efeito: undefined,
         imagem: imagemPath,
         atributosJson: Object.keys(atributos).length > 0 ? atributos : undefined,
         tags: ensureContentCategoryTag(tags, contentType),
@@ -372,8 +390,6 @@ export const useFormItem = (initialItem?: ItemPayload, contentType?: string) => 
     setPeso,
     quantidade,
     setQuantidade,
-    efeito,
-    setEfeito,
     imagemUrl,
     handleImagemUpload,
     atributos,

@@ -2,6 +2,7 @@ import { useState, forwardRef, useCallback, useEffect, useRef } from 'react';
 import { ContentController, LoginLabel, LoginInput, LoginLabelSpan, SpanError } from './InputText.style';
 import { FormLabelText } from '../FormLabelText';
 import { revealFirstValidationError } from '../../../utils/formValidationFeedback';
+import { selectNumericInputValue } from '../../../utils/numericInput';
 
 interface Props {
     theme: 'dark' | 'light';
@@ -54,8 +55,9 @@ export const InputText = forwardRef<HTMLInputElement, Props>(
 
     const handleFocus = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
       setFocus(true);
+      if (type === 'number') selectNumericInputValue(e.currentTarget);
       onFocus?.(e);
-    }, [onFocus]);
+    }, [onFocus, type]);
 
     const handleBlur = useCallback(() => {
       setFocus(false);

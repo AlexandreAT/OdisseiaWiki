@@ -40,28 +40,57 @@ import { DEFAULT_MAX_CHARACTER_LEVEL, getDefaultXpRequiredForLevel } from '../..
 import { Lightbox } from '../Wiki/components/blocks/shared/Lightbox/Lightbox';
 import { RelatedPageLink, RelatedPages, RelatedPagesTitle } from '../Cidade/CidadePage.style';
 import { detectImageShapeForBackgroundFromUrl } from '../../utils/imageDisplayShape';
+import { ARMA_TIPO_DANO_OPTIONS, ARMA_TIPO_OPTIONS, normalizeDadoAcerto } from '../../constants';
 
 const detailLabels: Record<string, string> = {
   curta: 'Dano Curto',
   media: 'Dano Médio',
   longa: 'Dano Longo',
+  emArea: 'Dano em Área',
+  preciso: 'Dano Preciso',
+  danoBase: 'Dano Base',
+  tipoArma: 'Tipo de Arma',
+  tipoDano: 'Tipo de Dano',
+  cadencia: 'Cadência por Turno',
+  capacidadeUso: 'Capacidade de Uso antes da Pausa',
+  capacidadeMunicao: 'Capacidade de Munição',
+  gastoEstaminaPorAtaque: 'Estamina por Ataque/Rajada',
+  acerto: 'Sistema de Acerto',
+  duracaoEfeito: 'Duração do Efeito',
   capacidade: 'Capacidade Munição',
-  acerto: 'Acerto',
   dano: 'Dano',
 };
 
 const formatDetailLabel = (key: string) => detailLabels[key] ?? key.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ').trim();
 
+const formatDetailValue = (key: string, value: unknown) => {
+  if (key === 'tipoArma') {
+    return ARMA_TIPO_OPTIONS.find((option) => option.value === value)?.label ?? String(value);
+  }
+
+  if (key === 'tipoDano') {
+    return ARMA_TIPO_DANO_OPTIONS.find((option) => option.value === value)?.label ?? String(value);
+  }
+
+  if (key === 'acerto') {
+    return normalizeDadoAcerto(value) || String(value);
+  }
+
+  return Array.isArray(value) ? value.join(', ') : String(value);
+};
+
 const getAttributeEntries = (attributes: Record<string, any> | undefined, prefix = ''): Array<{ label: string; value: string }> => {
   if (!attributes) return [];
 
   return Object.entries(attributes).flatMap(([key, value]) => {
-    if (key.startsWith('__') || key.toLowerCase().includes('efeitorichtext') || ['atual', 'ataquesPorTurno', 'especial', 'especiais'].includes(key) || value === undefined || value === null || value === '' || value === false || value === 0 || (Array.isArray(value) && value.length === 0)) return [];
+    if (key === 'ataquesPorTurno' && attributes.cadencia !== undefined) return [];
+    if (key === 'municao' && attributes.capacidadeMunicao !== undefined) return [];
+    if (key.startsWith('__') || key.toLowerCase().includes('efeitorichtext') || ['atual', 'ataquesPorTurno', 'efeito', 'especial', 'especiais'].includes(key) || value === undefined || value === null || value === '' || value === false || value === 0 || (Array.isArray(value) && value.length === 0)) return [];
     const label = ['danoPorAlcance', 'municao'].includes(key) ? prefix : (prefix ? `${prefix} ${formatDetailLabel(key)}` : formatDetailLabel(key));
 
     if (typeof value === 'object' && !Array.isArray(value)) return getAttributeEntries(value, label);
 
-    return [{ label, value: Array.isArray(value) ? value.join(', ') : String(value) }];
+    return [{ label, value: formatDetailValue(key, value) }];
   });
 };
 
@@ -444,7 +473,8 @@ const PersonagemPage: React.FC = () => {
   const isSelectedAbility = (selectedInventoryItem as any)?.__detailType === 'ability';
   const selectedEffect = isSelectedAbility
     ? getAbilityEffect(selectedInventoryItem)
-    : selectedInventoryItem?.efeito;
+    : (selectedInventoryItem?.atributos as Record<string, unknown> | undefined)?.efeito
+      ?? selectedInventoryItem?.efeito;
   const selectedSpecial = (selectedInventoryItem?.atributos as any)?.especial ?? (selectedInventoryItem?.atributos as any)?.especiais?.filter(Boolean).join(', ');
   const selectedAttributeEntries = getAttributeEntries(selectedInventoryItem?.atributos as Record<string, any> | undefined);
   const selectedAbilityEntries = isSelectedAbility ? [

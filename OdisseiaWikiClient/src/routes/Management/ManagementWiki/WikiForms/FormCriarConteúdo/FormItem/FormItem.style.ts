@@ -1,5 +1,6 @@
 import styled from 'styled-components';
 import { managementEntityToolbarResponsive } from '../../ManagementEntityToolbar.style';
+import { handleNumericInputFocus } from '../../../../../../utils/numericInput';
 
 interface Props {
   theme?: 'dark' | 'light';
@@ -150,7 +151,7 @@ export const LabelStatus = styled.label`
   text-transform: uppercase;
 `;
 
-export const MinimalInput = styled.input.attrs({ type: 'number' })`
+export const MinimalInput = styled.input.attrs({ type: 'number', onFocus: handleNumericInputFocus })`
   width: 100%;
   height: 36px;
   border: none;
