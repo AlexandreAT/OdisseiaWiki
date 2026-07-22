@@ -6,7 +6,8 @@ import { Skills } from '../../../../models/Skills';
 import { BottomContentController, SectionTable, TableTitle } from '../../../Hub/UserCharacters/CharacterCreate/FormUserCharacter/FormUserCharacter.style';
 import { StatusForm } from '../../../Hub/UserCharacters/CharacterCreate/FormUserCharacter/StatusForm/StatusForm';
 import { CharacterSystemFormProps } from './CharacterSystemForm.type';
-import { getInventarioItems, getProtesesItems, getProtesesTableItems, replaceItemSection } from '../../../../utils/itemInventorySections';
+import { getInventarioItems, getProtesesItems, getProtesesTableItems, isEmptyItemRow, replaceItemSection } from '../../../../utils/itemInventorySections';
+import { openItemPreview } from '../../../../utils/itemPreview';
 
 export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
   theme,
@@ -89,6 +90,8 @@ export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
             searchData={getInventarioItems(listItens)}
             searchKeys={['nome', 'tipo', 'descricao']}
             onSelectSearch={adicionarItem}
+            isRowEmpty={isEmptyItemRow}
+            onViewRow={openItemPreview}
             theme={theme}
             neon={neon}
           />
@@ -105,6 +108,8 @@ export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
             searchData={getProtesesItems(listItens)}
             searchKeys={['nome', 'tipo', 'descricao']}
             onSelectSearch={adicionarProtese}
+            isRowEmpty={isEmptyItemRow}
+            onViewRow={openItemPreview}
             theme={theme}
             neon={neon}
           />

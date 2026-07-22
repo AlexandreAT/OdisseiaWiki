@@ -224,11 +224,13 @@ const HudContentSection: React.FC<HudContentSectionProps> = ({
   clearColor,
   children,
 }) => (
-  <CardContent gap={12} neon={neon} $color={color}>
-    <HudCornerEl $position="top-left" $color={color} $clearColor={clearColor} $neon={neon === 'on'} />
+  <CardContent gap={12} neon={neon} $color={color} $secondary>
     <HudCornerEl $position="top-right" $color={color} $clearColor={clearColor} $neon={neon === 'on'} />
     <HudCornerEl $position="bottom-left" $color={color} $clearColor={clearColor} $neon={neon === 'on'} />
-    <HudCornerEl $position="bottom-right" $color={color} $clearColor={clearColor} $neon={neon === 'on'} />
+    {neon === 'on' && <>
+      <HudCornerEl $position="top-left" $color={color} $clearColor={clearColor} $neon />
+      <HudCornerEl $position="bottom-right" $color={color} $clearColor={clearColor} $neon />
+    </>}
     <HudTopLine $isActive={neon === 'on'} $color={color} $clearColor={clearColor} $neon={neon === 'on'} />
     <HudBottomLine $isActive={neon === 'on'} $color={color} $clearColor={clearColor} $neon={neon === 'on'} />
     <HudLeftLine $isActive={neon === 'on'} $color={color} $clearColor={clearColor} $neon={neon === 'on'} />

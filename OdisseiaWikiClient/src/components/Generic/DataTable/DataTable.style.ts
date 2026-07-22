@@ -50,6 +50,12 @@ export const DataTableContainer = styled.div<Props>`
                 : "var(--neonRed)"}
     }
 
+    .MuiPaper-root .iconView {
+        fill: ${({ theme, neon }) => theme === "dark"
+            ? neon === "on" ? "var(--clearneonGreen)" : "var(--neonGreen)"
+            : neon === "on" ? "var(--clearneonViolet)" : "var(--neonViolet)"};
+    }
+
   .MuiPaper-root {
     background-color: ${({ theme }) =>
       theme === "dark" ? "var(--deepgray)" : "var(--whitesmoke)"} !important;
@@ -266,12 +272,50 @@ export const TableScrollContainer = styled.div`
 
   th:last-child,
   td:last-child {
-    min-width: 72px;
+    min-width: 112px;
   }
 
   @media (max-width: 480px) {
     .MuiTable-root {
       min-width: 620px;
+    }
+  }
+`;
+
+export const RowActions = styled.div`
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  white-space: nowrap;
+
+  .MuiIconButton-root {
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
+    padding: 5px;
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  @media (max-width: 768px) {
+    gap: 0;
+
+    .MuiIconButton-root {
+      width: 26px;
+      height: 26px;
+      flex-basis: 26px;
+      padding: 4px;
+    }
+
+    svg {
+      width: 16px;
+      height: 16px;
     }
   }
 `;

@@ -4,8 +4,8 @@ import { Select } from '../../../../../../components/Generic/Select/Select';
 import { CheckBox } from '../../../../../../components/Generic/CheckBox/CheckBox';
 import { CyberButton } from '../../../../../../components/Generic/HighlightButton/HighlightButton';
 import { AttributeRow, AttributeSubsection, AttributeSubsectionTitle, FormItemAtributos, ProsthesisActions } from './FormCharacter.style';
-import { ArmaAtributos, ArmaTipo, ArmaTipoDano, ImplanteAtributos } from '../../../../../../models/Itens';
-import { ACERTO_DADO_OPTIONS, ARMA_TIPO_DANO_OPTIONS, ARMA_TIPO_OPTIONS, getPrimeiroAtaqueComGastoEstamina, normalizeDadoAcerto } from '../../../../../../constants';
+import { ArmaAtributos, ArmaTipo, ArmaTipoDano, ImplanteAtributos, TrajeAtributos } from '../../../../../../models/Itens';
+import { ACERTO_DADO_OPTIONS, ARMA_TIPO_DANO_OPTIONS, ARMA_TIPO_OPTIONS, getPrimeiroAtaqueComGastoEstamina, normalizeDadoAcerto, TRAJE_TIPO_OPTIONS } from '../../../../../../constants';
 import { DadoAcerto } from '../../../../../../models/Dados';
 
 interface BaseProps {
@@ -146,8 +146,8 @@ export const ArmaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme,
 };
 
 export const TrajeAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon }) => {
-  const [local, setLocal] = React.useState(
-    value || { armaduraBase: 0, protecaoBase: 0, escudoBase: 0, resistencias: [], penalidades: [], especial: "" }
+  const [local, setLocal] = React.useState<TrajeAtributos>(
+    value || { tipoTraje: undefined, armaduraBase: 0, protecaoBase: 0, escudoBase: 0, resistencias: [], penalidades: [], especial: "" }
   );
 
   const handleChange = (key: string, val: any) => {
@@ -158,6 +158,17 @@ export const TrajeAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme
 
   return (
     <FormItemAtributos>
+      <AttributeRow>
+        <Select
+          label="Subcategoria de proteção"
+          value={local.tipoTraje ?? ''}
+          onChange={(e) => handleChange('tipoTraje', e.target.value || undefined)}
+          theme={theme}
+          neon={neon}
+          options={TRAJE_TIPO_OPTIONS}
+          width="100%"
+        />
+      </AttributeRow>
       <AttributeRow $columns={3}>
         <InputText label="Proteção Base" type="number" theme={theme} neon={neon} value={local.protecaoBase} onChange={e => handleChange('protecaoBase', Number(e.target.value))} />
         <InputText label="Escudo Base" type="number" theme={theme} neon={neon} value={local.escudoBase} onChange={e => handleChange('escudoBase', Number(e.target.value))} />

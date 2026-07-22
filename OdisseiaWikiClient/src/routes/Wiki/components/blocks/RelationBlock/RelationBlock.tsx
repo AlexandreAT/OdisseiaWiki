@@ -257,16 +257,6 @@ const RelationTypeCarousel: React.FC<RelationTypeCarouselProps> = ({ tipo, items
       const route = getEntityRoute(relation.tipoEntidade, entityId);
       if (!route) return;
 
-      if (normalizeEntityType(relation.tipoEntidade) === 'item') {
-        navigate(route, {
-          state: {
-            errorTitle: 'PÃ¡gina ainda nÃ£o disponÃ­vel',
-            errorDescription: `A pÃ¡gina dinÃ¢mica de ${relation.nome || 'item'} ainda estÃ¡ em desenvolvimento.`,
-          },
-        });
-        return;
-      }
-
       navigate(route);
     };
 
@@ -397,4 +387,3 @@ export const RelationBlock: React.FC<RelationBlockProps> = ({ block, theme, neon
     </RelationBlockContainer>
   );
 };
-

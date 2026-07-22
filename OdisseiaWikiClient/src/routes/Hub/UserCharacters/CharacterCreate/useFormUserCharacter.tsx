@@ -21,6 +21,7 @@ import { mapInventoryForPayload, mapMagiasForPayload, mapSkillsForPayload } from
 import { normalizeToJSONContent, prepareForAPI } from '../../../../utils/richTextHelpers';
 import { CharacterStatusExtras, DEFAULT_CHARACTER_STATUS_EXTRAS, normalizeCharacterStatusExtras } from '../../../../utils/characterStatus';
 import { getApiErrorMessage } from '../../../../utils/apiError';
+import { addOrReplaceEmptyItem } from '../../../../utils/itemInventorySections';
 
 const parseJson = <T,>(value: unknown, fallback: T): T => {
   if (value === undefined || value === null) return fallback;
@@ -421,14 +422,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
   }, [searchItensTerm, allItens]);
 
   const handleSelectItem = useCallback((item: Item) => {
-    setItens(prev => {
-      return [...prev, {
-        ...item,
-        id: crypto.randomUUID(),
-        idItemBase: item.id,
-        quantidade: 1,
-      }];
-    });
+    setItens((previousItems) => addOrReplaceEmptyItem(previousItems, item));
   }, []);
 
   const searchTimeoutRef = useRef<NodeJS.Timeout>();

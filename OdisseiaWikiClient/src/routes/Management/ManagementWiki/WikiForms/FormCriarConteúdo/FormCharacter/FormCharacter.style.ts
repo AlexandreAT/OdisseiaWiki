@@ -704,6 +704,20 @@ export const FormItemAtributos = styled.div`
     gap: 15px;
 `
 
+export const ItemTableGeneralAttributes = styled(FormItemAtributos)<Props>`
+    margin-bottom: 20px;
+    border-bottom: 1px solid ${({ theme, neon }) =>
+        theme === 'dark'
+            ? neon === 'on' ? 'rgba(0, 229, 255, 0.46)' : 'rgba(255, 255, 255, 0.12)'
+            : neon === 'on' ? 'rgba(112, 53, 166, 0.46)' : 'rgba(0, 0, 0, 0.12)'};
+    padding-bottom: 20px;
+
+    @media (max-width: 640px) {
+        margin-bottom: 16px;
+        padding-bottom: 16px;
+    }
+`;
+
 export const AttributeRow = styled.div<{ $columns?: number }>`
     display: grid;
     grid-template-columns: repeat(${({ $columns = 1 }) => $columns}, minmax(0, 1fr));

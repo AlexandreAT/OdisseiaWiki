@@ -1,8 +1,13 @@
-import { ItemTipo, Item } from './../models/Itens';
-import { ItemPayload } from './../services/itensService';
+import { normalizeArmaTipo, normalizeTrajeTipo } from '../constants';
+import type { Item, ItemTipo } from './../models/Itens';
+import type { ItemPayload } from './../services/itensService';
+
+const isRecord = (value: unknown): value is Record<string, unknown> => (
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+);
 
 // garante que a gente tenha o tipo no formato string esperado pelo front
-function normalizeTipo(payloadTipo: any): ItemTipo {
+function normalizeTipo(payloadTipo: unknown): ItemTipo {
   // Caso venha número (enum numérico do backend)
   if (typeof payloadTipo === 'number') {
     const mapNumToString: ItemTipo[] = ['arma','traje','consumiveis','acessorio','implante','outro'];
@@ -18,14 +23,15 @@ function normalizeTipo(payloadTipo: any): ItemTipo {
 // de backend → frontend
 export const mapToItem = (payload: ItemPayload): Item => {
   // Processa atributosJson: se já for objeto, usa direto; se for string, faz parse
-  let atributos: any = undefined;
+  let atributos: Record<string, unknown> = {};
   if (payload.atributosJson) {
     if (typeof payload.atributosJson === 'string') {
       try {
-        atributos = JSON.parse(payload.atributosJson);
+        const parsedAttributes: unknown = JSON.parse(payload.atributosJson);
+        atributos = isRecord(parsedAttributes) ? parsedAttributes : {};
       } catch (e) {
         console.error('Erro ao parsear atributosJson:', e);
-        atributos = undefined;
+        atributos = {};
       }
     } else {
       // Já é um objeto
@@ -34,17 +40,33 @@ export const mapToItem = (payload: ItemPayload): Item => {
   }
 
   atributos = {
-    ...(atributos ?? {}),
-    efeito: atributos?.efeito ?? payload.efeito ?? '',
+    ...atributos,
+    efeito: atributos.efeito ?? payload.efeito ?? '',
   };
 
+  const normalizedWeaponType = normalizeArmaTipo(
+    atributos.tipoArma ?? atributos.TipoArma
+  );
+  if (normalizedWeaponType) {
+    atributos.tipoArma = normalizedWeaponType;
+    delete atributos.TipoArma;
+  }
+
+  const normalizedOutfitType = normalizeTrajeTipo(
+    atributos.tipoTraje ?? atributos.TipoTraje
+  );
+  if (normalizedOutfitType) {
+    atributos.tipoTraje = normalizedOutfitType;
+    delete atributos.TipoTraje;
+  }
+
   // Processa descricao: mantém como JSONContent se for objeto, ou string se for string
-  let descricao: any = undefined;
+  let descricao: Item['descricao'];
   if (payload.descricao) {
     if (typeof payload.descricao === 'string') {
       // Se vier como string, tenta parsear para JSONContent
       try {
-        descricao = JSON.parse(payload.descricao);
+        descricao = JSON.parse(payload.descricao) as Item['descricao'];
       } catch (e) {
         // Se falhar o parse, mantém como string
         descricao = payload.descricao;
@@ -62,8 +84,11 @@ export const mapToItem = (payload: ItemPayload): Item => {
     tipo: normalizeTipo(payload.tipo),
     quantidade: payload.quantidade,
     peso: payload.peso ?? undefined,
+    discricao: payload.discricao ?? 0,
     descricao,
-    efeito: atributos.efeito || payload.efeito || undefined,
+    efeito: typeof atributos.efeito === 'string' && atributos.efeito
+      ? atributos.efeito
+      : payload.efeito || undefined,
     imagem: payload.imagem ?? undefined,
     atributos,
     tags: payload.tags ?? undefined,
@@ -75,23 +100,6 @@ export const mapToItem = (payload: ItemPayload): Item => {
 
 // de frontend → backend
 export const mapToPayload = (item: Item): ItemPayload => {
-  // Processa descricao: se for objeto JSONContent, envia como objeto; se for string, envia como string
-  let descricao: string | any = undefined;
-  if (item.descricao) {
-    if (typeof item.descricao === 'string') {
-      descricao = item.descricao;
-    } else {
-      // É um objeto JSONContent, envia como objeto
-      descricao = item.descricao;
-    }
-  }
-
-  // Processa atributosJson: envia como objeto (não stringifica)
-  let atributosJson: any = undefined;
-  if (item.atributos) {
-    atributosJson = item.atributos;
-  }
-
   return {
     iditem: item.id,
     iditemBase: item.idItemBase,
@@ -99,10 +107,11 @@ export const mapToPayload = (item: Item): ItemPayload => {
     tipo: String(item.tipo),
     quantidade: item.quantidade,
     peso: item.peso,
-    descricao,
+    discricao: item.discricao ?? 0,
+    descricao: item.descricao,
     efeito: undefined,
     imagem: item.imagem,
-    atributosJson,
+    atributosJson: item.atributos,
     tags: item.tags,
     visivel: item.visivel,
     dataCriacao: item.dataCriacao,

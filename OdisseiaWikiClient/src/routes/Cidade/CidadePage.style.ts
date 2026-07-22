@@ -10,45 +10,41 @@ const bannerArrival = keyframes`
   to { opacity: 1; transform: scale(1); }
 `;
 
+const hudLineHorizontal = keyframes`
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+`;
+
+const hudLineVertical = keyframes`
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+`;
+
 const panelFrame = css<{ $neon?: boolean }>`
   position: relative;
-  border: 1px solid ${({ $neon }) => $neon
-    ? 'var(--clearneonBlue)'
-    : 'color-mix(in srgb, var(--neonBlue) 54%, transparent)'};
+  border: ${({ $neon }) => $neon
+    ? '2px solid transparent'
+    : '1px solid color-mix(in srgb, var(--neonBlue) 54%, transparent)'};
   background:
-    linear-gradient(145deg, rgba(4, 18, 34, 0.94), rgba(2, 7, 18, 0.9));
+    ${({ $neon }) => $neon
+      ? 'linear-gradient(145deg, rgba(4, 22, 42, 0.97), rgba(2, 7, 18, 0.94))'
+      : 'linear-gradient(145deg, rgba(4, 18, 34, 0.94), rgba(2, 7, 18, 0.9))'};
   box-shadow:
     0 18px 42px rgba(0, 0, 0, 0.28),
-    inset 0 0 ${({ $neon }) => $neon ? '16px rgba(0, 178, 255, 0.16)' : '34px rgba(0, 179, 255, 0.035)'},
-    ${({ $neon }) => $neon ? '0 0 7px rgba(0, 204, 255, 0.24)' : '0 0 0 transparent'};
-  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
-
-  &::before,
-  &::after {
-    content: '';
-    position: absolute;
-    pointer-events: none;
-    background: ${({ $neon }) => $neon ? 'var(--clearneonBlue)' : 'var(--neonBlue)'};
-    box-shadow: ${({ $neon }) => $neon ? '0 0 5px rgba(0, 204, 255, 0.62)' : 'none'};
-  }
-
-  &::before {
-    width: 54px;
-    height: 2px;
-    top: -1px;
-    left: 16px;
-  }
-
-  &::after {
-    width: 2px;
-    height: 42px;
-    right: -1px;
-    bottom: 16px;
-  }
+    inset 0 0 ${({ $neon }) => $neon ? '20px rgba(0, 178, 255, 0.19)' : '34px rgba(0, 179, 255, 0.035)'},
+    ${({ $neon }) => $neon ? '0 0 9px rgba(0, 204, 255, 0.3)' : '0 0 0 transparent'};
+  clip-path: ${({ $neon }) => $neon
+    ? `polygon(
+        12px 0, calc(100% - 12px) 0, 100% 12px,
+        100% calc(100% - 12px), calc(100% - 12px) 100%,
+        12px 100%, 0 calc(100% - 12px), 0 12px
+      )`
+    : 'polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px))'};
+  transition: clip-path 180ms ease, border-color 260ms ease, box-shadow 320ms ease, background-color 260ms ease;
 `;
 
 export const HudCornerAccent = styled.span<{
-  $position: 'top-right' | 'bottom-left';
+  $position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
   $neon: boolean;
 }>`
   position: absolute;
@@ -69,14 +65,64 @@ export const HudCornerAccent = styled.span<{
   mask-size: contain;
   mask-position: center;
 
-  ${({ $position }) => $position === 'top-right' ? css`
-    top: 0;
-    right: 0;
-    transform: scale(-1);
-  ` : css`
-    bottom: 0;
-    left: 0;
-  `}
+  ${({ $position }) => {
+    if ($position === 'top-left') return css`top: 0; left: 0; transform: scaleY(-1);`;
+    if ($position === 'top-right') return css`top: 0; right: 0; transform: scale(-1);`;
+    if ($position === 'bottom-right') return css`right: 0; bottom: 0; transform: scaleX(-1);`;
+    return css`bottom: 0; left: 0;`;
+  }}
+`;
+
+export const HudBorderLine = styled.span<{
+  $position: 'top' | 'right' | 'bottom' | 'left';
+  $isActive: boolean;
+  $color?: string;
+}>`
+  position: absolute;
+  z-index: 3;
+  pointer-events: none;
+  background: ${({ $color }) => $color ?? 'var(--clearneonBlue)'};
+  box-shadow: 0 0 5px ${({ $color }) => $color ?? 'var(--clearneonBlue)'};
+  will-change: opacity, transform;
+
+  ${({ $position }) => {
+    if ($position === 'top') return css`
+      top: 0;
+      right: 48px;
+      left: 48px;
+      height: 2px;
+      transform: scaleX(0);
+      transform-origin: left center;
+    `;
+    if ($position === 'bottom') return css`
+      right: 48px;
+      bottom: 0;
+      left: 48px;
+      height: 2px;
+      transform: scaleX(0);
+      transform-origin: right center;
+    `;
+    if ($position === 'left') return css`
+      top: 48px;
+      bottom: 48px;
+      left: 0;
+      width: 2px;
+      transform: scaleY(0);
+      transform-origin: top center;
+    `;
+    return css`
+      top: 48px;
+      right: 0;
+      bottom: 48px;
+      width: 2px;
+      transform: scaleY(0);
+      transform-origin: bottom center;
+    `;
+  }}
+
+  ${({ $position, $isActive }) => $isActive && ($position === 'top' || $position === 'bottom'
+    ? css`animation: ${hudLineHorizontal} 500ms ease-out forwards;`
+    : css`animation: ${hudLineVertical} 500ms ease-out 250ms forwards;`)}
 `;
 
 export const CityPageContainer = styled.main<{
@@ -126,14 +172,24 @@ export const CityBanner = styled.section<{ $neon: boolean; $clickable?: boolean 
   place-items: center;
   min-height: clamp(310px, 46vh, 520px);
   overflow: hidden;
-  border: 1px solid rgba(57, 211, 255, 0.64);
+  border: ${({ $neon }) => $neon
+    ? '2px solid transparent'
+    : '1px solid rgba(57, 211, 255, 0.64)'};
   background-color: rgba(0, 9, 21, 0.94);
-  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
   animation: ${bannerArrival} 0.8s ease-out both;
-  cursor: ${({ $clickable }) => $clickable ? 'zoom-in' : 'default'};
+  cursor: ${({ $clickable }) => $clickable ? 'pointer' : 'default'};
+  box-sizing: border-box;
   box-shadow: ${({ $neon }) => $neon
     ? 'inset 0 0 18px rgba(0, 178, 255, 0.18), 0 0 8px rgba(0, 204, 255, 0.22)'
     : 'none'};
+  clip-path: ${({ $neon }) => $neon
+    ? `polygon(
+        12px 0, calc(100% - 12px) 0, 100% 12px,
+        100% calc(100% - 12px), calc(100% - 12px) 100%,
+        12px 100%, 0 calc(100% - 12px), 0 12px
+      )`
+    : 'polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px))'};
+  transition: clip-path 180ms ease, border-color 260ms ease, box-shadow 320ms ease;
 
   &:focus-visible {
     outline: 2px solid var(--clearneonBlue);
@@ -265,6 +321,27 @@ export const HudPanel = styled.section<{ $gallery?: boolean; $neon: boolean; $st
   overflow: ${({ $standalone }) => $standalone ? 'visible' : 'hidden'};
   padding: 18px;
   box-sizing: border-box;
+
+  ${({ $neon }) => $neon && css`
+    h2,
+    h3 {
+      text-shadow: 0 0 7px rgba(0, 204, 255, 0.48);
+    }
+  `}
+
+  > header {
+    border-bottom-color: ${({ $neon }) => $neon
+      ? 'rgba(78, 218, 255, 0.48)'
+      : 'rgba(91, 203, 255, 0.2)'};
+    box-shadow: ${({ $neon }) => $neon
+      ? '0 7px 12px -12px rgba(0, 204, 255, 0.9)'
+      : 'none'};
+
+    > button {
+      text-shadow: ${({ $neon }) => $neon ? '0 0 7px rgba(0, 204, 255, 0.62)' : 'none'};
+    }
+  }
+
   @media (max-width: 540px) {
     padding: 14px;
   }
@@ -292,7 +369,9 @@ export const PanelTitle = styled.h2<{ $neon: boolean }>`
   font-weight: 100;
   letter-spacing: 1.4px;
   text-transform: uppercase;
-  text-shadow: ${({ $neon }) => $neon ? '0 0 8px var(--clearneonBlue)' : 'none'};
+  text-shadow: ${({ $neon }) => $neon
+    ? '0 0 6px var(--clearneonBlue), 0 0 13px rgba(0, 204, 255, 0.5)'
+    : 'none'};
 
   svg {
     flex: 0 0 auto;
@@ -300,6 +379,7 @@ export const PanelTitle = styled.h2<{ $neon: boolean }>`
     height: 20px;
     color: var(--clearneonBlue) !important;
     fill: var(--clearneonBlue) !important;
+    filter: ${({ $neon }) => $neon ? 'drop-shadow(0 0 5px var(--clearneonBlue))' : 'none'};
   }
 
   svg path {

@@ -24,11 +24,14 @@ import {
   ImageSection,
   TagsInputContainer,
   TagInput,
+  TagSectionHeader,
 } from "./FormItem.style";
+import { ItemTagInfo } from './ItemTagInfo';
 import { useFormItem } from "./useFormItem";
 import { atributosFormMap } from "../FormCharacter/MapItensForm";
 import toast from "react-hot-toast";
 import { ITEM_TIPO_OPTIONS } from "../../formOptions";
+import { handleNumericInputFocus } from '../../../../../../utils/numericInput';
 
 interface FormItemProps {
   theme: 'dark' | 'light';
@@ -49,6 +52,8 @@ export const FormItem = ({ theme, neon, contentType }: FormItemProps) => {
     setQuantidade,
     peso,
     setPeso,
+    discricao,
+    setDiscricao,
     imagemUrl,
     handleImagemUpload,
     atributos,
@@ -130,15 +135,29 @@ export const FormItem = ({ theme, neon, contentType }: FormItemProps) => {
             <LabelStatus>Quantidade</LabelStatus>
             <MinimalInput 
               value={quantidade} 
+              type="number"
+              onFocus={handleNumericInputFocus}
               onChange={(e) => setQuantidade(Number(e.target.value))}
             />
           </LabelInfoBox>
 
           <LabelInfoBox theme={theme} neon={neon}>
-            <LabelStatus>Peso (kg)</LabelStatus>
+            <LabelStatus>Espaço ocupado</LabelStatus>
             <MinimalInput 
-              value={peso || ""} 
+              value={peso ?? ""}
+              type="number"
+              onFocus={handleNumericInputFocus}
               onChange={(e) => setPeso(Number(e.target.value) || undefined)}
+            />
+          </LabelInfoBox>
+
+          <LabelInfoBox theme={theme} neon={neon}>
+            <LabelStatus>Discrição (-/+)</LabelStatus>
+            <MinimalInput
+              value={discricao}
+              type="number"
+              onFocus={handleNumericInputFocus}
+              onChange={(e) => setDiscricao(e.target.value === '' ? 0 : Number(e.target.value))}
             />
           </LabelInfoBox>
         </GridInputsRow>
@@ -189,7 +208,10 @@ export const FormItem = ({ theme, neon, contentType }: FormItemProps) => {
       </ImageSection>
 
       <div>
-        <SectionTitle theme={theme} neon={neon}>Tags (Opcional)</SectionTitle>
+        <TagSectionHeader>
+          <SectionTitle theme={theme} neon={neon}>Tags (Opcional)</SectionTitle>
+          <ItemTagInfo theme={theme} neon={neon} />
+        </TagSectionHeader>
         <TagsInputContainer>
           <TagInput
             theme={theme}
