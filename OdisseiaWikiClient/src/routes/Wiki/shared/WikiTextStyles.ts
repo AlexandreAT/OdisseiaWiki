@@ -1,6 +1,6 @@
 export const wikiHeading1Style = `
   font-family: 'DO Futuristic', sans-serif !important;
-  font-size: 2.2rem !important;
+  font-size: 2.1rem !important;
   font-weight: 100;
   letter-spacing: 3px;
   line-height: 1.4;
@@ -8,13 +8,13 @@ export const wikiHeading1Style = `
   color: var(--whitesmoke);
 
   @media (max-width: 768px) {
-    font-size: 1.8rem !important;
+    font-size: 1.72rem !important;
   }
 `;
 
 export const wikiHeading2Style = `
   font-family: 'DO Futuristic', sans-serif !important;
-  font-size: 1.6rem !important;
+  font-size: 1.52rem !important;
   font-weight: 100;
   letter-spacing: 2px;
   line-height: 1.4;
@@ -22,7 +22,7 @@ export const wikiHeading2Style = `
   color: var(--whitesmoke);
 
   @media (max-width: 768px) {
-    font-size: 1.4rem !important;
+    font-size: 1.34rem !important;
   }
 `;
 

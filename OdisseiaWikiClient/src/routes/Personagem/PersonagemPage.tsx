@@ -39,6 +39,7 @@ import { BiChevronDown } from 'react-icons/bi';
 import { DEFAULT_MAX_CHARACTER_LEVEL, getDefaultXpRequiredForLevel } from '../../utils/characterProgression';
 import { Lightbox } from '../Wiki/components/blocks/shared/Lightbox/Lightbox';
 import { RelatedPageLink, RelatedPages, RelatedPagesTitle } from '../Cidade/CidadePage.style';
+import { detectImageShapeForBackgroundFromUrl } from '../../utils/imageDisplayShape';
 
 const detailLabels: Record<string, string> = {
   curta: 'Dano Curto',
@@ -230,11 +231,39 @@ const PersonagemPage: React.FC = () => {
   const [personagensVinculadosNomes, setPersonagensVinculadosNomes] = React.useState<{ id: number; nome: string }[]>([]);
   const [galleryOpen, setGalleryOpen] = React.useState(true);
   const [mainImageOpen, setMainImageOpen] = React.useState(false);
+  const [mainImageBackground, setMainImageBackground] = React.useState<string | null>(null);
   const [historyModalOpen, setHistoryModalOpen] = React.useState(false);
   const [selectedInventoryItem, setSelectedInventoryItem] = React.useState<Item | null>(null);
   const [activeAbilityTab, setActiveAbilityTab] = React.useState<'skills' | 'magias'>('skills');
   const [itemBaseImages, setItemBaseImages] = React.useState<Record<string, string>>({});
   const [listModal, setListModal] = React.useState<'inventory' | 'implants' | 'abilities' | 'proficiencies' | null>(null);
+  const characterGalleryImages = React.useMemo(
+    () => normalizeGalleryImages(
+      personagem && 'galeriaImagem' in personagem ? personagem.galeriaImagem : undefined,
+    ),
+    [personagem],
+  );
+
+  React.useEffect(() => {
+    let active = true;
+    setMainImageBackground(null);
+
+    const selectBackground = async () => {
+      for (const galleryImage of characterGalleryImages) {
+        const candidateUrl = normalizeImagePath(galleryImage.url);
+        const shape = await detectImageShapeForBackgroundFromUrl(candidateUrl);
+
+        if (!active) return;
+        if (shape === 'square' || shape === 'rectangle') {
+          setMainImageBackground(candidateUrl);
+          return;
+        }
+      }
+    };
+
+    void selectBackground();
+    return () => { active = false; };
+  }, [characterGalleryImages]);
 
   React.useEffect(() => {
     let mounted = true;
@@ -372,8 +401,7 @@ const PersonagemPage: React.FC = () => {
   const loadPercentage = Math.round((currentLoad / loadCapacity) * 100);
   const isOverloaded = currentLoad > loadCapacity;
 
-  const rawGallery = (personagem as any)?.galeriaImagem;
-  const galleryImages = normalizeGalleryImages(rawGallery);
+  const galleryImages = characterGalleryImages;
   const skills = Array.isArray((personagem as any)?.skills) ? (personagem as any).skills.filter(isMeaningfulAbility) : [];
   const magias = Array.isArray((personagem as any)?.magia) ? (personagem as any).magia.filter(isMeaningfulAbility) : [];
   const proficiencias = Array.isArray((personagem as any)?.proficiencias)
@@ -1025,7 +1053,11 @@ const PersonagemPage: React.FC = () => {
 
         <Lightbox
           isOpen={mainImageOpen}
-          images={imagem ? [{ url: normalizeImagePath(imagem), caption: nome }] : []}
+          images={imagem ? [{
+            url: normalizeImagePath(imagem),
+            caption: nome,
+            backgroundUrl: mainImageBackground || normalizeImagePath(imagem),
+          }] : []}
           onClose={() => setMainImageOpen(false)}
         />
     </PageContainer>

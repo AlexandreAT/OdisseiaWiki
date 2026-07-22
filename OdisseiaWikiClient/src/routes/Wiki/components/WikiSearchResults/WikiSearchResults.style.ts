@@ -122,6 +122,7 @@ export const SearchResultGroup = styled.section`
   gap: 14px;
   width: 100%;
   min-width: 0;
+  scroll-margin-top: 90px;
 `;
 
 export const SearchResultGroupTitle = styled.h2<{ $type: WikiSearchEntityType; $neon: boolean }>`
@@ -282,6 +283,62 @@ export const ResultCardDescription = styled.p`
   -webkit-box-orient: vertical;
   line-height: 1.4;
   overflow-wrap: anywhere;
+`;
+
+export const SearchResultFooter = styled.footer<{ $type: WikiSearchEntityType }>`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 38px;
+  padding-top: 2px;
+  color: ${({ $type }) => getGroupColor($type)};
+`;
+
+export const PaginationButton = styled.button<{
+  $type: WikiSearchEntityType;
+  $neon: boolean;
+}>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid ${({ $type }) => getGroupColor($type)};
+  border-radius: 4px;
+  background: rgba(4, 12, 19, 0.72);
+  color: ${({ $type }) => getGroupColor($type)};
+  cursor: pointer;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+
+  svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  &:not(:disabled):hover,
+  &:not(:disabled):focus-visible {
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: ${({ $neon, $type }) => $neon ? `0 0 9px ${getGroupColor($type)}` : 'none'};
+    outline: none;
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.3;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+`;
+
+export const PaginationStatus = styled.span`
+  min-width: 92px;
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 12px;
+  text-align: center;
 `;
 
 export const ResultCardPlaceholder = styled.div<{ $type: WikiSearchEntityType }>`
