@@ -6,6 +6,11 @@ import {
   wakeApiServer,
 } from '../services/apiAvailability';
 import { beginApiRequest, finishApiRequest } from '../services/apiRequestActivity';
+import {
+  expireAuthSession,
+  isAuthSessionExpirationInProgress,
+  isTokenExpired,
+} from '../services/authSession';
 
 interface RetryableRequestConfig extends InternalAxiosRequestConfig {
   __odisseiaRetryAttempted?: boolean;
@@ -25,7 +30,14 @@ api.interceptors.request.use(
     await waitForActiveServerWakeup();
 
     const token = localStorage.getItem('token');
-    if (token) config.headers.Authorization = `Bearer ${token}`;
+    if (token) {
+      if (isTokenExpired(token)) {
+        expireAuthSession();
+        return new Promise<InternalAxiosRequestConfig>(() => undefined);
+      }
+
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     (config as RetryableRequestConfig).__odisseiaRequestTracked = true;
     beginApiRequest();
     return config;
@@ -41,6 +53,15 @@ api.interceptors.response.use(
   async (error: AxiosError) => {
     const config = error.config as RetryableRequestConfig | undefined;
     if (config?.__odisseiaRequestTracked) finishApiRequest();
+
+    if (
+      error.response?.status === 401
+      && (localStorage.getItem('token') || isAuthSessionExpirationInProgress())
+    ) {
+      if (!isAuthSessionExpirationInProgress()) expireAuthSession();
+      return new Promise(() => undefined);
+    }
+
     const isSafeGet = config?.method?.toLowerCase() === 'get';
 
     if (!config || !isSafeGet || config.__odisseiaRetryAttempted || !isTransientApiError(error)) {

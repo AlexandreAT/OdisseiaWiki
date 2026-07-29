@@ -126,7 +126,7 @@ ForwardedHeaders__Enabled=true
 Jwt__Issuer=<ISSUER>
 Jwt__Audience=<AUDIENCE>
 Jwt__ChaveSecreta=<SEGREDO_ALEATORIO_COM_PELO_MENOS_32_BYTES>
-Jwt__ExpiracaoHoras=168
+Jwt__ExpiracaoHoras=720
 Authorization__AdminEmails__0=<EMAIL_ADMIN>
 Authorization__RequireVerifiedEmailForAdmin=true
 GoogleAuth__ClientId=<GOOGLE_WEB_CLIENT_ID>
@@ -142,6 +142,10 @@ Cloudinary__UseLocalStorageInDevelopment=false
 `PORT` e `RENDER=true` são fornecidas pela plataforma. Não crie variáveis `VITE_*` no Render.
 Não configure `ImgBB__ApiKey` em produção: ImgBB permanece somente como compatibilidade para URLs
 antigas já persistidas.
+
+Mantenha `Jwt__ChaveSecreta` fixa entre reinicializações e novos deploys. Alterar essa chave invalida
+imediatamente todos os tokens emitidos, mesmo quando o prazo definido em `Jwt__ExpiracaoHoras` ainda
+não terminou.
 
 ### Forwarded headers e rate limiting
 
