@@ -1,0 +1,41 @@
+import { jwtDecode } from 'jwt-decode';
+
+const SESSION_EXPIRED_MESSAGE_KEY = 'odisseia:session-expired-message';
+const SESSION_EXPIRED_MESSAGE = 'Sua sessão expirou. Entre novamente para continuar.';
+
+let sessionExpirationInProgress = false;
+
+interface JwtExpirationPayload {
+  exp?: number;
+}
+
+export const clearAuthSession = () => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('usuario');
+};
+
+export const isTokenExpired = (token: string) => {
+  try {
+    const { exp } = jwtDecode<JwtExpirationPayload>(token);
+    return typeof exp === 'number' && exp * 1000 <= Date.now();
+  } catch {
+    return true;
+  }
+};
+
+export const isAuthSessionExpirationInProgress = () => sessionExpirationInProgress;
+
+export const expireAuthSession = () => {
+  if (sessionExpirationInProgress) return;
+
+  sessionExpirationInProgress = true;
+  clearAuthSession();
+  sessionStorage.setItem(SESSION_EXPIRED_MESSAGE_KEY, SESSION_EXPIRED_MESSAGE);
+  window.location.replace('/login');
+};
+
+export const consumeSessionExpiredMessage = () => {
+  const message = sessionStorage.getItem(SESSION_EXPIRED_MESSAGE_KEY);
+  sessionStorage.removeItem(SESSION_EXPIRED_MESSAGE_KEY);
+  return message;
+};

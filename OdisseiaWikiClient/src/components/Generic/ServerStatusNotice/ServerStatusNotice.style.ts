@@ -4,11 +4,11 @@ const spin = keyframes`
   to { transform: rotate(360deg); }
 `;
 
-export const NoticeWrapper = styled.div<{ $error: boolean }>`
+export const NoticeWrapper = styled.div<{ $error: boolean; $modalOpen: boolean }>`
   position: fixed;
   right: 20px;
   bottom: 20px;
-  z-index: 100000;
+  z-index: ${({ $modalOpen }) => ($modalOpen ? 9999 : 100000)};
   display: flex;
   align-items: center;
   gap: 12px;
@@ -28,6 +28,10 @@ export const NoticeWrapper = styled.div<{ $error: boolean }>`
     width: calc(100vw - 24px);
     gap: 9px;
     padding: 10px;
+  }
+
+  @media (max-width: 480px) {
+    flex-wrap: wrap;
   }
 `;
 
@@ -60,6 +64,46 @@ export const NoticeContent = styled.div`
   }
 `;
 
+export const NoticeActions = styled.div`
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+
+  @media (max-width: 480px) {
+    width: 100%;
+    justify-content: flex-end;
+  }
+`;
+
+export const NoticeHelpButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--clearneonBlue);
+  border-radius: 50%;
+  background: rgba(0, 212, 255, 0.08);
+  color: var(--clearneonBlue);
+  cursor: pointer;
+  font-family: 'DO Futuristic', sans-serif;
+  font-size: 14px;
+  transition: color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    background: rgba(0, 212, 255, 0.16);
+    color: var(--whitesmoke);
+    box-shadow: 0 0 10px rgba(0, 212, 255, 0.35);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--clearneonYellow);
+    outline-offset: 2px;
+  }
+`;
+
 export const NoticeAction = styled.button`
   flex: 0 0 auto;
   padding: 8px 10px;
@@ -77,5 +121,27 @@ export const NoticeAction = styled.button`
   @media (max-width: 480px) {
     padding: 7px 8px;
     font-size: 11px;
+  }
+`;
+
+export const ServerInfoContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  color: var(--whitesmoke);
+
+  p {
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.65;
+  }
+
+  @media (max-width: 480px) {
+    gap: 12px;
+
+    p {
+      font-size: 0.88rem;
+      line-height: 1.55;
+    }
   }
 `;

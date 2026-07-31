@@ -8,8 +8,10 @@ senhas, tokens, connection strings reais ou secrets neste repositório.
 1. Criar um Aiven for MySQL no plano **Free** e manter o banco vazio.
 2. Obter host, porta, database, usuário, senha e certificado CA no Aiven.
 3. Configurar Cloudinary e banco como variáveis do backend no Render.
-4. Criar o Web Service Docker no Render e aplicar migrations/seeder no primeiro startup.
-5. Validar `/health`, `/health/ready`, migrations e a mesa padrão.
+4. Criar o Web Service Docker no Render e aplicar migrations/seeder somente no primeiro startup
+   ou em um deploy controlado que contenha migration.
+5. Validar `/health/live`, `/health/ready`, migrations e a mesa padrão; depois desabilitar novamente
+   migrations e seeder automáticos.
 6. Criar o site no Netlify e configurar as duas variáveis `VITE_*`.
 7. Voltar ao Render para configurar a origem final do Netlify no CORS.
 8. Cadastrar a origem do Netlify no Google Cloud Console.
@@ -17,8 +19,12 @@ senhas, tokens, connection strings reais ou secrets neste repositório.
 
 Referências oficiais: [Render Web Services](https://render.com/docs/web-services),
 [Render Free](https://render.com/docs/free),
+[Render Health Checks](https://render.com/docs/health-checks),
+[Render Outbound IPs](https://render.com/docs/outbound-ip-addresses),
 [Netlify SPA redirects](https://docs.netlify.com/manage/routing/redirects/rewrites-proxies/),
-[Aiven MySQL Free](https://aiven.io/docs/products/mysql/concepts/mysql-free-tier) e
+[Aiven MySQL Free](https://aiven.io/docs/products/mysql/concepts/mysql-free-tier),
+[Aiven — restringir acesso por IP](https://aiven.io/docs/platform/howto/restrict-access),
+[Aiven — logs e métricas](https://aiven.io/docs/platform/howto/list-monitoring) e
 [Google Identity Services](https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid).
 
 ## 1. Aiven MySQL Free
@@ -26,6 +32,8 @@ Referências oficiais: [Render Web Services](https://render.com/docs/web-service
 Crie um serviço MySQL **Free**, sem adicionar método de pagamento. O plano gratuito atual possui
 um único nó e limites pequenos; é adequado ao início do projeto, mas não oferece alta disponibilidade.
 O banco de produção deve começar vazio: **não importe `odisseia_backup.sql` nem qualquer dump local**.
+Se o painel exibir créditos de trial, preço por hora ou data de término do trial, confirme o plano
+selecionado: o saldo promocional não transforma automaticamente um serviço pago em Free.
 
 No painel do Aiven, copie individualmente:
 
@@ -63,13 +71,22 @@ Database__SeedOnStartup=true
 ```
 
 No primeiro startup, as migrations são aplicadas e depois o seeder idempotente garante somente a
-mesa padrão obrigatória (`CodigoSistema=ODISSEIA_PADRAO`). A API pode responder em `/health` durante
-uma indisponibilidade transitória, mas `/health/ready` permanece indisponível até o banco estar pronto.
+mesa padrão obrigatória (`CodigoSistema=ODISSEIA_PADRAO`). A API pode responder em `/health/live`
+durante uma indisponibilidade transitória, mas `/health/ready` permanece indisponível até o banco
+estar pronto.
 
-Depois do primeiro deploy validado, `Database__ApplyMigrationsOnStartup` pode ser alterada para
-`false`. Para cada nova versão que contenha migrations, habilite-a novamente durante o deploy.
-`Database__SeedOnStartup=true` pode permanecer ativo: o índice único de `CodigoSistema` e o service
-idempotente impedem duplicação.
+Depois do primeiro deploy validado, altere **as duas** variáveis para `false`:
+
+```text
+Database__ApplyMigrationsOnStartup=false
+Database__SeedOnStartup=false
+```
+
+Esse é o estado normal de produção e também o estado esperado para cold starts. Para uma versão que
+contenha migration, faça backup, habilite somente as tarefas necessárias durante um deploy
+controlado, valide o banco e volte ambas para `false`. O seeder é idempotente, mas executá-lo em todo
+cold start aumenta desnecessariamente a dependência do startup em operações de escrita e lock.
+Mesmo com as duas tarefas desativadas, a API valida uma conexão inicial antes de liberar `/api`.
 
 Validações no cliente MySQL do Aiven:
 
@@ -91,7 +108,19 @@ Crie um **Web Service**, selecione Docker e use:
 - repository root/build context: raiz do repositório;
 - Dockerfile: `OdisseiaWiki/Dockerfile`;
 - instance type: Free;
-- health check path: `/health/ready`.
+- health check path: `/health/live`.
+
+Se a versão atualmente publicada ainda não possuir `/health/live`, use temporariamente `/health`.
+Troque para `/health/live` assim que o deploy que contém esse endpoint estiver ativo. **Não use
+`/health/ready` como health check do Render**: uma indisponibilidade transitória do banco deve retirar
+a API da prontidão para atender consultas, mas não deve fazer o Render interpretar o processo vivo
+como uma instância quebrada e reiniciá-lo.
+
+O Render oferece um único health check HTTP para duas necessidades que, nesta aplicação, são
+separadas. Usar liveness evita reinícios causados por uma oscilação externa do Aiven, mas também
+permite que um deploy seja marcado como live antes de o banco ficar pronto. Por isso, todo deploy
+deve validar `/health/ready` e uma rota pública com acesso ao banco; se eles não estabilizarem, faça
+rollback. Mudanças de credencial, TLS ou migration exigem atenção especial.
 
 Build local equivalente:
 
@@ -116,17 +145,18 @@ ConnectionStrings__DefaultConnection=<CONNECTION_STRING_AIVEN_COM_TLS>
 Database__ServerVersion=<VERSAO_MYSQL_COMPATIVEL>
 Database__MaximumPoolSize=10
 Database__ConnectionIdleTimeoutSeconds=60
+Database__DnsCheckIntervalSeconds=60
 Database__RetryCount=3
 Database__RetryDelaySeconds=5
-Database__ApplyMigrationsOnStartup=true
-Database__SeedOnStartup=true
+Database__ApplyMigrationsOnStartup=false
+Database__SeedOnStartup=false
 Database__InitializationRetrySeconds=10
 Database__InitializationLockTimeoutSeconds=30
 ForwardedHeaders__Enabled=true
 Jwt__Issuer=<ISSUER>
 Jwt__Audience=<AUDIENCE>
 Jwt__ChaveSecreta=<SEGREDO_ALEATORIO_COM_PELO_MENOS_32_BYTES>
-Jwt__ExpiracaoHoras=168
+Jwt__ExpiracaoHoras=720
 Authorization__AdminEmails__0=<EMAIL_ADMIN>
 Authorization__RequireVerifiedEmailForAdmin=true
 GoogleAuth__ClientId=<GOOGLE_WEB_CLIENT_ID>
@@ -143,6 +173,10 @@ Cloudinary__UseLocalStorageInDevelopment=false
 Não configure `ImgBB__ApiKey` em produção: ImgBB permanece somente como compatibilidade para URLs
 antigas já persistidas.
 
+Mantenha `Jwt__ChaveSecreta` fixa entre reinicializações e novos deploys. Alterar essa chave invalida
+imediatamente todos os tokens emitidos, mesmo quando o prazo definido em `Jwt__ExpiracaoHoras` ainda
+não terminou.
+
 ### Forwarded headers e rate limiting
 
 Com `ForwardedHeaders__Enabled=true` e `RENDER=true`, a API processa somente um hop de
@@ -157,12 +191,19 @@ fixos do proxy; a segurança depende do isolamento do origin e do limite de um h
 
 ### Health checks e logs
 
-- `GET /health`: liveness leve; não consulta banco nem Cloudinary e retorna apenas o status.
+- `GET /health/live`: liveness usado pelo Render; confirma que o processo HTTP está vivo, sem consultar
+  banco ou Cloudinary.
+- `GET /health`: alias legado de liveness, mantido para compatibilidade.
 - `GET /health/ready`: confirma que a inicialização terminou e que o MySQL aceita conexão.
 
-Nenhum endpoint retorna connection string ou detalhes da exceção. Para falhas de inicialização, os
-logs registram tentativa e tipo da exceção, sem imprimir o conteúdo da connection string. Uma falha
-temporária gera retry e não encerra o processo.
+Liveness e readiness têm finalidades diferentes. O Render deve verificar somente liveness. O
+frontend e a validação pós-deploy usam readiness para aguardar a API **e** o banco. Durante uma falha
+transitória do MySQL, `/health/live` pode responder `200` enquanto `/health/ready` responde `503`;
+isso significa “processo vivo, banco ainda indisponível”, não necessariamente que o serviço caiu.
+
+Nenhum endpoint retorna connection string ou detalhes internos da exceção. Para falhas de
+inicialização, os logs registram tentativa, tipos e códigos seguros da exceção e o próximo retry, sem
+imprimir o conteúdo da connection string. Uma falha temporária gera retry e não encerra o processo.
 
 ## 3. Cloudinary em produção
 
@@ -225,10 +266,116 @@ alterado futuramente para `ux_mode=redirect`. Use o mesmo Web Client ID em
 `VITE_GOOGLE_CLIENT_ID` e `GoogleAuth__ClientId`; o backend o valida como audience. Client secret do
 Google não é utilizado e nunca deve ir para o frontend.
 
-## 6. Checklist manual pós-deploy
+## 6. Runbook — falha de conexão entre Render e Aiven
 
-- Abrir `/health` e confirmar HTTP 200 sem detalhes internos.
+Os indicadores **Running** do Render e do Aiven confirmam que os serviços estão ativos isoladamente;
+eles não comprovam que a API consegue autenticar, negociar TLS e abrir uma conexão MySQL naquele
+momento. Uma falha seguida por **Service recovered** normalmente indica indisponibilidade transitória,
+cold start, limite de conexão ou configuração momentaneamente inválida — não uma desconexão
+permanente entre as plataformas.
+
+### 6.1. Classifique o problema pelos health checks
+
+Consulte os endpoints sem autenticação:
+
+```bash
+curl -i https://<BACKEND>.onrender.com/health/live
+curl -i https://<BACKEND>.onrender.com/health/ready
+```
+
+Enquanto a versão anterior ainda estiver publicada, substitua `/health/live` por `/health`.
+
+| Liveness | Readiness | Interpretação |
+| --- | --- | --- |
+| `200` | `200` | API e banco estão disponíveis agora; investigue os logs no horário do incidente. |
+| `200` | `503` | Processo está vivo, mas inicialização/conexão MySQL ainda não está pronta. |
+| sem resposta, `502`, `503` ou `504` | qualquer | Cold start, deploy, crash ou indisponibilidade da instância do Render. |
+| `200` | alternando entre `200` e `503` | Investigue rede, TLS, limite de conexões e métricas do Aiven. |
+
+O health check do Render deve continuar em `/health/live` mesmo quando readiness retorna `503`.
+Reiniciar repetidamente o serviço não corrige credencial, TLS, allowlist ou limite de conexão e ainda
+pode apagar o contexto temporal útil dos logs.
+
+### 6.2. Checklist da conexão
+
+Revise `ConnectionStrings__DefaultConnection` no painel do Render sem copiar seu valor para tickets,
+chat ou logs:
+
+- `Server`: use exatamente o **FQDN** fornecido pelo Aiven, sem `http://`, `https://`, caminho ou barra
+  final; nunca fixe o IP resolvido.
+- `Port`: use a porta MySQL exibida em **Connection information**, que pode não ser `3306`.
+- `Database`: `defaultdb` é um nome normal fornecido pelo Aiven; confirme em **Databases** que ele
+  ainda existe.
+- `User ID` e `Password`: confirme o usuário ativo. Se rotacionar a senha, atualize imediatamente a
+  variável no Render e faça um novo deploy.
+- `Database__ServerVersion`: mantenha compatível com a versão MySQL exibida pelo Aiven.
+- `SslMode`: mantenha no mínimo `Required`; com `VerifyCA`, confirme que o secret file existe no
+  caminho configurado e contém o CA atual do Aiven.
+- Não inclua aspas externas, quebras de linha ou espaços acidentais no valor.
+- Mantenha `Database__DnsCheckIntervalSeconds=60`, permitindo que o pool descarte conexões quando o
+  FQDN do serviço passar a resolver para outro IP.
+
+Se o Aiven estiver com IP filtering habilitado, permita todos os intervalos de saída atuais listados
+pelo Render para o serviço. Uma regra antiga pode bloquear uma instância nova mesmo quando ambos os
+painéis exibem **Running**.
+
+### 6.3. O que conferir em cada painel
+
+No **Render**:
+
+1. Confirme o commit realmente publicado e o horário de **Deploy live**.
+2. Compare **Events** com **Logs** no mesmo intervalo; `Instance failed` é consequência, e a exceção
+   imediatamente anterior costuma indicar a causa.
+3. Confirme health check `/health/live` (`/health` apenas durante a transição).
+4. Confira CPU, memória, reinícios e quantidade de instâncias.
+5. Verifique se as variáveis obrigatórias existem no Environment, sem revelar seus valores.
+
+No **Aiven**:
+
+1. Confirme serviço, nó e `defaultdb` ativos.
+2. Confira o plano, créditos e data de término de trial; serviço em trial não deve ser tratado como
+   recurso gratuito permanente.
+3. Revise **Logs**, **Metrics** e **Current queries** no horário exato do incidente.
+4. Confira uso de memória, reinícios, número de conexões e erros de autenticação/TLS.
+5. Confirme usuário, porta, FQDN, CA e regras de acesso por IP.
+
+Consultas úteis, executadas no console MySQL ou em um cliente conectado sem registrar a senha:
+
+```sql
+SHOW STATUS LIKE 'Threads_connected';
+SHOW STATUS LIKE 'Max_used_connections';
+SHOW STATUS LIKE 'Aborted_connects';
+SHOW STATUS LIKE 'Connection_errors%';
+SHOW VARIABLES LIKE 'max_connections';
+```
+
+Se `Max_used_connections` estiver próximo de `max_connections`, investigue vazamento ou excesso de
+pool antes de aumentar limites. O projeto usa pool máximo de 10 por instância; multiplique esse valor
+pelo número máximo de instâncias simultâneas do Render ao avaliar o consumo.
+
+### 6.4. Recuperação segura
+
+1. Preserve os logs e horários do incidente antes de reiniciar qualquer serviço.
+2. Corrija primeiro conexão, senha, TLS ou allowlist caso haja divergência.
+3. Deixe `Database__ApplyMigrationsOnStartup=false` e `Database__SeedOnStartup=false` em cold starts
+   normais.
+4. Faça redeploy/restart de uma plataforma por vez e valide liveness/readiness entre as ações.
+5. Aguarde o retry automático da API; não repita automaticamente `POST`, `PUT`, `PATCH` ou `DELETE`.
+6. Se a regressão começou em um commit, use rollback do Render e valide o banco antes de restaurar
+   migrations destrutivas.
+
+Ao pedir ajuda, compartilhe somente: horário com fuso, commit, status HTTP, endpoint, tipo/código da
+exceção, trace ID e sequência dos eventos. Oculte senha, connection string completa, JWT, tokens,
+cookies, API keys, conteúdo do CA e payloads com dados pessoais. O hostname e o usuário também devem
+ser omitidos em relatórios públicos quando não forem necessários.
+
+## 7. Checklist manual pós-deploy
+
+- Abrir `/health/live` e confirmar HTTP 200 sem detalhes internos.
 - Abrir `/health/ready` e confirmar HTTP 200 após migrations/seeder.
+- Confirmar no Render que o health check path é `/health/live`, nunca `/health/ready`.
+- Confirmar `Database__ApplyMigrationsOnStartup=false` e `Database__SeedOnStartup=false` após o
+  deploy controlado.
 - Conferir `__EFMigrationsHistory` e a única mesa padrão no Aiven.
 - Confirmar que nenhum dado do banco local foi importado.
 - Testar uma rota pública da Wiki sem autenticação.
@@ -241,10 +388,12 @@ Google não é utilizado e nunca deve ir para o frontend.
 - Conferir CORS: Netlify permitido e origem não cadastrada bloqueada.
 - Conferir logs sem senha, tokens, connection string ou API secrets.
 
-## 7. Limites que ficam para a Fase 4
+## 8. Limites que ficam para a Fase 4
 
 - Render Free entra em cold start após inatividade e pode levar cerca de um minuto para acordar.
-- O Aiven Free é single-node, limitado a 1 GB e pode ser pausado por inatividade.
+- Se o serviço selecionado for realmente o Aiven Free, considere seus limites de nó, memória,
+  armazenamento e eventuais pausas; um serviço coberto por créditos de trial segue as regras do plano
+  contratado e pode gerar cobrança ou parar ao fim do trial.
 - O readiness consulta o banco, mas não consulta Cloudinary; leitura pública pode funcionar durante
   indisponibilidade do storage de imagens.
 - Migrations automáticas são controladas por flag e lock, mas alterações destrutivas ainda devem ser

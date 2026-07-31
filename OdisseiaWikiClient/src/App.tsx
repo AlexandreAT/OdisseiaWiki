@@ -3,8 +3,9 @@ import { useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { Page, Header, Body, Footer } from './Global Styles/Global.style.ts';
 import { Navbar } from './components/Generic/Navbar/Navbar.tsx';
-import { Toaster } from 'react-hot-toast';
+import toast, { Toaster } from 'react-hot-toast';
 import { ServerStatusNotice } from './components/Generic/ServerStatusNotice/ServerStatusNotice.tsx';
+import { consumeSessionExpiredMessage } from './services/authSession.ts';
 
 function App() {
 
@@ -17,6 +18,11 @@ function App() {
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, [location.pathname, location.search]);
+
+  useEffect(() => {
+    const sessionMessage = consumeSessionExpiredMessage();
+    if (sessionMessage) toast.error(sessionMessage, { id: 'session-expired' });
+  }, []);
 
   return (
     <Page theme={theme} neon={neon}>

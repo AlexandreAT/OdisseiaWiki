@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { PerfilDropdown, PerfilOption, PerfilButton } from './PerfilList.style';
+import { clearAuthSession } from '../../../../services/authSession';
 
 interface Props {
     usuario: {
@@ -65,8 +66,7 @@ export const PerfilList = ({ usuario, onClose, avatarRef, theme }: Props) => {
     }, [onClose, avatarRef]);
     
     const handleLogout = () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('usuario');
+        clearAuthSession();
         window.location.href = '/login';
     };
 
