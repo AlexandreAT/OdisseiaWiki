@@ -6,5 +6,6 @@
         public string Nome { get; set; } = null!;
         public string? Imagem { get; set; }
         public bool PadraoSistema { get; set; }
+        public int? IdSistemaVersao { get; set; }
     }
 }

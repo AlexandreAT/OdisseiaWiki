@@ -7,6 +7,7 @@ namespace OdisseiaWiki.Services.Interfaces
     {
         Task<ResultMesa> CreateAsync(MesaDto dto);
         Task<List<Mesa>> GetAllAsync();
+        Task<Mesa?> GetByIdAsync(int id);
         Task<List<Mesa>> GetAccessibleAsync(int idUsuario);
         Task<bool> IsOwnerAsync(int idMesa, int idUsuario);
         Task<bool> CanUseAsync(int idMesa, int idUsuario);

@@ -4,5 +4,6 @@ export interface Mesa {
   nome: string;
   imagem?: string | null;
   padraoSistema: boolean;
+  idSistemaVersao?: number | null;
   dataCriacao: string;
 }

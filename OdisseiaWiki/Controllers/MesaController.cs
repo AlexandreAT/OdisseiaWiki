@@ -48,6 +48,20 @@ namespace OdisseiaWiki.Controllers
             return Ok(mesas);
         }
 
+        [HttpGet("{id:int}")]
+        public async Task<IActionResult> GetById(int id)
+        {
+            int? userId = User.GetUserId();
+            if (!userId.HasValue)
+                return Unauthorized();
+
+            if (!User.IsAdmin() && !await _service.CanUseAsync(id, userId.Value))
+                return Forbid();
+
+            Mesa? mesa = await _service.GetByIdAsync(id);
+            return mesa is null ? NotFound() : Ok(mesa);
+        }
+
         [HttpPut("{id:int}")]
         public async Task<IActionResult> Update(int id, [FromBody] MesaDto dto)
         {
