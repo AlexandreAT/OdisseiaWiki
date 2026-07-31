@@ -10,5 +10,8 @@ if (!/^https?:\/\//i.test(apiUrl)) {
   throw new Error('VITE_API_URL deve ser uma URL HTTP(S) absoluta.');
 }
 
-export const healthUrl = `${new URL(apiUrl).origin}/health`;
+const apiOrigin = new URL(apiUrl).origin;
+
+export const healthUrl = `${apiOrigin}/health`;
+export const readinessUrl = `${apiOrigin}/health/ready`;
 export const API_REQUEST_TIMEOUT_MS = 20_000;

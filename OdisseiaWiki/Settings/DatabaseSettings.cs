@@ -10,6 +10,8 @@ public sealed class DatabaseSettings
 
     public uint ConnectionIdleTimeoutSeconds { get; init; } = 60;
 
+    public uint DnsCheckIntervalSeconds { get; init; } = 60;
+
     public int RetryCount { get; init; } = 3;
 
     public int RetryDelaySeconds { get; init; } = 5;

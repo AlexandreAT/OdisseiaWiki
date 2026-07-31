@@ -12,12 +12,14 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using MySqlConnector;
 using OdisseiaWiki.Data;
 using OdisseiaWiki.Health;
+using OdisseiaWiki.Middleware;
 using OdisseiaWiki.Repositories;
 using OdisseiaWiki.Repositories.Interfaces;
 using OdisseiaWiki.Security;
@@ -102,6 +104,8 @@ public class Program
                 "Database:MaximumPoolSize deve estar entre 1 e 50.")
             .Validate(settings => settings.ConnectionIdleTimeoutSeconds is > 0 and <= 600,
                 "Database:ConnectionIdleTimeoutSeconds deve estar entre 1 e 600.")
+            .Validate(settings => settings.DnsCheckIntervalSeconds <= 3600,
+                "Database:DnsCheckIntervalSeconds deve estar entre 0 e 3600.")
             .Validate(settings => settings.RetryCount is >= 0 and <= 10,
                 "Database:RetryCount deve estar entre 0 e 10.")
             .Validate(settings => settings.RetryDelaySeconds is > 0 and <= 60,
@@ -146,6 +150,7 @@ public class Program
 
         builder.Services.AddSingleton<DatabaseInitializationState>();
         builder.Services.AddHostedService<DatabaseInitializationService>();
+        builder.Services.AddHostedService<DatabaseRecoveryService>();
         builder.Services.AddHealthChecks()
             .AddCheck<DatabaseReadinessHealthCheck>(
                 "database",
@@ -270,6 +275,41 @@ public class Program
             {
                 Exception? exception = context.Features.Get<IExceptionHandlerFeature>()?.Error;
                 ILogger<Program> logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+                bool databaseUnavailable = IsTransientDatabaseFailure(exception);
+
+                if (databaseUnavailable)
+                {
+                    Exception? rootException = exception?.GetBaseException();
+                    MySqlException? mySqlException = exception is null
+                        ? null
+                        : FindException<MySqlException>(exception);
+                    DatabaseInitializationState initializationState = context.RequestServices
+                        .GetRequiredService<DatabaseInitializationState>();
+                    initializationState.MarkUnavailable();
+                    logger.LogWarning(
+                        "Banco temporariamente indisponível ao processar {Method} {Path}. " +
+                        "Exceção externa: {OuterExceptionType}; exceção interna: {RootExceptionType}; " +
+                        "código MySQL: {MySqlErrorNumber}; SQL state: {SqlState}; transitório: {IsTransient}; " +
+                        "TraceId: {TraceId}.",
+                        context.Request.Method,
+                        context.Request.Path,
+                        exception?.GetType().Name,
+                        rootException?.GetType().Name,
+                        mySqlException?.Number,
+                        mySqlException?.SqlState,
+                        mySqlException?.IsTransient,
+                        context.TraceIdentifier);
+
+                    SetRetryAfterHeader(context, databaseSettings.InitializationRetrySeconds);
+                    await WriteProblemAsync(
+                        context,
+                        StatusCodes.Status503ServiceUnavailable,
+                        "Serviço temporariamente indisponível",
+                        "O servidor está restabelecendo a conexão com o banco de dados. " +
+                        "Tente novamente em alguns instantes.");
+                    return;
+                }
+
                 logger.LogError(exception, "Erro inesperado ao processar {Method} {Path}",
                     context.Request.Method, context.Request.Path);
 
@@ -287,11 +327,17 @@ public class Program
             app.UseStaticFiles();
         app.UseRouting();
         app.UseCors(FrontendCorsPolicy);
+        app.UseMiddleware<DatabaseReadinessMiddleware>();
         app.UseAuthentication();
         app.UseRateLimiter();
         app.UseAuthorization();
         app.MapControllers();
         app.MapHealthChecks("/health", new HealthCheckOptions
+        {
+            Predicate = _ => false,
+            ResponseWriter = WriteHealthResponseAsync,
+        }).AllowAnonymous();
+        app.MapHealthChecks("/health/live", new HealthCheckOptions
         {
             Predicate = _ => false,
             ResponseWriter = WriteHealthResponseAsync,
@@ -328,6 +374,7 @@ public class Program
             settings.MaximumPoolSize);
         connectionBuilder.MinimumPoolSize = 0;
         connectionBuilder.ConnectionIdleTimeout = settings.ConnectionIdleTimeoutSeconds;
+        connectionBuilder.DnsCheckInterval = settings.DnsCheckIntervalSeconds;
 
         if (!environment.IsDevelopment() &&
             connectionBuilder.SslMode is MySqlSslMode.None or MySqlSslMode.Preferred)
@@ -485,6 +532,42 @@ public class Program
         problem.Extensions["traceId"] = context.TraceIdentifier;
 
         await context.Response.WriteAsync(JsonSerializer.Serialize(problem));
+    }
+
+    private static bool IsTransientDatabaseFailure(Exception? exception)
+    {
+        while (exception is not null)
+        {
+            if (exception is RetryLimitExceededException)
+                return true;
+
+            if (exception is MySqlException { IsTransient: true })
+                return true;
+
+            exception = exception.InnerException;
+        }
+
+        return false;
+    }
+
+    private static TException? FindException<TException>(Exception exception)
+        where TException : Exception
+    {
+        Exception? current = exception;
+        while (current is not null)
+        {
+            if (current is TException typedException)
+                return typedException;
+
+            current = current.InnerException;
+        }
+
+        return null;
+    }
+
+    private static void SetRetryAfterHeader(HttpContext context, int retryAfterSeconds)
+    {
+        context.Response.Headers.RetryAfter = Math.Max(1, retryAfterSeconds).ToString();
     }
 
     private static Task WriteHealthResponseAsync(HttpContext context, HealthReport report)

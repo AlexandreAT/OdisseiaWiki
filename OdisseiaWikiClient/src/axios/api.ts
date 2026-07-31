@@ -64,9 +64,16 @@ api.interceptors.response.use(
 
     const isSafeGet = config?.method?.toLowerCase() === 'get';
 
-    if (!config || !isSafeGet || config.__odisseiaRetryAttempted || !isTransientApiError(error)) {
+    if (!config || !isTransientApiError(error)) {
       return Promise.reject(error);
     }
+
+    if (!isSafeGet) {
+      void wakeApiServer({ announceDelayMs: 0 }).catch(() => undefined);
+      return Promise.reject(error);
+    }
+
+    if (config.__odisseiaRetryAttempted) return Promise.reject(error);
 
     config.__odisseiaRetryAttempted = true;
 

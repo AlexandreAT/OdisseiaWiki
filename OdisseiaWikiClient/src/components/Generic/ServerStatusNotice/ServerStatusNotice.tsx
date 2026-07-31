@@ -16,10 +16,17 @@ import {
 } from './ServerStatusNotice.style';
 import { Modal } from '../Modal/Modal';
 
+interface RootState {
+  themesReducer: {
+    theme: 'dark' | 'light';
+    neon: 'on' | 'off';
+  };
+}
+
 export const ServerStatusNotice = () => {
   const [status, setStatus] = useState(getApiAvailabilityStatus);
   const [showServerInfo, setShowServerInfo] = useState(false);
-  const { theme, neon } = useSelector((state: any) => state.themesReducer);
+  const { theme, neon } = useSelector((state: RootState) => state.themesReducer);
 
   useEffect(() => {
     const unsubscribe = subscribeToApiAvailability(setStatus);
@@ -54,8 +61,8 @@ export const ServerStatusNotice = () => {
         <strong>{status === 'starting' ? 'Iniciando o servidor...' : 'Servidor temporariamente indisponível'}</strong>
         <span>
           {status === 'starting'
-            ? 'A conex\u00e3o est\u00e1 sendo preparada. Isso pode levar alguns segundos.'
-            : 'Confira sua conexão e tente novamente.'}
+            ? 'A conexão e o banco estão sendo preparados. Isso costuma levar cerca de um minuto.'
+            : 'O servidor ou o banco não responderam a tempo. Tente novamente.'}
         </span>
       </NoticeContent>
       <NoticeActions>
@@ -88,8 +95,8 @@ export const ServerStatusNotice = () => {
             </p>
             <p>
               Quando alguém entra novamente, a primeira solicitação inicia uma nova instância
-              do serviço. Os dados permanecem preservados, mas a API pode levar alguns segundos
-              para ficar pronta e responder normalmente.
+              do serviço. Os dados permanecem preservados, mas a API e o banco podem levar cerca
+              de um minuto, ou um pouco mais, para responder normalmente.
             </p>
             <p>
               Essa espera é uma limitação do ambiente de hospedagem atual e não indica um
