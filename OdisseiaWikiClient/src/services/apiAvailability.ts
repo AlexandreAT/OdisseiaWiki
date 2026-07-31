@@ -1,12 +1,16 @@
 import axios, { AxiosError } from 'axios';
-import { healthUrl } from '../axios/apiConfig';
+import { readinessUrl } from '../axios/apiConfig';
 
 export type ApiAvailabilityStatus = 'idle' | 'starting' | 'unavailable';
 type StatusListener = (status: ApiAvailabilityStatus) => void;
 
-const HEALTH_TIMEOUT_MS = 35_000;
-const HEALTH_RETRY_DELAY_MS = 4_000;
-const HEALTH_ATTEMPTS = 3;
+interface ReadinessResponse {
+  status?: unknown;
+}
+
+const READINESS_REQUEST_TIMEOUT_MS = 15_000;
+const READINESS_RETRY_DELAY_MS = 3_000;
+const SERVER_WAKE_WINDOW_MS = 140_000;
 
 let currentStatus: ApiAvailabilityStatus = 'idle';
 let activeWakeRequest: Promise<void> | null = null;
@@ -20,6 +24,26 @@ const publishStatus = (status: ApiAvailabilityStatus) => {
 const wait = (milliseconds: number) => new Promise<void>((resolve) => {
   window.setTimeout(resolve, milliseconds);
 });
+
+const isHealthyReadinessResponse = (data: unknown): data is ReadinessResponse => {
+  if (!data || typeof data !== 'object') return false;
+
+  const { status } = data as ReadinessResponse;
+  return typeof status === 'string' && status.toLowerCase() === 'healthy';
+};
+
+const checkApiReadiness = async (timeout: number) => {
+  const response = await axios.get<ReadinessResponse>(readinessUrl, {
+    timeout,
+    headers: {
+      Accept: 'application/json',
+    },
+  });
+
+  if (!isHealthyReadinessResponse(response.data)) {
+    throw new Error('A API respondeu, mas o banco ainda não está pronto.');
+  }
+};
 
 export const getApiAvailabilityStatus = () => currentStatus;
 
@@ -51,19 +75,29 @@ export const wakeApiServer = ({ announceDelayMs = 900 }: { announceDelayMs?: num
 
     try {
       let lastError: unknown;
+      const wakeDeadline = Date.now() + SERVER_WAKE_WINDOW_MS;
 
-      for (let attempt = 1; attempt <= HEALTH_ATTEMPTS; attempt += 1) {
+      while (Date.now() < wakeDeadline) {
         try {
-          await axios.get(healthUrl, { timeout: HEALTH_TIMEOUT_MS });
+          const remainingTime = wakeDeadline - Date.now();
+          const requestTimeout = Math.max(
+            1,
+            Math.min(READINESS_REQUEST_TIMEOUT_MS, remainingTime),
+          );
+          await checkApiReadiness(requestTimeout);
           publishStatus('idle');
           return;
         } catch (error) {
           lastError = error;
-          if (attempt < HEALTH_ATTEMPTS) await wait(HEALTH_RETRY_DELAY_MS);
+
+          const remainingTime = wakeDeadline - Date.now();
+          if (remainingTime > 0) {
+            await wait(Math.min(READINESS_RETRY_DELAY_MS, remainingTime));
+          }
         }
       }
 
-      throw lastError;
+      throw lastError ?? new Error('A API não ficou pronta dentro do tempo esperado.');
     } catch (error) {
       publishStatus('unavailable');
       throw error;

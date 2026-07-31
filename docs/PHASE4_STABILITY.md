@@ -2,17 +2,22 @@
 
 ## Cold start e timeout
 
-Em produção, o frontend consulta `GET /health` ao iniciar. Se o Render estiver dormindo, uma
+Em produção, o Render monitora `GET /health/live`, enquanto o frontend aguarda
+`GET /health/ready`. Se o Render estiver dormindo ou o banco ainda estiver reconectando, uma
 notificação informa **Iniciando o servidor...**. Requisições `GET` que falharem por timeout, ausência
-de resposta, HTTP 502, 503 ou 504 aguardam o health check e são repetidas uma única vez.
+de resposta, HTTP 502, 503 ou 504 aguardam readiness e são repetidas uma única vez.
 
 Operações `POST`, `PUT`, `PATCH` e `DELETE` nunca são repetidas automaticamente, evitando cadastros ou
 alterações duplicadas. Em falha persistente, **Tentar novamente** refaz somente o health check e
 recarrega a tela depois que o servidor responder.
 
-O timeout geral do Axios é de 20 segundos. O aquecimento usa no máximo três tentativas, espaçadas por
-quatro segundos, sem loop infinito. A busca da Wiki preserva timeout específico, cancelamento e
-resultados parciais.
+O timeout geral do Axios é de 20 segundos. Cada consulta de readiness possui timeout de 15 segundos;
+o aquecimento fica limitado a 140 segundos, com 3 segundos entre tentativas e sem loop infinito. A
+busca da Wiki preserva timeout específico, cancelamento e resultados parciais.
+
+O health check do Render nunca deve apontar para `/health/ready`: o processo pode estar saudável
+enquanto o MySQL enfrenta uma indisponibilidade transitória. O runbook completo de diagnóstico está
+em [DEPLOYMENT.md](DEPLOYMENT.md#6-runbook--falha-de-conexão-entre-render-e-aiven).
 
 As rotas principais são carregadas sob demanda com `React.lazy`, evitando enviar Home, Wiki,
 Management, Hub, Login e ficha de personagem no mesmo bundle inicial.
@@ -50,8 +55,11 @@ mysqldump --host=<HOST> --port=<PORT> --user=<USER> --password \
 ## Checklist recorrente de deploy
 
 - Confirmar que Render, Netlify, Aiven e Cloudinary continuam nos planos gratuitos.
-- Validar `/health` e `/health/ready` após cada deploy do backend.
+- Validar `/health/live` e `/health/ready` após cada deploy do backend.
+- Confirmar que o health check do Render aponta para `/health/live`.
 - Revisar migrations antes de habilitar `Database__ApplyMigrationsOnStartup`.
+- Manter `Database__ApplyMigrationsOnStartup=false` e `Database__SeedOnStartup=false` em cold starts
+  normais.
 - Confirmar seeder idempotente e exatamente uma mesa `ODISSEIA_PADRAO`.
 - Testar login manual e Google, CORS, upload, substituição e exclusão de imagem.
 - Abrir diretamente rotas SPA no Netlify e testar um cold start real após inatividade.
