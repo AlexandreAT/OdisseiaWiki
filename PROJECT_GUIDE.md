@@ -1525,6 +1525,38 @@ Entre os elementos já existentes ou em desenvolvimento estão:
 
 ---
 
+## 50.1. Sistemas de RPG configuráveis e versionados
+
+As regras reutilizáveis do RPG devem ser organizadas em sistemas e versões. Um sistema possui código estável e versões nos estados `Rascunho`, `Publicado` ou `Arquivado`.
+
+Regras obrigatórias:
+
+- somente rascunhos podem ser editados;
+- versões publicadas são imutáveis e novas alterações partem de uma duplicação;
+- cada mesa deve apontar explicitamente para uma versão publicada;
+- publicar uma versão não migra mesas existentes;
+- versões arquivadas continuam legíveis para vínculos históricos, mas não podem ser escolhidas por novas mesas;
+- dados relacionais, ordenáveis ou individualmente validáveis devem ser normalizados;
+- JSON é permitido apenas para extensões tipadas, versionadas e validadas por módulo;
+- o acesso às regras deve passar por um resolver central com fallback para dados legados;
+- toda escrita administrativa deve usar a policy de Admin no backend;
+- regras ambíguas do livro permanecem configuráveis e não devem ser inventadas pela implementação.
+
+A arquitetura, o fluxo de publicação e a estratégia de compatibilidade estão detalhados em `docs/RPG_SYSTEMS.md`. A matriz de testes está em `docs/RPG_SYSTEMS_QA.md`.
+
+Estrutura implementada:
+
+- `SistemaRpg` contém versões; `SistemaVersao` agrega módulos e configurações normalizadas;
+- `Mesa.IdSistemaVersao` fixa a versão usada pela mesa sem migração automática;
+- `SistemaRpgResolver` centraliza mesa explícita, sistema padrão e fallback legado;
+- `SistemaRpgSeeder` cria `ODISSEIA/1.0` de forma idempotente e vincula mesas legadas;
+- `SistemasRpgController`, `SistemaRpgService` e `SistemaRpgRepository` concentram os contratos e invariantes do backend;
+- `src/routes/Management/ManagementSystem`, `src/models/SistemaRpg.ts` e `src/services/sistemasRpgService.ts` formam a administração no frontend.
+
+Para evoluir regras, crie ou duplique uma versão, altere apenas o rascunho e publique. Para adicionar um módulo, atualize enum/modelagem, contexto e migration, DTOs, mapper, validações, service/controller, contrato/service frontend e a seção visual correspondente. A execução automática das regras ainda é incremental: fichas, progressão, recursos, dados e escalas antigas mantêm hardcodes com fallback até que cada consumidor seja migrado e testado.
+
+---
+
 # 51. Prioridades atuais
 
 As prioridades devem ser:

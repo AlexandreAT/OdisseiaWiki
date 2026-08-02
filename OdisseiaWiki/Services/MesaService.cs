@@ -11,11 +11,19 @@ namespace OdisseiaWiki.Services
     {
         private readonly IMesaRepository _repository;
         private readonly IAssetService _assetService;
+        private readonly ISistemaRpgService _sistemaRpgService;
+        private readonly ISistemaRpgResolver _sistemaRpgResolver;
 
-        public MesaService(IMesaRepository repository, IAssetService assetService)
+        public MesaService(
+            IMesaRepository repository,
+            IAssetService assetService,
+            ISistemaRpgService sistemaRpgService,
+            ISistemaRpgResolver sistemaRpgResolver)
         {
             _repository = repository;
             _assetService = assetService;
+            _sistemaRpgService = sistemaRpgService;
+            _sistemaRpgResolver = sistemaRpgResolver;
         }
 
         public async Task<ResultMesa> CreateAsync(MesaDto dto)
@@ -23,11 +31,24 @@ namespace OdisseiaWiki.Services
             if (string.IsNullOrWhiteSpace(dto.Nome))
                 return ResultMesaFail("Nome é obrigatório.");
 
+            int? idSistemaVersao = dto.IdSistemaVersao;
+            if (idSistemaVersao.HasValue)
+            {
+                var validacao = await _sistemaRpgService.ValidarVersaoSelecionavelAsync(idSistemaVersao.Value);
+                if (!validacao.Sucesso)
+                    return ResultMesaFail(validacao.MensagemErro ?? "A versão do sistema não pode ser usada por uma nova mesa.");
+            }
+            else
+            {
+                idSistemaVersao = await ResolverVersaoPadraoAsync();
+            }
+
             var mesa = new Mesa
             {
                 IdusuarioCriacao = dto.IdusuarioCriacao,
                 Nome = dto.Nome,
                 Imagem = dto.Imagem,
+                IdSistemaVersao = idSistemaVersao,
                 DataCriacao = DateTime.UtcNow
             };
 
@@ -37,6 +58,9 @@ namespace OdisseiaWiki.Services
 
         public async Task<List<Mesa>> GetAllAsync()
             => await _repository.GetAllAsync();
+
+        public Task<Mesa?> GetByIdAsync(int id)
+            => _repository.GetByIdAsync(id);
 
         public Task<List<Mesa>> GetAccessibleAsync(int idUsuario)
             => _repository.GetAccessibleByUsuarioIdAsync(idUsuario);
@@ -51,7 +75,18 @@ namespace OdisseiaWiki.Services
         {
             var mesaPadrao = await _repository.GetByCodigoSistemaAsync(SystemMesaConstants.CodigoMesaPadrao);
             if (mesaPadrao is not null)
+            {
+                if (!mesaPadrao.IdSistemaVersao.HasValue)
+                {
+                    mesaPadrao.IdSistemaVersao = await ResolverVersaoPadraoAsync();
+                    if (mesaPadrao.IdSistemaVersao.HasValue)
+                        mesaPadrao = await _repository.UpdateAsync(mesaPadrao);
+                }
+
                 return mesaPadrao;
+            }
+
+            int? idSistemaVersao = await ResolverVersaoPadraoAsync();
 
             try
             {
@@ -61,6 +96,7 @@ namespace OdisseiaWiki.Services
                     CodigoSistema = SystemMesaConstants.CodigoMesaPadrao,
                     PadraoSistema = true,
                     IdusuarioCriacao = null,
+                    IdSistemaVersao = idSistemaVersao,
                     DataCriacao = DateTime.UtcNow,
                 });
             }
@@ -112,5 +148,13 @@ namespace OdisseiaWiki.Services
 
         private static ResultMesa ResultMesaOk(Mesa mesa)
             => new() { Sucesso = true, Mesa = mesa };
+
+        private async Task<int?> ResolverVersaoPadraoAsync()
+        {
+            SistemaResolvidoDto sistemaResolvido = await _sistemaRpgResolver.ResolverAsync();
+            return sistemaResolvido.UsaFallbackLegado
+                ? null
+                : sistemaResolvido.IdSistemaVersao;
+        }
     }
 }

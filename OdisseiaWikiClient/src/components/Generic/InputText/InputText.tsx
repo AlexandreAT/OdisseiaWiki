@@ -20,6 +20,7 @@ interface Props {
     height?: string;
     name?: string;
     autoComplete?: string;
+    disabled?: boolean;
 }
 
 export const InputText = forwardRef<HTMLInputElement, Props>(
@@ -39,6 +40,7 @@ export const InputText = forwardRef<HTMLInputElement, Props>(
     height,
     name,
     autoComplete,
+    disabled = false,
   }, ref) => {
     const [focus, setFocus] = useState(false);
     const [nativeError, setNativeError] = useState('');
@@ -94,6 +96,7 @@ export const InputText = forwardRef<HTMLInputElement, Props>(
               name={name}
               aria-invalid={hasError}
               autoComplete={autoComplete}
+              disabled={disabled}
           />
           <LoginLabelSpan active={focus || hasValue}>
             <FormLabelText label={label} required={required} />

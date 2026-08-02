@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace OdisseiaWiki.Models;
 
@@ -24,6 +25,8 @@ public partial class Mesa
 
     public bool PadraoSistema { get; set; }
 
+    public int? IdSistemaVersao { get; set; }
+
     public DateTime DataCriacao { get; set; } = DateTime.UtcNow;
 
     public virtual Usuario? IdusuarioCriacaoNavigation { get; set; }
@@ -31,6 +34,9 @@ public partial class Mesa
     public virtual ICollection<PersonagemJogador> PersonagensJogadores { get; set; } = new List<PersonagemJogador>();
 
     public virtual ICollection<MesaEntidadeConfig> MesaEntidadeConfigs { get; set; } = new List<MesaEntidadeConfig>();
+
+    [JsonIgnore]
+    public virtual SistemaVersao? SistemaVersao { get; set; }
 
     public virtual ICollection<Mesausuario> Mesausuarios { get; set; } = new List<Mesausuario>();
 }

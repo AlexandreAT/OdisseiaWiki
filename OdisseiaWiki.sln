@@ -5,6 +5,8 @@ VisualStudioVersion = 17.8.34330.188
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OdisseiaWiki", "OdisseiaWiki\OdisseiaWiki.csproj", "{B66F272E-D044-456D-979D-710C65B87117}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OdisseiaWiki.Tests", "OdisseiaWiki.Tests\OdisseiaWiki.Tests.csproj", "{48A46912-2CBF-4AD1-B873-29F3579D51CE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{B66F272E-D044-456D-979D-710C65B87117}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B66F272E-D044-456D-979D-710C65B87117}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B66F272E-D044-456D-979D-710C65B87117}.Release|Any CPU.Build.0 = Release|Any CPU
+		{48A46912-2CBF-4AD1-B873-29F3579D51CE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{48A46912-2CBF-4AD1-B873-29F3579D51CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{48A46912-2CBF-4AD1-B873-29F3579D51CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{48A46912-2CBF-4AD1-B873-29F3579D51CE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

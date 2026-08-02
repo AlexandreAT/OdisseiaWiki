@@ -66,6 +66,11 @@ export const LoginInput = styled.input<Props>`
     max-width: 100%;
     box-sizing: border-box;
 
+    &:disabled {
+        opacity: 0.64;
+        cursor: not-allowed;
+    }
+
     &:focus {
         background-color: var(--black-blue);
         border-color: ${({ theme, neon, typeStyle }) => 

@@ -479,6 +479,7 @@ public class Program
         services.AddScoped<IInfoLoreRepository, InfoLoreRepository>();
         services.AddScoped<IPageRepository, PageRepository>();
         services.AddScoped<IAssetReferenceRepository, AssetReferenceRepository>();
+        services.AddScoped<ISistemaRpgRepository, SistemaRpgRepository>();
 
         services.AddScoped<IUsuarioService, UsuarioService>();
         services.AddScoped<IPersonagemService, PersonagemService>();
@@ -490,6 +491,9 @@ public class Program
         services.AddScoped<IMesaEntidadeConfigService, MesaEntidadeConfigService>();
         services.AddScoped<IInfoLoreService, InfoLoreService>();
         services.AddScoped<IPageService, PageService>();
+        services.AddScoped<ISistemaRpgService, SistemaRpgService>();
+        services.AddScoped<ISistemaRpgResolver, SistemaRpgResolver>();
+        services.AddScoped<ISistemaRpgSeeder, SistemaRpgSeeder>();
 
         services.Configure<ImgBBSettings>(configuration.GetSection("ImgBB"));
         services.AddScoped<ILocalStorageProvider, LocalStorageProvider>();
