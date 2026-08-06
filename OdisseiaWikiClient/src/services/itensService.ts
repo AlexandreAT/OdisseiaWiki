@@ -1,6 +1,7 @@
 import api from "../axios/api";
 import { JSONContent } from "../models/Itens";
 import { ServiceRequestOptions } from './serviceRequestOptions';
+import type { SistemaRuntimeContexto, SistemaRuntimeWarning } from '../models/SistemaRpg';
 
 export interface ItemPayload {
   iditem?: string;
@@ -19,12 +20,19 @@ export interface ItemPayload {
   visivel?: boolean;
   destaque?: boolean;
   dataCriacao?: string;
+  idSistemaRpg?: number | null;
+  idSistemaVersao?: number | null;
+  acompanharPublicacaoAtual?: boolean;
+  sistemaRuntime?: SistemaRuntimeContexto | null;
 }
 
 export interface ResultItem {
   sucesso: boolean;
+  id?: string;
   mensagemErro?: string;
   item?: ItemPayload;
+  sistemaRuntime?: SistemaRuntimeContexto | null;
+  warnings?: SistemaRuntimeWarning[];
 }
 
 export const getItens = async (
@@ -54,9 +62,9 @@ export const salvarItem = async (
 export const atualizarItem = async (
   id: string,
   payload: ItemPayload
-): Promise<boolean> => {
+): Promise<ResultItem> => {
   const response = await api.put(`/item/${id}`, payload);
-  return response.status === 204;
+  return response.data;
 };
 
 export const excluirItem = async (id: string): Promise<boolean> => {

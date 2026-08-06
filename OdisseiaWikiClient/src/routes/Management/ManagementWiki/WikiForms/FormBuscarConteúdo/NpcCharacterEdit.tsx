@@ -19,6 +19,7 @@ import { useFormCharacter } from '../FormCriarConteúdo/FormCharacter/useFormCha
 import { EditHeader } from './EditFormStyles';
 import { getApiErrorMessage } from '../../../../../utils/apiError';
 import { normalizeGalleryImages } from '../../../../../models/GalleryImage';
+import { SystemEntityBinding } from '../../../../../components/Generic/SystemEntityBinding';
 
 interface NpcCharacterEditProps {
   theme: 'dark' | 'light';
@@ -181,7 +182,9 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
     listItens,
     handleSelectItem,
     avatarFile,
-  } = useFormCharacter({ applyRaceDefaults: false });
+    sistema,
+  } = useFormCharacter({ applyRaceDefaults: false, idEntidade: characterId });
+  const hydrateSistemaVinculo = sistema.hydrateVinculo;
 
   const [extraInformation, setExtraInformation] = React.useState('');
   const [galeriaUrls, setGaleriaUrls] = React.useState<string[]>([]);
@@ -305,6 +308,11 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
         setUltimate(payload.ultimate || '');
         setVisivel(Boolean(payload.visivel));
         setDestaque(Boolean(payload.destaque));
+        hydrateSistemaVinculo({
+          idSistemaRpg: payload.idSistemaRpg,
+          idSistemaVersao: payload.idSistemaVersao,
+          acompanharPublicacaoAtual: payload.acompanharPublicacaoAtual,
+        });
         setItens(Array.isArray(loadedItens) && loadedItens.length > 0
           ? loadedItens
           : [{ nome: '', descricao: '', quantidade: 0, peso: 0, tipo: 'outro' } as any]);
@@ -382,6 +390,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
     setVisivel,
     setXp,
     setAvatarUrl,
+    hydrateSistemaVinculo,
   ]);
 
   const snapshot = React.useMemo(() => JSON.stringify({
@@ -413,6 +422,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
     galeriaUrls,
     galeriaShapes,
     galeriaCaptions,
+    sistema: sistema.vinculo,
   }), [
     userName,
     race,
@@ -442,6 +452,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
     galeriaUrls,
     galeriaShapes,
     galeriaCaptions,
+    sistema.vinculo,
   ]);
 
   React.useEffect(() => {
@@ -527,6 +538,11 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
 
   const handleSave = React.useCallback(async (options?: { goBackAfterSave?: boolean }) => {
     if (!validateEdit()) return;
+    if (!sistema.vinculo.acompanharPublicacaoAtual && !sistema.vinculo.idSistemaVersao) {
+      setEditStep(1);
+      toast.error('Selecione uma versão publicada para fixar o Sistema deste NPC.');
+      return;
+    }
     if (saveInFlightRef.current) return;
     saveInFlightRef.current = true;
 
@@ -631,6 +647,9 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
         destaque: destaque ?? false,
         idpassiva,
         ultimate: ultimate || undefined,
+        idSistemaRpg: sistema.vinculo.idSistemaRpg ?? sistema.effectiveSystemId,
+        idSistemaVersao: sistema.vinculo.acompanharPublicacaoAtual ? null : sistema.vinculo.idSistemaVersao,
+        acompanharPublicacaoAtual: sistema.vinculo.acompanharPublicacaoAtual,
         inventarioJson: inventarioMapped,
         skills: skillsMapped,
         magia: magiasMapped,
@@ -727,6 +746,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
     visivel,
     xp,
     onBack,
+    sistema,
   ]);
 
   const handleSaveAndBack = React.useCallback(async () => {
@@ -778,6 +798,8 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
 
       <FormEditController>
         {editStep === 1 && (
+          <>
+          <SystemEntityBinding theme={theme} neon={neon} state={sistema} />
           <CharacterSystemForm
             theme={theme}
             neon={neon}
@@ -809,7 +831,9 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
             itemColumns={itemColumns}
             skillsColumns={skillsColumns}
             magiasColumns={magiasColumns}
+            runtimeContext={sistema.contexto}
           />
+          </>
         )}
 
         {editStep === 2 && (

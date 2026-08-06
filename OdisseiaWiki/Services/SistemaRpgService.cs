@@ -107,6 +107,15 @@ public sealed partial class SistemaRpgService : ISistemaRpgService
             return NaoEncontrado<SistemaRpgResumoDto>("Sistema de RPG não encontrado.");
         if (string.IsNullOrWhiteSpace(dto.Nome))
             return Validacao<SistemaRpgResumoDto>("O nome do sistema é obrigatório.");
+        if (string.Equals(
+                sistema.Codigo,
+                SistemaRpgConfiguration.CodigoPadrao,
+                StringComparison.OrdinalIgnoreCase) &&
+            !dto.Ativo)
+        {
+            return Conflito<SistemaRpgResumoDto>(
+                "O Sistema base ODISSEIA é um dado fixo e não pode ser desativado.");
+        }
 
         sistema.Nome = dto.Nome.Trim();
         sistema.Descricao = Limpar(dto.Descricao);
@@ -122,6 +131,13 @@ public sealed partial class SistemaRpgService : ISistemaRpgService
         SistemaRpg? sistema = await _repository.GetByIdAsync(idSistemaRpg, tracked: true);
         if (sistema is null)
             return NaoEncontrado<bool>("Sistema de RPG não encontrado.");
+        if (string.Equals(
+                sistema.Codigo,
+                SistemaRpgConfiguration.CodigoPadrao,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return Conflito<bool>("O Sistema base ODISSEIA é um dado fixo e não pode ser excluído.");
+        }
         if (await _repository.CountMesasBySystemAsync(idSistemaRpg) > 0)
             return Conflito<bool>("O sistema não pode ser excluído porque está associado a mesas.");
         if (sistema.Versoes.Any(v => v.Status != SistemaVersaoStatus.Rascunho))
@@ -227,10 +243,34 @@ public sealed partial class SistemaRpgService : ISistemaRpgService
         if (erros.Count > 0)
             return Validacao<SistemaVersaoResumoDto>(string.Join(" ", erros));
 
+        if (await _repository.GetPatchNoteByVersionAsync(idSistemaVersao) is not null)
+            return Conflito<SistemaVersaoResumoDto>("Esta versão já possui um patch note imutável.");
+
+        int? idVersaoAnterior = versao.IdVersaoBase ?? versao.SistemaRpg.IdVersaoPublicada;
+        SistemaVersao? versaoAnterior = idVersaoAnterior.HasValue && idVersaoAnterior != idSistemaVersao
+            ? await _repository.GetVersionAsync(idVersaoAnterior.Value, includeConfiguration: true)
+            : null;
+        if (versaoAnterior is not null && versaoAnterior.IdSistemaRpg != versao.IdSistemaRpg)
+            versaoAnterior = null;
+
+        DateTime dataPublicacao = DateTime.UtcNow;
+        SistemaPatchNote patchNote;
+        try
+        {
+            patchNote = CriarPatchNote(versao, versaoAnterior, dataPublicacao);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Falha ao gerar patch note da versão {IdSistemaVersao}.", idSistemaVersao);
+            return Conflito<SistemaVersaoResumoDto>(
+                "A publicação foi cancelada porque não foi possível gerar o patch note obrigatório.");
+        }
+
         await _repository.ExecuteInTransactionAsync(async () =>
         {
             SistemaRpg sistema = versao.SistemaRpg;
-            DateTime agora = DateTime.UtcNow;
+            DateTime agora = dataPublicacao;
+            await _repository.AddPatchNoteAsync(patchNote);
             if (sistema.VersaoPublicada is not null && sistema.VersaoPublicada.IdSistemaVersao != versao.IdSistemaVersao)
             {
                 sistema.VersaoPublicada.Status = SistemaVersaoStatus.Arquivado;
@@ -244,6 +284,13 @@ public sealed partial class SistemaRpgService : ISistemaRpgService
             sistema.VersaoPublicada = versao;
             sistema.IdVersaoPublicada = versao.IdSistemaVersao;
             sistema.DataAtualizacao = agora;
+            if (string.Equals(
+                    sistema.Codigo,
+                    SistemaRpgConfiguration.CodigoPadrao,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                await _repository.SynchronizeDefaultMesaVersionAsync(versao.IdSistemaVersao);
+            }
             await _repository.SaveChangesAsync();
         });
         return SistemaOperacaoResultado<SistemaVersaoResumoDto>.Ok(
@@ -257,6 +304,15 @@ public sealed partial class SistemaRpgService : ISistemaRpgService
             return NaoEncontrado<SistemaVersaoResumoDto>("Versão do sistema não encontrada.");
         if (versao.Status != SistemaVersaoStatus.Publicado)
             return Conflito<SistemaVersaoResumoDto>("Somente uma versão publicada pode ser arquivada.");
+        if (string.Equals(
+                versao.SistemaRpg.Codigo,
+                SistemaRpgConfiguration.CodigoPadrao,
+                StringComparison.OrdinalIgnoreCase) &&
+            versao.SistemaRpg.IdVersaoPublicada == idSistemaVersao)
+        {
+            return Conflito<SistemaVersaoResumoDto>(
+                "A publicação atual do Sistema base ODISSEIA não pode ser arquivada sem que outra versão seja publicada em seu lugar.");
+        }
         await _repository.ExecuteInTransactionAsync(async () =>
         {
             DateTime agora = DateTime.UtcNow;
@@ -306,15 +362,32 @@ public sealed partial class SistemaRpgService : ISistemaRpgService
 
     public async Task<SistemaOperacaoResultado<SistemaResolvidoDto>> MigrarMesaAsync(
         int idMesa,
-        int idSistemaVersao)
+        int idSistemaVersao,
+        bool confirmarPreservacaoValores)
     {
+        if (!confirmarPreservacaoValores)
+        {
+            return Validacao<SistemaResolvidoDto>(
+                "Confirme explicitamente que a migração preservará os valores atuais das fichas e alterará somente a versão da Mesa.");
+        }
+
         Mesa? mesa = await _repository.GetMesaAsync(idMesa, tracked: true);
         if (mesa is null)
             return NaoEncontrado<SistemaResolvidoDto>("Mesa não encontrada.");
+        if (MesaAcompanhaSistemaPadrao(mesa))
+        {
+            return Conflito<SistemaResolvidoDto>(
+                "A Mesa Padrão acompanha automaticamente a publicação atual do Sistema ODISSEIA e não pode ser migrada manualmente.");
+        }
         SistemaOperacaoResultado<bool> validacao = await ValidarVersaoSelecionavelAsync(idSistemaVersao);
         if (!validacao.Sucesso)
             return SistemaOperacaoResultado<SistemaResolvidoDto>.Falha(validacao.MensagemErro!, validacao.TipoErro);
 
+        if (mesa.IdSistemaVersao == idSistemaVersao)
+            return Conflito<SistemaResolvidoDto>("A Mesa já utiliza a versão de destino informada.");
+
+        // A migração é deliberadamente não destrutiva: nenhuma entidade ou JSON da Mesa é carregado
+        // para escrita. A única propriedade alterada é a FK que define as regras de background.
         mesa.IdSistemaVersao = idSistemaVersao;
         await _repository.SaveChangesAsync();
         return SistemaOperacaoResultado<SistemaResolvidoDto>.Ok(await _resolver.ResolverAsync(idMesa));
@@ -366,6 +439,13 @@ public sealed partial class SistemaRpgService : ISistemaRpgService
     };
 
     private static string? Limpar(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static bool MesaAcompanhaSistemaPadrao(Mesa mesa) =>
+        string.Equals(
+            mesa.CodigoSistema,
+            SystemMesaConstants.CodigoMesaPadrao,
+            StringComparison.OrdinalIgnoreCase) ||
+        (mesa.PadraoSistema && SystemMesaConstants.NomeRepresentaMesaPadrao(mesa.Nome));
 
     private static SistemaOperacaoResultado<T> Validacao<T>(string mensagem) =>
         SistemaOperacaoResultado<T>.Falha(mensagem, SistemaOperacaoErro.Validacao);

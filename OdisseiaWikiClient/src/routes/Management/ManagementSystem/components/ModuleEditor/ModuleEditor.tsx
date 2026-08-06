@@ -31,6 +31,7 @@ interface ModuleEditorProps {
   readOnly: boolean;
   theme: 'dark' | 'light';
   neon: 'on' | 'off';
+  systemCode: string;
   raceOptions: RaceOption[];
   onChange: (config: AnyModuleConfig) => void;
   onRetry: () => void;
@@ -46,6 +47,7 @@ export const ModuleEditor = ({
   readOnly,
   theme,
   neon,
+  systemCode,
   raceOptions,
   onChange,
   onRetry,
@@ -112,6 +114,7 @@ export const ModuleEditor = ({
           readOnly={readOnly}
           theme={theme}
           neon={neon}
+          systemCode={systemCode}
           raceOptions={raceOptions}
         />
       )}

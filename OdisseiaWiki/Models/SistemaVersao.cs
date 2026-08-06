@@ -51,5 +51,10 @@ public class SistemaVersao
     public virtual ICollection<SistemaCondicao> Condicoes { get; set; } = new List<SistemaCondicao>();
     public virtual ICollection<SistemaDescansoConfig> Descansos { get; set; } = new List<SistemaDescansoConfig>();
     public virtual SistemaMorteConfig? Morte { get; set; }
+    public virtual ICollection<SistemaItemEscopo> ItemEscopos { get; set; } = new List<SistemaItemEscopo>();
     public virtual ICollection<Mesa> Mesas { get; set; } = new List<Mesa>();
+
+    public virtual SistemaPatchNote? PatchNote { get; set; }
+
+    public virtual ICollection<SistemaPatchNote> PatchNotesComoVersaoAnterior { get; set; } = new List<SistemaPatchNote>();
 }

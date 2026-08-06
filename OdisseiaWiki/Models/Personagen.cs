@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
+using OdisseiaWiki.Dtos;
 
 namespace OdisseiaWiki.Models;
 
@@ -16,9 +17,25 @@ public partial class Personagen : PersonagemBase
     public bool Visivel { get; set; } = true;
     public bool Destaque { get; set; } = false;
 
+    public int? IdSistemaRpg { get; set; }
+
+    public int? IdSistemaVersao { get; set; }
+
+    public bool AcompanharPublicacaoAtual { get; set; } = true;
+
+    [JsonIgnore]
+    public virtual SistemaRpg? SistemaRpg { get; set; }
+
+    [JsonIgnore]
+    public virtual SistemaVersao? SistemaVersao { get; set; }
+
     [NotMapped]
     [JsonPropertyName("proficiencias")]
     public List<ProficienciaResumoView> ProficienciasResumo { get; set; } = new();
+
+    [NotMapped]
+    [JsonPropertyName("sistemaRuntime")]
+    public SistemaRuntimeContextoDto? SistemaRuntime { get; set; }
 }
 
 public sealed class ProficienciaResumoView

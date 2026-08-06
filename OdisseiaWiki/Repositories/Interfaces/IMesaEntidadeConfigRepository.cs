@@ -6,6 +6,7 @@ namespace OdisseiaWiki.Repositories.Interfaces;
 public interface IMesaEntidadeConfigRepository
 {
     Task<MesaEntidadeConfig?> GetAsync(int idMesa, MesaEntidadeTipo tipoEntidade, string idEntidade);
+    Task<List<MesaEntidadeConfig>> GetAllAsync(int idMesa, MesaEntidadeTipo tipoEntidade);
     Task<MesaEntidadeConfig> CreateAsync(MesaEntidadeConfig configuracao);
     Task<MesaEntidadeConfig> UpdateAsync(MesaEntidadeConfig configuracao);
     Task<bool> DeleteAsync(MesaEntidadeConfig configuracao);

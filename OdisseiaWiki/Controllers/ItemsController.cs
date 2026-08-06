@@ -43,19 +43,34 @@ namespace OdisseiaWiki.Controllers
         [Authorize(Policy = AuthorizationPolicies.Admin)]
         public async Task<IActionResult> Create([FromBody] ItemCreateDto dto)
         {
-            var id = await _service.CreateAsync(dto);
-            return CreatedAtAction(nameof(GetById), new { id }, new { id });
+            try
+            {
+                ItemSaveResultDto resultado = await _service.CreateWithRuntimeAsync(dto);
+                return CreatedAtAction(nameof(GetById), new { id = resultado.Id }, resultado);
+            }
+            catch (InvalidOperationException exception)
+            {
+                return BadRequest(new { mensagemErro = exception.Message });
+            }
         }
 
         [HttpPut]
         [Authorize(Policy = AuthorizationPolicies.Admin)]
         public async Task<IActionResult> Update([FromBody] ItemUpdateDto dto)
         {
-            var sucesso = await _service.UpdateAsync(dto);
+            ItemSaveResultDto? resultado;
+            try
+            {
+                resultado = await _service.UpdateWithRuntimeAsync(dto);
+            }
+            catch (InvalidOperationException exception)
+            {
+                return BadRequest(new { mensagemErro = exception.Message });
+            }
             
-            return !sucesso
+            return resultado is null
                 ? NotFound($"Item com id {dto.Iditem} não encontrado.")
-                : NoContent();
+                : Ok(resultado);
         }
 
         [HttpDelete("{id}")]

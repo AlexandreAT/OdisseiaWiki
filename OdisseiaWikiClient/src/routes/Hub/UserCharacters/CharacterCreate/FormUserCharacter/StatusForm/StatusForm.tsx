@@ -4,6 +4,12 @@ import { LabelInfoBox } from '../../../../../../components/Generic/LabelInfoBox/
 import { StatusInput } from '../../../../../../components/Generic/StatusInput/StatusInput';
 import { AvatarIcon } from '../../../../../../components/Generic/AvatarIcon/AvatarIcon';
 import { StatusFormProps } from './StatusForm.type';
+import {
+  getRuntimeAttributeFields,
+  getRuntimeDefenseFields,
+  getRuntimeResourceFields,
+  getRuntimeResourceLabel,
+} from '../../../../../../utils/systemRuntimeCharacter';
 
 export const StatusForm: React.FC<StatusFormProps> = ({
   theme,
@@ -25,7 +31,33 @@ export const StatusForm: React.FC<StatusFormProps> = ({
   avatarUrl,
   setAvatarUrl,
   raceImageUrl,
+  runtimeContext,
 }) => {
+  const primaryFields = React.useMemo(
+    () => getRuntimeAttributeFields(runtimeContext, 'Principal', atributosPrincipais),
+    [atributosPrincipais, runtimeContext],
+  );
+  const secondaryFields = React.useMemo(
+    () => getRuntimeAttributeFields(runtimeContext, 'Secundario', atributosSecundarios),
+    [atributosSecundarios, runtimeContext],
+  );
+  const defenseFields = React.useMemo(
+    () => getRuntimeDefenseFields(runtimeContext, defesas),
+    [defesas, runtimeContext],
+  );
+  const resourceFields = React.useMemo(
+    () => getRuntimeResourceFields(runtimeContext, statusBasico),
+    [runtimeContext, statusBasico],
+  );
+  const extraResources = resourceFields.filter(
+    ({ key }) => !['vida', 'estamina', 'mana', 'capacidadeCarga'].includes(key),
+  );
+  const capacityLabel = getRuntimeResourceLabel(
+    runtimeContext,
+    'capacidadeCarga',
+    'Carga',
+  );
+
   return (
     <>
       <StatusHeader>
@@ -39,18 +71,23 @@ export const StatusForm: React.FC<StatusFormProps> = ({
           <LabelInfoBox theme={theme} neon={neon}>
             <>
               <LabelStatus>Xp: </LabelStatus>
-              <MinimalInput value={xp} onChange={(e) => setXp(Number(e.target.value))} />
+              <MinimalInput min={0} value={xp} onChange={(e) => setXp(Number(e.target.value))} />
             </>
           </LabelInfoBox>
           <LabelInfoBox theme={theme} neon={neon}>
             <>
               <LabelStatus>Nível: </LabelStatus>
-              <MinimalInput value={level} onChange={(e) => setLevel(Number(e.target.value))} />
+              <MinimalInput
+                min={1}
+                max={runtimeContext?.progressao?.nivelMaximo}
+                value={level}
+                onChange={(e) => setLevel(Number(e.target.value))}
+              />
             </>
           </LabelInfoBox>
           <LabelInfoBox theme={theme} neon={neon}>
             <>
-              <LabelStatus>Carga: </LabelStatus>
+            <LabelStatus>{capacityLabel}: </LabelStatus>
               <MinimalInput
                 value={statusBasico.capacidadeCarga}
                 onChange={(e) =>
@@ -59,13 +96,34 @@ export const StatusForm: React.FC<StatusFormProps> = ({
               />
             </>
           </LabelInfoBox>
+          {extraResources.map((resource) => (
+            <LabelInfoBox
+              key={resource.key}
+              theme={theme}
+              neon={neon}
+              title={resource.description}
+            >
+              <>
+                <LabelStatus>{resource.label}: </LabelStatus>
+                <MinimalInput
+                  value={statusBasico[resource.key] ?? 0}
+                  min={resource.min}
+                  max={resource.max}
+                  onChange={(event) => setStatusBasico((previous) => ({
+                    ...previous,
+                    [resource.key]: Number(event.target.value),
+                  }))}
+                />
+              </>
+            </LabelInfoBox>
+          ))}
         </HeaderInfo>
         <SectionStatus theme={theme} neon={neon}>
           <StatusInput
             theme={theme}
             neon={neon}
             type="vida"
-            label="Vida"
+            label={getRuntimeResourceLabel(runtimeContext, 'vida', 'Vida')}
             value={statusBasico.vida}
             maxValue={statusBasico.vidaMaxima}
             enableCalculator
@@ -81,7 +139,7 @@ export const StatusForm: React.FC<StatusFormProps> = ({
             theme={theme}
             neon={neon}
             type="estamina"
-            label="Estamina"
+            label={getRuntimeResourceLabel(runtimeContext, 'estamina', 'Estamina')}
             value={statusBasico.estamina}
             maxValue={statusBasico.estaminaMaxima}
             enableCalculator
@@ -97,7 +155,7 @@ export const StatusForm: React.FC<StatusFormProps> = ({
             theme={theme}
             neon={neon}
             type="mana"
-            label="Mana"
+            label={getRuntimeResourceLabel(runtimeContext, 'mana', 'Mana')}
             value={statusBasico.mana}
             maxValue={statusBasico.manaMaxima}
             enableCalculator
@@ -116,17 +174,19 @@ export const StatusForm: React.FC<StatusFormProps> = ({
         <AtributeController>
           <StatusAtributosDiv theme={theme} neon={neon}>
             <LabelStatus width='16px'>Principais</LabelStatus>
-            {Object.entries(atributosPrincipais).map(([key, value]) => (
-              <AtributoDiv key={key}>
-                <LabelStatus width='13px'>{key}</LabelStatus>
+            {primaryFields.map((field) => (
+              <AtributoDiv key={field.key} title={field.description}>
+                <LabelStatus width='13px'>{field.label}</LabelStatus>
                 <AtributoBox theme={theme} neon={neon}>
                   <MinimalInput
                     type="number"
-                    value={value}
+                    value={atributosPrincipais[field.key] ?? 0}
+                    min={field.min}
+                    max={field.max}
                     onChange={(e) =>
                       setAtributosPrincipais({
                         ...atributosPrincipais,
-                        [key]: Number(e.target.value),
+                        [field.key]: Number(e.target.value),
                       })
                     }
                   />
@@ -140,17 +200,17 @@ export const StatusForm: React.FC<StatusFormProps> = ({
           <StatusDefesaController theme={theme} neon={neon}>
             <LabelStatus>Defesas</LabelStatus>
             <StatusDefesaDiv>
-              {Object.entries(defesas).map(([key, value]) => (
-                <AtributoDiv key={key}>
-                  <LabelStatus width='13px'>{key}</LabelStatus>
+              {defenseFields.map((field) => (
+                <AtributoDiv key={field.key} title={field.description}>
+                  <LabelStatus width='13px'>{field.label}</LabelStatus>
                   <AtributoBox theme={theme} neon={neon}>
                     <MinimalInput
                       type="number"
-                      value={value}
+                      value={defesas[field.key] ?? 0}
                       onChange={(e) =>
                         setDefesas({
                           ...defesas,
-                          [key]: Number(e.target.value),
+                          [field.key]: Number(e.target.value),
                         })
                       }
                     />
@@ -184,17 +244,19 @@ export const StatusForm: React.FC<StatusFormProps> = ({
         
         <StatusAtributosDiv theme={theme} neon={neon}>
           <LabelStatus width='16px'>Secundários</LabelStatus>
-          {Object.entries(atributosSecundarios).map(([key, value]) => (
-            <AtributoDiv key={key}>
-              <LabelStatus width='13px'>{key}</LabelStatus>
+          {secondaryFields.map((field) => (
+            <AtributoDiv key={field.key} title={field.description}>
+              <LabelStatus width='13px'>{field.label}</LabelStatus>
               <AtributoBox theme={theme} neon={neon}>
                 <MinimalInput
                   type="number"
-                  value={value}
+                  value={atributosSecundarios[field.key] ?? 0}
+                  min={field.min}
+                  max={field.max}
                   onChange={(e) =>
                     setAtributosSecundarios({
                       ...atributosSecundarios,
-                      [key]: Number(e.target.value),
+                      [field.key]: Number(e.target.value),
                     })
                   }
                 />

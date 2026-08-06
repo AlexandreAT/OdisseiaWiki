@@ -1,9 +1,15 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ItemTipo, JSONContent } from "../../../../../../models/Itens";
 import { saveAsset } from "../../../../../../services/assetsService";
 import { prepareForAPI } from "../../../../../../utils/richTextHelpers";
 import { salvarItem, ItemPayload } from "../../../../../../services/itensService";
 import { ensureContentCategoryTag, isContentCategoryTag } from '../../../../../../utils/contentCategoryTag';
+import { useSistemaEntidadeGlobalForm } from '../../../../../../hooks/useSistemaEntidadeGlobalForm';
+import {
+  buildSistemaItemFormCatalog,
+  itemTypeToSystemCode,
+  resolveItemSystemScope,
+} from '../../../../../../utils/systemItemFormCatalog';
 
 // Atributos iniciais para cada tipo
 const getEmptyAtributos = (tipo: ItemTipo): any => {
@@ -144,6 +150,51 @@ export const useFormItem = (initialItem?: ItemPayload, contentType?: string) => 
     };
   });
 
+  const initialScope = resolveItemSystemScope(tipo, atributos, []);
+  const sistema = useSistemaEntidadeGlobalForm({
+    tipoEntidade: 'Item',
+    idEntidade: itemId,
+    initialValue: {
+      idSistemaRpg: initialItem?.idSistemaRpg,
+      idSistemaVersao: initialItem?.idSistemaVersao,
+      acompanharPublicacaoAtual: initialItem?.acompanharPublicacaoAtual,
+    },
+    codigoTipoItem: itemTypeToSystemCode(tipo),
+    codigoCategoriaItem: initialScope.categoryCode || undefined,
+    codigoArquetipoItem: initialScope.archetypeCode || undefined,
+  });
+  const sistemaItemCatalogo = useMemo(
+    () => buildSistemaItemFormCatalog(tipo, atributos, sistema.catalogTypes),
+    [atributos, sistema.catalogTypes, tipo],
+  );
+
+  const handleAtributosChange = useCallback((nextAttributes: Record<string, unknown>) => {
+    const nextScope = resolveItemSystemScope(tipo, nextAttributes, sistema.catalogTypes);
+    setAtributos({
+      ...nextAttributes,
+      ...(nextScope.categoryCode ? { codigoCategoria: nextScope.categoryCode } : {}),
+      ...(nextScope.archetypeCode ? { codigoArquetipo: nextScope.archetypeCode } : {}),
+    });
+  }, [sistema.catalogTypes, tipo]);
+
+  const setSistemaItemCategory = useCallback((categoryCode: string) => {
+    setAtributos((current: Record<string, unknown>) => ({
+      ...current,
+      codigoCategoria: categoryCode || undefined,
+      codigoArquetipo: undefined,
+      ...(tipo === 'arma' ? { tipoArma: undefined } : {}),
+      ...(tipo === 'traje' ? { tipoTraje: undefined } : {}),
+      ...(tipo === 'implante' ? { parteCorpo: undefined } : {}),
+    }));
+  }, [tipo]);
+
+  const setSistemaItemArchetype = useCallback((archetypeCode: string) => {
+    setAtributos((current: Record<string, unknown>) => ({
+      ...current,
+      codigoArquetipo: archetypeCode ? archetypeCode.toUpperCase() : undefined,
+    }));
+  }, []);
+
   const [tags, setTags] = useState<string[]>(initialItem?.tags || []);
   const [tagInput, setTagInput] = useState("");
 
@@ -276,6 +327,7 @@ export const useFormItem = (initialItem?: ItemPayload, contentType?: string) => 
 
     setVisivel(true);
     setDestaque(false);
+    sistema.hydrateVinculo();
   };
 
   // ------------------------
@@ -297,6 +349,13 @@ export const useFormItem = (initialItem?: ItemPayload, contentType?: string) => 
           : nome.trim().length < 3
             ? "Não foi possível salvar: o nome do item deve ter pelo menos 3 caracteres."
             : "Não foi possível salvar: o nome do item deve ter no máximo 100 caracteres.",
+      };
+    }
+
+    if (!sistema.vinculo.acompanharPublicacaoAtual && !sistema.vinculo.idSistemaVersao) {
+      return {
+        success: false,
+        message: 'Selecione uma versão publicada para fixar o Sistema deste item.',
       };
     }
 
@@ -324,7 +383,10 @@ export const useFormItem = (initialItem?: ItemPayload, contentType?: string) => 
         atributosJson: Object.keys(atributos).length > 0 ? atributos : undefined,
         tags: ensureContentCategoryTag(tags, contentType),
         visivel,
-        destaque
+        destaque,
+        idSistemaRpg: sistema.vinculo.idSistemaRpg ?? sistema.effectiveSystemId,
+        idSistemaVersao: sistema.vinculo.acompanharPublicacaoAtual ? null : sistema.vinculo.idSistemaVersao,
+        acompanharPublicacaoAtual: sistema.vinculo.acompanharPublicacaoAtual,
       };
 
       let response;
@@ -334,7 +396,7 @@ export const useFormItem = (initialItem?: ItemPayload, contentType?: string) => 
         const { atualizarItem } = await import("../../../../../../services/itensService");
         const updated = await atualizarItem(itemId, dto);
         
-        if (!updated) {
+        if (!updated.sucesso) {
           setIsSubmitting(false);
           return {
             success: false,
@@ -399,7 +461,11 @@ export const useFormItem = (initialItem?: ItemPayload, contentType?: string) => 
     imagemUrl,
     handleImagemUpload,
     atributos,
-    setAtributos,
+    setAtributos: handleAtributosChange,
+    sistema,
+    sistemaItemCatalogo,
+    setSistemaItemCategory,
+    setSistemaItemArchetype,
     tags,
     tagInput,
     setTagInput,

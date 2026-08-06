@@ -13,9 +13,13 @@ namespace OdisseiaWiki.Models
         [Required]
         public int Idusuario { get; set; }
 
+        public int? IdSistemaVersao { get; set; }
+
         public string? InfoSecundariasJson { get; set; }
 
         public virtual Mesa Mesa { get; set; } = null!;
         public virtual Usuario Usuario { get; set; } = null!;
+
+        public virtual SistemaVersao? SistemaVersao { get; set; }
     }
 }

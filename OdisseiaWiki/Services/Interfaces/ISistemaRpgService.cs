@@ -1,4 +1,5 @@
 using OdisseiaWiki.Dtos;
+using OdisseiaWiki.Models;
 
 namespace OdisseiaWiki.Services.Interfaces;
 
@@ -15,6 +16,7 @@ public interface ISistemaRpgService
     Task<SistemaOperacaoResultado<SistemaVersaoResumoDto>> CriarVersaoAsync(int idSistemaRpg, SistemaVersaoCreateDto dto);
     Task<SistemaOperacaoResultado<SistemaVersaoResumoDto>> DuplicarVersaoAsync(int idSistemaVersao, SistemaVersaoDuplicarDto dto);
     Task<SistemaOperacaoResultado<SistemaVersaoResumoDto>> PublicarVersaoAsync(int idSistemaVersao);
+    Task<SistemaOperacaoResultado<SistemaPatchNoteDto>> ObterPatchNoteAsync(int idSistemaVersao);
     Task<SistemaOperacaoResultado<SistemaVersaoResumoDto>> ArquivarVersaoAsync(int idSistemaVersao);
     Task<SistemaOperacaoResultado<bool>> ExcluirVersaoAsync(int idSistemaRpg, int idSistemaVersao);
 
@@ -34,12 +36,22 @@ public interface ISistemaRpgService
     Task<SistemaOperacaoResultado<SistemaSobrevivenciaConfigDto>> AtualizarSobrevivenciaAsync(int idSistemaVersao, SistemaSobrevivenciaConfigDto dto);
 
     Task<SistemaOperacaoResultado<bool>> ValidarVersaoSelecionavelAsync(int idSistemaVersao);
-    Task<SistemaOperacaoResultado<SistemaResolvidoDto>> MigrarMesaAsync(int idMesa, int idSistemaVersao);
+    Task<SistemaOperacaoResultado<MesaMigracaoPreviewDto>> ObterPreviaMigracaoMesaAsync(
+        int idMesa,
+        int idSistemaVersaoDestino);
+    Task<SistemaOperacaoResultado<SistemaResolvidoDto>> MigrarMesaAsync(
+        int idMesa,
+        int idSistemaVersao,
+        bool confirmarPreservacaoValores);
 }
 
 public interface ISistemaRpgResolver
 {
     Task<SistemaResolvidoDto> ResolverAsync(int? idMesa = null);
+    Task<SistemaRuntimeContextoDto> ResolverContextoAsync(SistemaRuntimeConsultaDto consulta);
+    Task<SistemaRuntimeContextoDto> ResolverContextoAsync(
+        SistemaRuntimeConsultaDto consulta,
+        SistemaEntidadeGlobalVinculoSnapshot vinculoProposto);
 }
 
 public interface ISistemaRpgSeeder

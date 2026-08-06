@@ -55,3 +55,74 @@ public enum SistemaUnidadeDuracao
     Sessao,
     Permanente,
 }
+
+public enum SistemaRuntimeOrigem
+{
+    Mesa,
+    VersaoFixadaPersonagemJogador,
+    VersaoFixadaEntidade,
+    PublicacaoAtualEntidade,
+    SistemaPadrao,
+    FallbackLegado,
+}
+
+public enum SistemaValorProveniencia
+{
+    Sistema,
+    OverrideMesa,
+    ValorExplicitoEntidade,
+    FallbackLegado,
+}
+
+public enum SistemaEntidadeGlobalTipo
+{
+    Npc,
+    Raca,
+    Item,
+}
+
+public enum SistemaRuntimeWarningCodigo
+{
+    MesaNaoEncontrada,
+    VersaoRascunhoIgnorada,
+    EntidadeNaoEncontrada,
+    VinculoInconsistente,
+    SistemaNaoEncontrado,
+    PublicacaoAtualIndisponivel,
+    ConfiguracaoRacialAusente,
+    OverrideMesaInvalido,
+    CatalogoItemAusente,
+    EscopoItemNaoEncontrado,
+    ValorForaReferencia,
+    FallbackLegadoUtilizado,
+}
+
+public enum SistemaItemEscopoNivel
+{
+    Tipo,
+    Categoria,
+    Arquetipo,
+}
+
+public enum SistemaItemCampoTipo
+{
+    Texto,
+    Inteiro,
+    Decimal,
+    Booleano,
+    Codigo,
+    Lista,
+}
+
+public enum SistemaItemReferenciaTipo
+{
+    TipoDano,
+    TipoDefesa,
+    Alcance,
+    Material,
+    ParteCorpo,
+    Lado,
+    Modificacao,
+    Lacrima,
+    Outro,
+}

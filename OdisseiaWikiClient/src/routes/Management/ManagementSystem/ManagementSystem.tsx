@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import {
   CriarSistemaRpgPayload,
   CriarSistemaVersaoPayload,
@@ -40,21 +41,24 @@ export const ManagementSystem = ({ theme, neon, onDirtyChange }: ManagementSyste
     sourceVersion?: SistemaVersaoResumo | null;
   } | null>(null);
   const [confirm, setConfirm] = useState<ConfirmState | null>(null);
+  const [catalogDirty, setCatalogDirty] = useState(false);
+  const hasUnsavedChanges = management.dirty || catalogDirty;
 
   useEffect(() => {
-    onDirtyChange?.(management.dirty);
+    onDirtyChange?.(hasUnsavedChanges);
     return () => onDirtyChange?.(false);
-  }, [management.dirty, onDirtyChange]);
+  }, [hasUnsavedChanges, onDirtyChange]);
 
-  const runWithDirtyGuard = (action: () => void) => {
-    if (!management.dirty) {
+  const runWithDirtyGuard = (action: () => void, includeCatalog = true) => {
+    const shouldGuard = management.dirty || (includeCatalog && catalogDirty);
+    if (!shouldGuard) {
       action();
       return;
     }
     setConfirm({
       title: 'Descartar alterações não salvas?',
-      message: 'O módulo atual possui alterações que ainda não foram salvas.',
-      detail: 'Ao continuar, as alterações locais deste módulo serão descartadas.',
+      message: 'A versão atual possui alterações que ainda não foram salvas.',
+      detail: 'Ao continuar, as alterações locais do módulo ou do catálogo serão descartadas.',
       confirmText: 'Descartar e continuar',
       danger: true,
       action,
@@ -89,6 +93,10 @@ export const ManagementSystem = ({ theme, neon, onDirtyChange }: ManagementSyste
   const requestPublish = () => {
     const version = management.selectedVersion;
     if (!version) return;
+    if (catalogDirty) {
+      toast.error('Salve ou descarte as alterações do catálogo de itens antes de publicar.');
+      return;
+    }
 
     const openPublishConfirmation = () => setConfirm({
       title: `Publicar versão ${version.numeroVersao}?`,
@@ -217,9 +225,13 @@ export const ManagementSystem = ({ theme, neon, onDirtyChange }: ManagementSyste
           onPublishVersion={requestPublish}
           onArchiveVersion={requestArchive}
           onDeleteVersion={requestDeleteVersion}
+          onMigrationComplete={() => {
+            management.retryVersions();
+            management.retrySystems();
+          }}
           onSelectModule={(moduleKey: SistemaModuloKey) => {
             if (moduleKey === management.activeModule) return;
-            runWithDirtyGuard(() => management.selectModule(moduleKey));
+            runWithDirtyGuard(() => management.selectModule(moduleKey), false);
           }}
           onChangeModule={management.setModuleConfig}
           onRetryModule={management.retryModule}
@@ -234,6 +246,7 @@ export const ManagementSystem = ({ theme, neon, onDirtyChange }: ManagementSyste
               action: management.discardModuleChanges,
             });
           }}
+          onCatalogDirtyChange={setCatalogDirty}
         />
       )}
 

@@ -26,6 +26,11 @@ public partial class OdisseiaContext
     public virtual DbSet<SistemaCondicao> SistemaCondicoes { get; set; }
     public virtual DbSet<SistemaDescansoConfig> SistemaDescansosConfig { get; set; }
     public virtual DbSet<SistemaMorteConfig> SistemaMortesConfig { get; set; }
+    public virtual DbSet<SistemaPatchNote> SistemaPatchNotes { get; set; }
+    public virtual DbSet<SistemaItemEscopo> SistemaItemEscopos { get; set; }
+    public virtual DbSet<SistemaItemCampo> SistemaItemCampos { get; set; }
+    public virtual DbSet<SistemaItemFaixa> SistemaItemFaixas { get; set; }
+    public virtual DbSet<SistemaItemReferencia> SistemaItemReferencias { get; set; }
 
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder)
     {
@@ -34,6 +39,8 @@ public partial class OdisseiaContext
         ConfigureCriacao(modelBuilder);
         ConfigureExploracaoECombate(modelBuilder);
         ConfigurePoderesESobrevivencia(modelBuilder);
+        ConfigureRuntimeBindings(modelBuilder);
+        ConfigureItens(modelBuilder);
     }
 
     private static void ConfigureSistemaRpg(ModelBuilder modelBuilder)
@@ -79,6 +86,40 @@ public partial class OdisseiaContext
                 .HasForeignKey(e => e.IdVersaoBase)
                 .OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("FK_SistemaVersao_VersaoBase");
+        });
+
+        modelBuilder.Entity<SistemaPatchNote>(entity =>
+        {
+            entity.ToTable("sistemapatchnotes");
+            entity.HasKey(e => e.IdSistemaPatchNote);
+            entity.Property(e => e.CodigoSistema).HasMaxLength(50);
+            entity.Property(e => e.NomeSistema).HasMaxLength(150);
+            entity.Property(e => e.NumeroVersaoAnterior).HasMaxLength(20);
+            entity.Property(e => e.NumeroVersaoNova).HasMaxLength(20);
+            entity.Property(e => e.Titulo).HasMaxLength(200);
+            entity.Property(e => e.Resumo).HasMaxLength(2000);
+            entity.Property(e => e.DataGeracao).HasColumnType("datetime");
+            entity.Property(e => e.DiffJson).HasColumnType("json");
+            entity.HasIndex(e => e.IdSistemaVersao)
+                .IsUnique()
+                .HasDatabaseName("UX_SistemaPatchNote_Versao");
+            entity.HasIndex(e => new { e.IdSistemaRpg, e.DataGeracao })
+                .HasDatabaseName("IX_SistemaPatchNote_Sistema_Data");
+            entity.HasOne(e => e.SistemaRpg)
+                .WithMany(e => e.PatchNotes)
+                .HasForeignKey(e => e.IdSistemaRpg)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_SistemaPatchNote_SistemaRpg");
+            entity.HasOne(e => e.SistemaVersao)
+                .WithOne(e => e.PatchNote)
+                .HasForeignKey<SistemaPatchNote>(e => e.IdSistemaVersao)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_SistemaPatchNote_Versao");
+            entity.HasOne(e => e.VersaoAnterior)
+                .WithMany(e => e.PatchNotesComoVersaoAnterior)
+                .HasForeignKey(e => e.IdVersaoAnterior)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_SistemaPatchNote_VersaoAnterior");
         });
 
         modelBuilder.Entity<SistemaModulo>(entity =>
@@ -394,6 +435,147 @@ public partial class OdisseiaContext
             entity.HasIndex(e => e.IdSistemaVersao).IsUnique();
             entity.HasOne(e => e.SistemaVersao).WithOne(e => e.Morte)
                 .HasForeignKey<SistemaMorteConfig>(e => e.IdSistemaVersao)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+    }
+
+    private static void ConfigureRuntimeBindings(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<PersonagemJogador>(entity =>
+        {
+            entity.Property(item => item.IdSistemaVersao).HasColumnName("IDSistemaVersao");
+            entity.HasIndex(item => item.IdSistemaVersao)
+                .HasDatabaseName("IX_PersonagensJogador_SistemaVersao");
+            entity.HasOne(item => item.SistemaVersao).WithMany()
+                .HasForeignKey(item => item.IdSistemaVersao)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_PersonagensJogador_SistemaVersao");
+        });
+
+        modelBuilder.Entity<Personagen>(entity =>
+        {
+            entity.Property(item => item.IdSistemaRpg).HasColumnName("IDSistemaRpg");
+            entity.Property(item => item.IdSistemaVersao).HasColumnName("IDSistemaVersao");
+            entity.Property(item => item.AcompanharPublicacaoAtual).HasDefaultValue(true);
+            entity.HasIndex(item => item.IdSistemaRpg).HasDatabaseName("IX_Personagem_SistemaRpg");
+            entity.HasIndex(item => item.IdSistemaVersao).HasDatabaseName("IX_Personagem_SistemaVersao");
+            entity.HasOne(item => item.SistemaRpg).WithMany().HasForeignKey(item => item.IdSistemaRpg)
+                .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_Personagem_SistemaRpg");
+            entity.HasOne(item => item.SistemaVersao).WithMany().HasForeignKey(item => item.IdSistemaVersao)
+                .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_Personagem_SistemaVersao");
+            entity.ToTable("personagens", table => table.HasCheckConstraint(
+                "CK_personagens_SistemaRuntimeVinculo",
+                "(`AcompanharPublicacaoAtual` = 1 AND `IDSistemaVersao` IS NULL) OR " +
+                "(`AcompanharPublicacaoAtual` = 0 AND `IDSistemaRpg` IS NOT NULL AND `IDSistemaVersao` IS NOT NULL)"));
+        });
+
+        modelBuilder.Entity<Raca>(entity =>
+        {
+            entity.Property(item => item.IdSistemaRpg).HasColumnName("IDSistemaRpg");
+            entity.Property(item => item.IdSistemaVersao).HasColumnName("IDSistemaVersao");
+            entity.Property(item => item.AcompanharPublicacaoAtual).HasDefaultValue(true);
+            entity.HasIndex(item => item.IdSistemaRpg).HasDatabaseName("IX_Raca_SistemaRpg");
+            entity.HasIndex(item => item.IdSistemaVersao).HasDatabaseName("IX_Raca_SistemaVersao");
+            entity.HasOne(item => item.SistemaRpg).WithMany().HasForeignKey(item => item.IdSistemaRpg)
+                .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_Raca_SistemaRpg");
+            entity.HasOne(item => item.SistemaVersao).WithMany().HasForeignKey(item => item.IdSistemaVersao)
+                .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_Raca_SistemaVersao");
+            entity.ToTable("racas", table => table.HasCheckConstraint(
+                "CK_racas_SistemaRuntimeVinculo",
+                "(`AcompanharPublicacaoAtual` = 1 AND `IDSistemaVersao` IS NULL) OR " +
+                "(`AcompanharPublicacaoAtual` = 0 AND `IDSistemaRpg` IS NOT NULL AND `IDSistemaVersao` IS NOT NULL)"));
+        });
+
+        modelBuilder.Entity<Item>(entity =>
+        {
+            entity.Property(item => item.IdSistemaRpg).HasColumnName("IDSistemaRpg");
+            entity.Property(item => item.IdSistemaVersao).HasColumnName("IDSistemaVersao");
+            entity.Property(item => item.AcompanharPublicacaoAtual).HasDefaultValue(true);
+            entity.HasIndex(item => item.IdSistemaRpg).HasDatabaseName("IX_Item_SistemaRpg");
+            entity.HasIndex(item => item.IdSistemaVersao).HasDatabaseName("IX_Item_SistemaVersao");
+            entity.HasOne(item => item.SistemaRpg).WithMany().HasForeignKey(item => item.IdSistemaRpg)
+                .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_Item_SistemaRpg");
+            entity.HasOne(item => item.SistemaVersao).WithMany().HasForeignKey(item => item.IdSistemaVersao)
+                .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_Item_SistemaVersao");
+            entity.ToTable("itens", table => table.HasCheckConstraint(
+                "CK_itens_SistemaRuntimeVinculo",
+                "(`AcompanharPublicacaoAtual` = 1 AND `IDSistemaVersao` IS NULL) OR " +
+                "(`AcompanharPublicacaoAtual` = 0 AND `IDSistemaRpg` IS NOT NULL AND `IDSistemaVersao` IS NOT NULL)"));
+        });
+    }
+
+    private static void ConfigureItens(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<SistemaItemEscopo>(entity =>
+        {
+            entity.ToTable("sistemaitensescopos");
+            entity.HasKey(item => item.IdSistemaItemEscopo);
+            entity.Property(item => item.Nivel).HasConversion<string>().HasMaxLength(30);
+            entity.Property(item => item.Codigo).HasMaxLength(50);
+            entity.Property(item => item.CodigoCaminho).HasMaxLength(200);
+            entity.Property(item => item.Nome).HasMaxLength(150);
+            entity.Property(item => item.Descricao).HasColumnType("text");
+            entity.HasIndex(item => new { item.IdSistemaVersao, item.CodigoCaminho })
+                .IsUnique()
+                .HasDatabaseName("UX_SistemaItemEscopo_Versao_Caminho");
+            entity.HasIndex(item => new { item.IdSistemaVersao, item.Nivel, item.Codigo })
+                .HasDatabaseName("IX_SistemaItemEscopo_Versao_Nivel_Codigo");
+            entity.HasOne(item => item.SistemaVersao)
+                .WithMany(version => version.ItemEscopos)
+                .HasForeignKey(item => item.IdSistemaVersao)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(item => item.EscopoPai)
+                .WithMany(parent => parent.Filhos)
+                .HasForeignKey(item => item.IdEscopoPai)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<SistemaItemCampo>(entity =>
+        {
+            entity.ToTable("sistemaitenscampos");
+            entity.HasKey(item => item.IdSistemaItemCampo);
+            entity.Property(item => item.Codigo).HasMaxLength(50);
+            entity.Property(item => item.Nome).HasMaxLength(150);
+            entity.Property(item => item.Tipo).HasConversion<string>().HasMaxLength(30);
+            entity.Property(item => item.Unidade).HasMaxLength(50);
+            entity.Property(item => item.Descricao).HasColumnType("text");
+            entity.HasIndex(item => new { item.IdSistemaItemEscopo, item.Codigo }).IsUnique();
+            entity.HasOne(item => item.Escopo).WithMany(scope => scope.Campos)
+                .HasForeignKey(item => item.IdSistemaItemEscopo)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<SistemaItemFaixa>(entity =>
+        {
+            entity.ToTable("sistemaitensfaixas", table => table.HasCheckConstraint(
+                "CK_SistemaItemFaixa_Intervalo",
+                "`ValorMinimo` IS NULL OR `ValorMaximo` IS NULL OR `ValorMinimo` <= `ValorMaximo`"));
+            entity.HasKey(item => item.IdSistemaItemFaixa);
+            entity.Property(item => item.CodigoCampo).HasMaxLength(50);
+            entity.Property(item => item.Nome).HasMaxLength(150);
+            entity.Property(item => item.ValorMinimo).HasPrecision(18, 2);
+            entity.Property(item => item.ValorMaximo).HasPrecision(18, 2);
+            entity.Property(item => item.ValorReferencia).HasPrecision(18, 2);
+            entity.Property(item => item.Unidade).HasMaxLength(50);
+            entity.Property(item => item.Descricao).HasColumnType("text");
+            entity.HasIndex(item => new { item.IdSistemaItemEscopo, item.CodigoCampo }).IsUnique();
+            entity.HasOne(item => item.Escopo).WithMany(scope => scope.Faixas)
+                .HasForeignKey(item => item.IdSistemaItemEscopo)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<SistemaItemReferencia>(entity =>
+        {
+            entity.ToTable("sistemaitensreferencias");
+            entity.HasKey(item => item.IdSistemaItemReferencia);
+            entity.Property(item => item.Tipo).HasConversion<string>().HasMaxLength(30);
+            entity.Property(item => item.Codigo).HasMaxLength(50);
+            entity.Property(item => item.Nome).HasMaxLength(150);
+            entity.Property(item => item.Valor).HasMaxLength(250);
+            entity.Property(item => item.Descricao).HasColumnType("text");
+            entity.HasIndex(item => new { item.IdSistemaItemEscopo, item.Tipo, item.Codigo }).IsUnique();
+            entity.HasOne(item => item.Escopo).WithMany(scope => scope.Referencias)
+                .HasForeignKey(item => item.IdSistemaItemEscopo)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

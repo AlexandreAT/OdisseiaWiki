@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using OdisseiaWiki.Data;
+using OdisseiaWiki.Enums;
 using OdisseiaWiki.Models;
 using OdisseiaWiki.Repositories.Interfaces;
+using OdisseiaWiki.Services.Helpers;
 
 namespace OdisseiaWiki.Repositories;
 
@@ -80,7 +82,10 @@ public sealed class SistemaRpgRepository : ISistemaRpgRepository
                 .Include(v => v.SkillConfig)
                 .Include(v => v.Condicoes)
                 .Include(v => v.Descansos)
-                .Include(v => v.Morte);
+                .Include(v => v.Morte)
+                .Include(v => v.ItemEscopos).ThenInclude(item => item.Campos)
+                .Include(v => v.ItemEscopos).ThenInclude(item => item.Faixas)
+                .Include(v => v.ItemEscopos).ThenInclude(item => item.Referencias);
         }
 
         if (!tracked)
@@ -136,14 +141,119 @@ public sealed class SistemaRpgRepository : ISistemaRpgRepository
         return query.FirstOrDefaultAsync(m => m.Idmesa == idMesa);
     }
 
+    public Task<PersonagemJogador?> GetPlayerCharacterAsync(
+        int idPersonagemJogador,
+        bool tracked = false)
+    {
+        IQueryable<PersonagemJogador> query = _context.PersonagemJogadores
+            .Include(personagem => personagem.Mesa)
+                .ThenInclude(mesa => mesa.SistemaVersao)
+                    .ThenInclude(versao => versao!.SistemaRpg)
+            .Include(personagem => personagem.SistemaVersao)
+                .ThenInclude(versao => versao!.SistemaRpg);
+        if (!tracked)
+            query = query.AsNoTracking();
+        return query.FirstOrDefaultAsync(personagem =>
+            personagem.IdpersonagemJogador == idPersonagemJogador);
+    }
+
+    public Task<Mesa?> GetMesaForMigrationPreviewAsync(int idMesa) =>
+        _context.Mesas
+            .AsNoTracking()
+            .Include(m => m.SistemaVersao)
+                .ThenInclude(v => v!.SistemaRpg)
+            .Include(m => m.PersonagensJogadores)
+            .Include(m => m.MesaEntidadeConfigs)
+            .AsSplitQuery()
+            .FirstOrDefaultAsync(m => m.Idmesa == idMesa);
+
+    public Task<SistemaPatchNote?> GetPatchNoteByVersionAsync(int idSistemaVersao) =>
+        _context.SistemaPatchNotes
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.IdSistemaVersao == idSistemaVersao);
+
     public Task<List<Mesa>> GetMesasWithoutVersionAsync() =>
         _context.Mesas.Where(m => m.IdSistemaVersao == null).ToListAsync();
+
+    public async Task SynchronizeDefaultMesaVersionAsync(int idSistemaVersao)
+    {
+        await _context.Mesas
+            .Where(mesa => mesa.CodigoSistema == SystemMesaConstants.CodigoMesaPadrao)
+            .ExecuteUpdateAsync(atualizacao => atualizacao
+                .SetProperty(mesa => mesa.IdSistemaVersao, idSistemaVersao)
+                .SetProperty(mesa => mesa.PadraoSistema, true)
+                .SetProperty(mesa => mesa.Nome, SystemMesaConstants.NomeMesaPadrao));
+    }
 
     public Task<List<Raca>> GetRacesAsync() =>
         _context.Racas.AsNoTracking().ToListAsync();
 
     public Task<List<Passiva>> GetPassivasAsync() =>
         _context.Passivas.AsNoTracking().ToListAsync();
+
+    public Task<SistemaEntidadeGlobalVinculoSnapshot?> GetGlobalEntityBindingAsync(
+        SistemaEntidadeGlobalTipo tipoEntidade,
+        string idEntidade)
+    {
+        return tipoEntidade switch
+        {
+            SistemaEntidadeGlobalTipo.Npc when int.TryParse(idEntidade, out int idNpc) =>
+                _context.Personagens.AsNoTracking()
+                    .Where(entity => entity.Idpersonagem == idNpc)
+                    .Select(entity => new SistemaEntidadeGlobalVinculoSnapshot
+                    {
+                        TipoEntidade = tipoEntidade,
+                        IdEntidade = idEntidade,
+                        IdSistemaRpg = entity.IdSistemaRpg,
+                        IdSistemaVersao = entity.IdSistemaVersao,
+                        AcompanharPublicacaoAtual = entity.AcompanharPublicacaoAtual,
+                        EstadoJson = entity.StatusJson,
+                        SkillsJson = entity.Skills,
+                        MagiasJson = entity.Magia,
+                    })
+                    .FirstOrDefaultAsync(),
+            SistemaEntidadeGlobalTipo.Raca when int.TryParse(idEntidade, out int idRaca) =>
+                _context.Racas.AsNoTracking()
+                    .Where(entity => entity.Idraca == idRaca)
+                    .Select(entity => new SistemaEntidadeGlobalVinculoSnapshot
+                    {
+                        TipoEntidade = tipoEntidade,
+                        IdEntidade = idEntidade,
+                        IdSistemaRpg = entity.IdSistemaRpg,
+                        IdSistemaVersao = entity.IdSistemaVersao,
+                        AcompanharPublicacaoAtual = entity.AcompanharPublicacaoAtual,
+                        EstadoJson = entity.StatusJson,
+                    })
+                    .FirstOrDefaultAsync(),
+            SistemaEntidadeGlobalTipo.Item =>
+                _context.Itens.AsNoTracking()
+                    .Where(entity => entity.Iditem == idEntidade)
+                    .Select(entity => new SistemaEntidadeGlobalVinculoSnapshot
+                    {
+                        TipoEntidade = tipoEntidade,
+                        IdEntidade = idEntidade,
+                        IdSistemaRpg = entity.IdSistemaRpg,
+                        IdSistemaVersao = entity.IdSistemaVersao,
+                        AcompanharPublicacaoAtual = entity.AcompanharPublicacaoAtual,
+                        TipoItem = entity.Tipo,
+                        EstadoJson = entity.AtributosJson,
+                    })
+                    .FirstOrDefaultAsync(),
+            _ => Task.FromResult<SistemaEntidadeGlobalVinculoSnapshot?>(null),
+        };
+    }
+
+    public Task<Raca?> GetRaceRuntimeAsync(int idRaca) =>
+        _context.Racas.AsNoTracking().FirstOrDefaultAsync(raca => raca.Idraca == idRaca);
+
+    public Task<MesaEntidadeConfig?> GetMesaEntityConfigAsync(
+        int idMesa,
+        MesaEntidadeTipo tipoEntidade,
+        string idEntidade) =>
+        _context.MesaEntidadeConfigs.AsNoTracking().FirstOrDefaultAsync(configuracao =>
+            configuracao.Idmesa == idMesa &&
+            configuracao.TipoEntidade == tipoEntidade &&
+            configuracao.Identidade == idEntidade);
 
     public async Task AddSystemAsync(SistemaRpg sistema)
     {
@@ -153,6 +263,11 @@ public sealed class SistemaRpgRepository : ISistemaRpgRepository
     public async Task AddVersionAsync(SistemaVersao versao)
     {
         await _context.SistemaVersoes.AddAsync(versao);
+    }
+
+    public async Task AddPatchNoteAsync(SistemaPatchNote patchNote)
+    {
+        await _context.SistemaPatchNotes.AddAsync(patchNote);
     }
 
     public void RemoveSystem(SistemaRpg sistema) => _context.SistemasRpg.Remove(sistema);

@@ -20,6 +20,10 @@ namespace OdisseiaWiki.Dtos
         public List<string>? Tags { get; set; }
         public bool Visivel { get; set; } = true;
         public bool Destaque { get; set; } = false;
+        public int? IdSistemaRpg { get; set; }
+        public int? IdSistemaVersao { get; set; }
+        public bool AcompanharPublicacaoAtual { get; set; } = true;
+        public SistemaRuntimeContextoDto? SistemaRuntime { get; set; }
         public DateTime DataCriacao { get; set; }
         public int? Idpersonagem { get; set; }
     }

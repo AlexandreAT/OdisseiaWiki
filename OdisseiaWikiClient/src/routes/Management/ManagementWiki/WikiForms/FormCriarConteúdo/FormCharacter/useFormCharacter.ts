@@ -19,6 +19,7 @@ import { ensureContentCategoryTag, isContentCategoryTag } from '../../../../../.
 import { CharacterStatusExtras, DEFAULT_CHARACTER_STATUS_EXTRAS } from '../../../../../../utils/characterStatus';
 import { getApiErrorMessage } from '../../../../../../utils/apiError';
 import { addOrReplaceEmptyItem } from '../../../../../../utils/itemInventorySections';
+import { useSistemaEntidadeGlobalForm } from '../../../../../../hooks/useSistemaEntidadeGlobalForm';
 
 const serializeRichText = (value: any): string => {
   if (value === undefined || value === null) return '';
@@ -31,13 +32,18 @@ const serializeRichText = (value: any): string => {
   }
 };
 
-export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { applyRaceDefaults?: boolean; contentType?: string } = {}) => {
+export const useFormCharacter = ({ applyRaceDefaults = true, contentType, idEntidade }: { applyRaceDefaults?: boolean; contentType?: string; idEntidade?: string } = {}) => {
   // --- step ---
   const [step, setStep] = useState(1);
   // --- dados do formulário ---
   const [userName, setUserName] = useState('');
   // race
   const [race, setRace] = useState<number | undefined>(undefined);
+  const sistema = useSistemaEntidadeGlobalForm({
+    tipoEntidade: 'Npc',
+    idEntidade,
+    idRaca: race,
+  });
 
   // city
   const [city, setCity] = useState<number | undefined>(undefined);
@@ -433,6 +439,12 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
       return;
     }
 
+    if (!sistema.vinculo.acompanharPublicacaoAtual && !sistema.vinculo.idSistemaVersao) {
+      toast.error('Selecione uma versão publicada para fixar o Sistema deste NPC.');
+      setStep(1);
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       let avatarPath = avatarUrl;
@@ -536,6 +548,9 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
         tags: ensureContentCategoryTag(tags, contentType),
         visivel: visivel,
         destaque,
+        idSistemaRpg: sistema.vinculo.idSistemaRpg ?? sistema.effectiveSystemId,
+        idSistemaVersao: sistema.vinculo.acompanharPublicacaoAtual ? null : sistema.vinculo.idSistemaVersao,
+        acompanharPublicacaoAtual: sistema.vinculo.acompanharPublicacaoAtual,
         inventarioJson: inventarioMapped,
         skills: skillMapped,
         magia: magiaMapped,
@@ -571,7 +586,7 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
     } finally {
       setIsSubmitting(false);
     }
-  }, [avatarUrl, avatarFile, galeriaFiles, galeriaCaptions, userName, statusBasico, itens, magias, skills, race, city, history, costumes, nanites, alignment, traits, idpassiva, ultimate, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, statusExtras, defesas, tags, contentType, visivel, destaque, validateStepOne]);
+  }, [avatarUrl, avatarFile, galeriaFiles, galeriaCaptions, userName, statusBasico, itens, magias, skills, race, city, history, costumes, nanites, alignment, traits, idpassiva, ultimate, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, statusExtras, defesas, tags, contentType, visivel, destaque, validateStepOne, sistema]);
 
   return {
     step, setStep,
@@ -620,6 +635,7 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType }: { ap
     listRaces, loadingRaces, selectedRace,
     personagens, allPersonagens, searchTerm, loadingPersonagens,
     listItens, loadingItens, searchItensTerm, setSearchItensTerm,
+    sistema,
 
     // funções
     searchPersonagens,

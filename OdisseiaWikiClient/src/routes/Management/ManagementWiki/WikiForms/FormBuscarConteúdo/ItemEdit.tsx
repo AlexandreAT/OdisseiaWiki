@@ -37,6 +37,7 @@ import { EditHeader, LoadingContainer } from './EditFormStyles';
 import { EntityEditFloatingActions } from './EntityEditFloatingActions';
 import { ITEM_TIPO_OPTIONS } from '../formOptions';
 import { handleNumericInputFocus } from '../../../../../utils/numericInput';
+import { SystemEntityBinding } from '../../../../../components/Generic/SystemEntityBinding';
 
 interface ItemEditProps {
   theme: 'dark' | 'light';
@@ -189,6 +190,10 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
     handleSubmit,
     isSubmitting,
     nomeError,
+    sistema,
+    sistemaItemCatalogo,
+    setSistemaItemCategory,
+    setSistemaItemArchetype,
   } = useFormItem(initialItem);
 
   const itemImageCropPreset: CropPreset = {
@@ -214,7 +219,8 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
     atributos,
     tags,
     visivel,
-  }), [nome, tipo, descricao, quantidade, peso, discricao, imagemUrl, atributos, tags, visivel]);
+    sistema: sistema.vinculo,
+  }), [nome, tipo, descricao, quantidade, peso, discricao, imagemUrl, atributos, tags, visivel, sistema.vinculo]);
   const [lastSavedSnapshot, setLastSavedSnapshot] = React.useState(snapshot);
   const isSynced = snapshot === lastSavedSnapshot;
   const persistInFlightRef = React.useRef(false);
@@ -294,7 +300,7 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
             onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setTipo(e.target.value as ItemTipo)}
             theme={theme}
             neon={neon}
-            options={ITEM_TIPO_OPTIONS}
+            options={sistemaItemCatalogo.typeOptions.length ? sistemaItemCatalogo.typeOptions : ITEM_TIPO_OPTIONS}
             width="100%"
           />
         </GridInputsRow>
@@ -333,17 +339,42 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
 
       </FormHeader>
 
+      <SystemEntityBinding theme={theme} neon={neon} state={sistema} />
+
       {/* Seção de Atributos Dinâmicos */}
       {AtributosForm && (
         <AtributosSection theme={theme} neon={neon}>
           <SectionTitle theme={theme} neon={neon}>Atributos do {ITEM_TIPO_OPTIONS.find(o => o.value === tipo)?.label}</SectionTitle>
           <AtributosGrid>
+            {sistemaItemCatalogo.categoryOptions.length > 0 && (
+              <Select
+                label="Categoria do Sistema"
+                theme={theme}
+                neon={neon}
+                value={sistemaItemCatalogo.categoryCode ?? ''}
+                onChange={(event) => setSistemaItemCategory(event.target.value)}
+                options={sistemaItemCatalogo.categoryOptions}
+                width="100%"
+              />
+            )}
+            {['consumiveis', 'acessorio', 'outro'].includes(tipo) && sistemaItemCatalogo.archetypeOptions.length > 0 && (
+              <Select
+                label="Arquétipo do Sistema"
+                theme={theme}
+                neon={neon}
+                value={sistemaItemCatalogo.archetypeCode?.toLocaleLowerCase('pt-BR') ?? ''}
+                onChange={(event) => setSistemaItemArchetype(event.target.value)}
+                options={sistemaItemCatalogo.archetypeOptions}
+                width="100%"
+              />
+            )}
             <AtributosForm
               value={atributos}
               onChange={setAtributos}
               theme={theme}
               neon={neon}
               managementLayout
+              sistemaItemCatalogo={sistemaItemCatalogo}
             />
           </AtributosGrid>
         </AtributosSection>

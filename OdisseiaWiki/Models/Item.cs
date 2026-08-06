@@ -2,6 +2,7 @@
 using OdisseiaWiki.Models;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 public partial class Item
 {
@@ -40,8 +41,20 @@ public partial class Item
     public bool Visivel { get; set; } = true;
     public bool Destaque { get; set; } = false;
 
+    public int? IdSistemaRpg { get; set; }
+
+    public int? IdSistemaVersao { get; set; }
+
+    public bool AcompanharPublicacaoAtual { get; set; } = true;
+
     public DateTime DataCriacao { get; set; } = DateTime.UtcNow;
 
     public int? Idpersonagem { get; set; }
     public virtual Personagen? Personagem { get; set; }
+
+    [JsonIgnore]
+    public virtual SistemaRpg? SistemaRpg { get; set; }
+
+    [JsonIgnore]
+    public virtual SistemaVersao? SistemaVersao { get; set; }
 }

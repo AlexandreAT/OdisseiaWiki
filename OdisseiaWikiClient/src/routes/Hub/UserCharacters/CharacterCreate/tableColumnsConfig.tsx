@@ -10,6 +10,8 @@ import { atributosFormMap, atributosMagiaFormMap, atributosSkillFormMap } from '
 import { ItemTableGeneralAttributes } from '../../../Management/ManagementWiki/WikiForms/FormCriarConteúdo/FormCharacter/FormCharacter.style';
 import { getTextPreview } from '../../../../utils/richTextHelpers';
 import { InputText } from '../../../../components/Generic/InputText/InputText';
+import { SistemaRuntimeContexto } from '../../../../models/SistemaRpg';
+import { getRuntimeMagicTypeOptions } from '../../../../utils/systemRuntimeCharacter';
 
 const RichTextCellEditor = memo(({ 
   value, 
@@ -383,11 +385,19 @@ export const createItemColumns = (theme: 'dark' | 'light', neon: 'on' | 'off') =
   } as any,
 ];
 
-export const createSkillsColumns = (theme: 'dark' | 'light', neon: 'on' | 'off') => [
-  ...baseSkillsColumns.map((column) =>
-    column.key === 'efeito'
+export const createSkillsColumns = (
+  theme: 'dark' | 'light',
+  neon: 'on' | 'off',
+  runtimeContext?: SistemaRuntimeContexto | null,
+) => [
+  ...baseSkillsColumns.map((column) => {
+    const runtimeColumn = column.key === 'elemento'
+      ? { ...column, options: getRuntimeMagicTypeOptions(runtimeContext, true) }
+      : column;
+
+    return runtimeColumn.key === 'efeito'
       ? {
-          ...column,
+          ...runtimeColumn,
           customRender: (value: any, row: Skills, onChange: (v: any) => void) => (
             <RichTextCellEditor
               value={value}
@@ -401,8 +411,8 @@ export const createSkillsColumns = (theme: 'dark' | 'light', neon: 'on' | 'off')
             />
           ),
         }
-      : column
-  ),
+      : runtimeColumn;
+  }),
   {
     key: "atributos",
     label: "Atributos",
@@ -412,11 +422,19 @@ export const createSkillsColumns = (theme: 'dark' | 'light', neon: 'on' | 'off')
   } as any,
 ];
 
-export const createMagiasColumns = (theme: 'dark' | 'light', neon: 'on' | 'off') => [
-  ...baseMagiasColumns.map((column) =>
-    column.key === 'efeito'
+export const createMagiasColumns = (
+  theme: 'dark' | 'light',
+  neon: 'on' | 'off',
+  runtimeContext?: SistemaRuntimeContexto | null,
+) => [
+  ...baseMagiasColumns.map((column) => {
+    const runtimeColumn = column.key === 'elemento'
+      ? { ...column, options: getRuntimeMagicTypeOptions(runtimeContext) }
+      : column;
+
+    return runtimeColumn.key === 'efeito'
       ? {
-          ...column,
+          ...runtimeColumn,
           customRender: (value: any, row: Magia, onChange: (v: any) => void) => (
             <RichTextCellEditor
               value={value}
@@ -430,8 +448,8 @@ export const createMagiasColumns = (theme: 'dark' | 'light', neon: 'on' | 'off')
             />
           ),
         }
-      : column
-  ),
+      : runtimeColumn;
+  }),
   {
     key: "atributos",
     label: "Atributos",

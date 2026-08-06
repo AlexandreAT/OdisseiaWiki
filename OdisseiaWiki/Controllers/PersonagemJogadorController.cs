@@ -124,6 +124,23 @@ namespace OdisseiaWiki.Controllers
                 : NoContent();
         }
 
+        [HttpPost("{id:int}/sistema/atualizar")]
+        public async Task<IActionResult> AtualizarSistema(int id)
+        {
+            int? userId = User.GetUserId();
+            if (!userId.HasValue)
+                return Unauthorized();
+
+            PersonagemJogadorDto? personagem = await _service.GetByIdAsync(id);
+            if (personagem is null)
+                return NotFound($"PersonagemJogador com id {id} não encontrado.");
+            if (!User.IsAdmin() && personagem.Idusuario != userId.Value)
+                return Forbid();
+
+            ResultPersonagemJogador resultado = await _service.AtualizarSistemaAsync(id);
+            return resultado.Sucesso ? Ok(resultado) : BadRequest(resultado);
+        }
+
         [HttpPost("batch-delete")]
         public async Task<IActionResult> DeleteMany([FromBody] DeletePersonagensJogadorDto dto)
         {

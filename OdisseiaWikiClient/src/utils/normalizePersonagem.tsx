@@ -1,5 +1,6 @@
 import { PersonagemStatus } from "../models/Characters";
 import { GalleryImage, normalizeGalleryImages } from '../models/GalleryImage';
+import type { SistemaRuntimeContexto } from '../models/SistemaRpg';
 
 // ----- tipos auxiliares (adequa se já tiver algo parecido no teu projeto) -----
 export type Skill = {
@@ -57,6 +58,7 @@ export interface RawPersonagemApi {
   idpassiva?: number;
   passiva?: any;
   ultimate?: string | any;
+  sistemaRuntime?: SistemaRuntimeContexto | null;
 }
 
 // ----- default status para fallback -----
@@ -90,6 +92,7 @@ export function normalizePersonagem(raw: RawPersonagemApi) {
   const status: PersonagemStatus = {
     ...parsedStatus,
     status: {
+      ...parsedStatus.status,
       vida: parsedStatus.status?.vida ?? 0,
       vidaMaxima: parsedStatus.status?.vidaMaxima ?? parsedStatus.status?.vida ?? 0,
       estamina: parsedStatus.status?.estamina ?? 0,
@@ -98,6 +101,11 @@ export function normalizePersonagem(raw: RawPersonagemApi) {
       manaMaxima: parsedStatus.status?.manaMaxima ?? parsedStatus.status?.mana ?? 0,
       capacidadeCarga: parsedStatus.status?.capacidadeCarga ?? 0,
     },
+    atributos: {
+      principais: { ...defaultStatus.atributos.principais, ...parsedStatus.atributos?.principais },
+      secundarios: { ...defaultStatus.atributos.secundarios, ...parsedStatus.atributos?.secundarios },
+    },
+    defesas: { ...defaultStatus.defesas, ...parsedStatus.defesas },
   };
   const tracos = parseJsonOr<string[]>(raw.tracos, []);
   const costumes = parseJsonOr<string[]>(raw.costumes, []);
@@ -138,5 +146,6 @@ export function normalizePersonagem(raw: RawPersonagemApi) {
     idpassiva: raw.idpassiva,
     passiva: raw.passiva,
     ultimate: parseJsonOr<any>(raw.ultimate, raw.ultimate ?? null),
+    sistemaRuntime: raw.sistemaRuntime ?? null,
   } as const; // retorna um objeto normalizado
 }

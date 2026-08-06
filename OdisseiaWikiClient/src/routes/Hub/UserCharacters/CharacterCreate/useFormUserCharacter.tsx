@@ -15,13 +15,20 @@ import { getPersonagens } from '../../../../services/personagensService';
 import { Mesa } from '../../../../models/Mesa';
 import { getMesas } from '../../../../services/mesaService';
 import { atualizarPersonagemJogador, criarPersonagemJogador, PersonagemJogadorPayload } from '../../../../services/personagemJogadorService';
-import { PersonagemJogador, PersonagemStatus } from '../../../../models/PersonagemJogador';
+import { Defesas, PersonagemJogador, PersonagemStatus, StatusBase } from '../../../../models/PersonagemJogador';
 import { TOTAL_STEPS } from './constants';
 import { mapInventoryForPayload, mapMagiasForPayload, mapSkillsForPayload } from './helpers';
 import { normalizeToJSONContent, prepareForAPI } from '../../../../utils/richTextHelpers';
 import { CharacterStatusExtras, DEFAULT_CHARACTER_STATUS_EXTRAS, normalizeCharacterStatusExtras } from '../../../../utils/characterStatus';
 import { getApiErrorMessage } from '../../../../utils/apiError';
 import { addOrReplaceEmptyItem } from '../../../../utils/itemInventorySections';
+import { useSistemaRuntimeContexto } from '../../../../hooks/useSistemaRuntimeContexto';
+import {
+  applyRuntimeInitialAttribute,
+  createRuntimeAttributeDefaults,
+  createRuntimeDefenseDefaults,
+  createRuntimeResourceDefaults,
+} from '../../../../utils/systemRuntimeCharacter';
 
 const parseJson = <T,>(value: unknown, fallback: T): T => {
   if (value === undefined || value === null) return fallback;
@@ -112,7 +119,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
   const [statusError, setStatusError] = useState(false);
 
   // --- status básico ---
-  const [statusBasico, setStatusBasico] = useState({
+  const [statusBasico, setStatusBasico] = useState<StatusBase>({
     vida: 0,
     vidaMaxima: 0,
     estamina: 0,
@@ -123,7 +130,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
   });
   
   // --- defesas ---
-  const [defesas, setDefesas] = useState({
+  const [defesas, setDefesas] = useState<Defesas>({
     armadura: 0,
     protecao: 0,
     escudo: 0,
@@ -175,6 +182,18 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
   const [selectedMesa, setSelectedMesa] = useState<number | undefined>(undefined);
   const [loadingMesas, setLoadingMesas] = useState(true);
   const [mesaError, setMesaError] = useState(false);
+  const {
+    contexto: runtimeContext,
+    loading: runtimeLoading,
+    error: runtimeError,
+  } = useSistemaRuntimeContexto({
+    idPersonagemJogador: personagem && selectedMesa === personagem.idmesa
+      ? personagem.idpersonagemJogador
+      : undefined,
+    idMesa: !personagem || selectedMesa !== personagem.idmesa ? selectedMesa : undefined,
+    idRaca: race,
+    enabled: Boolean(selectedMesa || personagem?.idpersonagemJogador),
+  });
 
   useEffect(() => {
     if (selectedMesa) setMesaError(false);
@@ -183,15 +202,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
   const isFirstStep = step === 1;
   const isLastStep = step === TOTAL_STEPS;
 
-  const buildStatusForPayload = useCallback(() => ({
-    vida: statusBasico.vida,
-    vidaMaxima: statusBasico.vidaMaxima,
-    estamina: statusBasico.estamina,
-    estaminaMaxima: statusBasico.estaminaMaxima,
-    mana: statusBasico.mana,
-    manaMaxima: statusBasico.manaMaxima,
-    capacidadeCarga: statusBasico.capacidadeCarga,
-  }), [statusBasico]);
+  const buildStatusForPayload = useCallback(() => ({ ...statusBasico }), [statusBasico]);
 
   const selectedRace = useMemo(() => 
     listRaces.find(r => r.idraca === race), 
@@ -335,37 +346,55 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
 
   const hasInitializedRef = useRef(false);
   const lastRaceIdRef = useRef<number | undefined>(undefined);
+  const raceChangedByUserRef = useRef(false);
+  const lastRuntimeRaceDefaultsRef = useRef('');
+  const lastRuntimeCreationDefaultsRef = useRef('');
 
-  const applyRaceDefaults = useCallback((raceStatus: RacaStatus) => {
-    const basePrincipais: Principais = {
-      resistencia: 0,
-      agilidade: 0,
-      sabedoria: 0,
-      precisao: 0,
-      forca: 0,
-    };
-    const key = raceStatus.atributoInicial
-      ?.trim()
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') as keyof Principais;
+  const applyRaceDefaults = useCallback((raceStatus: RacaStatus | null, useRuntime = false) => {
+    const context = useRuntime ? runtimeContext : null;
+    const attributeDefaults = createRuntimeAttributeDefaults(context);
+    const initialAttribute = context?.configuracaoRacial?.codigoAtributoInicial
+      ?? raceStatus?.atributoInicial;
 
-    if (key && key in basePrincipais) basePrincipais[key] = 1;
-    setAtributosPrincipais(basePrincipais);
-    setAtributosSecundarios({
-      sanidade: 0,
-      coragem: 0,
-      inteligencia: 0,
-      percepcao: 0,
-      labia: 0,
-      intimidacao: 0,
+    setAtributosPrincipais(applyRuntimeInitialAttribute(
+      attributeDefaults.principais,
+      initialAttribute,
+    ) as Principais);
+    setAtributosSecundarios(attributeDefaults.secundarios as Secundarios);
+
+    const legacyStatus = raceStatus ? resolveRacaCharacterStatus(raceStatus) : null;
+    setStatusBasico(createRuntimeResourceDefaults(context, legacyStatus) as StatusBase);
+  }, [runtimeContext]);
+
+  useEffect(() => {
+    if (personagem || !runtimeContext) return;
+    const signature = `${selectedMesa ?? 'sem-mesa'}:${runtimeContext.idSistemaVersao ?? runtimeContext.numeroVersao}`;
+    if (lastRuntimeCreationDefaultsRef.current === signature) return;
+    lastRuntimeCreationDefaultsRef.current = signature;
+
+    setLevel(runtimeContext.criacao?.nivelInicial ?? 1);
+    setStatusExtras({
+      pontos: runtimeContext.criacao?.pontosIniciais ?? 0,
+      pontosAtributo: runtimeContext.criacao?.pontosAtributoIniciais ?? 0,
+      pontosSkill: runtimeContext.criacao?.pontosSkillIniciais ?? 0,
+      pontosUltimate: 0,
+      condicioes: [],
     });
+    setDefesas(createRuntimeDefenseDefaults(runtimeContext) as Defesas);
+  }, [personagem, runtimeContext, selectedMesa]);
 
-    const initialStatus = resolveRacaCharacterStatus(raceStatus);
-    if (initialStatus) setStatusBasico(initialStatus);
-  }, []);
+  useEffect(() => {
+    if (!race || !runtimeContext || (personagem && !raceChangedByUserRef.current)) return;
+    const signature = `${selectedMesa ?? 'sem-mesa'}:${race}:${runtimeContext.idSistemaVersao ?? runtimeContext.numeroVersao}`;
+    if (lastRuntimeRaceDefaultsRef.current === signature) return;
+    lastRuntimeRaceDefaultsRef.current = signature;
+
+    applyRaceDefaults(selectedRaceStatus, true);
+    raceChangedByUserRef.current = false;
+  }, [applyRaceDefaults, personagem, race, runtimeContext, selectedMesa, selectedRaceStatus]);
 
   const handleRaceChange = useCallback((raceId: number) => {
+    raceChangedByUserRef.current = true;
     setRace(raceId);
     const nextRace = listRaces.find(item => item.idraca === raceId);
     const nextRaceStatus = normalizeRacaStatus(
@@ -373,7 +402,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
       ?? (nextRace as (RacaPayload & { StatusJson?: unknown }) | undefined)?.StatusJson
     );
 
-    if (nextRaceStatus) applyRaceDefaults(nextRaceStatus);
+    if (nextRaceStatus) applyRaceDefaults(nextRaceStatus, false);
   }, [applyRaceDefaults, listRaces]);
 
   useEffect(() => {
@@ -386,7 +415,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     lastRaceIdRef.current = selectedRace.idraca;
     hasInitializedRef.current = true;
 
-    applyRaceDefaults(selectedRaceStatus);
+    applyRaceDefaults(selectedRaceStatus, false);
   }, [selectedRace?.idraca, selectedRaceStatus, personagem, applyRaceDefaults]);
 
   useEffect(() => {
@@ -542,7 +571,8 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     setCostumes(Array.isArray(costumes) ? costumes[0] || '' : String(costumes || ''));
 
     setStatusBasico({
-        vida: status.status?.vida ?? 0,
+      ...status.status,
+      vida: status.status?.vida ?? 0,
       vidaMaxima: status.status?.vidaMaxima ?? status.status?.vida ?? 0,
         estamina: status.status?.estamina ?? 0,
       estaminaMaxima: status.status?.estaminaMaxima ?? status.status?.estamina ?? 0,
@@ -552,7 +582,8 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     });
 
     setDefesas({
-        armadura: status.defesas?.armadura ?? 0,
+      ...status.defesas,
+      armadura: status.defesas?.armadura ?? 0,
         protecao: status.defesas?.protecao ?? 0,
         escudo: status.defesas?.escudo ?? 0,
         outras: status.defesas?.outras ?? 0,
@@ -771,7 +802,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     } finally {
       setIsSubmitting(false);
     }
-  }, [avatarUrl, avatarFile, galeriaUrls, galeriaPreviewFileMap, userName, statusBasico, itens, magias, skills, race, city, userId, selectedMesa, history, costumes, extraInformation, nanites, alignment, traits, idpassiva, ultimate, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, statusExtras, defesas, personagem, onSave, validateStepOne]);
+  }, [avatarUrl, avatarFile, galeriaUrls, galeriaPreviewFileMap, userName, statusBasico, itens, magias, skills, race, city, userId, selectedMesa, history, costumes, extraInformation, nanites, alignment, traits, idpassiva, ultimate, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, statusExtras, defesas, personagem, onSave, validateStepOne, buildStatusForPayload]);
 
   // --- submit ---
   const handleSubmit = useCallback(async (e?: React.FormEvent) => {
@@ -956,6 +987,9 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     setMesaError,
     listMesas,
     loadingMesas,
+    runtimeContext,
+    runtimeLoading,
+    runtimeError,
     searchPersonagens,
     handleNext,
     handleSubmit,

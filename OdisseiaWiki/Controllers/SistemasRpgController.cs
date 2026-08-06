@@ -13,15 +13,18 @@ public sealed class SistemasRpgController : ControllerBase
     private readonly ISistemaRpgService _service;
     private readonly ISistemaRpgResolver _resolver;
     private readonly IMesaService _mesaService;
+    private readonly IPersonagemJogadorService _personagemJogadorService;
 
     public SistemasRpgController(
         ISistemaRpgService service,
         ISistemaRpgResolver resolver,
-        IMesaService mesaService)
+        IMesaService mesaService,
+        IPersonagemJogadorService personagemJogadorService)
     {
         _service = service;
         _resolver = resolver;
         _mesaService = mesaService;
+        _personagemJogadorService = personagemJogadorService;
     }
 
     [HttpGet]
@@ -82,6 +85,11 @@ public sealed class SistemasRpgController : ControllerBase
     [HttpPost("versoes/{idSistemaVersao:int}/publicar")]
     public async Task<IActionResult> PublicarVersao(int idSistemaVersao)
         => Responder(await _service.PublicarVersaoAsync(idSistemaVersao));
+
+    [Authorize(Policy = AuthorizationPolicies.Admin)]
+    [HttpGet("versoes/{idSistemaVersao:int}/patch-note")]
+    public async Task<IActionResult> ObterPatchNote(int idSistemaVersao)
+        => Responder(await _service.ObterPatchNoteAsync(idSistemaVersao));
 
     [Authorize(Policy = AuthorizationPolicies.Admin)]
     [HttpPost("versoes/{idSistemaVersao:int}/arquivar")]
@@ -175,7 +183,77 @@ public sealed class SistemasRpgController : ControllerBase
 
     [HttpGet("resolver")]
     public async Task<ActionResult<SistemaResolvidoDto>> Resolver([FromQuery] int? idMesa = null)
-        => Ok(await _resolver.ResolverAsync(idMesa));
+    {
+        if (idMesa.HasValue)
+        {
+            if (User.Identity?.IsAuthenticated != true)
+                return Unauthorized();
+
+            int? userId = User.GetUserId();
+            if (!userId.HasValue)
+                return Unauthorized();
+
+            if (!User.IsAdmin() && !await _mesaService.CanUseAsync(idMesa.Value, userId.Value))
+                return Forbid();
+        }
+
+        return Ok(await _resolver.ResolverAsync(idMesa));
+    }
+
+    [HttpGet("runtime/contexto")]
+    public async Task<ActionResult<SistemaRuntimeContextoDto>> ResolverContextoRuntime(
+        [FromQuery] SistemaRuntimeConsultaDto consulta)
+    {
+        if (consulta.IdPersonagemJogador.HasValue)
+        {
+            int? userId = User.GetUserId();
+            if (!userId.HasValue)
+                return Unauthorized();
+
+            PersonagemJogadorDto? personagem = await _personagemJogadorService.GetByIdAsync(
+                consulta.IdPersonagemJogador.Value);
+            if (personagem is null)
+                return NotFound("Personagem de jogador não encontrado.");
+            if (!User.IsAdmin() && personagem.Idusuario != userId.Value)
+                return Forbid();
+        }
+
+        if (consulta.IdMesa.HasValue)
+        {
+            if (User.Identity?.IsAuthenticated != true)
+                return Unauthorized();
+
+            int? userId = User.GetUserId();
+            if (!userId.HasValue)
+                return Unauthorized();
+
+            if (!User.IsAdmin() &&
+                !await _mesaService.CanUseAsync(consulta.IdMesa.Value, userId.Value))
+            {
+                return Forbid();
+            }
+        }
+
+        return Ok(await _resolver.ResolverContextoAsync(consulta));
+    }
+
+    [Authorize]
+    [HttpPost("mesas/{idMesa:int}/migracao/preview")]
+    public async Task<IActionResult> ObterPreviaMigracaoMesa(
+        int idMesa,
+        [FromBody] MesaMigracaoPreviewRequestDto dto)
+    {
+        var userId = User.GetUserId();
+        if (!userId.HasValue)
+            return Unauthorized();
+
+        if (!User.IsAdmin() && !await _mesaService.IsOwnerAsync(idMesa, userId.Value))
+            return Forbid();
+
+        return Responder(await _service.ObterPreviaMigracaoMesaAsync(
+            idMesa,
+            dto.IdSistemaVersaoDestino));
+    }
 
     [Authorize]
     [HttpPost("mesas/{idMesa:int}/migrar")]
@@ -190,7 +268,10 @@ public sealed class SistemasRpgController : ControllerBase
         if (!User.IsAdmin() && !await _mesaService.IsOwnerAsync(idMesa, userId.Value))
             return Forbid();
 
-        return Responder(await _service.MigrarMesaAsync(idMesa, dto.IdSistemaVersao));
+        return Responder(await _service.MigrarMesaAsync(
+            idMesa,
+            dto.IdSistemaVersao,
+            dto.ConfirmarPreservacaoValores));
     }
 
     private IActionResult Responder<T>(SistemaOperacaoResultado<T> resultado)

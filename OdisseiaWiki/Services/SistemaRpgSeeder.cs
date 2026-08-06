@@ -7,7 +7,7 @@ using OdisseiaWiki.Services.Interfaces;
 
 namespace OdisseiaWiki.Services;
 
-public sealed class SistemaRpgSeeder : ISistemaRpgSeeder
+public sealed partial class SistemaRpgSeeder : ISistemaRpgSeeder
 {
     private readonly ISistemaRpgRepository _repository;
     private readonly ILogger<SistemaRpgSeeder> _logger;
@@ -29,6 +29,15 @@ public sealed class SistemaRpgSeeder : ISistemaRpgSeeder
                 sistema.IdSistemaRpg,
                 SistemaRpgConfiguration.VersaoPadrao,
                 tracked: true);
+
+        if (sistema is { Ativo: false })
+        {
+            sistema.Ativo = true;
+            sistema.DataAtualizacao = DateTime.UtcNow;
+            await _repository.SaveChangesAsync();
+            _logger.LogWarning(
+                "O Sistema base ODISSEIA estava inativo e foi reativado pelo seed obrigatório.");
+        }
 
         if (versao is null && sistema is not null && sistema.Versoes.Any(v => v.Status == SistemaVersaoStatus.Publicado))
         {
@@ -80,6 +89,40 @@ public sealed class SistemaRpgSeeder : ISistemaRpgSeeder
 
         if (versao is null)
             return;
+
+        // Complemento técnico do schema de itens: somente a publicação corrente
+        // pode receber o backfill aditivo quando o catálogo inteiro está vazio.
+        // Versões arquivadas permanecem historicamente imutáveis.
+        bool podeComplementarPublicacaoAtual =
+            versao.Status == SistemaVersaoStatus.Publicado &&
+            sistema?.IdVersaoPublicada == versao.IdSistemaVersao;
+        if (podeComplementarPublicacaoAtual)
+        {
+            SistemaVersao? versaoComCatalogo = await _repository.GetVersionAsync(
+                versao.IdSistemaVersao,
+                includeConfiguration: true,
+                tracked: true);
+            if (versaoComCatalogo is not null)
+                versao = versaoComCatalogo;
+
+            if (versao.ItemEscopos.Count == 0)
+            {
+                versao.ItemEscopos = CriarCatalogoItens();
+                foreach (SistemaItemEscopo escopo in versao.ItemEscopos)
+                {
+                    escopo.IdSistemaVersao = versao.IdSistemaVersao;
+                    escopo.SistemaVersao = versao;
+                }
+                await _repository.SaveChangesAsync();
+                _logger.LogInformation(
+                    "Catálogo técnico de itens adicionado de forma idempotente à publicação corrente Odisseia 1.0.");
+            }
+        }
+        else if (versao.ItemEscopos.Count == 0)
+        {
+            _logger.LogWarning(
+                "A versão histórica Odisseia 1.0 não possui catálogo de itens e foi preservada sem alterações; o runtime usará fallback legado.");
+        }
 
         List<Mesa> mesasLegadas = await _repository.GetMesasWithoutVersionAsync();
         if (mesasLegadas.Count > 0)
@@ -298,6 +341,7 @@ public sealed class SistemaRpgSeeder : ISistemaRpgSeeder
             Observacoes = "São 4 slots de skill e 1 de ultimate. Skills começam no nível 1 e podem chegar ao nível 4. O Éter não é magia, mas suas Artes Etéricas usam mana e ocupam slots de skill/ultimate.",
         };
         versao.Condicoes = CriarCondicoes();
+        versao.ItemEscopos = CriarCatalogoItens();
         versao.Descansos = new List<SistemaDescansoConfig>
         {
             new() { Tipo = "SIMPLES", Nome = "Descanso simples/curto", DuracaoMinimaMinutos = 0, DuracaoMaximaMinutos = 0, RecuperacaoVida = 0, RecuperacaoMana = 10, RecuperacaoEstamina = 10, TipoRecuperacao = SistemaRecuperacaoTipo.ValorFixo, ExigeGuarda = false, PermiteAtividades = false, ConfiguracaoJson = "{\"duracao\":\"1 turno\",\"aplicacaoRecuperacao\":\"no próximo turno\"}", Ordem = 1 },

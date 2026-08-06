@@ -5,9 +5,14 @@ const SESSION_EXPIRED_MESSAGE = 'Sua sessão expirou. Entre novamente para conti
 
 let sessionExpirationInProgress = false;
 
-interface JwtExpirationPayload {
+interface JwtAuthPayload {
   exp?: number;
+  role?: string | string[];
 }
+
+export type AuthSession =
+  | { status: 'anonymous'; roles: [] }
+  | { status: 'authenticated'; roles: string[] };
 
 export const clearAuthSession = () => {
   localStorage.removeItem('token');
@@ -16,10 +21,28 @@ export const clearAuthSession = () => {
 
 export const isTokenExpired = (token: string) => {
   try {
-    const { exp } = jwtDecode<JwtExpirationPayload>(token);
-    return typeof exp === 'number' && exp * 1000 <= Date.now();
+    const { exp } = jwtDecode<JwtAuthPayload>(token);
+    return typeof exp !== 'number' || exp * 1000 <= Date.now();
   } catch {
     return true;
+  }
+};
+
+export const getAuthSession = (token: string | null): AuthSession => {
+  if (!token || isTokenExpired(token)) {
+    return { status: 'anonymous', roles: [] };
+  }
+
+  try {
+    const { role } = jwtDecode<JwtAuthPayload>(token);
+    const roles = (Array.isArray(role) ? role : [role])
+      .filter((claim): claim is string => typeof claim === 'string')
+      .map((claim) => claim.trim())
+      .filter(Boolean);
+
+    return { status: 'authenticated', roles };
+  } catch {
+    return { status: 'anonymous', roles: [] };
   }
 };
 

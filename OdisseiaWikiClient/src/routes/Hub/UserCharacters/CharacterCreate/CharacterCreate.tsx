@@ -7,6 +7,7 @@ import { createItemColumns, createSkillsColumns, createMagiasColumns } from './t
 import { BasicInfoForm } from './FormUserCharacter/BasicInfoForm/BasicInfoForm';
 import { StatusForm } from './FormUserCharacter/StatusForm/StatusForm';
 import { CharacterStepDots } from '../../../Shared/CharacterForms/CharacterStepDots';
+import { SystemRuntimeIndicator } from '../../../../components/Generic/SystemRuntimeIndicator';
 
 interface UserCharactersProps {
   theme: 'dark' | 'light';
@@ -52,6 +53,7 @@ const CharacterCreateComponent = ({ theme, neon, userId, onSave }: UserCharacter
     selectedMesa, listMesas, setSelectedMesa, loadingMesas,
     mesaError, setMesaError,
     isSubmitting,
+    runtimeContext, runtimeLoading, runtimeError,
   } = useFormUserCharacter(userId, onSave);
 
   const raceImageUrl = React.useMemo(() => 
@@ -60,8 +62,14 @@ const CharacterCreateComponent = ({ theme, neon, userId, onSave }: UserCharacter
   );
   
   const itemColumns = React.useMemo(() => createItemColumns(theme, neon), [theme, neon]);
-  const skillsColumns = React.useMemo(() => createSkillsColumns(theme, neon), [theme, neon]);
-  const magiasColumns = React.useMemo(() => createMagiasColumns(theme, neon), [theme, neon]);
+  const skillsColumns = React.useMemo(
+    () => createSkillsColumns(theme, neon, runtimeContext),
+    [theme, neon, runtimeContext],
+  );
+  const magiasColumns = React.useMemo(
+    () => createMagiasColumns(theme, neon, runtimeContext),
+    [theme, neon, runtimeContext],
+  );
 
   const handleStepDotClick = React.useCallback((targetStep: 1 | 2) => {
     if (targetStep === step) return;
@@ -98,6 +106,14 @@ const CharacterCreateComponent = ({ theme, neon, userId, onSave }: UserCharacter
         disabled={loadingMesas}
         allowEmptyOption={false}
       />
+
+      {selectedMesa && (
+        <SystemRuntimeIndicator
+          contexto={runtimeContext}
+          loading={runtimeLoading}
+          error={runtimeError}
+        />
+      )}
       
       {selectedMesa && step === 1 && (
         <BasicInfoForm
@@ -158,6 +174,7 @@ const CharacterCreateComponent = ({ theme, neon, userId, onSave }: UserCharacter
           itemColumns={itemColumns}
           skillsColumns={skillsColumns}
           magiasColumns={magiasColumns}
+          runtimeContext={runtimeContext}
         />
       )}
 
@@ -182,6 +199,7 @@ const CharacterCreateComponent = ({ theme, neon, userId, onSave }: UserCharacter
           avatarUrl={avatarUrl}
           setAvatarUrl={setAvatarUrl}
           raceImageUrl={raceImageUrl}
+          runtimeContext={runtimeContext}
         />
       )}
 

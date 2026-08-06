@@ -47,6 +47,8 @@ import {
 import { SistemaValidationErrors } from '../../systemValidation';
 import { ModuleEditor } from '../ModuleEditor/ModuleEditor';
 import { RaceOption } from '../ModuleForms/ModuleForm.types';
+import { SystemVersionOperations } from '../SystemVersionOperations/SystemVersionOperations';
+import { SystemItemCatalog } from '../SystemItemCatalog/SystemItemCatalog';
 
 type AnyModuleConfig = SistemaModuloConfigMap[SistemaModuloKey];
 
@@ -79,12 +81,14 @@ interface SystemWorkspaceProps {
   onPublishVersion: () => void;
   onArchiveVersion: () => void;
   onDeleteVersion: () => void;
+  onMigrationComplete: () => void;
   onSelectModule: (moduleKey: SistemaModuloKey) => void;
   onChangeModule: (config: AnyModuleConfig) => void;
   onRetryModule: () => void;
   onCreateEmptyModule: () => void;
   onSave: () => void;
   onDiscard: () => void;
+  onCatalogDirtyChange: (dirty: boolean) => void;
 }
 
 const MODULE_KEYS = Object.keys(SISTEMA_MODULO_LABELS) as SistemaModuloKey[];
@@ -133,12 +137,14 @@ export const SystemWorkspace = ({
   onPublishVersion,
   onArchiveVersion,
   onDeleteVersion,
+  onMigrationComplete,
   onSelectModule,
   onChangeModule,
   onRetryModule,
   onCreateEmptyModule,
   onSave,
   onDiscard,
+  onCatalogDirtyChange,
 }: SystemWorkspaceProps) => (
   <>
     <WorkspaceHeader theme={theme} neon={neon}>
@@ -274,6 +280,24 @@ export const SystemWorkspace = ({
               </ReadOnlyBanner>
             )}
 
+            {getSistemaVersaoStatusLabel(selectedVersion.status) === 'Publicado' && (
+              <SystemVersionOperations
+                version={selectedVersion}
+                systemActive={system.ativo}
+                theme={theme}
+                neon={neon}
+                onMigrationComplete={onMigrationComplete}
+              />
+            )}
+
+            <SystemItemCatalog
+              idSistemaVersao={selectedVersion.idSistemaVersao}
+              readOnly={readOnly}
+              theme={theme}
+              neon={neon}
+              onDirtyChange={onCatalogDirtyChange}
+            />
+
             <ModuleNav theme={theme} neon={neon} aria-label="Módulos da versão">
               {MODULE_KEYS.map((moduleKey) => (
                 <ModuleNavButton
@@ -292,6 +316,7 @@ export const SystemWorkspace = ({
 
             <ModuleEditor
               moduleKey={activeModule}
+              systemCode={system.codigo}
               config={moduleConfig}
               loading={moduleLoading}
               error={moduleError}
@@ -322,6 +347,7 @@ export const SystemWorkspace = ({
                 </ActionButton>
               </SaveBar>
             )}
+
           </>
         )}
       </EditorPanel>

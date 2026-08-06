@@ -7,6 +7,11 @@ namespace OdisseiaWiki.Dtos
         public bool Sucesso { get; private set; }
         public string? MensagemErro { get; private set; }
         public Personagen? Personagem { get; private set; }
+        public SistemaRuntimeContextoDto? SistemaRuntime => Personagem?.SistemaRuntime;
+        public IReadOnlyList<SistemaRuntimeWarningDto> Warnings =>
+            Personagem?.SistemaRuntime?.Warnings is { } warnings
+                ? warnings
+                : Array.Empty<SistemaRuntimeWarningDto>();
 
         private ResultPersonagem(bool sucesso, string? mensagemErro, Personagen? personagem)
         {

@@ -9,7 +9,9 @@ namespace OdisseiaWiki.Services.Interfaces
         Task<IEnumerable<ItemDto>> GetAllAsync(bool? visivel = null);
         Task<ItemDto?> GetByIdAsync(string id);
         Task<string> CreateAsync(ItemCreateDto dto);
+        Task<ItemSaveResultDto> CreateWithRuntimeAsync(ItemCreateDto dto);
         Task<bool> UpdateAsync(ItemUpdateDto dto);
+        Task<ItemSaveResultDto?> UpdateWithRuntimeAsync(ItemUpdateDto dto);
         Task<bool> DeleteAsync(string id);
         Task<List<ItemDto>> GetBatchAsync(List<string> ids);
     }

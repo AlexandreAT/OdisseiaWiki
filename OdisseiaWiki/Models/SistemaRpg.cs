@@ -26,4 +26,6 @@ public class SistemaRpg
     public virtual SistemaVersao? VersaoPublicada { get; set; }
 
     public virtual ICollection<SistemaVersao> Versoes { get; set; } = new List<SistemaVersao>();
+
+    public virtual ICollection<SistemaPatchNote> PatchNotes { get; set; } = new List<SistemaPatchNote>();
 }

@@ -4,7 +4,8 @@ import { Magia } from '../../../../../../models/Magias';
 import { RacaPayload } from '../../../../../../services/racasService';
 import { CidadePayload } from '../../../../../../services/cidadesService';
 import { personagensMock } from '../../../../../../Mock/characters.mock';
-import { JSONContent } from '../../../../../../models/Characters';
+import { JSONContent, StatusBase } from '../../../../../../models/Characters';
+import { SistemaRuntimeContexto } from '../../../../../../models/SistemaRpg';
 
 export interface BasicInfoFormProps {
   theme: 'dark' | 'light';
@@ -42,24 +43,9 @@ export interface BasicInfoFormProps {
   setMagias: (value: Magia[]) => void;
   listPersonagemRelacionado: { id: number; nome: string }[];
   setListPersonagemRelacionado: React.Dispatch<React.SetStateAction<{ id: number; nome: string }[]>>;
-  statusBasico: {
-    vida: number;
-    vidaMaxima: number;
-    estamina: number;
-    estaminaMaxima: number;
-    mana: number;
-    manaMaxima: number;
-    capacidadeCarga: number;
-  };
-  setStatusBasico: React.Dispatch<React.SetStateAction<{
-    vida: number;
-    vidaMaxima: number;
-    estamina: number;
-    estaminaMaxima: number;
-    mana: number;
-    manaMaxima: number;
-    capacidadeCarga: number;
-  }>>;
+  statusBasico: StatusBase;
+  setStatusBasico: React.Dispatch<React.SetStateAction<StatusBase>>;
+  runtimeContext?: SistemaRuntimeContexto | null;
   errors: { name?: string; race?: string };
   userError: boolean;
   setUserError: (value: boolean) => void;

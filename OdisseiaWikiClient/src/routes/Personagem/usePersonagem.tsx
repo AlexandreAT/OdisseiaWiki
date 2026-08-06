@@ -18,6 +18,7 @@ export const usePersonagem = (idParam?: string | undefined, source: 'public' | '
   const [error, setError] = useState<string | null>(null);
   const [personagem, setPersonagem] = useState<NormalizedPersonagem | null>(null);
   const [relatedPages, setRelatedPages] = useState<PageDto[]>([]);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -67,6 +68,7 @@ export const usePersonagem = (idParam?: string | undefined, source: 'public' | '
             idpassiva: (payload as any).idpassiva ?? (payload as any).Idpassiva ?? undefined,
             passiva: (payload as any).passiva ?? (payload as any).Passiva ?? undefined,
             ultimate: (payload as any).ultimate ?? (payload as any).Ultimate ?? undefined,
+            sistemaRuntime: (payload as any).sistemaRuntime ?? (payload as any).SistemaRuntime ?? null,
             visivel: (payload as any).visivel ?? true,
           } as any;
 
@@ -83,7 +85,7 @@ export const usePersonagem = (idParam?: string | undefined, source: 'public' | '
     load();
 
     return () => { cancelled = true; };
-  }, [idParam, source]);
+  }, [idParam, source, reloadKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -111,5 +113,11 @@ export const usePersonagem = (idParam?: string | undefined, source: 'public' | '
     return () => { cancelled = true; };
   }, [idParam, source]);
 
-  return { loading, error, personagem, relatedPages };
+  return {
+    loading,
+    error,
+    personagem,
+    relatedPages,
+    reload: () => setReloadKey((current) => current + 1),
+  };
 };

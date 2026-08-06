@@ -19,6 +19,9 @@ namespace OdisseiaWiki.Dtos
         public List<string>? Tags { get; set; }
         public bool Visivel { get; set; }
         public bool Destaque { get; set; }
+        public int? IdSistemaRpg { get; set; }
+        public int? IdSistemaVersao { get; set; }
+        public bool? AcompanharPublicacaoAtual { get; set; }
         public int? Idpersonagem { get; set; }
     }
 }

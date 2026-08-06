@@ -55,9 +55,17 @@ A raiz relacional é `SistemaRpg -> SistemaVersao`. A versão agrega:
 - `SistemaMovimentoConfig`, `SistemaPontosAcaoConfig` e `SistemaAcaoConfig` para exploração;
 - `SistemaResultadoDado`, `SistemaTipoDano` e `SistemaTipoDefesa` para combate;
 - `SistemaTipoMagia` e `SistemaSkillConfig` para poderes;
-- `SistemaCondicao`, `SistemaDescansoConfig` e `SistemaMorteConfig` para sobrevivência.
+- `SistemaCondicao`, `SistemaDescansoConfig` e `SistemaMorteConfig` para sobrevivência;
+- `SistemaItemEscopo`, `SistemaItemCampo`, `SistemaItemFaixa` e `SistemaItemReferencia` para o catálogo hierárquico de itens por tipo, categoria e arquétipo;
+- `SistemaPatchNote` para o snapshot estruturado e imutável criado na publicação.
 
 `Mesa.IdSistemaVersao` é a FK opcional de transição. O relacionamento é explícito e uma versão pode continuar ligada a várias mesas mesmo depois de arquivada.
+
+NPCs, raças e itens globais possuem `IdSistemaRpg`, `IdSistemaVersao` e `AcompanharPublicacaoAtual`. O vínculo acompanhado aponta para o Sistema e resolve sua publicação corrente; o vínculo fixo aponta para uma versão específica. Rascunhos não são aceitos pelo runtime. Versões arquivadas permanecem válidas somente para vínculos históricos já fixados.
+
+### Evolução de schema desta integração
+
+A evolução de banco é aditiva: cria as tabelas `SistemaItemEscopos`, `SistemaItemCampos`, `SistemaItemFaixas`, `SistemaItemReferencias` e `SistemaPatchNotes`; acrescenta os vínculos opcionais de Sistema/versão e o indicador de acompanhamento em personagem NPC, raça e item; e cria FKs/índices para proteger os relacionamentos e unicidades do catálogo. Não remove `StatusJson`, `AtributosJson` nem qualquer valor de ficha. O backfill de dados do catálogo é executado pelo seeder sob a condição estrita documentada abaixo, não por atualização destrutiva da migration.
 
 ## Dados normalizados e JSON extensível
 
@@ -96,15 +104,16 @@ O fluxo seguro é:
 4. A validação de publicação verifica módulos obrigatórios, códigos duplicados, progressão, faixas de dados e demais invariantes.
 5. O administrador publica `1.1`.
 6. `1.1` passa a ser a versão publicada atual do sistema e a versão publicada anterior é arquivada.
-7. Mesas vinculadas a `1.0` continuam em `1.0`.
-8. Cada mesa migra apenas por uma ação explícita e autorizada.
+7. Mesas comuns vinculadas a `1.0` continuam em `1.0`; a Mesa Padrão acompanha a publicação atual de `ODISSEIA`.
+8. Cada mesa comum migra apenas por uma ação explícita e autorizada.
 
-Uma publicação também pode ser arquivada manualmente. Quando ela é a publicação atual,
+Uma publicação de um sistema comum também pode ser arquivada manualmente. Quando ela é a publicação atual,
 o ponteiro `IdVersaoPublicada` é limpo de forma transacional; as mesas já vinculadas
 continuam usando essa versão arquivada, enquanto novas mesas aguardam uma nova publicação
-ou seguem o fallback legado.
+ou seguem o fallback legado. A publicação atual do Sistema base `ODISSEIA` não pode ser
+arquivada sem que uma substituta seja publicada no mesmo fluxo.
 
-Publicar uma versão não executa migração em massa e não altera silenciosamente personagens ou mesas.
+Publicar uma versão não executa migração em massa e não altera silenciosamente personagens ou mesas comuns. A única exceção é a Mesa Padrão `ODISSEIA_PADRAO`: sua FK acompanha a publicação atual do Sistema base, sem reescrever qualquer valor persistido nas fichas.
 
 ## Regras de imutabilidade e exclusão
 
@@ -121,7 +130,9 @@ Publicar uma versão não executa migração em massa e não altera silenciosame
 
 Cada `Mesa` deve apontar para uma versão específica por uma FK opcional durante a transição. O vínculo passa a ser obrigatório nos novos fluxos, mas a nulabilidade temporária preserva bancos já existentes.
 
-Na migração inicial, o seed deve vincular mesas antigas sem versão à `ODISSEIA/1.0`. Novas mesas salvam explicitamente a versão publicada escolhida. Isso impede que uma publicação futura migre mesas antigas por efeito colateral.
+A Mesa Padrão é um registro lógico fixo identificado por `CodigoSistema = ODISSEIA_PADRAO`, e não por ID numérico. Ela acompanha sempre `ODISSEIA.IdVersaoPublicada`; não pode ser excluída, alterada nem migrada manualmente. Na inicialização, nomes históricos equivalentes são reconciliados de forma transacional: personagens, usuários e overrides são movidos para o registro canônico antes da remoção de duplicatas.
+
+Na migração inicial, o seed deve vincular mesas comuns antigas sem versão à `ODISSEIA/1.0`. Nomes históricos reconhecidos como Mesa Padrão são consolidados no registro canônico e passam a acompanhar a publicação atual. Novas mesas comuns salvam explicitamente a versão publicada escolhida. Isso impede que uma publicação futura migre mesas antigas por efeito colateral.
 
 Uma migração de mesa deve:
 
@@ -133,16 +144,38 @@ Uma migração de mesa deve:
 
 ## Resolução e fallback
 
-O acesso a regras deve passar por um resolver único, e não por consultas independentes espalhadas nos services. A ordem de resolução é:
+O acesso a regras passa por `SistemaRpgResolver.ResolverContextoAsync`, que entrega `SistemaRuntimeContextoDto` com os agregados de configuração, vínculo efetivo, origem, proveniências, warnings e fallbacks. Consumidores não devem reconstruir esse contexto com consultas independentes.
 
-1. versão explicitamente vinculada à mesa;
-2. para uma mesa legada ainda sem vínculo, `ODISSEIA/1.0`;
-3. quando não existe mesa, versão publicada atual do sistema padrão;
-4. se a nova configuração não estiver disponível, comportamento hardcoded legado.
+A precedência efetiva é:
 
-O resultado deve informar a versão efetiva e a origem da resolução, permitindo diagnóstico entre vínculo explícito, sistema padrão e fallback legado.
+1. publicação atual de `ODISSEIA`, quando a Mesa é a Mesa Padrão;
+2. versão explicitamente vinculada à Mesa comum;
+3. versão fixa da entidade global, quando não há Mesa;
+4. publicação atual do Sistema que a entidade global acompanha;
+5. publicação atual do sistema padrão `ODISSEIA`;
+6. para Mesa legada sem FK, `ODISSEIA/1.0` durante a transição;
+7. fallback legado quando nenhuma configuração versionada válida existir.
 
-Personagens jogadores resolvem o sistema pela mesa. NPCs e visualizações sem mesa usam o sistema padrão. Uma versão arquivada ainda pode ser resolvida para uma mesa já vinculada, mas um rascunho nunca pode alimentar gameplay normal.
+`SistemaRuntimeOrigem` identifica `Mesa`, `VersaoFixadaEntidade`, `PublicacaoAtualEntidade`, `SistemaPadrao` ou `FallbackLegado`. Cada valor resolvido relevante registra `SistemaValorProveniencia`: `Sistema`, `OverrideMesa`, `ValorExplicitoEntidade` ou `FallbackLegado`. Um rascunho nunca alimenta gameplay normal.
+
+### Matriz de fontes: regra versus estado
+
+| Camada | Responsabilidade | Exemplos | Pode sobrescrever estado salvo? |
+|---|---|---|---|
+| Conteúdo global da Wiki | Identidade e conteúdo público da entidade | nome, imagem, descrição, tags | Não |
+| `SistemaVersao` | Regras, limites, catálogos e referências | progressão, atributos, recursos, defesas, skills, magias, raça e itens | Não |
+| `MesaEntidadeConfig` | Delta contextual da Mesa aplicado depois do Sistema | ajuste racial específico da campanha | Não; altera a interpretação efetiva |
+| Estado explícito | Valores reais persistidos do personagem ou item | XP, nível, HP atual, atributos, inventário, `StatusJson`, `AtributosJson` | É a fonte final do valor salvo |
+
+Alterar uma regra ou migrar uma Mesa muda a interpretação de background, nunca regrava silenciosamente os valores explícitos. Valores acima de uma referência são preservados e retornam warning tipado com caminho, valor informado e faixa esperada.
+
+### Raças
+
+`SistemaRacaConfig` é a única fonte mecânica editável quando existe configuração versionada. `Raca.StatusJson` permanece somente como fallback de leitura para raças ou versões ainda não configuradas e não recebe escrita duplicada. `MesaEntidadeConfig` representa apenas o delta da Mesa e é aplicado depois da configuração racial do Sistema.
+
+### Itens
+
+O item conserva seus valores reais em `AtributosJson`. O Sistema resolve, por códigos, o caminho tipo → categoria → arquétipo e combina campos, faixas e referências herdados. O catálogo orienta formulários, gráficos e validações, mas não limita itens excepcionais: escopo ausente ou valor fora da faixa gera warning e mantém o dado original.
 
 ## Seed inicial
 
@@ -156,6 +189,10 @@ Cuidados:
 - o seed não deve criar automaticamente conteúdo Wiki incompleto para raças ausentes;
 - regras ambíguas no livro devem permanecer descritivas ou configuráveis, sem inferência silenciosa;
 - o seed do sistema acontece antes do seed da mesa padrão.
+- o Sistema `ODISSEIA` e a Mesa `ODISSEIA_PADRAO` são dados fixos lógicos, recriados se ausentes; o Sistema base também é reativado caso um banco legado o tenha deixado inativo;
+- o seed da Mesa Padrão sincroniza sua FK com a publicação atual e consolida registros legados equivalentes sem apagar fichas.
+
+Como exceção técnica documentada para a versão publicada que antecede o novo schema, o seeder faz um backfill aditivo do catálogo de itens de `ODISSEIA/1.0` somente enquanto ela ainda é a publicação corrente. Ele só insere a árvore quando `ItemEscopos` está inteiramente vazia. A operação é idempotente, nunca complementa, substitui ou sobrescreve um catálogo existente e nunca modifica uma versão arquivada; nesse caso, o runtime mantém o fallback legado.
 
 ### Rastreabilidade do seed `ODISSEIA/1.0`
 
@@ -232,14 +269,25 @@ GET    /api/sistemas-rpg/versoes/{versaoId}/poderes
 PUT    /api/sistemas-rpg/versoes/{versaoId}/poderes
 GET    /api/sistemas-rpg/versoes/{versaoId}/sobrevivencia
 PUT    /api/sistemas-rpg/versoes/{versaoId}/sobrevivencia
+GET    /api/sistemas-rpg/versoes/{versaoId}/itens
+PUT    /api/sistemas-rpg/versoes/{versaoId}/itens
+GET    /api/sistemas-rpg/versoes/{versaoId}/patch-note
 
 GET    /api/sistemas-rpg/resolver?idMesa={mesaId}
+GET    /api/sistemas-rpg/runtime/contexto
+POST   /api/sistemas-rpg/mesas/{mesaId}/migracao/preview
 POST   /api/sistemas-rpg/mesas/{mesaId}/migrar
 ```
 
-Endpoints de seção recebem DTOs específicos. Não existe uma escrita do tipo `PUT /modulo/{tipo}` aceitando JSON arbitrário sem validação. A validação para publicação é parte de `POST .../publicar`, e não um endpoint separado.
+`runtime/contexto` aceita `idMesa`, `tipoEntidade`, `idEntidade`, `idRaca` e os códigos opcionais de tipo/categoria/arquétipo de item. O contexto global permanece público; qualquer consulta com `idMesa`, inclusive pelo endpoint legado `resolver`, exige autenticação e autorização de uso da Mesa, com bypass apenas para Admin. Endpoints de seção recebem DTOs específicos. Não existe uma escrita do tipo `PUT /modulo/{tipo}` aceitando JSON arbitrário sem validação. A validação para publicação é parte de `POST .../publicar`, e não um endpoint separado.
 
-As consultas são públicas, mas somente administradores recebem sistemas inativos e rascunhos. Criação, alteração, publicação, arquivamento e exclusão usam a policy `Admin`. A migração de mesa exige autenticação e validação de proprietário, exceto para administradores.
+As consultas de runtime e de versões publicadas são públicas quando não expõem configuração privada. Somente administradores recebem sistemas inativos/rascunhos, alteram catálogos ou consultam patch notes administrativos. Criação, alteração, publicação, arquivamento e exclusão usam a policy `Admin`. Preview e migração de Mesa exigem autenticação e validação de proprietário, exceto para administradores.
+
+## Patch notes e migração consciente
+
+Ao publicar, o backend compara a nova versão com sua base ou publicação anterior e cria `SistemaPatchNote` com grupos por módulo, alterações adicionadas/removidas/alteradas, valores anterior/novo e impacto. A criação do snapshot, o arquivamento da publicação anterior e a troca de `IdVersaoPublicada` ocorrem na mesma transação. O contexto bloqueia update e delete de patch notes depois da criação.
+
+Antes de migrar, `POST /api/sistemas-rpg/mesas/{mesaId}/migracao/preview` combina o patch note com a análise da Mesa e retorna versões, valores preservados, resumo e warnings, incluindo incompatibilidades raciais, itens sem arquétipo e fallbacks previstos. A confirmação exige `ConfirmarPreservacaoValores = true`; a operação efetiva altera somente `Mesa.IdSistemaVersao`. Personagens, XP, recursos, atributos, inventários, itens e overrides não são regravados.
 
 ## Validações obrigatórias
 
@@ -262,22 +310,26 @@ Antes de salvar ou publicar, validar ao menos:
 
 ## Integração incremental
 
-Os fluxos atuais continuam operando durante a migração:
+Os consumidores integrados usam o contexto runtime para:
 
-- progressão ainda possui curva legada no frontend;
-- recursos, atributos e defesas ainda vivem em `StatusJson`;
-- raças mantêm valores em `Raca.StatusJson` e overrides em `MesaEntidadeConfig`;
-- dados aceitos ainda são D6, D8 e D20 hardcoded;
-- tipos de skills, magias, danos e várias escalas de item ainda estão no frontend;
-- ações, descanso, morte e engine de rolagem ainda não possuem execução automática completa.
+- curva e limite de progressão;
+- catálogos e limites de atributos, recursos, defesas, skills e magias;
+- defaults raciais na criação e troca consciente de raça;
+- valores raciais em páginas e formulários;
+- hierarquia, campos, referências e escalas visuais de itens;
+- warnings de NPC, personagem jogador e item sem alterar o valor explícito.
 
-Cada integração nova deve consultar o resolver primeiro e cair no valor legado quando a configuração estiver ausente. A remoção de um hardcode só é segura depois que dados antigos, sistema padrão, NPCs sem mesa e mesas sem configuração forem testados.
+Ao carregar ou editar uma ficha existente, propriedades históricas e códigos desconhecidos continuam preservados. Defaults do Sistema são aplicados na criação ou quando o campo ainda não possui valor explícito; não são uma rotina de normalização destrutiva.
 
-Nesta entrega, `MesaService` já valida a versão informada, seleciona a versão padrão na criação e preserva a troca de versão como ação explícita. A execução das regras em fichas e páginas ainda não foi convertida em um motor; os dados novos são a base versionada para essa migração gradual.
+Os hardcodes remanescentes ficam restritos a fallbacks de compatibilidade quando o contexto, módulo, configuração racial ou escopo de item estiver ausente. A execução completa de ações, movimento, condições, descanso, morte e rolagens continua fora deste runtime: os catálogos são resolvidos, mas ainda não constituem uma engine universal de combate. Itens customizados sem códigos reconhecíveis também mantêm a renderização e as constantes legadas.
+
+Criação e atualização de Item e NPC resolvem também o snapshot proposto antes de persistir. Extrapolações válidas não são bloqueadas nem normalizadas: a resposta do save já devolve o contexto e os warnings tipados correspondentes, permitindo ao formulário informar a referência sem realizar um GET adicional.
+
+No frontend, `/management` é protegido por `ManagementAccessGuard`: sessão anônima é redirecionada ao login com destino interno preservado, e usuário autenticado sem papel `Admin` vai para a tela de acesso negado. Essa barreira melhora o fluxo, mas não substitui a policy `Admin` do backend.
 
 ## Como evoluir a configuração
 
-Para criar outro sistema, use a tela `Management > Sistema`, cadastre os dados gerais, crie uma versão em rascunho, preencha todas as seções obrigatórias e publique. Para alterar regras publicadas, duplique a versão, edite o novo rascunho e publique-o; mesas existentes permanecem na versão anterior até migração explícita.
+Para criar outro sistema, use a tela `Management > Sistema`, cadastre os dados gerais, crie uma versão em rascunho, preencha todas as seções obrigatórias e publique. Para alterar regras publicadas, duplique a versão, edite o novo rascunho e publique-o; mesas comuns existentes permanecem na versão anterior até migração explícita. A Mesa Padrão é a exceção fixa e acompanha cada nova publicação de `ODISSEIA`.
 
 Ao adicionar um módulo novo, mantenha o corte vertical existente:
 

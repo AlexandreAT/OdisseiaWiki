@@ -1,4 +1,6 @@
 import { Item, ItemTipo } from '../models/Itens';
+import { SistemaRuntimeConsulta, SistemaRuntimeContexto } from '../models/SistemaRpg';
+import { resolveItemSystemScope } from './systemItemFormCatalog';
 
 const PREVIEW_PREFIX = 'odisseia:item-preview:';
 const PREVIEW_MAX_AGE_MS = 24 * 60 * 60 * 1000;
@@ -14,6 +16,12 @@ const VALID_ITEM_TYPES: ItemTipo[] = [
 interface StoredItemPreview {
   createdAt: number;
   item: Item;
+  runtimeQuery?: SistemaRuntimeConsulta;
+}
+
+export interface LoadedItemPreview {
+  item: Item;
+  runtimeQuery?: SistemaRuntimeConsulta;
 }
 
 const finiteNumber = (value: unknown, fallback = 0) => {
@@ -52,13 +60,48 @@ const removeExpiredPreviews = () => {
   }
 };
 
-export const openItemPreview = (item: Item) => {
+const buildRuntimeQuery = (
+  item: Item,
+  runtimeContext?: SistemaRuntimeContexto | null,
+): SistemaRuntimeConsulta => {
+  const effectiveContext = runtimeContext ?? item.sistemaRuntime;
+  const { typeCode, categoryCode, archetypeCode } = resolveItemSystemScope(
+    item.tipo,
+    item.atributos,
+    effectiveContext?.itens?.tipos ?? [],
+  );
+
+  return {
+    ...(effectiveContext?.idPersonagemJogador
+      ? { idPersonagemJogador: effectiveContext.idPersonagemJogador }
+      : effectiveContext?.idMesa ? { idMesa: effectiveContext.idMesa } : {}),
+    ...(!effectiveContext?.idPersonagemJogador && !effectiveContext?.idMesa && effectiveContext?.entidade ? {
+      tipoEntidade: effectiveContext.entidade.tipoEntidade,
+      idEntidade: effectiveContext.entidade.idEntidade,
+    } : {}),
+    codigoTipoItem: typeCode,
+    ...(categoryCode ? { codigoCategoriaItem: categoryCode } : {}),
+    ...(archetypeCode ? { codigoArquetipoItem: archetypeCode } : {}),
+  };
+};
+
+export const openItemPreview = (
+  item: Item,
+  runtimeContext?: SistemaRuntimeContexto | null,
+) => {
   removeExpiredPreviews();
 
   const previewId = `preview_${crypto.randomUUID()}`;
+  const effectiveRuntimeContext = runtimeContext ?? item.sistemaRuntime;
   const storedPreview: StoredItemPreview = {
     createdAt: Date.now(),
-    item: normalizeItemPreview(item, previewId),
+    item: normalizeItemPreview({
+      ...item,
+      // O contexto completo inclui todo o catálogo e não deve ser duplicado no localStorage.
+      // A nova guia resolve novamente somente o escopo efetivo deste item.
+      sistemaRuntime: null,
+    }, previewId),
+    runtimeQuery: buildRuntimeQuery(item, effectiveRuntimeContext),
   };
   localStorage.setItem(`${PREVIEW_PREFIX}${previewId}`, JSON.stringify(storedPreview));
 
@@ -71,7 +114,7 @@ export const openItemPreview = (item: Item) => {
   previewLink.click();
 };
 
-export const loadItemPreview = (previewId: string): Item | null => {
+export const loadItemPreview = (previewId: string): LoadedItemPreview | null => {
   if (!previewId.startsWith('preview_')) return null;
 
   try {
@@ -84,7 +127,10 @@ export const loadItemPreview = (previewId: string): Item | null => {
       return null;
     }
 
-    return normalizeItemPreview(stored.item, previewId);
+    return {
+      item: normalizeItemPreview(stored.item, previewId),
+      runtimeQuery: stored.runtimeQuery,
+    };
   } catch {
     localStorage.removeItem(`${PREVIEW_PREFIX}${previewId}`);
     return null;
