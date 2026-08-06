@@ -26,6 +26,7 @@ import { Magia } from '../../../../../../models/Magias';
 import { TRAITS_OPTIONS, ALIGNMENT_OPTIONS } from '../../formOptions';
 import { getInventarioItems, getProtesesItems, getProtesesTableItems, isEmptyItemRow, replaceItemSection } from '../../../../../../utils/itemInventorySections';
 import { openItemPreview } from '../../../../../../utils/itemPreview';
+import { SystemEntityBinding } from '../../../../../../components/Generic/SystemEntityBinding';
 //import OrcBack from '../../../../../../assets/racas/orc/OrcBackground.jpeg';
 
 interface FormProps {
@@ -79,6 +80,7 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
     atributosSecundarios, setAtributosSecundarios,
     defesas, setDefesas,
     listItens, handleSelectItem,
+    sistema,
   } = useFormCharacter({ contentType });
   
   const tagInputRef = useRef<HTMLInputElement>(null);
@@ -182,6 +184,8 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
               />
             </HeaderAvatar>
           </FormHeader>
+
+          <SystemEntityBinding theme={theme} neon={neon} state={sistema} />
 
           {selectedRace && (
             <SectionStatus theme={theme} neon={neon}>
@@ -387,7 +391,7 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
               searchKeys={['nome', 'tipo', 'descricao']}
               onSelectSearch={(item) => item.tipo !== 'implante' && handleSelectItem(item)}
               isRowEmpty={isEmptyItemRow}
-              onViewRow={openItemPreview}
+              onViewRow={(item) => openItemPreview(item, sistema.contexto)}
               theme={theme}
               neon={neon}
             />
@@ -405,7 +409,7 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
               searchKeys={['nome', 'tipo', 'descricao']}
               onSelectSearch={(item) => item.tipo === 'implante' && handleSelectItem(item)}
               isRowEmpty={isEmptyItemRow}
-              onViewRow={openItemPreview}
+              onViewRow={(item) => openItemPreview(item, sistema.contexto)}
               theme={theme}
               neon={neon}
             />

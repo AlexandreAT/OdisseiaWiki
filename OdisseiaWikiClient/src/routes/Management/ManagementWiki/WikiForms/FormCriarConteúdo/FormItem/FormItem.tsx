@@ -32,6 +32,7 @@ import { atributosFormMap } from "../FormCharacter/MapItensForm";
 import toast from "react-hot-toast";
 import { ITEM_TIPO_OPTIONS } from "../../formOptions";
 import { handleNumericInputFocus } from '../../../../../../utils/numericInput';
+import { SystemEntityBinding } from '../../../../../../components/Generic/SystemEntityBinding';
 
 interface FormItemProps {
   theme: 'dark' | 'light';
@@ -72,6 +73,10 @@ export const FormItem = ({ theme, neon, contentType }: FormItemProps) => {
     isSubmitting,
     nomeError,
     setNomeError,
+    sistema,
+    sistemaItemCatalogo,
+    setSistemaItemCategory,
+    setSistemaItemArchetype,
   } = useFormItem(undefined, contentType);
 
   const itemImageCropPreset: CropPreset = {
@@ -124,7 +129,7 @@ export const FormItem = ({ theme, neon, contentType }: FormItemProps) => {
             onChange={(e) => setTipo(e.target.value as ItemTipo)}
             theme={theme}
             neon={neon}
-            options={ITEM_TIPO_OPTIONS}
+            options={sistemaItemCatalogo.typeOptions.length ? sistemaItemCatalogo.typeOptions : ITEM_TIPO_OPTIONS}
             required
             width="100%"
           />
@@ -164,16 +169,41 @@ export const FormItem = ({ theme, neon, contentType }: FormItemProps) => {
 
       </FormHeader>
 
+      <SystemEntityBinding theme={theme} neon={neon} state={sistema} />
+
       {AtributosForm && (
         <AtributosSection theme={theme} neon={neon}>
           <SectionTitle theme={theme} neon={neon}>Atributos do {ITEM_TIPO_OPTIONS.find(o => o.value === tipo)?.label}</SectionTitle>
           <AtributosGrid>
+            {sistemaItemCatalogo.categoryOptions.length > 0 && (
+              <Select
+                label="Categoria do Sistema"
+                theme={theme}
+                neon={neon}
+                value={sistemaItemCatalogo.categoryCode ?? ''}
+                onChange={(event) => setSistemaItemCategory(event.target.value)}
+                options={sistemaItemCatalogo.categoryOptions}
+                width="100%"
+              />
+            )}
+            {['consumiveis', 'acessorio', 'outro'].includes(tipo) && sistemaItemCatalogo.archetypeOptions.length > 0 && (
+              <Select
+                label="Arquétipo do Sistema"
+                theme={theme}
+                neon={neon}
+                value={sistemaItemCatalogo.archetypeCode?.toLocaleLowerCase('pt-BR') ?? ''}
+                onChange={(event) => setSistemaItemArchetype(event.target.value)}
+                options={sistemaItemCatalogo.archetypeOptions}
+                width="100%"
+              />
+            )}
             <AtributosForm
               value={atributos}
               onChange={setAtributos}
               theme={theme}
               neon={neon}
               managementLayout
+              sistemaItemCatalogo={sistemaItemCatalogo}
             />
           </AtributosGrid>
         </AtributosSection>

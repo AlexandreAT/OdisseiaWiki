@@ -1533,8 +1533,8 @@ Regras obrigatórias:
 
 - somente rascunhos podem ser editados;
 - versões publicadas são imutáveis e novas alterações partem de uma duplicação;
-- cada mesa deve apontar explicitamente para uma versão publicada;
-- publicar uma versão não migra mesas existentes;
+- cada mesa comum deve apontar explicitamente para uma versão publicada;
+- publicar uma versão não migra mesas comuns; a Mesa Padrão acompanha automaticamente a publicação atual de `ODISSEIA` sem reescrever fichas;
 - versões arquivadas continuam legíveis para vínculos históricos, mas não podem ser escolhidas por novas mesas;
 - dados relacionais, ordenáveis ou individualmente validáveis devem ser normalizados;
 - JSON é permitido apenas para extensões tipadas, versionadas e validadas por módulo;
@@ -1547,13 +1547,19 @@ A arquitetura, o fluxo de publicação e a estratégia de compatibilidade estão
 Estrutura implementada:
 
 - `SistemaRpg` contém versões; `SistemaVersao` agrega módulos e configurações normalizadas;
-- `Mesa.IdSistemaVersao` fixa a versão usada pela mesa sem migração automática;
-- `SistemaRpgResolver` centraliza mesa explícita, sistema padrão e fallback legado;
-- `SistemaRpgSeeder` cria `ODISSEIA/1.0` de forma idempotente e vincula mesas legadas;
+- `Mesa.IdSistemaVersao` fixa a versão usada pelas mesas comuns; a Mesa Padrão, identificada por `ODISSEIA_PADRAO`, acompanha a publicação atual do Sistema base;
+- `SistemaRpgResolver` entrega um contexto agregado com regras, origem, proveniência, warnings e fallbacks; a precedência é Mesa, vínculo global fixo ou acompanhado, sistema padrão e legado;
+- NPCs, raças e itens globais podem acompanhar a publicação atual ou fixar uma versão publicada/arquivada histórica; rascunhos nunca alimentam o runtime;
+- `SistemaRacaConfig` é a fonte mecânica racial versionada; `Raca.StatusJson` é somente fallback de leitura quando a configuração não existe, e `MesaEntidadeConfig` aplica apenas o delta da Mesa depois do Sistema;
+- progressão, atributos, recursos, defesas, skills, magias e catálogos disponíveis no contexto são consumidos pelos fluxos integrados sem regravar o estado explícito das fichas;
+- itens preservam valores reais em `AtributosJson`; o Sistema fornece a hierarquia tipo/categoria/arquétipo, campos, referências e faixas, emitindo warning em vez de limitar valores excepcionais;
+- publicar gera um `SistemaPatchNote` estruturado e imutável na mesma transação; a migração de Mesa exige preview e confirmação e altera somente `Mesa.IdSistemaVersao`;
+- `SistemaRpgSeeder` cria `ODISSEIA/1.0` de forma idempotente, vincula mesas legadas e faz backfill técnico do catálogo apenas quando ela ainda é a publicação corrente e sua coleção está vazia; versões arquivadas nunca são alteradas;
+- o seed da Mesa Padrão reconhece nomes históricos, consolida duplicatas preservando personagens/vínculos/overrides e mantém `ODISSEIA_PADRAO` sincronizada com `ODISSEIA.IdVersaoPublicada`;
 - `SistemasRpgController`, `SistemaRpgService` e `SistemaRpgRepository` concentram os contratos e invariantes do backend;
-- `src/routes/Management/ManagementSystem`, `src/models/SistemaRpg.ts` e `src/services/sistemasRpgService.ts` formam a administração no frontend.
+- `src/routes/Management/ManagementSystem`, `src/models/SistemaRpg.ts` e `src/services/sistemasRpgService.ts` formam a administração no frontend, protegida por `ManagementAccessGuard` além da policy `Admin` obrigatória no backend.
 
-Para evoluir regras, crie ou duplique uma versão, altere apenas o rascunho e publique. Para adicionar um módulo, atualize enum/modelagem, contexto e migration, DTOs, mapper, validações, service/controller, contrato/service frontend e a seção visual correspondente. A execução automática das regras ainda é incremental: fichas, progressão, recursos, dados e escalas antigas mantêm hardcodes com fallback até que cada consumidor seja migrado e testado.
+Para evoluir regras, crie ou duplique uma versão, altere apenas o rascunho e publique. Para adicionar um módulo, atualize enum/modelagem, contexto e migration, DTOs, mapper, validações, service/controller, contrato/service frontend e a seção visual correspondente. Regra e estado não se confundem: uma nova publicação muda interpretação, limites e catálogos de quem a acompanha, mas não sobrescreve XP, recursos, atributos, inventário ou outros valores persistidos. Hardcodes remanescentes são apenas fallbacks explícitos e devem ser removidos somente quando o catálogo versionado e a compatibilidade histórica estiverem cobertos.
 
 ---
 

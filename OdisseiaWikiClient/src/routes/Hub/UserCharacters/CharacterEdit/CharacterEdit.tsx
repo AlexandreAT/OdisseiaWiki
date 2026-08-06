@@ -24,6 +24,7 @@ import {
   FloatingSaveButton,
   SyncIconBadge,
 } from './CharacterEdit.style';
+import { SystemRuntimeIndicator } from '../../../../components/Generic/SystemRuntimeIndicator';
 
 interface UserCharactersProps {
   theme: 'dark' | 'light';
@@ -99,6 +100,8 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, initialStep = 1
         atributosSecundarios, setAtributosSecundarios,
         defesas, setDefesas,
         listItens, handleSelectItem,
+        selectedMesa,
+        runtimeContext, runtimeLoading, runtimeError,
     } = useFormUserCharacter(userId, onSave, personagem);
 
     // Debug logs and temporary race-filter removed
@@ -109,8 +112,14 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, initialStep = 1
     );
 
     const itemColumns = React.useMemo(() => createItemColumns(theme, neon), [theme, neon]);
-    const skillsColumns = React.useMemo(() => createSkillsColumns(theme, neon), [theme, neon]);
-    const magiasColumns = React.useMemo(() => createMagiasColumns(theme, neon), [theme, neon]);
+    const skillsColumns = React.useMemo(
+      () => createSkillsColumns(theme, neon, runtimeContext),
+      [theme, neon, runtimeContext],
+    );
+    const magiasColumns = React.useMemo(
+      () => createMagiasColumns(theme, neon, runtimeContext),
+      [theme, neon, runtimeContext],
+    );
 
     const snapshot = React.useMemo(() => JSON.stringify({
       userName,
@@ -268,6 +277,14 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, initialStep = 1
               onStepClick={handleStepDotClick}
             />
 
+            {selectedMesa && (
+              <SystemRuntimeIndicator
+                contexto={runtimeContext}
+                loading={runtimeLoading}
+                error={runtimeError}
+              />
+            )}
+
             <FormEditController>
               {editStep === 2 && (
                 <CharacterSystemForm
@@ -301,6 +318,7 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, initialStep = 1
                   itemColumns={itemColumns}
                   skillsColumns={skillsColumns}
                   magiasColumns={magiasColumns}
+                  runtimeContext={runtimeContext}
                 />
               )}
 

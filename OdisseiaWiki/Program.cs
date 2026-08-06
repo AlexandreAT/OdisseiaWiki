@@ -492,7 +492,9 @@ public class Program
         services.AddScoped<IInfoLoreService, InfoLoreService>();
         services.AddScoped<IPageService, PageService>();
         services.AddScoped<ISistemaRpgService, SistemaRpgService>();
+        services.AddScoped<ISistemaRpgItemCatalogService, SistemaRpgItemCatalogService>();
         services.AddScoped<ISistemaRpgResolver, SistemaRpgResolver>();
+        services.AddScoped<ISistemaEntidadeVinculoService, SistemaEntidadeVinculoService>();
         services.AddScoped<ISistemaRpgSeeder, SistemaRpgSeeder>();
 
         services.Configure<ImgBBSettings>(configuration.GetSection("ImgBB"));

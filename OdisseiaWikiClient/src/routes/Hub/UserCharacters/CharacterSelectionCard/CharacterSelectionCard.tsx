@@ -16,10 +16,10 @@ import {
   HudRightLine,
   HudTopLine,
 } from '../../../Personagem/PersonagemPage.style';
-import {
-  DEFAULT_MAX_CHARACTER_LEVEL,
-  getDefaultXpRequiredForLevel,
-} from '../../../../utils/characterProgression';
+import { resolveCharacterProgression } from '../../../../utils/characterProgression';
+import { useSistemaRuntimeContexto } from '../../../../hooks/useSistemaRuntimeContexto';
+import { getRuntimeResourceLabel } from '../../../../utils/systemRuntimeCharacter';
+import { SystemRuntimeIndicator } from '../../../../components/Generic/SystemRuntimeIndicator';
 import {
   ActionButton,
   Actions,
@@ -60,6 +60,8 @@ interface CharacterSelectionCardProps {
   onView: () => void;
   onSheet: () => void;
   onEdit: () => void;
+  onUpdateSystem?: () => void;
+  updatingSystem?: boolean;
   selectionMode?: boolean;
   selected?: boolean;
   onToggleSelection?: () => void;
@@ -84,19 +86,40 @@ export const CharacterSelectionCard = ({
   onView,
   onSheet,
   onEdit,
+  onUpdateSystem,
+  updatingSystem = false,
   selectionMode = false,
   selected = false,
   onToggleSelection,
 }: CharacterSelectionCardProps) => {
   const navigate = useNavigate();
-  const normalizedLevel = Math.max(1, Math.trunc(Number(level) || 1));
-  const normalizedXp = Math.max(0, Number(xp) || 0);
-  const isMaximumLevel = normalizedLevel >= DEFAULT_MAX_CHARACTER_LEVEL;
-  const requiredXp = getDefaultXpRequiredForLevel(normalizedLevel);
-  const progress = isMaximumLevel
-    ? 100
-    : Math.min(100, Math.max(0, (normalizedXp / Math.max(requiredXp, 1)) * 100));
-  const readyToLevel = !isMaximumLevel && normalizedXp >= requiredXp;
+  const embeddedRuntimeContext = personagem.sistemaRuntime;
+  const {
+    contexto: fetchedRuntimeContext,
+    loading: runtimeLoading,
+    error: runtimeError,
+  } = useSistemaRuntimeContexto({
+    idPersonagemJogador: personagem.idpersonagemJogador,
+    idRaca: personagem.idraca,
+    enabled: Boolean(personagem.idpersonagemJogador) && !embeddedRuntimeContext,
+  });
+  const runtimeContext = embeddedRuntimeContext ?? fetchedRuntimeContext;
+  const runtimeHasNotice = !runtimeLoading && (
+    !runtimeContext
+    || Boolean(runtimeError)
+    || !runtimeContext.idSistemaVersao
+    || (runtimeContext.warnings?.length ?? 0) > 0
+    || (runtimeContext.fallbacks?.length ?? 0) > 0
+  );
+  const {
+    level: normalizedLevel,
+    xp: normalizedXp,
+    maximumLevel,
+    isMaximumLevel,
+    requiredXp,
+    progress,
+    readyToLevel,
+  } = resolveCharacterProgression(level, xp, runtimeContext?.progressao);
   const proficiencies = personagem.proficiencias
     ?.map((proficiency) => proficiency.nome)
     .filter(Boolean)
@@ -153,15 +176,15 @@ export const CharacterSelectionCard = ({
         <StatusColumn>
           <CharacterName>{personagem.nome || 'Personagem sem nome'}</CharacterName>
           <StatusItem>
-            <StatusLabel>Vida</StatusLabel>
+            <StatusLabel>{getRuntimeResourceLabel(runtimeContext, 'vida', 'Vida')}</StatusLabel>
             <StatusBar theme={theme} neon={neon} type="vida" value={status.vida} maxValue={status.vidaMaxima || undefined} height="18px" />
           </StatusItem>
           <StatusItem>
-            <StatusLabel>Mana</StatusLabel>
+            <StatusLabel>{getRuntimeResourceLabel(runtimeContext, 'mana', 'Mana')}</StatusLabel>
             <StatusBar theme={theme} neon={neon} type="mana" value={status.mana} maxValue={status.manaMaxima || undefined} height="18px" />
           </StatusItem>
           <StatusItem>
-            <StatusLabel>Estamina</StatusLabel>
+            <StatusLabel>{getRuntimeResourceLabel(runtimeContext, 'estamina', 'Estamina')}</StatusLabel>
             <StatusBar theme={theme} neon={neon} type="estamina" value={status.estamina} maxValue={status.estaminaMaxima || undefined} height="18px" />
           </StatusItem>
         </StatusColumn>
@@ -187,7 +210,7 @@ export const CharacterSelectionCard = ({
 
       <XpSection $ready={readyToLevel}>
         <LevelFlag type="button" onClick={() => openDevelopmentPage(`/sistema/nivel/${normalizedLevel}`, 'Página de nível ainda não disponível', 'A página dinâmica deste nível está em desenvolvimento.')}>
-          Nível {Math.min(normalizedLevel, DEFAULT_MAX_CHARACTER_LEVEL)}
+          Nível {Math.min(normalizedLevel, maximumLevel)}
         </LevelFlag>
         <ProgressBody>
           <ProgressHeader>
@@ -213,6 +236,15 @@ export const CharacterSelectionCard = ({
           </DetailLink>
         </DetailItem>
       </DetailsGrid>
+
+      {(runtimeHasNotice || runtimeContext?.atualizacaoDisponivel) && (
+        <SystemRuntimeIndicator
+          contexto={runtimeContext}
+          error={runtimeError}
+          onUpdate={onUpdateSystem}
+          updating={updatingSystem}
+        />
+      )}
 
       <Actions>
         <ActionButton type="button" onClick={onView}><VisibilityIcon />Visualizar</ActionButton>

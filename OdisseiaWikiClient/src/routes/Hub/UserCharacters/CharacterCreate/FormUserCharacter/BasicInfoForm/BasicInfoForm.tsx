@@ -6,7 +6,7 @@ import { FormHeader, GridInputs, HeaderAvatar, HeaderInputs, RelatedCharactersSe
 import { InputText } from '../../../../../../components/Generic/InputText/InputText';
 import { Select } from '../../../../../../components/Generic/Select/Select';
 import { ImageUploader } from '../../../../../../components/Generic/ImageUploader/ImageUploader';
-import { CropPreset } from '../../../../../../components/Generic/ImageUploader/types';
+import { CropPreset, CropResult } from '../../../../../../components/Generic/ImageUploader/types';
 import { StatusInput } from '../../../../../../components/Generic/StatusInput/StatusInput';
 import { TextArea } from '../../../../../../components/Generic/TextArea/TextArea';
 import { RichTextEditor } from '../../../../../../components/Generic/RichTextEditor/RichTextEditor';
@@ -20,6 +20,7 @@ import { TRAITS_OPTIONS, ALIGNMENT_OPTIONS } from '../../constants';
 import { BasicInfoFormProps } from './BasicInfoForm.type';
 import { getInventarioItems, getProtesesItems, getProtesesTableItems, isEmptyItemRow, replaceItemSection } from '../../../../../../utils/itemInventorySections';
 import { openItemPreview } from '../../../../../../utils/itemPreview';
+import { getRuntimeResourceLabel } from '../../../../../../utils/systemRuntimeCharacter';
 
 export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
   theme,
@@ -79,6 +80,7 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
   itemColumns,
   skillsColumns,
   magiasColumns,
+  runtimeContext,
 }) => {
   const inventario = getInventarioItems(itens);
   const updateInventario = (updatedItems: Item[]) => setItens(replaceItemSection(itens, 'inventario', updatedItems));
@@ -92,8 +94,12 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
     displayShape: 'circle',
     label: 'Avatar Circular',
   };
+  const initialMagicLimit = runtimeContext?.criacao?.maximoMagiasIniciais;
+  const initialSkillLimit = runtimeContext?.criacao?.maximoSkillsIniciais;
+  const filledMagicCount = magias.filter((magia) => magia.nome?.trim()).length;
+  const filledSkillCount = skills.filter((skill) => skill.nome?.trim()).length;
 
-  const handleCharacterAvatarUpload = (result: any) => {
+  const handleCharacterAvatarUpload = (result: CropResult) => {
     setAvatarUrl(result.preview);
     setAvatarFile(result.file);
   };
@@ -158,7 +164,7 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
             theme={theme}
             neon={neon}
             type="vida"
-            label="Vida"
+            label={getRuntimeResourceLabel(runtimeContext, 'vida', 'Vida')}
             value={statusBasico.vida}
             maxValue={statusBasico.vidaMaxima}
             enableCalculator
@@ -174,7 +180,7 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
             theme={theme}
             neon={neon}
             type="estamina"
-            label="Estamina"
+            label={getRuntimeResourceLabel(runtimeContext, 'estamina', 'Estamina')}
             value={statusBasico.estamina}
             maxValue={statusBasico.estaminaMaxima}
             enableCalculator
@@ -190,7 +196,7 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
             theme={theme}
             neon={neon}
             type="mana"
-            label="Mana"
+            label={getRuntimeResourceLabel(runtimeContext, 'mana', 'Mana')}
             value={statusBasico.mana}
             maxValue={statusBasico.manaMaxima}
             enableCalculator
@@ -335,7 +341,7 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
           searchKeys={['nome', 'tipo', 'descricao']}
           onSelectSearch={(item) => item.tipo !== 'implante' && handleSelectItem(item)}
           isRowEmpty={isEmptyItemRow}
-          onViewRow={openItemPreview}
+          onViewRow={(item) => openItemPreview(item, runtimeContext)}
           theme={theme}
           neon={neon}
         />
@@ -353,14 +359,16 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
           searchKeys={['nome', 'tipo', 'descricao']}
           onSelectSearch={(item) => item.tipo === 'implante' && handleSelectItem(item)}
           isRowEmpty={isEmptyItemRow}
-          onViewRow={openItemPreview}
+          onViewRow={(item) => openItemPreview(item, runtimeContext)}
           theme={theme}
           neon={neon}
         />
       </SectionTable>
 
       <SectionTable>
-        <TableTitle>Magias</TableTitle>
+        <TableTitle>
+          Magias{initialMagicLimit != null ? ` (${filledMagicCount}/${initialMagicLimit})` : ''}
+        </TableTitle>
         <DataTable<Magia>
           data={magias}
           onChange={setMagias}
@@ -372,7 +380,9 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
       </SectionTable>
 
       <SectionTable>
-        <TableTitle>Skills</TableTitle>
+        <TableTitle>
+          Skills{initialSkillLimit != null ? ` (${filledSkillCount}/${initialSkillLimit})` : ''}
+        </TableTitle>
         <DataTable<Skills>
           data={skills}
           onChange={setSkills}

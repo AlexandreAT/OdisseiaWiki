@@ -6,6 +6,7 @@ using OdisseiaWiki.Repositories.Interfaces;
 using OdisseiaWiki.Services.Helpers;
 using OdisseiaWiki.Services.Interfaces;
 using System.Text.Json;
+using OdisseiaWiki.Enums;
 
 namespace OdisseiaWiki.Services
 {
@@ -13,17 +14,32 @@ namespace OdisseiaWiki.Services
     {
         private readonly IPersonagemRepository _repository;
         private readonly IAssetService _assetService;
+        private readonly ISistemaRpgResolver _sistemaResolver;
+        private readonly ISistemaEntidadeVinculoService _vinculoSistemaService;
 
-        public PersonagemService(IPersonagemRepository repository, IAssetService assetService)
+        public PersonagemService(
+            IPersonagemRepository repository,
+            IAssetService assetService,
+            ISistemaRpgResolver sistemaResolver,
+            ISistemaEntidadeVinculoService vinculoSistemaService)
         {
             _repository = repository;
             _assetService = assetService;
+            _sistemaResolver = sistemaResolver;
+            _vinculoSistemaService = vinculoSistemaService;
         }
 
         public async Task<ResultPersonagem> CreateAsync(PersonagemDto dto)
         {
             if (string.IsNullOrWhiteSpace(dto.Nome))
                 return ResultPersonagem.Fail("Nome é obrigatório.");
+
+            SistemaEntidadeVinculoResultado vinculo = await _vinculoSistemaService.ValidarAsync(
+                dto.IdSistemaRpg,
+                dto.IdSistemaVersao,
+                dto.AcompanharPublicacaoAtual ?? true);
+            if (!vinculo.Sucesso)
+                return ResultPersonagem.Fail(vinculo.MensagemErro!);
 
             if (dto.StatusJson?.status != null)
             {
@@ -57,6 +73,9 @@ namespace OdisseiaWiki.Services
                 Tags = JsonSerializer.Serialize(ContentCategoryHelper.EnsureCategoryTag(dto.Tags, ContentCategoryHelper.Personagem)),
                 Visivel = dto.Visivel,
                 Destaque = dto.Destaque,
+                IdSistemaRpg = vinculo.IdSistemaRpg,
+                IdSistemaVersao = vinculo.IdSistemaVersao,
+                AcompanharPublicacaoAtual = vinculo.AcompanharPublicacaoAtual,
                 Implantes = dto.Implantes != null ? JsonSerializer.Serialize(dto.Implantes) : null,
                 Idpassiva = dto.Idpassiva,
                 Ultimate = dto.Ultimate != null ? JsonSerializer.Serialize(dto.Ultimate) : null,
@@ -64,6 +83,7 @@ namespace OdisseiaWiki.Services
             };
 
             var criado = await _repository.CreateAsync(personagem);
+            criado.SistemaRuntime = await ResolverRuntimeAsync(criado);
             return ResultPersonagem.Ok(criado);
         }
 
@@ -77,6 +97,7 @@ namespace OdisseiaWiki.Services
                 return null;
 
             personagem.ProficienciasResumo = await _repository.GetProficienciasByPersonagemIdAsync(id);
+            personagem.SistemaRuntime = await ResolverRuntimeAsync(personagem);
             return personagem;
         }
 
@@ -87,6 +108,27 @@ namespace OdisseiaWiki.Services
                 return ResultPersonagem.Fail($"Personagem com id {id} não encontrado.");
 
             HashSet<string> oldAssets = ExtractAssets(personagem);
+
+            bool informouVinculo = dto.IdSistemaRpg.HasValue ||
+                dto.IdSistemaVersao.HasValue ||
+                dto.AcompanharPublicacaoAtual.HasValue;
+            if (informouVinculo)
+            {
+                SistemaEntidadeVinculoResultado vinculo = await _vinculoSistemaService.ValidarAsync(
+                    dto.IdSistemaRpg,
+                    dto.IdSistemaVersao,
+                    dto.AcompanharPublicacaoAtual ?? personagem.AcompanharPublicacaoAtual,
+                    new SistemaEntidadeVinculoExistente(
+                        personagem.IdSistemaRpg,
+                        personagem.IdSistemaVersao,
+                        personagem.AcompanharPublicacaoAtual));
+                if (!vinculo.Sucesso)
+                    return ResultPersonagem.Fail(vinculo.MensagemErro!);
+
+                personagem.IdSistemaRpg = vinculo.IdSistemaRpg;
+                personagem.IdSistemaVersao = vinculo.IdSistemaVersao;
+                personagem.AcompanharPublicacaoAtual = vinculo.AcompanharPublicacaoAtual;
+            }
 
             personagem.Nome = dto.Nome ?? personagem.Nome;
             personagem.Idraca = dto.Idraca;
@@ -120,6 +162,7 @@ namespace OdisseiaWiki.Services
                 _assetService,
                 oldAssets,
                 ExtractAssets(atualizado));
+            atualizado.SistemaRuntime = await ResolverRuntimeAsync(atualizado);
             return ResultPersonagem.Ok(atualizado);
         }
 
@@ -151,5 +194,25 @@ namespace OdisseiaWiki.Services
                 personagem.Historia,
                 personagem.Implantes,
                 personagem.Ultimate);
+
+        private Task<SistemaRuntimeContextoDto> ResolverRuntimeAsync(Personagen personagem) =>
+            _sistemaResolver.ResolverContextoAsync(
+                new SistemaRuntimeConsultaDto
+                {
+                    TipoEntidade = SistemaEntidadeGlobalTipo.Npc,
+                    IdEntidade = personagem.Idpersonagem.ToString(),
+                    IdRaca = personagem.Idraca,
+                },
+                new SistemaEntidadeGlobalVinculoSnapshot
+                {
+                    TipoEntidade = SistemaEntidadeGlobalTipo.Npc,
+                    IdEntidade = personagem.Idpersonagem.ToString(),
+                    IdSistemaRpg = personagem.IdSistemaRpg,
+                    IdSistemaVersao = personagem.IdSistemaVersao,
+                    AcompanharPublicacaoAtual = personagem.AcompanharPublicacaoAtual,
+                    EstadoJson = personagem.StatusJson,
+                    SkillsJson = personagem.Skills,
+                    MagiasJson = personagem.Magia,
+                });
     }
 }

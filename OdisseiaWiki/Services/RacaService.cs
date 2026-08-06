@@ -17,15 +17,21 @@ namespace OdisseiaWiki.Services
         private readonly IRacaRepository _repository;
         private readonly IMesaEntidadeConfigService _mesaEntidadeConfigService;
         private readonly IAssetService _assetService;
+        private readonly ISistemaRpgResolver _sistemaRpgResolver;
+        private readonly ISistemaEntidadeVinculoService _sistemaEntidadeVinculoService;
 
         public RacaService(
             IRacaRepository repository,
             IMesaEntidadeConfigService mesaEntidadeConfigService,
-            IAssetService assetService)
+            IAssetService assetService,
+            ISistemaRpgResolver sistemaRpgResolver,
+            ISistemaEntidadeVinculoService sistemaEntidadeVinculoService)
         {
             _repository = repository;
             _mesaEntidadeConfigService = mesaEntidadeConfigService;
             _assetService = assetService;
+            _sistemaRpgResolver = sistemaRpgResolver;
+            _sistemaEntidadeVinculoService = sistemaEntidadeVinculoService;
         }
 
         public async Task<ResultRaca> CreateAsync(RacaDto dto)
@@ -38,6 +44,13 @@ namespace OdisseiaWiki.Services
 
             if (!TryNormalizeVariacoes(dto.Variacoes, out List<RacaVariacaoDto>? variacoes, out string? variacoesError))
                 return ResultRaca.Fail(variacoesError!);
+
+            SistemaEntidadeVinculoResultado vinculo = await _sistemaEntidadeVinculoService.ValidarAsync(
+                dto.IdSistemaRpg,
+                dto.IdSistemaVersao,
+                dto.AcompanharPublicacaoAtual ?? true);
+            if (!vinculo.Sucesso)
+                return ResultRaca.Fail(vinculo.MensagemErro!);
 
             var raca = new Raca
             {
@@ -56,6 +69,9 @@ namespace OdisseiaWiki.Services
                 Tags = JsonSerializer.Serialize(ContentCategoryHelper.EnsureCategoryTag(dto.Tags, ContentCategoryHelper.Raca)),
                 Visivel = dto.Visivel,
                 Destaque = dto.Destaque,
+                IdSistemaRpg = vinculo.IdSistemaRpg,
+                IdSistemaVersao = vinculo.IdSistemaVersao,
+                AcompanharPublicacaoAtual = vinculo.AcompanharPublicacaoAtual,
                 DataCriacao = DateTime.UtcNow
             };
 
@@ -72,8 +88,57 @@ namespace OdisseiaWiki.Services
             HashSet<string> oldAssets = AssetReferenceHelper.Extract(
                 raca.Imagem, raca.GaleriaImagem, raca.Variacoes, raca.Descricao);
 
+            bool alterarVinculo = dto.AcompanharPublicacaoAtual.HasValue ||
+                dto.IdSistemaRpg.HasValue ||
+                dto.IdSistemaVersao.HasValue;
+            if (alterarVinculo)
+            {
+                SistemaEntidadeVinculoResultado vinculo = await _sistemaEntidadeVinculoService.ValidarAsync(
+                    dto.IdSistemaRpg,
+                    dto.IdSistemaVersao,
+                    dto.AcompanharPublicacaoAtual ?? raca.AcompanharPublicacaoAtual,
+                    new SistemaEntidadeVinculoExistente(
+                        raca.IdSistemaRpg,
+                        raca.IdSistemaVersao,
+                        raca.AcompanharPublicacaoAtual));
+                if (!vinculo.Sucesso)
+                    return ResultRaca.Fail(vinculo.MensagemErro!);
+
+                raca.IdSistemaRpg = vinculo.IdSistemaRpg;
+                raca.IdSistemaVersao = vinculo.IdSistemaVersao;
+                raca.AcompanharPublicacaoAtual = vinculo.AcompanharPublicacaoAtual;
+            }
+
             raca.Nome = string.IsNullOrWhiteSpace(dto.Nome) ? raca.Nome : dto.Nome.Trim();
-            if (dto.StatusJson is not null)
+            SistemaRuntimeConsultaDto consultaRuntime = new()
+            {
+                TipoEntidade = Enums.SistemaEntidadeGlobalTipo.Raca,
+                IdEntidade = raca.Idraca.ToString(),
+                IdRaca = raca.Idraca,
+            };
+            SistemaRuntimeContextoDto contextoAtual = await _sistemaRpgResolver.ResolverContextoAsync(
+                consultaRuntime,
+                new SistemaEntidadeGlobalVinculoSnapshot
+                {
+                    TipoEntidade = Enums.SistemaEntidadeGlobalTipo.Raca,
+                    IdEntidade = raca.Idraca.ToString(),
+                    IdSistemaRpg = raca.IdSistemaRpg,
+                    IdSistemaVersao = raca.IdSistemaVersao,
+                    AcompanharPublicacaoAtual = raca.AcompanharPublicacaoAtual,
+                    EstadoJson = raca.StatusJson,
+                });
+            bool sistemaPadrao = string.Equals(
+                contextoAtual.CodigoSistema,
+                SistemaRpgConfiguration.CodigoPadrao,
+                StringComparison.OrdinalIgnoreCase);
+            bool configuracaoMecanicaVersionada = !sistemaPadrao &&
+                contextoAtual.ConfiguracaoRacial is not null &&
+                !contextoAtual.Fallbacks.Any(fallback =>
+                    fallback.Caminho.StartsWith("configuracaoRacial", StringComparison.OrdinalIgnoreCase));
+
+            // No ODISSEIA, a entidade da Wiki é a fonte oficial. Somente Sistemas
+            // adicionais podem substituir seus valores por configuração versionada.
+            if (dto.StatusJson is not null && !configuracaoMecanicaVersionada)
             {
                 if (!TryNormalizeStatus(dto.StatusJson, out RacaStatusDto? status, out string? statusError))
                     return ResultRaca.Fail(statusError!);
@@ -117,10 +182,29 @@ namespace OdisseiaWiki.Services
         public async Task<ResultRaca> GetAllAsync(bool? visivel = null, int? idMesa = null)
         {
             var racas = await _repository.GetAllAsync(visivel);
+            SistemaRuntimeContextoDto contexto = await _sistemaRpgResolver.ResolverContextoAsync(
+                new SistemaRuntimeConsultaDto { IdMesa = idMesa });
+            bool sistemaPadrao = string.Equals(
+                contexto.CodigoSistema,
+                SistemaRpgConfiguration.CodigoPadrao,
+                StringComparison.OrdinalIgnoreCase);
+            Dictionary<int, SistemaRacaConfigDto> configuracoes = sistemaPadrao
+                ? new Dictionary<int, SistemaRacaConfigDto>()
+                : contexto.Criacao?.Racas
+                    .Where(configuracao => configuracao.IdRaca.HasValue)
+                    .ToDictionary(configuracao => configuracao.IdRaca!.Value)
+                    ?? new Dictionary<int, SistemaRacaConfigDto>();
+            Dictionary<string, RacaDto> bases = racas.ToDictionary(
+                raca => raca.Idraca.ToString(),
+                raca => AplicarConfiguracaoSistema(
+                    MapToDto(raca),
+                    configuracoes.GetValueOrDefault(raca.Idraca)));
+            IReadOnlyDictionary<string, RacaDto> resolvidas = await _mesaEntidadeConfigService
+                .ApplyOverridesAsync(idMesa, Enums.MesaEntidadeTipo.Raca, bases);
 
-            var dtos = await Task.WhenAll(racas.Select(raca => MapToDtoAsync(raca, idMesa)));
-
-            return ResultRaca.Ok(dtos.ToList());
+            return ResultRaca.Ok(racas
+                .Select(raca => resolvidas[raca.Idraca.ToString()])
+                .ToList());
         }
 
         public async Task<RacaDto?> GetByIdAsync(int id, int? idMesa = null)
@@ -159,15 +243,67 @@ namespace OdisseiaWiki.Services
                 : null,
             Visivel = raca.Visivel,
             Destaque = raca.Destaque,
+            IdSistemaRpg = raca.IdSistemaRpg,
+            IdSistemaVersao = raca.IdSistemaVersao,
+            AcompanharPublicacaoAtual = raca.AcompanharPublicacaoAtual,
             DataCriacao = raca.DataCriacao
         };
 
         private Task<RacaDto> MapToDtoAsync(Raca raca, int? idMesa)
-            => _mesaEntidadeConfigService.ApplyOverrideAsync(
-                idMesa,
-                Enums.MesaEntidadeTipo.Raca,
-                raca.Idraca.ToString(),
-                MapToDto(raca));
+            => MapToDtoComSistemaAsync(raca, idMesa);
+
+        private async Task<RacaDto> MapToDtoComSistemaAsync(Raca raca, int? idMesa)
+        {
+            SistemaRuntimeContextoDto contexto = await _sistemaRpgResolver.ResolverContextoAsync(
+                new SistemaRuntimeConsultaDto
+                {
+                    IdMesa = idMesa,
+                    TipoEntidade = Enums.SistemaEntidadeGlobalTipo.Raca,
+                    IdEntidade = raca.Idraca.ToString(),
+                    IdRaca = raca.Idraca,
+                });
+            RacaDto dto = AplicarConfiguracaoSistema(MapToDto(raca), contexto.ConfiguracaoRacial);
+            dto.SistemaRuntime = contexto;
+            return dto;
+        }
+
+        private static RacaDto AplicarConfiguracaoSistema(
+            RacaDto dto,
+            SistemaRacaConfigDto? configuracao)
+        {
+            if (configuracao is null)
+                return dto;
+
+            List<RacaPassivaDto>? passivasLegadas = dto.StatusJson?.passivas;
+            List<RacaPassivaDto>? passivasSistema = configuracao.PassivasVinculadas.Count == 0
+                ? passivasLegadas
+                : configuracao.PassivasVinculadas.Select(passiva => new RacaPassivaDto
+                {
+                    Nome = passiva.NomeExibicao,
+                    Efeito = passivasLegadas?.FirstOrDefault(legada =>
+                        string.Equals(
+                            legada.Nome,
+                            passiva.NomeExibicao,
+                            StringComparison.OrdinalIgnoreCase))?.Efeito,
+                }).ToList();
+
+            dto.StatusJson = new RacaStatusDto
+            {
+                status = new StatusBaseDto
+                {
+                    vida = configuracao.VidaBase,
+                    vidaMaxima = configuracao.VidaBase,
+                    estamina = configuracao.EstaminaBase,
+                    estaminaMaxima = configuracao.EstaminaBase,
+                    mana = configuracao.ManaBase,
+                    manaMaxima = configuracao.ManaBase,
+                    capacidadeCarga = configuracao.CapacidadeCargaBase,
+                },
+                atributoInicial = configuracao.CodigoAtributoInicial,
+                passivas = passivasSistema,
+            };
+            return dto;
+        }
 
         public async Task<List<RacaDto>> GetBatchAsync(List<int> ids)
         {

@@ -304,6 +304,9 @@ public sealed partial class SistemaRpgService
         erros.AddRange(ValidarCombate(SistemaRpgMapper.ToCombate(versao)));
         erros.AddRange(ValidarPoderes(SistemaRpgMapper.ToPoderes(versao)));
         erros.AddRange(ValidarSobrevivencia(SistemaRpgMapper.ToSobrevivencia(versao)));
+        if (versao.ItemEscopos.Count > 0)
+            erros.AddRange(SistemaRpgItemCatalogService.Validar(
+                SistemaRpgMapper.ToItens(versao, incluirInativos: true)));
         return erros.Distinct(StringComparer.Ordinal).ToList();
     }
 
@@ -499,5 +502,6 @@ public sealed partial class SistemaRpgService
             PermiteEstabilizacaoManual = origem.Morte.PermiteEstabilizacaoManual,
             Observacoes = origem.Morte.Observacoes, ConfiguracaoJson = origem.Morte.ConfiguracaoJson,
         };
+        destino.ItemEscopos = SistemaRpgItemCatalogService.ClonarCatalogo(origem.ItemEscopos);
     }
 }

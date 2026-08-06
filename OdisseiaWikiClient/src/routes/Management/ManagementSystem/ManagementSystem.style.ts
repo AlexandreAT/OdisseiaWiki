@@ -702,6 +702,276 @@ export const Changelog = styled.details`
   }
 `;
 
+export const PatchPanel = styled.section<SystemThemeProps>`
+  margin: 12px 14px 0;
+  padding: 12px;
+  border: 1px solid ${({ theme, neon }) => accent({ theme, neon })};
+  border-radius: 7px;
+  background: rgba(0, 8, 18, 0.62);
+`;
+
+export const PatchPanelHeader = styled.header`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+
+  > div,
+  .patch-actions {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+  }
+
+  > div:first-child > svg {
+    flex: 0 0 auto;
+    color: var(--clearneonBlue);
+  }
+
+  h4,
+  p {
+    margin: 0;
+  }
+
+  h4 {
+    color: var(--clearneonBlue) !important;
+    font-family: 'DO Futuristic', sans-serif;
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0.8px;
+  }
+
+  p {
+    margin-top: 3px;
+    color: var(--grey) !important;
+    font-size: 10px;
+  }
+
+  @media (max-width: 680px) {
+    flex-direction: column;
+
+    .patch-actions {
+      width: 100%;
+      flex-wrap: wrap;
+    }
+  }
+`;
+
+export const PatchState = styled.div<{ $error?: boolean }>`
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid ${({ $error }) => $error ? 'var(--clearneonRed)' : 'var(--grey)'};
+  border-radius: 5px;
+  color: ${({ $error }) => $error ? 'var(--clearneonRed)' : 'var(--lightGrey)'} !important;
+  font-size: 11px;
+  line-height: 1.45;
+`;
+
+export const PatchGroups = styled.div`
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+`;
+
+export const PatchImpact = styled.span<{ $impact: 'Baixo' | 'Medio' | 'Alto' | 'Critico' }>`
+  padding: 3px 6px;
+  border: 1px solid ${({ $impact }) => {
+    if ($impact === 'Critico') return 'var(--clearneonRed)';
+    if ($impact === 'Alto') return 'var(--clearneonYellow)';
+    if ($impact === 'Medio') return 'var(--clearneonViolet)';
+    return 'var(--clearneonBlue)';
+  }};
+  border-radius: 999px;
+  color: var(--lightGrey) !important;
+  font-size: 8px;
+  white-space: nowrap;
+`;
+
+export const PatchGroup = styled.details`
+  min-width: 0;
+  border: 1px solid var(--grey);
+  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.2);
+
+  > summary {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 10px;
+    color: var(--whitesmoke) !important;
+    font-family: 'DO Futuristic', sans-serif;
+    font-size: 10px;
+    cursor: pointer;
+    list-style: none;
+
+    &::-webkit-details-marker { display: none; }
+    small { color: var(--grey) !important; font-family: Arial, sans-serif; font-size: 9px; }
+  }
+
+  .patch-alterations {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 0 8px 8px;
+  }
+
+  @media (max-width: 560px) {
+    > summary {
+      grid-template-columns: minmax(0, 1fr) auto;
+      small { display: none; }
+    }
+  }
+`;
+
+export const PatchAlteration = styled.article`
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(180px, 0.8fr) minmax(0, 1.2fr);
+  gap: 10px;
+  padding: 9px;
+  border-left: 2px solid var(--clearneonBlue);
+  background: rgba(0, 174, 255, 0.04);
+
+  strong,
+  span {
+    display: block;
+    overflow-wrap: anywhere;
+  }
+
+  strong { color: var(--lightGrey) !important; font-size: 10px; line-height: 1.4; }
+  span { margin-top: 3px; color: var(--grey) !important; font-size: 9px; }
+
+  dl {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    margin: 0;
+
+    > div { min-width: 0; }
+    dt { color: var(--grey) !important; font-size: 8px; text-transform: uppercase; }
+    dd {
+      margin: 3px 0 0;
+      overflow: hidden;
+      color: var(--whitesmoke) !important;
+      font-family: monospace;
+      font-size: 9px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  @media (max-width: 640px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+`;
+
+export const MigrationFlow = styled.div`
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  .migration-input-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 9px;
+  }
+
+  @media (max-width: 560px) {
+    .migration-input-row { grid-template-columns: minmax(0, 1fr); }
+  }
+`;
+
+export const MigrationNotice = styled.div<{ $warning?: boolean; $blocked?: boolean }>`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 9px 10px;
+  border: 1px solid ${({ $blocked, $warning }) => $blocked
+    ? 'var(--clearneonRed)'
+    : $warning ? 'var(--clearneonYellow)' : 'var(--grey)'};
+  border-radius: 5px;
+  background: ${({ $blocked, $warning }) => $blocked
+    ? 'rgba(255, 0, 55, 0.06)'
+    : $warning ? 'rgba(255, 205, 0, 0.05)' : 'rgba(0, 174, 255, 0.035)'};
+
+  strong {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: ${({ $blocked, $warning }) => $blocked
+    ? 'var(--clearneonRed)'
+    : $warning ? 'var(--clearneonYellow)' : 'var(--clearneonBlue)'} !important;
+    font-size: 11px;
+  }
+
+  strong svg { width: 15px; height: 15px; }
+  span { color: var(--lightGrey) !important; font-size: 11px; line-height: 1.45; }
+  small { color: var(--grey) !important; font-size: 9px; }
+`;
+
+export const MigrationSummaryGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+
+  > div {
+    min-width: 0;
+    padding: 9px;
+    border: 1px solid var(--grey);
+    border-radius: 5px;
+    background: rgba(0, 0, 0, 0.2);
+  }
+
+  span,
+  strong { display: block; overflow-wrap: anywhere; }
+  span { color: var(--grey) !important; font-size: 8px; text-transform: uppercase; }
+  strong { margin-top: 4px; color: var(--whitesmoke) !important; font-size: 11px; }
+
+  @media (max-width: 620px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+`;
+
+export const PreservedValues = styled.div`
+  padding: 10px;
+  border-left: 3px solid var(--clearneonGreen);
+  background: rgba(0, 255, 170, 0.035);
+
+  strong { color: var(--clearneonGreen) !important; font-size: 10px; }
+  ul {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px 14px;
+    margin: 7px 0 0;
+    padding-left: 17px;
+  }
+  li { color: var(--lightGrey) !important; font-size: 10px; line-height: 1.4; }
+
+  @media (max-width: 540px) {
+    ul { grid-template-columns: minmax(0, 1fr); }
+  }
+`;
+
+export const MigrationConfirmation = styled.div<{ $blocked: boolean }>`
+  padding: 10px;
+  border: 1px solid ${({ $blocked }) => $blocked ? 'var(--clearneonRed)' : 'var(--clearneonGreen)'};
+  border-radius: 5px;
+
+  p {
+    margin: 0;
+    color: var(--clearneonRed) !important;
+    font-size: 11px;
+    line-height: 1.45;
+  }
+`;
+
 export const TableToolButton = styled.button<SystemThemeProps>`
   min-height: 32px;
   padding: 6px 9px;

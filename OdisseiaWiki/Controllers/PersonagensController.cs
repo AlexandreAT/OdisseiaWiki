@@ -58,7 +58,7 @@ namespace OdisseiaWiki.Controllers
             if (!resultado.Sucesso)
                 return BadRequest(resultado.MensagemErro);
 
-            return Ok(resultado.Personagem);
+            return Ok(resultado);
         }
 
         [HttpDelete("{id:int}")]

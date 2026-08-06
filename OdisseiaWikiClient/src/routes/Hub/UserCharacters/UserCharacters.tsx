@@ -7,7 +7,7 @@ import { PersonagemJogador, StatusBase } from '../../../models/PersonagemJogador
 import { CidadePayload, getCidades, getCidadesByIds } from '../../../services/cidadesService';
 import { getMesas } from '../../../services/mesaService';
 import { Mesa } from '../../../models/Mesa';
-import { deletarPersonagensJogador, getPersonagensPorUsuario } from '../../../services/personagemJogadorService';
+import { atualizarSistemaPersonagemJogador, deletarPersonagensJogador, getPersonagensPorUsuario } from '../../../services/personagemJogadorService';
 import { getRacas, getRacasByIds, RacaPayload } from '../../../services/racasService';
 import { getApiErrorMessage } from '../../../utils/apiError';
 import { CharacterCreate } from './CharacterCreate/CharacterCreate';
@@ -64,6 +64,7 @@ const parsePersonagens = (data: PersonagemJogador[]): PersonagemComStatus[] => d
     idpersonagemJogador: source.idpersonagemJogador ?? source.IdpersonagemJogador,
     idusuario: source.idusuario ?? source.Idusuario,
     idmesa: source.idmesa ?? source.Idmesa,
+    idSistemaVersao: source.idSistemaVersao ?? source.IdSistemaVersao,
     nome: source.nome ?? source.Nome ?? '',
     idraca: source.idraca ?? source.Idraca,
     idcidade: source.idcidade ?? source.Idcidade,
@@ -88,6 +89,7 @@ const parsePersonagens = (data: PersonagemJogador[]): PersonagemComStatus[] => d
     mesaNome: source.mesaNome ?? source.MesaNome,
     autorNome: source.autorNome ?? source.AutorNome,
     proficiencias: source.proficiencias ?? source.Proficiencias ?? [],
+    sistemaRuntime: source.sistemaRuntime ?? source.SistemaRuntime ?? null,
   };
   let parsedStatusJson: any = null;
 
@@ -183,6 +185,7 @@ export const UserCharacters = ({
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [batchDeleteOpen, setBatchDeleteOpen] = useState(false);
   const [isDeletingBatch, setIsDeletingBatch] = useState(false);
+  const [updatingSystemId, setUpdatingSystemId] = useState<number | null>(null);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedStep: 1 | 2 = searchParams.get('step') === '2' ? 2 : 1;
@@ -361,6 +364,19 @@ export const UserCharacters = ({
     }
   };
 
+  const handleSystemUpdate = async (personagem: PersonagemJogador) => {
+    setUpdatingSystemId(personagem.idpersonagemJogador);
+    try {
+      const result = await atualizarSistemaPersonagemJogador(personagem.idpersonagemJogador);
+      await refreshCharacters();
+      toast.success(result.mensagem ?? 'Sistema do personagem atualizado.');
+    } catch (requestError: unknown) {
+      toast.error(getApiErrorMessage(requestError, 'Não foi possível atualizar o Sistema deste personagem.'));
+    } finally {
+      setUpdatingSystemId(null);
+    }
+  };
+
   if (loading) return <div>Carregando personagens...</div>;
 
   if (viewMode === 'create') {
@@ -479,6 +495,8 @@ export const UserCharacters = ({
               onView={() => navigate(`/personagem/${personagem.idpersonagemJogador}?tipo=jogador`)}
               onSheet={() => updateRouteState('edit', personagem, 2)}
               onEdit={() => updateRouteState('edit', personagem, 1)}
+              onUpdateSystem={() => handleSystemUpdate(personagem)}
+              updatingSystem={updatingSystemId === personagem.idpersonagemJogador}
               selectionMode={selectionMode}
               selected={selectedIds.has(personagem.idpersonagemJogador)}
               onToggleSelection={() => toggleCharacterSelection(personagem.idpersonagemJogador)}

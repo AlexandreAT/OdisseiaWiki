@@ -95,6 +95,10 @@ export const mapToItem = (payload: ItemPayload): Item => {
     visivel: payload.visivel ?? undefined,
     dataCriacao: payload.dataCriacao ?? undefined,
     idPersonagem: payload.idpersonagem ?? undefined,
+    idSistemaRpg: payload.idSistemaRpg ?? null,
+    idSistemaVersao: payload.idSistemaVersao ?? null,
+    acompanharPublicacaoAtual: payload.acompanharPublicacaoAtual ?? true,
+    sistemaRuntime: payload.sistemaRuntime ?? null,
   };
 };
 
@@ -116,5 +120,8 @@ export const mapToPayload = (item: Item): ItemPayload => {
     visivel: item.visivel,
     dataCriacao: item.dataCriacao,
     idpersonagem: item.idPersonagem,
+    idSistemaRpg: item.idSistemaRpg,
+    idSistemaVersao: item.idSistemaVersao,
+    acompanharPublicacaoAtual: item.acompanharPublicacaoAtual,
   };
 };

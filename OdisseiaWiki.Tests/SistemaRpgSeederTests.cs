@@ -119,6 +119,118 @@ public sealed class SistemaRpgSeederTests
         Assert.Equal(5, versao.Morte.MultiplicadorDanoInstaKill);
     }
 
+    [Fact]
+    public async Task SeedAsync_ConfiguraCatalogoDeItensComEscalasPorArquetipo()
+    {
+        (_, SistemaVersao versao) = await ExecutarSeedAsync();
+
+        SistemaItemEscopo[] tipos = versao.ItemEscopos
+            .Where(item => item.Nivel == SistemaItemEscopoNivel.Tipo)
+            .ToArray();
+        Assert.Equal(6, tipos.Length);
+        Assert.Equal(
+            ["ACESSORIO", "ARMA", "CONSUMIVEIS", "IMPLANTE", "OUTRO", "TRAJE"],
+            tipos.Select(item => item.Codigo).OrderBy(item => item).ToArray());
+
+        SistemaItemEscopo pistola = versao.ItemEscopos.Single(item =>
+            item.Nivel == SistemaItemEscopoNivel.Arquetipo && item.Codigo == "PISTOLA_REVOLVER");
+        Assert.Contains(pistola.Faixas, faixa =>
+            faixa.CodigoCampo == "DANO_POR_ALCANCE_CURTA" &&
+            faixa.ValorMaximo == 1_000 &&
+            faixa.ValorReferencia == 250);
+        Assert.Contains(pistola.Faixas, faixa =>
+            faixa.CodigoCampo == "DANO_POR_ALCANCE_MEDIA" &&
+            faixa.ValorMaximo == 350 &&
+            faixa.ValorReferencia == 120);
+        Assert.Contains(pistola.Faixas, faixa =>
+            faixa.CodigoCampo == "DANO_POR_ALCANCE_LONGA" &&
+            faixa.ValorMaximo == 500 &&
+            faixa.ValorReferencia == 150);
+
+        SistemaItemEscopo morteiro = versao.ItemEscopos.Single(item =>
+            item.Nivel == SistemaItemEscopoNivel.Arquetipo && item.Codigo == "ARMA_PESADA_AREA");
+        Assert.Contains(morteiro.Faixas, faixa =>
+            faixa.CodigoCampo == "DANO_POR_ALCANCE_PRECISO" &&
+            faixa.ValorMaximo == 6_000 &&
+            faixa.ValorReferencia == 6_000);
+
+        SistemaItemEscopo armorCore = versao.ItemEscopos.Single(item =>
+            item.Nivel == SistemaItemEscopoNivel.Arquetipo && item.Codigo == "ARMOR_CORE");
+        Assert.Contains(armorCore.Faixas, faixa =>
+            faixa.CodigoCampo == "PROTECAO_BASE" && faixa.ValorReferencia == 1_200);
+        Assert.Contains(armorCore.Faixas, faixa =>
+            faixa.CodigoCampo == "ARMADURA_BASE" && faixa.ValorReferencia == 300);
+    }
+
+    [Fact]
+    public async Task SeedAsync_BackfillDeCatalogoVazioEIdempotente()
+    {
+        Mock<ISistemaRpgRepository> repository = new();
+        (SistemaRpg sistema, SistemaVersao versao) = CriarSistemaExistente();
+        repository.Setup(item => item.GetByCodeAsync("ODISSEIA", true)).ReturnsAsync(sistema);
+        repository.Setup(item => item.GetVersionByNumberAsync(1, "1.0", true)).ReturnsAsync(versao);
+        repository.Setup(item => item.GetVersionAsync(42, true, true)).ReturnsAsync(versao);
+        repository.Setup(item => item.GetMesasWithoutVersionAsync()).ReturnsAsync([]);
+        repository.Setup(item => item.SaveChangesAsync()).Returns(Task.CompletedTask);
+        SistemaRpgSeeder seeder = new(repository.Object, NullLogger<SistemaRpgSeeder>.Instance);
+
+        await seeder.SeedAsync();
+        int quantidadeAposPrimeiroSeed = versao.ItemEscopos.Count;
+        await seeder.SeedAsync();
+
+        Assert.True(quantidadeAposPrimeiroSeed > 0);
+        Assert.Equal(quantidadeAposPrimeiroSeed, versao.ItemEscopos.Count);
+        repository.Verify(item => item.SaveChangesAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task SeedAsync_NaoSobrescreveCatalogoJaExistenteEmVersaoPublicada()
+    {
+        Mock<ISistemaRpgRepository> repository = new();
+        (SistemaRpg sistema, SistemaVersao versao) = CriarSistemaExistente();
+        SistemaItemEscopo customizado = new()
+        {
+            IdSistemaItemEscopo = 500,
+            IdSistemaVersao = 42,
+            Nivel = SistemaItemEscopoNivel.Tipo,
+            Codigo = "CUSTOMIZADO",
+            CodigoCaminho = "CUSTOMIZADO",
+            Nome = "Catálogo publicado já existente",
+        };
+        versao.ItemEscopos.Add(customizado);
+        repository.Setup(item => item.GetByCodeAsync("ODISSEIA", true)).ReturnsAsync(sistema);
+        repository.Setup(item => item.GetVersionByNumberAsync(1, "1.0", true)).ReturnsAsync(versao);
+        repository.Setup(item => item.GetVersionAsync(42, true, true)).ReturnsAsync(versao);
+        repository.Setup(item => item.GetMesasWithoutVersionAsync()).ReturnsAsync([]);
+        SistemaRpgSeeder seeder = new(repository.Object, NullLogger<SistemaRpgSeeder>.Instance);
+
+        await seeder.SeedAsync();
+
+        Assert.Same(customizado, Assert.Single(versao.ItemEscopos));
+        repository.Verify(item => item.SaveChangesAsync(), Times.Never);
+    }
+
+    [Fact]
+    public async Task SeedAsync_NaoFazBackfillEmVersaoArquivadaHistorica()
+    {
+        Mock<ISistemaRpgRepository> repository = new();
+        (SistemaRpg sistema, SistemaVersao versao) = CriarSistemaExistente();
+        versao.Status = SistemaVersaoStatus.Arquivado;
+        sistema.IdVersaoPublicada = 99;
+        sistema.VersaoPublicada = null;
+        repository.Setup(item => item.GetByCodeAsync("ODISSEIA", true)).ReturnsAsync(sistema);
+        repository.Setup(item => item.GetVersionByNumberAsync(1, "1.0", true)).ReturnsAsync(versao);
+        repository.Setup(item => item.GetMesasWithoutVersionAsync()).ReturnsAsync([]);
+        SistemaRpgSeeder seeder = new(repository.Object, NullLogger<SistemaRpgSeeder>.Instance);
+
+        await seeder.SeedAsync();
+
+        Assert.Empty(versao.ItemEscopos);
+        repository.Verify(item => item.GetVersionAsync(
+            It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<bool>()), Times.Never);
+        repository.Verify(item => item.SaveChangesAsync(), Times.Never);
+    }
+
     private static async Task<(SistemaRpg Sistema, SistemaVersao Versao)> ExecutarSeedAsync()
     {
         Mock<ISistemaRpgRepository> repository = new();
@@ -140,5 +252,28 @@ public sealed class SistemaRpgSeederTests
 
         SistemaRpg sistema = Assert.IsType<SistemaRpg>(sistemaCriado);
         return (sistema, Assert.Single(sistema.Versoes));
+    }
+
+    private static (SistemaRpg Sistema, SistemaVersao Versao) CriarSistemaExistente()
+    {
+        SistemaRpg sistema = new()
+        {
+            IdSistemaRpg = 1,
+            Codigo = "ODISSEIA",
+            Nome = "Odisseia",
+            Ativo = true,
+            IdVersaoPublicada = 42,
+        };
+        SistemaVersao versao = new()
+        {
+            IdSistemaVersao = 42,
+            IdSistemaRpg = 1,
+            NumeroVersao = "1.0",
+            Status = SistemaVersaoStatus.Publicado,
+            SistemaRpg = sistema,
+        };
+        sistema.VersaoPublicada = versao;
+        sistema.Versoes.Add(versao);
+        return (sistema, versao);
     }
 }

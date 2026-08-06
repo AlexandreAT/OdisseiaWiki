@@ -98,6 +98,11 @@ public sealed class MesaMigrarSistemaDto
 {
     [Range(1, int.MaxValue)]
     public int IdSistemaVersao { get; set; }
+
+    /// <summary>
+    /// Confirma que somente IdSistemaVersao será alterado e que os valores salvos nas fichas serão preservados.
+    /// </summary>
+    public bool ConfirmarPreservacaoValores { get; set; }
 }
 
 public enum SistemaOperacaoErro

@@ -13,7 +13,12 @@ import {
   DuplicarSistemaVersaoPayload,
   SistemaModuloConfigMap,
   SistemaModuloKey,
+  MesaMigracaoPreview,
+  SistemaPatchNote,
   SistemaResolverResult,
+  SistemaRuntimeConsulta,
+  SistemaRuntimeContexto,
+  SistemaItensConfig,
   SistemaRpg,
   SistemaRpgResumo,
   SistemaVersaoResumo,
@@ -118,6 +123,17 @@ export const publicarVersaoSistemaRpg = async (
   return response.data;
 };
 
+export const obterPatchNoteSistemaRpg = async (
+  idSistemaVersao: number,
+  requestOptions: ServiceRequestOptions = {},
+): Promise<SistemaPatchNote> => {
+  const response = await api.get<SistemaPatchNote>(
+    `${BASE_PATH}/versoes/${idSistemaVersao}/patch-note`,
+    requestOptions,
+  );
+  return response.data;
+};
+
 export const arquivarVersaoSistemaRpg = async (
   idSistemaVersao: number,
 ): Promise<SistemaVersaoResumo> => {
@@ -216,6 +232,28 @@ export const obterConfiguracaoSobrevivenciaSistemaRpg = (
   requestOptions,
 );
 
+export const obterCatalogoItensSistemaRpg = async (
+  idSistemaVersao: number,
+  requestOptions: ServiceRequestOptions = {},
+): Promise<SistemaItensConfig> => {
+  const response = await api.get<SistemaItensConfig>(
+    `${BASE_PATH}/versoes/${idSistemaVersao}/itens`,
+    requestOptions,
+  );
+  return response.data;
+};
+
+export const atualizarCatalogoItensSistemaRpg = async (
+  idSistemaVersao: number,
+  payload: SistemaItensConfig,
+): Promise<SistemaItensConfig> => {
+  const response = await api.put<SistemaItensConfig>(
+    `${BASE_PATH}/versoes/${idSistemaVersao}/itens`,
+    payload,
+  );
+  return response.data;
+};
+
 export const resolverSistemaRpg = async (
   idMesa?: number,
   requestOptions: ServiceRequestOptions = {},
@@ -227,9 +265,40 @@ export const resolverSistemaRpg = async (
   return response.data;
 };
 
+export const resolverContextoRuntimeSistemaRpg = async (
+  consulta: SistemaRuntimeConsulta,
+  requestOptions: ServiceRequestOptions = {},
+): Promise<SistemaRuntimeContexto> => {
+  const params = Object.fromEntries(
+    Object.entries(consulta).filter(([, value]) => value !== undefined && value !== null && value !== ''),
+  );
+  const response = await api.get<SistemaRuntimeContexto>(`${BASE_PATH}/runtime/contexto`, {
+    params,
+    ...requestOptions,
+  });
+  return response.data;
+};
+
 export const migrarMesaParaVersaoSistemaRpg = async (
   idMesa: number,
   idSistemaVersao: number,
-): Promise<void> => {
-  await api.post(`${BASE_PATH}/mesas/${idMesa}/migrar`, { idSistemaVersao });
+): Promise<SistemaResolverResult> => {
+  const response = await api.post<SistemaResolverResult>(
+    `${BASE_PATH}/mesas/${idMesa}/migrar`,
+    { idSistemaVersao, confirmarPreservacaoValores: true },
+  );
+  return response.data;
+};
+
+export const obterPreviaMigracaoMesaSistemaRpg = async (
+  idMesa: number,
+  idSistemaVersaoDestino: number,
+  requestOptions: ServiceRequestOptions = {},
+): Promise<MesaMigracaoPreview> => {
+  const response = await api.post<MesaMigracaoPreview>(
+    `${BASE_PATH}/mesas/${idMesa}/migracao/preview`,
+    { idSistemaVersaoDestino },
+    requestOptions,
+  );
+  return response.data;
 };

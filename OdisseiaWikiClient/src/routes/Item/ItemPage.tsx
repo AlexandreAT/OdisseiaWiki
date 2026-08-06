@@ -28,6 +28,7 @@ import {
 import { useSelector } from 'react-redux';
 import backgroundVideo from '../../assets/backgroundLinesScifiAnimation.mp4';
 import { OdisseiaAnimatedTitle } from '../../components/Generic/OdisseiaAnimatedTitle';
+import { SystemRuntimeIndicator } from '../../components/Generic/SystemRuntimeIndicator/SystemRuntimeIndicator';
 import { Modal } from '../../components/Generic/Modal/Modal';
 import { RichTextDisplay } from '../../components/Generic/RichTextDisplay/RichTextDisplay';
 import {
@@ -51,6 +52,7 @@ import {
   OutrosAtributos,
   TrajeAtributos,
 } from '../../models/Itens';
+import type { SistemaItemFaixaRuntime } from '../../models/SistemaRpg';
 import {
   BackgroundOverlay,
   BackgroundVideo,
@@ -253,6 +255,23 @@ const humanize = (value: unknown) => {
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 };
 
+const normalizeRuntimeCode = (value: string) => value
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/[^a-zA-Z0-9]/g, '')
+  .toLocaleLowerCase('pt-BR');
+
+const findRuntimeRange = (
+  ranges: SistemaItemFaixaRuntime[],
+  ...candidates: string[]
+) => {
+  const normalizedCandidates = candidates.map(normalizeRuntimeCode);
+  return ranges.find((range) => {
+    const code = normalizeRuntimeCode(range.codigoCampo);
+    return normalizedCandidates.some((candidate) => code === candidate || code.endsWith(candidate));
+  });
+};
+
 const uniqueTags = (item: Item, typeLabel: string, extraTags: string[] = []) => (
   ['Item', typeLabel, ...extraTags, ...(item.tags ?? [])].filter((tag, index, tags) => (
     tags.findIndex((candidate) => candidate.localeCompare(tag, 'pt-BR', { sensitivity: 'base' }) === 0) === index
@@ -374,6 +393,7 @@ const ItemPage = () => {
     relatedPages,
     loading,
     error,
+    runtimeError,
     activeModal,
     selectedDetail,
     imageOpen,
@@ -423,6 +443,25 @@ const ItemPage = () => {
   const outfitTypeLabel = optionLabel(outfitType, TRAJE_TIPO_OPTIONS);
   const tags = uniqueTags(item, typeLabel, outfitTypeLabel ? [outfitTypeLabel] : []);
   const effect = hasText(attributes.efeito) ? attributes.efeito : item.efeito;
+  const runtimeRanges = item.sistemaRuntime?.referenciaItem?.faixas ?? [];
+  let usedMetricFallback = false;
+  const resolveMetricReference = (
+    candidates: string[],
+    fallbackMaximum: number,
+    fallbackReference?: number,
+  ) => {
+    const range = findRuntimeRange(runtimeRanges, ...candidates);
+    if (!range) usedMetricFallback = true;
+    const maximum = Number(range?.valorMaximo ?? fallbackMaximum);
+    const referenceMaximum = range?.valorReferencia ?? fallbackReference;
+    return {
+      maximum: Number.isFinite(maximum) && maximum > 0 ? maximum : fallbackMaximum,
+      referenceMaximum: referenceMaximum == null ? undefined : Number(referenceMaximum),
+      referenceDescription: range?.descricao || (referenceMaximum == null
+        ? undefined
+        : `Referência comum do Sistema: ${formatValue(Number(referenceMaximum))}.`),
+    };
+  };
 
   const openDetail = (title: string, description: string, label?: string) => {
     setSelectedDetail({ title, description, label });
@@ -478,17 +517,27 @@ const ItemPage = () => {
       const value = damageByField[field];
       if (!hasNumber(value)) return [];
 
-      const referenceMaximum = damageConfig.commonMaximumByField?.[field]
+      const fallbackReference = damageConfig.commonMaximumByField?.[field]
         ?? damageConfig.commonMaximum;
+      const runtimeReference = resolveMetricReference(
+        field === 'base'
+          ? ['danoBase', 'base']
+          : field === 'emArea'
+            ? ['danoPorAlcance.emArea', 'danoEmArea', 'emArea']
+            : [`danoPorAlcance.${field}`, `dano${field}`, field],
+        damageConfig.scaleMaximumByField?.[field] ?? damageConfig.scaleMaximum,
+        fallbackReference,
+      );
 
       return [{
         label: DAMAGE_LABELS[field],
         value,
-        maximum: damageConfig.scaleMaximumByField?.[field] ?? damageConfig.scaleMaximum,
-        referenceMaximum,
-        referenceDescription: referenceMaximum !== undefined
-          ? `Maior dano comum desta categoria em alcance ${DAMAGE_LABELS[field].toLocaleLowerCase('pt-BR')}: ${formatValue(referenceMaximum)}.`
-          : undefined,
+        ...runtimeReference,
+        referenceDescription: runtimeReference.referenceDescription ?? (
+          runtimeReference.referenceMaximum !== undefined
+            ? `Maior dano comum desta categoria em alcance ${DAMAGE_LABELS[field].toLocaleLowerCase('pt-BR')}: ${formatValue(runtimeReference.referenceMaximum)}.`
+            : undefined
+        ),
         accent: index % 2 === 0 ? 'pink' as const : 'purple' as const,
       }];
     });
@@ -544,35 +593,22 @@ const ItemPage = () => {
     const references = normalizedOutfitType
       ? OUTFIT_DEFENSE_REFERENCES[normalizedOutfitType]
       : undefined;
-    const referenceLabel = optionLabel(normalizedOutfitType, TRAJE_TIPO_OPTIONS)?.toLocaleLowerCase('pt-BR');
     const defenseValues: MetricData[] = [
       {
         label: 'Proteção',
         value: hasNumber(outfit.protecaoBase) ? outfit.protecaoBase : 0,
-        maximum: 1200,
-        referenceMaximum: references?.protecao,
-        referenceDescription: references
-          ? `Maior proteção conhecida para ${referenceLabel}: ${formatValue(references.protecao)}.`
-          : undefined,
+        ...resolveMetricReference(['protecaoBase', 'protecao'], 1200, references?.protecao),
         accent: 'pink',
       },
       {
         label: 'Escudo',
         value: hasNumber(outfit.escudoBase) ? outfit.escudoBase : 0,
-        maximum: 3000,
-        referenceMaximum: references?.escudo,
-        referenceDescription: references
-          ? `Maior escudo conhecido para ${referenceLabel}: ${formatValue(references.escudo)}.`
-          : undefined,
+        ...resolveMetricReference(['escudoBase', 'escudo'], 3000, references?.escudo),
       },
       {
         label: 'Armadura',
         value: hasNumber(outfit.armaduraBase) ? outfit.armaduraBase : 0,
-        maximum: 500,
-        referenceMaximum: references?.armadura,
-        referenceDescription: references
-          ? `Maior armadura conhecida para ${referenceLabel}: ${formatValue(references.armadura)}.`
-          : undefined,
+        ...resolveMetricReference(['armaduraBase', 'armadura'], 500, references?.armadura),
         accent: 'purple',
       },
     ];
@@ -593,16 +629,14 @@ const ItemPage = () => {
   const renderConsumableTechnical = () => {
     const consumable = attributes as ConsumiveisAtributos;
     const restoreValues: MetricData[] = [
-      ['Vida', consumable.restaura?.vida, 1500, 1500, 'pink'],
-      ['Estamina', consumable.restaura?.estamina, 100, 40, 'green'],
-      ['Mana', consumable.restaura?.mana, 100, 35, undefined],
-    ].filter((entry): entry is [string, number, number, number, MetricData['accent']] => hasNumber(entry[1]))
-      .map(([label, value, maximum, referenceMaximum, accent]) => ({
+      ['Vida', 'vida', consumable.restaura?.vida, 1500, 1500, 'pink'],
+      ['Estamina', 'estamina', consumable.restaura?.estamina, 100, 40, 'green'],
+      ['Mana', 'mana', consumable.restaura?.mana, 100, 35, undefined],
+    ].filter((entry): entry is [string, string, number, number, number, MetricData['accent']] => hasNumber(entry[2]))
+      .map(([label, code, value, maximum, referenceMaximum, accent]) => ({
         label,
         value,
-        maximum,
-        referenceMaximum,
-        referenceDescription: `Maior restauração comum de ${label.toLocaleLowerCase('pt-BR')}: ${formatValue(referenceMaximum)}.`,
+        ...resolveMetricReference([`restaura.${code}`, `restaura${code}`, code], maximum, referenceMaximum),
         accent,
         showPlus: true,
       }));
@@ -780,17 +814,22 @@ const ItemPage = () => {
           <Metrics
             title="Impacto no personagem"
             values={bonusEntries.map(([label, value], index) => {
-              const referenceMaximum = implant.parteCorpo
+              const fallbackReference = implant.parteCorpo
                 ? IMPLANT_BONUS_COMMON_BY_BODY_PART[implant.parteCorpo]?.[label]
                   ?? IMPLANT_BONUS_COMMON_FALLBACK[label]
                 : IMPLANT_BONUS_COMMON_FALLBACK[label];
+              const runtimeReference = resolveMetricReference(
+                [`bonus.${label}`, `bonus${label}`, label],
+                IMPLANT_BONUS_SCALE[label],
+                fallbackReference,
+              );
 
               return {
                 label: humanize(label) ?? label,
                 value,
-                maximum: IMPLANT_BONUS_SCALE[label],
-                referenceMaximum,
-                referenceDescription: `Maior bônus comum previsto para esta região corporal: ${formatValue(referenceMaximum)}.`,
+                ...runtimeReference,
+                referenceDescription: runtimeReference.referenceDescription
+                  ?? `Maior bônus comum previsto para esta região corporal: ${formatValue(fallbackReference)}.`,
                 showPlus: true,
                 accent: index % 3 === 0 ? 'pink' : index % 3 === 1 ? 'green' : 'purple',
               };
@@ -842,6 +881,13 @@ const ItemPage = () => {
 
   const image = normalizeImagePath(item.imagem);
 
+  const contentSections = item.tipo === 'implante'
+    ? renderImplantSections()
+    : renderGenericSections();
+  const runtimeDisplayError = runtimeError ?? (usedMetricFallback
+    ? 'As escalas deste item nÃ£o vieram da versÃ£o esperada; os grÃ¡ficos estÃ£o usando valores de compatibilidade.'
+    : null);
+
   return (
     <ItemPageRoot>
       {renderBackground()}
@@ -884,6 +930,7 @@ const ItemPage = () => {
                     </ItemTag>
                   ))}
                 </ItemTagList>
+                <SystemRuntimeIndicator contexto={item.sistemaRuntime} error={runtimeDisplayError} />
                 {renderQuickFacts()}
               </ItemIdentity>
 
@@ -892,7 +939,7 @@ const ItemPage = () => {
           </HeroPanel>
         </ItemRevealBlock>
 
-        {item.tipo === 'implante' ? renderImplantSections() : renderGenericSections()}
+        {contentSections}
       </ItemPageContent>
 
       {activeModal === 'description' && (

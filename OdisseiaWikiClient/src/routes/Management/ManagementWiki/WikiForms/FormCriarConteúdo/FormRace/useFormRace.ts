@@ -18,6 +18,7 @@ import { normalizeGalleryImages } from '../../../../../../models/GalleryImage';
 import { JSONContent } from '../../../../../../models/Cities';
 import { createEmptyJSONContent, prepareForAPI } from '../../../../../../utils/richTextHelpers';
 import { getApiErrorMessage } from '../../../../../../utils/apiError';
+import { useSistemaEntidadeGlobalForm } from '../../../../../../hooks/useSistemaEntidadeGlobalForm';
 
 const normalizePassivas = (passivas: RacaPassiva[]): RacaPassiva[] => (
   passivas.flatMap((passiva) => {
@@ -52,8 +53,24 @@ export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => 
   const legacyVariations = (initialRaca as (RacaPayload & { Variantes?: unknown }) | undefined)?.Variantes;
   const initialVariations = normalizeRacaVariacoes(initialRaca?.variacoes ?? legacyVariations);
   const parsedGaleria = normalizeGalleryImages(initialRaca?.galeriaImagem);
+  const mechanicsManagedBySystem = Boolean(
+    initialRaca?.sistemaRuntime?.configuracaoRacial
+      && !initialRaca.sistemaRuntime.fallbacks?.some((fallback) => (
+        fallback.caminho?.toLocaleLowerCase('pt-BR').startsWith('configuracaoracial')
+      )),
+  );
 
   const [racaId] = useState<number | undefined>(initialRaca?.idraca);
+  const sistema = useSistemaEntidadeGlobalForm({
+    tipoEntidade: 'Raca',
+    idEntidade: initialRaca?.idraca ? String(initialRaca.idraca) : undefined,
+    idRaca: initialRaca?.idraca,
+    initialValue: {
+      idSistemaRpg: initialRaca?.idSistemaRpg,
+      idSistemaVersao: initialRaca?.idSistemaVersao,
+      acompanharPublicacaoAtual: initialRaca?.acompanharPublicacaoAtual,
+    },
+  });
   const [nome, setNome] = useState(initialRaca?.nome || '');
   const [descricao, setDescricao] = useState<JSONContent | string>(initialRaca?.descricao || '');
   const [imagemUrl, setImagemUrl] = useState(initialRaca?.imagem || '');
@@ -108,6 +125,10 @@ export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => 
   };
 
   const validateStatus = (): boolean => {
+    if (mechanicsManagedBySystem) {
+      setErrors({});
+      return true;
+    }
     const newErrors: RaceFormErrors = {};
 
     if (vida < 0) newErrors.statusVida = 'Vida não pode ser negativa';
@@ -121,7 +142,7 @@ export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => 
   };
 
   const validateTables = (): { passiveError: string; variationError: string } => {
-    const passiveError = passivas.reduce<string>((currentError, passiva, index) => {
+    const passiveError = mechanicsManagedBySystem ? '' : passivas.reduce<string>((currentError, passiva, index) => {
       if (currentError) return currentError;
       const passiveName = passiva.nome?.trim() ?? '';
       const passiveEffect = passiva.efeito?.trim() ?? '';
@@ -288,6 +309,10 @@ export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => 
     variationImageFiles: ReadonlyMap<string, File>,
   ): Promise<CreateRacaDto | null> => {
     if (!validateForm()) return null;
+    if (!sistema.vinculo.acompanharPublicacaoAtual && !sistema.vinculo.idSistemaVersao) {
+      lastValidationErrorsRef.current = ['Selecione uma versão publicada para fixar o Sistema desta raça.'];
+      return null;
+    }
 
     const uploadResult = await uploadImages();
     const normalizedVariations = normalizeVariacoes(variacoes);
@@ -300,7 +325,7 @@ export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => 
 
     return {
       Nome: nome.trim(),
-      StatusJson: statusJson,
+      ...(!mechanicsManagedBySystem ? { StatusJson: statusJson } : {}),
       Descricao: prepareForAPI(descricao) ?? createEmptyJSONContent(),
       Imagem: uploadResult.imagemPath || '',
       GaleriaImagem: uploadResult.galeriaPaths || [],
@@ -308,6 +333,9 @@ export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => 
       Tags: ensureContentCategoryTag(tags, contentType),
       Visivel: visivel,
       Destaque: destaque,
+      IdSistemaRpg: sistema.vinculo.idSistemaRpg ?? sistema.effectiveSystemId,
+      IdSistemaVersao: sistema.vinculo.acompanharPublicacaoAtual ? null : sistema.vinculo.idSistemaVersao,
+      AcompanharPublicacaoAtual: sistema.vinculo.acompanharPublicacaoAtual,
     };
   };
 
@@ -379,6 +407,7 @@ export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => 
     setNomeError('');
     setPassivasError('');
     setVariacoesError('');
+    sistema.hydrateVinculo();
   };
 
   return {
@@ -408,6 +437,8 @@ export const useFormRace = (initialRaca?: RacaPayload, contentType?: string) => 
     passivasError,
     variacoesError,
     atributoOptions: ATRIBUTO_OPTIONS,
+    mechanicsManagedBySystem,
+    sistema,
     setNome: handleNomeChange,
     setNomeError,
     setDescricao,

@@ -2,6 +2,7 @@ import api from "../axios/api";
 import { ServiceRequestOptions } from './serviceRequestOptions';
 import { GalleryImage } from '../models/GalleryImage';
 import { JSONContent } from '../models/Cities';
+import type { SistemaRuntimeContexto } from '../models/SistemaRpg';
 
 export interface StatusBase {
   vida: number;
@@ -45,11 +46,15 @@ export interface RacaPayload {
   visivel: boolean;
   destaque?: boolean;
   dataCriacao?: string;
+  idSistemaRpg?: number | null;
+  idSistemaVersao?: number | null;
+  acompanharPublicacaoAtual?: boolean;
+  sistemaRuntime?: SistemaRuntimeContexto | null;
 }
 
 export interface CreateRacaDto {
   Nome: string;
-  StatusJson: RacaStatus;
+  StatusJson?: RacaStatus;
   Descricao?: JSONContent | string | null;
   Imagem?: string;
   GaleriaImagem?: GalleryImage[];
@@ -57,6 +62,9 @@ export interface CreateRacaDto {
   Tags?: string[];
   Visivel: boolean;
   Destaque?: boolean;
+  IdSistemaRpg?: number | null;
+  IdSistemaVersao?: number | null;
+  AcompanharPublicacaoAtual?: boolean;
 }
 
 export interface ResultRacas {

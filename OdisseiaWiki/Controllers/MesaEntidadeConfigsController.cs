@@ -53,7 +53,7 @@ public class MesaEntidadeConfigsController : ControllerBase
         dto.Identidade = idEntidade;
         dto.Idusuario = userId.Value;
 
-        var resultado = await _service.SaveAsync(dto);
+        var resultado = await _service.SaveAsync(dto, User.IsAdmin());
         return resultado.Sucesso ? Ok(resultado) : BadRequest(resultado);
     }
 
@@ -67,7 +67,12 @@ public class MesaEntidadeConfigsController : ControllerBase
         if (!userId.HasValue)
             return Unauthorized();
 
-        var resultado = await _service.DeleteAsync(idMesa, tipoEntidade, idEntidade, userId.Value);
+        var resultado = await _service.DeleteAsync(
+            idMesa,
+            tipoEntidade,
+            idEntidade,
+            userId.Value,
+            User.IsAdmin());
         return resultado.Sucesso ? Ok(resultado) : BadRequest(resultado);
     }
 }

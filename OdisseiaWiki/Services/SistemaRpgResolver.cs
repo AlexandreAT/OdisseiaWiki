@@ -7,7 +7,7 @@ using OdisseiaWiki.Services.Interfaces;
 
 namespace OdisseiaWiki.Services;
 
-public sealed class SistemaRpgResolver : ISistemaRpgResolver
+public sealed partial class SistemaRpgResolver : ISistemaRpgResolver
 {
     private readonly ISistemaRpgRepository _repository;
 
@@ -19,6 +19,14 @@ public sealed class SistemaRpgResolver : ISistemaRpgResolver
         if (idMesa.HasValue)
         {
             mesa = await _repository.GetMesaAsync(idMesa.Value);
+            if (mesa is not null && MesaAcompanhaPublicacaoPadrao(mesa))
+            {
+                SistemaRpg? sistemaAtual = await _repository.GetByCodeAsync(
+                    SistemaRpgConfiguration.CodigoPadrao);
+                if (sistemaAtual is { Ativo: true, VersaoPublicada: not null })
+                    return Mapear(sistemaAtual.VersaoPublicada, "SistemaPadrao", sistemaAtual.Codigo);
+            }
+
             if (mesa?.SistemaVersao is { Status: not SistemaVersaoStatus.Rascunho } versaoMesa)
                 return Mapear(versaoMesa, "MesaExplicita");
         }
@@ -68,4 +76,11 @@ public sealed class SistemaRpgResolver : ISistemaRpgResolver
         Origem = origem,
         UsaFallbackLegado = false,
     };
+
+    private static bool MesaAcompanhaPublicacaoPadrao(Mesa mesa) =>
+        string.Equals(
+            mesa.CodigoSistema,
+            SystemMesaConstants.CodigoMesaPadrao,
+            StringComparison.OrdinalIgnoreCase) ||
+        (mesa.PadraoSistema && SystemMesaConstants.NomeRepresentaMesaPadrao(mesa.Nome));
 }

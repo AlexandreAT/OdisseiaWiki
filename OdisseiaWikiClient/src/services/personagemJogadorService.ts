@@ -27,6 +27,7 @@ export interface PersonagemJogadorPayload {
   dataCriacao: string;
   statusJson: {
     status: {
+      [codigo: string]: number | undefined;
       vida: number;
       vidaMaxima?: number;
       estamina: number;
@@ -94,6 +95,13 @@ export const atualizarPersonagemJogador = async (
   payload: PersonagemJogadorPayload
 ): Promise<ResultPersonagemJogador> => {
   const response = await api.put(`/PersonagemJogador/${id}`, payload);
+  return response.data;
+};
+
+export const atualizarSistemaPersonagemJogador = async (
+  id: number,
+): Promise<ResultPersonagemJogador> => {
+  const response = await api.post(`/PersonagemJogador/${id}/sistema/atualizar`);
   return response.data;
 };
 

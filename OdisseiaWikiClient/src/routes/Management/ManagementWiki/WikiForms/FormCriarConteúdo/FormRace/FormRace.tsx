@@ -12,6 +12,7 @@ import { RichTextEditor } from '../../../../../../components/Generic/RichTextEdi
 import { DataTable } from '../../../../../../components/Generic/DataTable/DataTable';
 import { ImageGalleryWithCrop } from '../../../../../../components/Generic/ImageGallery/ImageGalleryWithCrop';
 import { EntityEditFloatingActions } from '../../FormBuscarConteúdo/EntityEditFloatingActions';
+import { SystemEntityBinding } from '../../../../../../components/Generic/SystemEntityBinding';
 import { normalizeImagePath } from '../../../../../Wiki/utils/imagePathHelper';
 import { RacaPassiva, RacaVariacao } from '../../../../../../services/racasService';
 import { useFormRace } from './useFormRace';
@@ -78,6 +79,8 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
     variacoesError,
     errors,
     atributoOptions,
+    mechanicsManagedBySystem,
+    sistema,
     setNome,
     setNomeError,
     setDescricao,
@@ -179,10 +182,11 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
     atributoInicial,
     passivas,
     variacoes,
+    sistema: sistema.vinculo,
   }), [
     nome, descricao, imagemUrl, imagemFile, galeriaUrls, galeriaFiles, galeriaCaptions,
     tags, visivel, destaque, vida, estamina, mana, capacidadeCarga, atributoInicial,
-    passivas, variacoes,
+    passivas, variacoes, sistema.vinculo,
   ]);
   const [lastSavedSnapshot, setLastSavedSnapshot] = React.useState(snapshot);
   const isSynced = snapshot === lastSavedSnapshot;
@@ -254,6 +258,8 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
         </HeaderInfo>
       </FormHeader>
 
+      <SystemEntityBinding theme={theme} neon={neon} state={sistema} />
+
       <ImageSection>
         <StatusTitle theme={theme} neon={neon}>Imagem principal</StatusTitle>
         <ImageUploader
@@ -283,11 +289,17 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
 
       <StatusSection theme={theme} neon={neon}>
         <StatusTitle theme={theme} neon={neon}>Status base</StatusTitle>
+        {mechanicsManagedBySystem && (
+          <SectionHelp>
+            A regra mecânica desta raça vem da versão do Sistema e fica somente leitura aqui.{' '}
+            <a href="/management?area=sistema">Abra Sistemas para editar um rascunho e publicar a alteração.</a>
+          </SectionHelp>
+        )}
         <StatusGrid>
-          <InputText theme={theme} neon={neon} label="Vida" type="number" value={vida.toString()} onChange={(event) => setVida(Number(event.target.value))} width="100%" error={!!errors.statusVida} errorMessage={errors.statusVida} required />
-          <InputText theme={theme} neon={neon} label="Estamina" type="number" value={estamina.toString()} onChange={(event) => setEstamina(Number(event.target.value))} width="100%" error={!!errors.statusEstamina} errorMessage={errors.statusEstamina} required />
-          <InputText theme={theme} neon={neon} label="Mana" type="number" value={mana.toString()} onChange={(event) => setMana(Number(event.target.value))} width="100%" error={!!errors.statusMana} errorMessage={errors.statusMana} required />
-          <InputText theme={theme} neon={neon} label="Capacidade de Carga" type="number" value={capacidadeCarga.toString()} onChange={(event) => setCapacidadeCarga(Number(event.target.value))} width="100%" error={!!errors.statusCapacidadeCarga} errorMessage={errors.statusCapacidadeCarga} required />
+          <InputText theme={theme} neon={neon} label="Vida" type="number" value={vida.toString()} onChange={(event) => setVida(Number(event.target.value))} width="100%" error={!!errors.statusVida} errorMessage={errors.statusVida} required disabled={mechanicsManagedBySystem} />
+          <InputText theme={theme} neon={neon} label="Estamina" type="number" value={estamina.toString()} onChange={(event) => setEstamina(Number(event.target.value))} width="100%" error={!!errors.statusEstamina} errorMessage={errors.statusEstamina} required disabled={mechanicsManagedBySystem} />
+          <InputText theme={theme} neon={neon} label="Mana" type="number" value={mana.toString()} onChange={(event) => setMana(Number(event.target.value))} width="100%" error={!!errors.statusMana} errorMessage={errors.statusMana} required disabled={mechanicsManagedBySystem} />
+          <InputText theme={theme} neon={neon} label="Capacidade de Carga" type="number" value={capacidadeCarga.toString()} onChange={(event) => setCapacidadeCarga(Number(event.target.value))} width="100%" error={!!errors.statusCapacidadeCarga} errorMessage={errors.statusCapacidadeCarga} required disabled={mechanicsManagedBySystem} />
         </StatusGrid>
         <Select
           theme={theme}
@@ -300,10 +312,11 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
           error={!!errors.atributoInicial}
           errorMessage={errors.atributoInicial}
           required
+          disabled={mechanicsManagedBySystem}
         />
       </StatusSection>
 
-      <ContentSection>
+      {!mechanicsManagedBySystem && <ContentSection>
         <SectionHeader>
           <StatusTitle theme={theme} neon={neon}>Habilidades passivas</StatusTitle>
           <SectionHelp>Cadastre o nome da habilidade e o efeito concedido por ela.</SectionHelp>
@@ -318,7 +331,7 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
           error={!!passivasError}
           errorMessage={passivasError}
         />
-      </ContentSection>
+      </ContentSection>}
 
       <ContentSection>
         <SectionHeader>

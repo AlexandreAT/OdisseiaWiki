@@ -2,6 +2,7 @@ import { Principais, Secundarios, JSONContent } from './../models/Characters';
 import api from "../axios/api";
 import { ServiceRequestOptions } from './serviceRequestOptions';
 import { GalleryImage } from '../models/GalleryImage';
+import type { SistemaRuntimeContexto, SistemaRuntimeWarning } from '../models/SistemaRpg';
 
 export interface PersonagemPayload {
   idpersonagem: string;
@@ -25,6 +26,10 @@ export interface PersonagemPayload {
   visivel: boolean;
   destaque?: boolean;
   dataCriacao: string;
+  idSistemaRpg?: number | null;
+  idSistemaVersao?: number | null;
+  acompanharPublicacaoAtual?: boolean;
+  sistemaRuntime?: SistemaRuntimeContexto | null;
   statusJson: {
     status: {
       vida: number;
@@ -54,6 +59,8 @@ export interface ResultPersonagem {
   sucesso: boolean;
   mensagemErro?: string;
   personagem?: PersonagemPayload;
+  sistemaRuntime?: SistemaRuntimeContexto | null;
+  warnings?: SistemaRuntimeWarning[];
 }
 
 export interface ResultPersonagens {
@@ -82,6 +89,9 @@ export interface PersonagemCreatePayload {
   tags?: string[];
   visivel: boolean;
   destaque?: boolean;
+  idSistemaRpg?: number | null;
+  idSistemaVersao?: number | null;
+  acompanharPublicacaoAtual?: boolean;
   statusJson?: {
     status: {
       vida: number;
@@ -121,6 +131,9 @@ export interface PersonagemUpdatePayload {
   tags?: string[];
   visivel: boolean;
   destaque?: boolean;
+  idSistemaRpg?: number | null;
+  idSistemaVersao?: number | null;
+  acompanharPublicacaoAtual?: boolean;
   idpassiva?: number;
   ultimate?: string;
   statusJson?: {

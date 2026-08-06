@@ -1,4 +1,5 @@
 import { DadoAcerto } from './Dados';
+import type { SistemaRuntimeContexto } from './SistemaRpg';
 
 export type ItemTipo = "arma" | "traje" | "consumiveis" | "acessorio" | "implante" | "outro";
 
@@ -68,6 +69,10 @@ export interface Item {
   destaque?: boolean;
   dataCriacao?: string;
   idPersonagem?: number;
+  idSistemaRpg?: number | null;
+  idSistemaVersao?: number | null;
+  acompanharPublicacaoAtual?: boolean;
+  sistemaRuntime?: SistemaRuntimeContexto | null;
 }
 
 // ---- Model de Atributos ----

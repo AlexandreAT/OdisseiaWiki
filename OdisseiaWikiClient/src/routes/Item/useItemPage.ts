@@ -4,6 +4,8 @@ import { Item } from '../../models/Itens';
 import { PageDto } from '../../models/Pages';
 import { getItemById } from '../../services/itensService';
 import { getPagesReferencingEntity } from '../../services/pageService';
+import { resolverContextoRuntimeSistemaRpg } from '../../services/sistemasRpgService';
+import { getApiErrorMessage } from '../../utils/apiError';
 import { mapToItem } from '../../utils/mapItem';
 import { loadItemPreview } from '../../utils/itemPreview';
 import { ItemDetailModal, ItemPageModal } from './ItemPage.types';
@@ -26,6 +28,7 @@ export const useItemPage = () => {
   const [relatedPages, setRelatedPages] = useState<PageDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [runtimeError, setRuntimeError] = useState<string | null>(null);
   const [activeModal, setActiveModal] = useState<ItemPageModal>(null);
   const [selectedDetail, setSelectedDetail] = useState<ItemDetailModal | null>(null);
   const [imageOpen, setImageOpen] = useState(false);
@@ -42,16 +45,35 @@ export const useItemPage = () => {
     const load = async () => {
       setLoading(true);
       setError(null);
+      setRuntimeError(null);
       setItem(null);
       setRelatedPages([]);
 
-      const previewItem = loadItemPreview(id);
-      if (previewItem) {
-        setItem(previewItem);
+      const preview = loadItemPreview(id);
+      if (preview) {
+        let resolvedItem = preview.item;
 
-        if (previewItem.idItemBase) {
+        if (preview.runtimeQuery) {
           try {
-            const pagesResult = await getPagesReferencingEntity('Item', previewItem.idItemBase);
+            const runtimeContext = await resolverContextoRuntimeSistemaRpg(preview.runtimeQuery);
+            resolvedItem = { ...resolvedItem, sistemaRuntime: runtimeContext };
+          } catch (runtimeRequestError: unknown) {
+            if (!active) return;
+            setRuntimeError(getApiErrorMessage(
+              runtimeRequestError,
+              'NÃ£o foi possÃ­vel carregar a versÃ£o do Sistema usada por este personagem.',
+            ));
+          }
+        } else if (!resolvedItem.sistemaRuntime) {
+          setRuntimeError('A origem do Sistema deste item nÃ£o foi identificada.');
+        }
+
+        if (!active) return;
+        setItem(resolvedItem);
+
+        if (resolvedItem.idItemBase) {
+          try {
+            const pagesResult = await getPagesReferencingEntity('Item', resolvedItem.idItemBase);
             if (active && pagesResult.sucesso !== false && Array.isArray(pagesResult.pages)) {
               setRelatedPages(
                 pagesResult.pages
@@ -114,6 +136,7 @@ export const useItemPage = () => {
     relatedPages,
     loading,
     error,
+    runtimeError,
     activeModal,
     selectedDetail,
     imageOpen,

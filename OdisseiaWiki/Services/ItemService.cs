@@ -12,40 +12,26 @@ namespace OdisseiaWiki.Services
     {
         private readonly IItemRepository _repository;
         private readonly IAssetService _assetService;
+        private readonly ISistemaRpgResolver _sistemaRpgResolver;
+        private readonly ISistemaEntidadeVinculoService _sistemaEntidadeVinculoService;
 
-        public ItemService(IItemRepository repository, IAssetService assetService)
+        public ItemService(
+            IItemRepository repository,
+            IAssetService assetService,
+            ISistemaRpgResolver sistemaRpgResolver,
+            ISistemaEntidadeVinculoService sistemaEntidadeVinculoService)
         {
             _repository = repository;
             _assetService = assetService;
+            _sistemaRpgResolver = sistemaRpgResolver;
+            _sistemaEntidadeVinculoService = sistemaEntidadeVinculoService;
         }
 
         public async Task<IEnumerable<ItemDto>> GetAllAsync(bool? visivel = null)
         {
             var items = await _repository.GetAllAsync(visivel);
             
-            return items.Select(i => new ItemDto
-            {
-                Iditem = i.Iditem,
-                Nome = i.Nome,
-                Tipo = i.Tipo,
-                Quantidade = i.Quantidade,
-                Peso = i.Peso,
-                Discricao = i.Discricao,
-                Descricao = RichTextHelper.DeserializeRichText(i.Descricao),
-                Efeito = i.Efeito,
-                Imagem = i.Imagem,
-                AtributosJson = !string.IsNullOrWhiteSpace(i.AtributosJson)
-                    ? JsonSerializer.Deserialize<object>(i.AtributosJson)
-                    : null,
-                IditemBase = i.IditemBase,
-                Tags = !string.IsNullOrWhiteSpace(i.Tags)
-                    ? JsonSerializer.Deserialize<List<string>>(i.Tags)
-                    : null,
-                Visivel = i.Visivel,
-                Destaque = i.Destaque,
-                DataCriacao = i.DataCriacao,
-                Idpersonagem = i.Idpersonagem
-            });
+            return items.Select(MapToDto);
         }
 
         public async Task<ItemDto?> GetByIdAsync(string id)
@@ -53,33 +39,27 @@ namespace OdisseiaWiki.Services
             var item = await _repository.GetByIdAsync(id);
             if (item is null) return null;
             
-            return new ItemDto
+            ItemDto dto = MapToDto(item);
+            dto.SistemaRuntime = await _sistemaRpgResolver.ResolverContextoAsync(new SistemaRuntimeConsultaDto
             {
-                Iditem = item.Iditem,
-                Nome = item.Nome,
-                Tipo = item.Tipo,
-                Quantidade = item.Quantidade,
-                Peso = item.Peso,
-                Discricao = item.Discricao,
-                Descricao = RichTextHelper.DeserializeRichText(item.Descricao),
-                Efeito = item.Efeito,
-                Imagem = item.Imagem,
-                AtributosJson = !string.IsNullOrWhiteSpace(item.AtributosJson)
-                    ? JsonSerializer.Deserialize<object>(item.AtributosJson)
-                    : null,
-                IditemBase = item.IditemBase,
-                Tags = !string.IsNullOrWhiteSpace(item.Tags)
-                    ? JsonSerializer.Deserialize<List<string>>(item.Tags)
-                    : null,
-                Visivel = item.Visivel,
-                Destaque = item.Destaque,
-                DataCriacao = item.DataCriacao,
-                Idpersonagem = item.Idpersonagem
-            };
+                TipoEntidade = Enums.SistemaEntidadeGlobalTipo.Item,
+                IdEntidade = item.Iditem,
+            });
+            return dto;
         }
 
-        public async Task<string> CreateAsync(ItemCreateDto dto)
+        public async Task<string> CreateAsync(ItemCreateDto dto) =>
+            (await CreateWithRuntimeAsync(dto)).Id;
+
+        public async Task<ItemSaveResultDto> CreateWithRuntimeAsync(ItemCreateDto dto)
         {
+            SistemaEntidadeVinculoResultado vinculo = await _sistemaEntidadeVinculoService.ValidarAsync(
+                dto.IdSistemaRpg,
+                dto.IdSistemaVersao,
+                dto.AcompanharPublicacaoAtual);
+            if (!vinculo.Sucesso)
+                throw new InvalidOperationException(vinculo.MensagemErro);
+
             var item = new Item
             {
                 Iditem = Guid.NewGuid().ToString(),
@@ -98,18 +78,48 @@ namespace OdisseiaWiki.Services
                 Tags = JsonSerializer.Serialize(ContentCategoryHelper.EnsureCategoryTag(dto.Tags, ContentCategoryHelper.Item)),
                 Visivel = dto.Visivel,
                 Destaque = dto.Destaque,
+                IdSistemaRpg = vinculo.IdSistemaRpg,
+                IdSistemaVersao = vinculo.IdSistemaVersao,
+                AcompanharPublicacaoAtual = vinculo.AcompanharPublicacaoAtual,
                 Idpersonagem = dto.Idpersonagem,
                 DataCriacao = DateTime.UtcNow
             };
 
             await _repository.AddAsync(item);
-            return item.Iditem;
+            ItemDto salvo = MapToDto(item);
+            salvo.SistemaRuntime = await ResolverRuntimeAsync(item);
+            return ItemSaveResultDto.Ok(salvo);
         }
 
-        public async Task<bool> UpdateAsync(ItemUpdateDto dto)
+        public async Task<bool> UpdateAsync(ItemUpdateDto dto) =>
+            await UpdateWithRuntimeAsync(dto) is not null;
+
+        public async Task<ItemSaveResultDto?> UpdateWithRuntimeAsync(ItemUpdateDto dto)
         {
             var item = await _repository.GetByIdAsync(dto.Iditem);
-            if (item is null) return false;
+            if (item is null) return null;
+
+            bool alterarVinculo = dto.AcompanharPublicacaoAtual.HasValue ||
+                dto.IdSistemaRpg.HasValue ||
+                dto.IdSistemaVersao.HasValue;
+            if (alterarVinculo)
+            {
+                bool acompanhar = dto.AcompanharPublicacaoAtual ?? item.AcompanharPublicacaoAtual;
+                SistemaEntidadeVinculoResultado vinculo = await _sistemaEntidadeVinculoService.ValidarAsync(
+                    dto.IdSistemaRpg,
+                    dto.IdSistemaVersao,
+                    acompanhar,
+                    new SistemaEntidadeVinculoExistente(
+                        item.IdSistemaRpg,
+                        item.IdSistemaVersao,
+                        item.AcompanharPublicacaoAtual));
+                if (!vinculo.Sucesso)
+                    throw new InvalidOperationException(vinculo.MensagemErro);
+
+                item.IdSistemaRpg = vinculo.IdSistemaRpg;
+                item.IdSistemaVersao = vinculo.IdSistemaVersao;
+                item.AcompanharPublicacaoAtual = vinculo.AcompanharPublicacaoAtual;
+            }
 
             HashSet<string> oldAssets = AssetReferenceHelper.Extract(
                 item.Imagem, item.Descricao, item.AtributosJson);
@@ -140,7 +150,9 @@ namespace OdisseiaWiki.Services
                 _assetService,
                 oldAssets,
                 AssetReferenceHelper.Extract(item.Imagem, item.Descricao, item.AtributosJson));
-            return true;
+            ItemDto salvo = MapToDto(item);
+            salvo.SistemaRuntime = await ResolverRuntimeAsync(item);
+            return ItemSaveResultDto.Ok(salvo);
         }
 
         public async Task<bool> DeleteAsync(string id)
@@ -159,7 +171,28 @@ namespace OdisseiaWiki.Services
         {
             List<Item> items = await _repository.GetBatchAsync(ids);
 
-            return items.Select(i => new ItemDto
+            return items.Select(MapToDto).ToList();
+        }
+
+        private Task<SistemaRuntimeContextoDto> ResolverRuntimeAsync(Item item) =>
+            _sistemaRpgResolver.ResolverContextoAsync(
+                new SistemaRuntimeConsultaDto
+                {
+                    TipoEntidade = Enums.SistemaEntidadeGlobalTipo.Item,
+                    IdEntidade = item.Iditem,
+                },
+                new SistemaEntidadeGlobalVinculoSnapshot
+                {
+                    TipoEntidade = Enums.SistemaEntidadeGlobalTipo.Item,
+                    IdEntidade = item.Iditem,
+                    IdSistemaRpg = item.IdSistemaRpg,
+                    IdSistemaVersao = item.IdSistemaVersao,
+                    AcompanharPublicacaoAtual = item.AcompanharPublicacaoAtual,
+                    TipoItem = item.Tipo,
+                    EstadoJson = item.AtributosJson,
+                });
+
+        private static ItemDto MapToDto(Item i) => new()
             {
                 Iditem = i.Iditem,
                 Nome = i.Nome,
@@ -179,9 +212,11 @@ namespace OdisseiaWiki.Services
                     : null,
                 Visivel = i.Visivel,
                 Destaque = i.Destaque,
+                IdSistemaRpg = i.IdSistemaRpg,
+                IdSistemaVersao = i.IdSistemaVersao,
+                AcompanharPublicacaoAtual = i.AcompanharPublicacaoAtual,
                 DataCriacao = i.DataCriacao,
                 Idpersonagem = i.Idpersonagem
-            }).ToList();
-        }
+            };
     }
 }

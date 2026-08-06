@@ -5,6 +5,8 @@ using OdisseiaWiki.Repositories.Interfaces;
 using OdisseiaWiki.Services.Interfaces;
 using OdisseiaWiki.Services.Helpers;
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using OdisseiaWiki.Enums;
 
 namespace OdisseiaWiki.Services
 {
@@ -14,17 +16,20 @@ namespace OdisseiaWiki.Services
         private readonly IMesaRepository _mesaRepository;
         private readonly IMesaService _mesaService;
         private readonly IAssetService _assetService;
+        private readonly ISistemaRpgResolver _sistemaResolver;
 
         public PersonagemJogadorService(
             IPersonagemJogadorRepository repository,
             IMesaRepository mesaRepository,
             IMesaService mesaService,
-            IAssetService assetService)
+            IAssetService assetService,
+            ISistemaRpgResolver sistemaResolver)
         {
             _repository = repository;
             _mesaRepository = mesaRepository;
             _mesaService = mesaService;
             _assetService = assetService;
+            _sistemaResolver = sistemaResolver;
         }
 
         public async Task<ResultPersonagemJogador> CreateAsync(PersonagemJogadorDto personagemDto)
@@ -36,49 +41,14 @@ namespace OdisseiaWiki.Services
             if (!validacaoMesa.Sucesso)
                 return ResultFail(validacaoMesa.MensagemErro!);
             personagemDto.Idmesa = validacaoMesa.Idmesa;
-
-            if (personagemDto.StatusJson != null)
-            {
-                var statusString = JsonSerializer.Serialize(personagemDto.StatusJson);
-                var statusElement = JsonSerializer.Deserialize<JsonElement>(statusString);
-                
-                if (statusElement.TryGetProperty("status", out var statusProp))
-                {
-                    var vida = statusProp.TryGetProperty("vida", out var v) ? v.GetInt32() : 0;
-                    var vidaMaxima = statusProp.TryGetProperty("vidaMaxima", out var vm) ? vm.GetInt32() : 0;
-                    var estamina = statusProp.TryGetProperty("estamina", out var e) ? e.GetInt32() : 0;
-                    var estaminaMaxima = statusProp.TryGetProperty("estaminaMaxima", out var em) ? em.GetInt32() : 0;
-                    var mana = statusProp.TryGetProperty("mana", out var m) ? m.GetInt32() : 0;
-                    var manaMaxima = statusProp.TryGetProperty("manaMaxima", out var mm) ? mm.GetInt32() : 0;
-
-                    if (vidaMaxima == 0) vidaMaxima = vida;
-                    if (estaminaMaxima == 0) estaminaMaxima = estamina;
-                    if (manaMaxima == 0) manaMaxima = mana;
-
-                    var statusNormalizado = new
-                    {
-                        status = new
-                        {
-                            vida,
-                            vidaMaxima,
-                            estamina,
-                            estaminaMaxima,
-                            mana,
-                            manaMaxima,
-                            capacidadeCarga = statusProp.GetProperty("capacidadeCarga").GetInt32()
-                        },
-                        atributos = statusElement.GetProperty("atributos"),
-                        nivel = statusElement.GetProperty("nivel").GetInt32(),
-                        xp = statusElement.GetProperty("xp").GetInt32(),
-                        defesas = statusElement.GetProperty("defesas")
-                    };
-
-                    personagemDto.StatusJson = statusNormalizado;
-                }
-            }
+            SistemaRuntimeContextoDto contexto = await ResolverContextoAsync(
+                personagemDto.Idmesa,
+                personagemDto.Idraca);
+            personagemDto.StatusJson = AplicarDefaultsDeCriacao(personagemDto.StatusJson, contexto);
 
             PersonagemJogador personagem = MapDtoToModel(personagemDto);
             personagem.Idcidade = personagem.Idcidade == 0 ? null : personagem.Idcidade;
+            personagem.IdSistemaVersao = contexto.IdSistemaVersao;
 
             PersonagemJogador criado = await _repository.CreateAsync(personagem);
             return ResultOk(criado, "Personagem criado com sucesso.");
@@ -94,6 +64,7 @@ namespace OdisseiaWiki.Services
             var validacaoMesa = await ValidarMesaAsync(personagemDto.Idmesa, idUsuario);
             if (!validacaoMesa.Sucesso)
                 return ResultFail(validacaoMesa.MensagemErro!);
+            bool mesaAlterada = personagem.Idmesa != validacaoMesa.Idmesa;
             personagemDto.Idmesa = validacaoMesa.Idmesa;
             personagemDto.Idusuario = idUsuario;
 
@@ -101,6 +72,13 @@ namespace OdisseiaWiki.Services
 
             personagem = MapDtoToModel(personagemDto, personagem);
             personagem.Idcidade = personagem.Idcidade == 0 ? null : personagem.Idcidade;
+            if (mesaAlterada)
+            {
+                SistemaRuntimeContextoDto novoContexto = await ResolverContextoAsync(
+                    personagem.Idmesa,
+                    personagem.Idraca);
+                personagem.IdSistemaVersao = novoContexto.IdSistemaVersao;
+            }
 
             PersonagemJogador atualizado = await _repository.UpdateAsync(personagem);
             await AssetReferenceHelper.DeleteRemovedAsync(
@@ -137,9 +115,12 @@ namespace OdisseiaWiki.Services
             Dictionary<int, List<Proficiencia>> proficiencias =
                 await _repository.GetProficienciasByPersonagemIdsAsync(new[] { id });
 
+            SistemaRuntimeContextoDto contexto = await ResolverContextoPersonagemAsync(personagem);
+            contexto = PrepararContextoDaFicha(personagem, contexto) ?? contexto;
             return MapToDto(
                 personagem,
-                proficiencias.GetValueOrDefault(id) ?? new List<Proficiencia>());
+                proficiencias.GetValueOrDefault(id) ?? new List<Proficiencia>(),
+                contexto);
         }
 
         public async Task<bool> DeleteAsync(int id)
@@ -153,6 +134,30 @@ namespace OdisseiaWiki.Services
             if (deleted)
                 await AssetReferenceHelper.DeleteAllAsync(_assetService, assets);
             return deleted;
+        }
+
+        public async Task<ResultPersonagemJogador> AtualizarSistemaAsync(int id)
+        {
+            PersonagemJogador? personagem = await _repository.GetByIdAsync(id);
+            if (personagem is null)
+                return ResultFail($"PersonagemJogador com id {id} não encontrado.");
+
+            SistemaRuntimeContextoDto contextoMesa = await ResolverContextoAsync(
+                personagem.Idmesa,
+                personagem.Idraca);
+            // Um fallback pontual (por exemplo, uma raça ainda sem configuração
+            // mecânica na versão) não invalida a publicação resolvida da Mesa.
+            if (!contextoMesa.IdSistemaVersao.HasValue)
+                return ResultFail("A Mesa não possui uma versão válida publicada para atualizar esta ficha.");
+
+            if (personagem.IdSistemaVersao == contextoMesa.IdSistemaVersao)
+                return ResultOk(personagem, "O personagem já utiliza a versão atual da Mesa.");
+
+            personagem.IdSistemaVersao = contextoMesa.IdSistemaVersao;
+            PersonagemJogador atualizado = await _repository.UpdateAsync(personagem);
+            return ResultOk(
+                atualizado,
+                $"Sistema do personagem atualizado manualmente para a versão {contextoMesa.NumeroVersao}. Os valores salvos da ficha foram preservados.");
         }
 
         public async Task<int> DeleteManyAsync(IReadOnlyCollection<int> ids)
@@ -269,20 +274,29 @@ namespace OdisseiaWiki.Services
                 await _repository.GetProficienciasByPersonagemIdsAsync(
                     personagens.Select(personagem => personagem.IdpersonagemJogador));
 
+            Dictionary<int, SistemaRuntimeContextoDto> contextos = new();
+            foreach (PersonagemJogador personagem in personagens)
+                contextos[personagem.IdpersonagemJogador] = await ResolverContextoPersonagemAsync(personagem);
+
             return personagens
                 .Select(personagem => MapToDto(
                     personagem,
-                    proficiencias.GetValueOrDefault(personagem.IdpersonagemJogador) ?? new List<Proficiencia>()))
+                    proficiencias.GetValueOrDefault(personagem.IdpersonagemJogador) ?? new List<Proficiencia>(),
+                    PrepararContextoDaFicha(
+                        personagem,
+                        contextos.GetValueOrDefault(personagem.IdpersonagemJogador))))
                 .ToList();
         }
 
         private static PersonagemJogadorDto MapToDto(
             PersonagemJogador personagem,
-            IReadOnlyCollection<Proficiencia>? proficiencias = null) => new()
+            IReadOnlyCollection<Proficiencia>? proficiencias = null,
+            SistemaRuntimeContextoDto? sistemaRuntime = null) => new()
         {
             IdpersonagemJogador = personagem.IdpersonagemJogador,
             Idusuario = personagem.Idusuario,
             Idmesa = personagem.Idmesa,
+            IdSistemaVersao = personagem.IdSistemaVersao,
             Idraca = personagem.Idraca,
             Idcidade = personagem.Idcidade,
             Nome = personagem.Nome,
@@ -307,6 +321,7 @@ namespace OdisseiaWiki.Services
             CidadeNome = personagem.IdcidadeNavigation?.Nome,
             MesaNome = personagem.Mesa?.Nome,
             AutorNome = personagem.Usuario?.Nome ?? personagem.Usuario?.Nickname,
+            SistemaRuntime = sistemaRuntime,
             Proficiencias = proficiencias?
                 .Select(proficiencia => new ProficienciaResumoDto
                 {
@@ -316,6 +331,268 @@ namespace OdisseiaWiki.Services
                 })
                 .ToList() ?? new List<ProficienciaResumoDto>(),
         };
+
+        private Task<SistemaRuntimeContextoDto> ResolverContextoAsync(int idMesa, int idRaca) =>
+            _sistemaResolver.ResolverContextoAsync(new SistemaRuntimeConsultaDto
+            {
+                IdMesa = idMesa,
+                IdRaca = idRaca > 0 ? idRaca : null,
+            });
+
+        private Task<SistemaRuntimeContextoDto> ResolverContextoPersonagemAsync(
+            PersonagemJogador personagem) =>
+            _sistemaResolver.ResolverContextoAsync(new SistemaRuntimeConsultaDto
+            {
+                IdPersonagemJogador = personagem.IdpersonagemJogador,
+                IdRaca = personagem.Idraca > 0 ? personagem.Idraca : null,
+            });
+
+        private static SistemaRuntimeContextoDto? PrepararContextoDaFicha(
+            PersonagemJogador personagem,
+            SistemaRuntimeContextoDto? contextoBase)
+        {
+            if (contextoBase is null)
+                return null;
+
+            SistemaRuntimeContextoDto contexto = JsonSerializer.Deserialize<SistemaRuntimeContextoDto>(
+                JsonSerializer.Serialize(contextoBase)) ?? contextoBase;
+            JsonObject status = ParseStoredObject(personagem.StatusJson);
+
+            int nivel = LerInteiro(status["nivel"]);
+            int nivelMaximo = contexto.Progressao?.NivelMaximo ?? 0;
+            if (nivelMaximo > 0 && nivel > nivelMaximo)
+            {
+                AdicionarWarningExplicito(
+                    contexto,
+                    "statusJson.nivel",
+                    nivel,
+                    nivelMaximo,
+                    "O nível salvo está acima da referência da versão efetiva e foi preservado.");
+            }
+
+            JsonObject recursos = status["status"] as JsonObject ?? new JsonObject();
+            SistemaRacaConfigDto? raca = contexto.ConfiguracaoRacial;
+            if (raca is not null)
+            {
+                CompararDefaultRacial(contexto, recursos, "vidaMaxima", raca.VidaBase);
+                CompararDefaultRacial(contexto, recursos, "estaminaMaxima", raca.EstaminaBase);
+                CompararDefaultRacial(contexto, recursos, "manaMaxima", raca.ManaBase);
+                CompararDefaultRacial(contexto, recursos, "capacidadeCarga", raca.CapacidadeCargaBase);
+            }
+
+            int skills = ContarItensJson(personagem.Skills);
+            int limiteSkills = contexto.Poderes?.SkillConfig?.MaximoSkills ?? 0;
+            if (limiteSkills > 0 && skills > limiteSkills)
+            {
+                AdicionarWarningExplicito(
+                    contexto,
+                    "skills",
+                    skills,
+                    limiteSkills,
+                    "A ficha possui mais skills que o limite da versão efetiva; as escolhas foram preservadas.");
+            }
+
+            int magias = ContarItensJson(personagem.Magia);
+            int limiteMagias = contexto.Poderes?.LimiteMagias ?? 0;
+            if (limiteMagias <= 0)
+            {
+                limiteMagias = contexto.Poderes?.SkillConfig?.MaximoMagias ?? 0;
+            }
+            if (limiteMagias > 0 && magias > limiteMagias)
+            {
+                AdicionarWarningExplicito(
+                    contexto,
+                    "magias",
+                    magias,
+                    limiteMagias,
+                    "A ficha possui mais magias que o limite da versão efetiva; as escolhas foram preservadas.");
+            }
+
+            return contexto;
+        }
+
+        private static void CompararDefaultRacial(
+            SistemaRuntimeContextoDto contexto,
+            JsonObject recursos,
+            string campo,
+            int referencia)
+        {
+            int valor = LerInteiro(recursos[campo]);
+            if (referencia <= 0 || valor <= 0 || valor == referencia)
+                return;
+
+            AdicionarWarningExplicito(
+                contexto,
+                $"statusJson.status.{campo}",
+                valor,
+                referencia,
+                "O valor salvo difere do default racial atual e foi preservado.");
+        }
+
+        private static void AdicionarWarningExplicito(
+            SistemaRuntimeContextoDto contexto,
+            string caminho,
+            decimal valor,
+            decimal referencia,
+            string mensagem)
+        {
+            contexto.Warnings.Add(new SistemaRuntimeWarningDto
+            {
+                Codigo = SistemaRuntimeWarningCodigo.ValorForaReferencia,
+                Caminho = caminho,
+                Mensagem = mensagem,
+                ValorInformado = valor,
+                ValorMaximoReferencia = referencia,
+                Referencia = referencia.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            });
+            contexto.Proveniencias.Add(new SistemaRuntimeProvenienciaDto
+            {
+                Caminho = caminho,
+                Origem = SistemaValorProveniencia.ValorExplicitoEntidade,
+                Detalhe = "Valor persistido na ficha",
+            });
+        }
+
+        private static JsonObject ParseStoredObject(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return new JsonObject();
+
+            try
+            {
+                return JsonNode.Parse(value) as JsonObject ?? new JsonObject();
+            }
+            catch (JsonException)
+            {
+                return new JsonObject();
+            }
+        }
+
+        private static int ContarItensJson(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return 0;
+
+            try
+            {
+                return JsonNode.Parse(value) is JsonArray array ? array.Count : 0;
+            }
+            catch (JsonException)
+            {
+                return 0;
+            }
+        }
+
+        private static object AplicarDefaultsDeCriacao(
+            object? statusJson,
+            SistemaRuntimeContextoDto contexto)
+        {
+            JsonObject raiz = ParseObject(statusJson);
+            JsonObject status = GetOrCreateObject(raiz, "status");
+            SistemaRacaConfigDto? raca = contexto.ConfiguracaoRacial;
+
+            AplicarRecurso(status, "vida", "vidaMaxima", raca?.VidaBase);
+            AplicarRecurso(status, "estamina", "estaminaMaxima", raca?.EstaminaBase);
+            AplicarRecurso(status, "mana", "manaMaxima", raca?.ManaBase);
+            SetDefaultNumber(status, "capacidadeCarga", raca?.CapacidadeCargaBase);
+
+            SetDefaultNumber(raiz, "nivel", contexto.Criacao?.NivelInicial ?? 1);
+            SetDefaultNumber(raiz, "xp", 0, substituirZero: false);
+            SetDefaultNumber(raiz, "pontos", contexto.Criacao?.PontosIniciais ?? 0, substituirZero: false);
+
+            JsonObject atributos = GetOrCreateObject(raiz, "atributos");
+            foreach (SistemaAtributoConfigDto atributo in contexto.Criacao?.Atributos
+                .Where(item => item.Ativo)
+                .OrderBy(item => item.Ordem) ?? Enumerable.Empty<SistemaAtributoConfigDto>())
+            {
+                string grupo = atributo.Grupo switch
+                {
+                    SistemaAtributoGrupo.Principal => "principais",
+                    SistemaAtributoGrupo.Secundario => "secundarios",
+                    SistemaAtributoGrupo.Defesa => "defesas",
+                    _ => "outros",
+                };
+                SetDefaultNumber(
+                    GetOrCreateObject(atributos, grupo),
+                    atributo.Codigo,
+                    atributo.ValorComum);
+            }
+
+            JsonObject defesas = GetOrCreateObject(raiz, "defesas");
+            foreach (SistemaTipoDefesaDto defesa in contexto.Combate?.TiposDefesa
+                .OrderBy(item => item.Ordem) ?? Enumerable.Empty<SistemaTipoDefesaDto>())
+            {
+                SetDefaultNumber(defesas, defesa.Codigo, 0, substituirZero: false);
+            }
+
+            return JsonSerializer.Deserialize<object>(raiz.ToJsonString())!;
+        }
+
+        private static JsonObject ParseObject(object? value)
+        {
+            if (value is null)
+                return new JsonObject();
+
+            try
+            {
+                return JsonNode.Parse(JsonSerializer.Serialize(value)) as JsonObject ?? new JsonObject();
+            }
+            catch (JsonException)
+            {
+                return new JsonObject();
+            }
+        }
+
+        private static JsonObject GetOrCreateObject(JsonObject parent, string propertyName)
+        {
+            if (parent[propertyName] is JsonObject existing)
+                return existing;
+
+            JsonObject created = new();
+            parent[propertyName] = created;
+            return created;
+        }
+
+        private static void AplicarRecurso(
+            JsonObject status,
+            string atual,
+            string maximo,
+            int? valorRacial)
+        {
+            int referencia = valorRacial.GetValueOrDefault();
+            int valorMaximo = LerInteiro(status[maximo]);
+            int valorAtual = LerInteiro(status[atual]);
+
+            if (valorMaximo <= 0)
+                valorMaximo = valorAtual > 0 ? valorAtual : referencia;
+            if (valorAtual <= 0)
+                valorAtual = valorMaximo > 0 ? valorMaximo : referencia;
+
+            status[maximo] = valorMaximo;
+            status[atual] = valorAtual;
+        }
+
+        private static void SetDefaultNumber(
+            JsonObject parent,
+            string propertyName,
+            int? defaultValue,
+            bool substituirZero = true)
+        {
+            if (!defaultValue.HasValue)
+                return;
+
+            JsonNode? current = parent[propertyName];
+            if (current is null || (substituirZero && LerInteiro(current) == 0))
+                parent[propertyName] = defaultValue.Value;
+        }
+
+        private static int LerInteiro(JsonNode? value)
+        {
+            if (value is JsonValue jsonValue && jsonValue.TryGetValue(out int integer))
+                return integer;
+
+            return 0;
+        }
 
         private static T? Deserialize<T>(string? value)
         {

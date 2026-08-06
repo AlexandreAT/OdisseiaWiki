@@ -447,6 +447,235 @@ export interface SistemaResolverResult {
   usaFallbackLegado: boolean;
 }
 
+export type SistemaRuntimeOrigem =
+  | 'Mesa'
+  | 'VersaoFixadaPersonagemJogador'
+  | 'VersaoFixadaEntidade'
+  | 'PublicacaoAtualEntidade'
+  | 'SistemaPadrao'
+  | 'FallbackLegado';
+
+export type SistemaEntidadeGlobalTipo = 'Npc' | 'Raca' | 'Item';
+
+export type SistemaValorProveniencia =
+  | 'Sistema'
+  | 'OverrideMesa'
+  | 'ValorExplicitoEntidade'
+  | 'FallbackLegado';
+
+export interface SistemaRuntimeConsulta {
+  idMesa?: number;
+  idPersonagemJogador?: number;
+  tipoEntidade?: SistemaEntidadeGlobalTipo;
+  idEntidade?: string;
+  idRaca?: number;
+  codigoTipoItem?: string;
+  codigoCategoriaItem?: string;
+  codigoArquetipoItem?: string;
+}
+
+export interface SistemaRuntimeVinculoEntidade {
+  tipoEntidade: SistemaEntidadeGlobalTipo;
+  idEntidade: string;
+  idSistemaRpg?: number | null;
+  idSistemaVersao?: number | null;
+  acompanharPublicacaoAtual: boolean;
+}
+
+export interface SistemaRuntimeProveniencia {
+  caminho: string;
+  origem: SistemaValorProveniencia;
+  detalhe?: string | null;
+}
+
+export interface SistemaRuntimeWarning {
+  codigo: string;
+  mensagem: string;
+  caminho?: string | null;
+  valorInformado?: number | null;
+  valorMinimoReferencia?: number | null;
+  valorMaximoReferencia?: number | null;
+  referencia?: string | null;
+}
+
+export interface SistemaRuntimeFallback {
+  caminho: string;
+  motivo: string;
+  origem: SistemaValorProveniencia;
+}
+
+export interface SistemaItemCampoRuntime {
+  idSistemaItemCampo: number;
+  codigo: string;
+  nome: string;
+  tipo: 'Texto' | 'Inteiro' | 'Decimal' | 'Booleano' | 'Codigo' | 'Lista' | string;
+  unidade?: string | null;
+  obrigatorio: boolean;
+  descricao?: string | null;
+  ordem: number;
+  codigoCaminhoOrigem?: string | null;
+}
+
+export interface SistemaItemFaixaRuntime {
+  idSistemaItemFaixa: number;
+  codigoCampo: string;
+  nome: string;
+  valorMinimo?: number | null;
+  valorMaximo?: number | null;
+  valorReferencia?: number | null;
+  unidade?: string | null;
+  descricao?: string | null;
+  ordem: number;
+  codigoCaminhoOrigem?: string | null;
+}
+
+export interface SistemaItemReferenciaRuntime {
+  idSistemaItemReferencia: number;
+  tipo: string;
+  codigo: string;
+  nome: string;
+  valor?: string | null;
+  descricao?: string | null;
+  ordem: number;
+  codigoCaminhoOrigem?: string | null;
+}
+
+export interface SistemaItemEscopoRuntime {
+  idSistemaItemEscopo: number;
+  idEscopoPai?: number | null;
+  nivel: 'Tipo' | 'Categoria' | 'Arquetipo' | string;
+  codigo: string;
+  codigoCaminho: string;
+  nome: string;
+  descricao?: string | null;
+  ordem: number;
+  ativo: boolean;
+  campos: SistemaItemCampoRuntime[];
+  faixas: SistemaItemFaixaRuntime[];
+  referencias: SistemaItemReferenciaRuntime[];
+  filhos: SistemaItemEscopoRuntime[];
+}
+
+/** Catálogo mecânico versionado de itens usado tanto no runtime quanto no editor administrativo. */
+export interface SistemaItensConfig {
+  tipos: SistemaItemEscopoRuntime[];
+}
+
+export interface SistemaItemReferenciaEfetivaRuntime {
+  codigoTipo?: string | null;
+  codigoCategoria?: string | null;
+  codigoArquetipo?: string | null;
+  codigoCaminho?: string | null;
+  completa: boolean;
+  campos: SistemaItemCampoRuntime[];
+  faixas: SistemaItemFaixaRuntime[];
+  referencias: SistemaItemReferenciaRuntime[];
+}
+
+export interface SistemaRuntimeContexto {
+  idSistemaRpg?: number | null;
+  idSistemaVersao?: number | null;
+  codigoSistema: string;
+  nomeSistema?: string | null;
+  numeroVersao: string;
+  statusVersao?: SistemaVersaoStatus | null;
+  origem: SistemaRuntimeOrigem;
+  idMesa?: number | null;
+  idPersonagemJogador?: number | null;
+  entidade?: SistemaRuntimeVinculoEntidade | null;
+  acompanhaPublicacaoAtual: boolean;
+  idVersaoFixada?: number | null;
+  atualizacaoDisponivel?: boolean;
+  idVersaoDisponivel?: number | null;
+  numeroVersaoDisponivel?: string | null;
+  usaFallbackLegado: boolean;
+  configuracaoGeral?: ConfiguracaoGeralSistema | null;
+  criacao?: ConfiguracaoCriacaoSistema | null;
+  progressao?: ConfiguracaoProgressaoSistema | null;
+  exploracao?: ConfiguracaoExploracaoSistema | null;
+  combate?: ConfiguracaoCombateSistema | null;
+  poderes?: ConfiguracaoPoderesSistema | null;
+  sobrevivencia?: ConfiguracaoSobrevivenciaSistema | null;
+  configuracaoRacial?: SistemaRacaConfig | null;
+  itens: SistemaItensConfig;
+  referenciaItem?: SistemaItemReferenciaEfetivaRuntime | null;
+  proveniencias: SistemaRuntimeProveniencia[];
+  warnings: SistemaRuntimeWarning[];
+  fallbacks: SistemaRuntimeFallback[];
+}
+
+export type SistemaPatchAlteracaoTipo = 'Adicionado' | 'Removido' | 'Alterado';
+export type SistemaPatchImpacto = 'Baixo' | 'Medio' | 'Alto' | 'Critico';
+export type SistemaMigracaoAvisoNivel = 'Informacao' | 'Atencao' | 'Bloqueio';
+
+export interface SistemaPatchAlteracao {
+  modulo: string;
+  entidade: string;
+  identidade?: string | null;
+  campo: string;
+  valorAnterior?: unknown;
+  valorNovo?: unknown;
+  tipo: SistemaPatchAlteracaoTipo;
+  impacto: SistemaPatchImpacto;
+  descricao: string;
+}
+
+export interface SistemaPatchGrupo {
+  modulo: string;
+  titulo: string;
+  impacto: SistemaPatchImpacto;
+  alteracoes: SistemaPatchAlteracao[];
+}
+
+export interface SistemaPatchNote {
+  idSistemaPatchNote: number;
+  idSistemaRpg: number;
+  codigoSistema: string;
+  nomeSistema: string;
+  idVersaoAnterior?: number | null;
+  numeroVersaoAnterior?: string | null;
+  idSistemaVersao: number;
+  numeroVersaoNova: string;
+  dataGeracao: string;
+  titulo: string;
+  resumo: string;
+  versaoInicial: boolean;
+  grupos: SistemaPatchGrupo[];
+}
+
+export interface SistemaMigracaoAviso {
+  codigo: string;
+  nivel: SistemaMigracaoAvisoNivel;
+  categoria: string;
+  mensagem: string;
+  entidade?: string | null;
+  identidade?: string | null;
+  quantidade: number;
+}
+
+export interface SistemaMigracaoResumoMesa {
+  quantidadePersonagens: number;
+  quantidadeOverrides: number;
+  quantidadeItensInventario: number;
+  quantidadeAvisos: number;
+  quantidadeBloqueios: number;
+}
+
+export interface MesaMigracaoPreview {
+  idMesa: number;
+  nomeMesa: string;
+  idSistemaVersaoOrigem?: number | null;
+  numeroVersaoOrigem: string;
+  idSistemaVersaoDestino: number;
+  numeroVersaoDestino: string;
+  requerConfirmacaoExplicita: boolean;
+  alteraSomenteVersaoDaMesa: boolean;
+  valoresPreservados: string[];
+  comparacao: SistemaPatchNote;
+  avisos: SistemaMigracaoAviso[];
+  resumoMesa: SistemaMigracaoResumoMesa;
+}
+
 export const SISTEMA_MODULO_ENDPOINTS: Record<SistemaModuloKey, SistemaModuloEndpoint> = {
   geral: 'configuracao-geral',
   criacao: 'criacao',

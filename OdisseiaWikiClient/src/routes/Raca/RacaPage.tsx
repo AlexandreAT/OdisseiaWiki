@@ -17,6 +17,7 @@ import rollingEnergy from '../../assets/svg/rolling-energy.svg';
 import { ListModal } from '../../components/Generic/ListModal';
 import { Modal } from '../../components/Generic/Modal/Modal';
 import { OdisseiaAnimatedTitle } from '../../components/Generic/OdisseiaAnimatedTitle';
+import { SystemRuntimeIndicator } from '../../components/Generic/SystemRuntimeIndicator/SystemRuntimeIndicator';
 import { RichTextDisplay } from '../../components/Generic/RichTextDisplay/RichTextDisplay';
 import { PersonagemPayload } from '../../services/personagensService';
 import { RacaPassiva, RacaVariacao } from '../../services/racasService';
@@ -315,6 +316,7 @@ const RacaPage = () => {
                     {visibleTags.map((tag) => <RaceTag key={tag}>{tag}</RaceTag>)}
                   </RaceTagList>
                 )}
+                <SystemRuntimeIndicator contexto={race.sistemaRuntime} />
                 <DescriptionButton
                   type="button"
                   $clickable={hasDescription}

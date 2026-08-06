@@ -17,4 +17,5 @@ export interface ModuleFormProps<K extends SistemaModuloKey> {
   theme: 'dark' | 'light';
   neon: 'on' | 'off';
   raceOptions?: RaceOption[];
+  systemCode?: string;
 }

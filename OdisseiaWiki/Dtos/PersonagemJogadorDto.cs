@@ -12,6 +12,7 @@ namespace OdisseiaWiki.Dtos
         public int? Idcidade { get; set; }
         public int Idmesa { get; set; }
         public int Idusuario { get; set; }
+        public int? IdSistemaVersao { get; set; }
         public string? Alinhamento { get; set; }
         public JsonElement? Historia { get; set; }
         public string? Imagem { get; set; }
@@ -34,6 +35,7 @@ namespace OdisseiaWiki.Dtos
         public string? MesaNome { get; set; }
         public string? AutorNome { get; set; }
         public List<ProficienciaResumoDto> Proficiencias { get; set; } = new();
+        public SistemaRuntimeContextoDto? SistemaRuntime { get; set; }
     }
 
     public class ProficienciaResumoDto

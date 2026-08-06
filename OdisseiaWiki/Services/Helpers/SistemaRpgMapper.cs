@@ -1,11 +1,17 @@
 using OdisseiaWiki.Dtos;
 using OdisseiaWiki.Enums;
 using OdisseiaWiki.Models;
+using System.Text.Json;
 
 namespace OdisseiaWiki.Services.Helpers;
 
 internal static class SistemaRpgMapper
 {
+    private static readonly JsonSerializerOptions RaceJsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+    };
+
     public static SistemaRpgResumoDto ToResumo(SistemaRpg entity, int quantidadeMesas = 0) => new()
     {
         IdSistemaRpg = entity.IdSistemaRpg,
@@ -78,6 +84,57 @@ internal static class SistemaRpgMapper
             Racas = entity.Racas.OrderBy(r => r.Ordem).Select(ToRaca).ToList(),
             Atributos = entity.Atributos.OrderBy(a => a.Ordem).Select(ToAtributo).ToList(),
             Recursos = entity.Recursos.OrderBy(r => r.Ordem).Select(ToRecurso).ToList(),
+        };
+    }
+
+    public static SistemaRacaConfigDto FromWikiRace(Raca race, int order = 1)
+    {
+        RacaStatusDto? status = null;
+        if (!string.IsNullOrWhiteSpace(race.StatusJson))
+        {
+            try
+            {
+                status = JsonSerializer.Deserialize<RacaStatusDto>(race.StatusJson, RaceJsonOptions);
+            }
+            catch (JsonException)
+            {
+                // A entidade continua sendo a fonte oficial. Dados inválidos ficam
+                // zerados para serem corrigidos no formulário da própria raça.
+            }
+        }
+
+        StatusBaseDto resources = status?.status ?? new StatusBaseDto();
+        return new SistemaRacaConfigDto
+        {
+            IdRaca = race.Idraca,
+            CodigoRaca = SistemaRpgConfiguration.NormalizarCodigo(null, race.Nome),
+            NomeRaca = race.Nome,
+            Jogavel = true,
+            VidaBase = resources.vidaMaxima > 0 ? resources.vidaMaxima : resources.vida,
+            EstaminaBase = resources.estaminaMaxima > 0 ? resources.estaminaMaxima : resources.estamina,
+            ManaBase = resources.manaMaxima > 0 ? resources.manaMaxima : resources.mana,
+            CapacidadeCargaBase = resources.capacidadeCarga,
+            CodigoAtributoInicial = string.IsNullOrWhiteSpace(status?.atributoInicial)
+                ? null
+                : SistemaRpgConfiguration.NormalizarCodigo(null, status.atributoInicial),
+            Passivas = status?.passivas is { Count: > 0 }
+                ? string.Join("\n", status.passivas.Select(passiva =>
+                    string.IsNullOrWhiteSpace(passiva.Efeito)
+                        ? passiva.Nome
+                        : $"{passiva.Nome}: {passiva.Efeito}"))
+                : null,
+            NivelDesbloqueio = 1,
+            Ordem = order,
+            PassivasVinculadas = status?.passivas?
+                .Where(passiva => !string.IsNullOrWhiteSpace(passiva.Nome))
+                .Select((passiva, index) => new SistemaRacaPassivaDto
+                {
+                    CodigoPassiva = SistemaRpgConfiguration.NormalizarCodigo(null, passiva.Nome!),
+                    NomeExibicao = passiva.Nome!.Trim(),
+                    Ordem = index + 1,
+                    NivelDesbloqueio = 1,
+                })
+                .ToList() ?? new List<SistemaRacaPassivaDto>(),
         };
     }
 
@@ -330,6 +387,97 @@ internal static class SistemaRpgMapper
             },
         };
     }
+
+    public static SistemaItensConfigDto ToItens(SistemaVersao entity, bool incluirInativos = false)
+    {
+        List<SistemaItemEscopo> escopos = entity.ItemEscopos
+            .Where(item => incluirInativos || item.Ativo)
+            .OrderBy(item => item.Ordem)
+            .ThenBy(item => item.Nome)
+            .ToList();
+        Dictionary<int, List<SistemaItemEscopo>> porPai = escopos
+            .Where(item => item.IdEscopoPai.HasValue)
+            .GroupBy(item => item.IdEscopoPai!.Value)
+            .ToDictionary(group => group.Key, group => group.ToList());
+
+        return new SistemaItensConfigDto
+        {
+            Tipos = escopos
+                .Where(item => item.Nivel == SistemaItemEscopoNivel.Tipo && item.IdEscopoPai is null)
+                .Select(item => ToItemEscopo(item, porPai, new HashSet<int>()))
+                .ToList(),
+        };
+    }
+
+    private static SistemaItemEscopoDto ToItemEscopo(
+        SistemaItemEscopo item,
+        IReadOnlyDictionary<int, List<SistemaItemEscopo>> porPai,
+        HashSet<int> visitados)
+    {
+        if (!visitados.Add(item.IdSistemaItemEscopo))
+            return ToItemEscopoSemFilhos(item);
+
+        SistemaItemEscopoDto dto = ToItemEscopoSemFilhos(item);
+        if (porPai.TryGetValue(item.IdSistemaItemEscopo, out List<SistemaItemEscopo>? filhos))
+        {
+            dto.Filhos = filhos
+                .OrderBy(filho => filho.Ordem)
+                .ThenBy(filho => filho.Nome)
+                .Select(filho => ToItemEscopo(filho, porPai, new HashSet<int>(visitados)))
+                .ToList();
+        }
+
+        return dto;
+    }
+
+    private static SistemaItemEscopoDto ToItemEscopoSemFilhos(SistemaItemEscopo item) => new()
+    {
+        IdSistemaItemEscopo = item.IdSistemaItemEscopo,
+        IdEscopoPai = item.IdEscopoPai,
+        Nivel = item.Nivel,
+        Codigo = item.Codigo,
+        CodigoCaminho = item.CodigoCaminho,
+        Nome = item.Nome,
+        Descricao = item.Descricao,
+        Ordem = item.Ordem,
+        Ativo = item.Ativo,
+        Campos = item.Campos.OrderBy(campo => campo.Ordem).Select(campo => new SistemaItemCampoDto
+        {
+            IdSistemaItemCampo = campo.IdSistemaItemCampo,
+            Codigo = campo.Codigo,
+            Nome = campo.Nome,
+            Tipo = campo.Tipo,
+            Unidade = campo.Unidade,
+            Obrigatorio = campo.Obrigatorio,
+            Descricao = campo.Descricao,
+            Ordem = campo.Ordem,
+            CodigoCaminhoOrigem = item.CodigoCaminho,
+        }).ToList(),
+        Faixas = item.Faixas.OrderBy(faixa => faixa.Ordem).Select(faixa => new SistemaItemFaixaDto
+        {
+            IdSistemaItemFaixa = faixa.IdSistemaItemFaixa,
+            CodigoCampo = faixa.CodigoCampo,
+            Nome = faixa.Nome,
+            ValorMinimo = faixa.ValorMinimo,
+            ValorMaximo = faixa.ValorMaximo,
+            ValorReferencia = faixa.ValorReferencia,
+            Unidade = faixa.Unidade,
+            Descricao = faixa.Descricao,
+            Ordem = faixa.Ordem,
+            CodigoCaminhoOrigem = item.CodigoCaminho,
+        }).ToList(),
+        Referencias = item.Referencias.OrderBy(referencia => referencia.Ordem).Select(referencia => new SistemaItemReferenciaDto
+        {
+            IdSistemaItemReferencia = referencia.IdSistemaItemReferencia,
+            Tipo = referencia.Tipo,
+            Codigo = referencia.Codigo,
+            Nome = referencia.Nome,
+            Valor = referencia.Valor,
+            Descricao = referencia.Descricao,
+            Ordem = referencia.Ordem,
+            CodigoCaminhoOrigem = item.CodigoCaminho,
+        }).ToList(),
+    };
 
     private static SistemaRacaConfigDto ToRaca(SistemaRacaConfig r)
     {

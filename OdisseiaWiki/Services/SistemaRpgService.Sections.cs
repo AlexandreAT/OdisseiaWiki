@@ -53,10 +53,22 @@ public sealed partial class SistemaRpgService
         return SistemaOperacaoResultado<SistemaConfiguracaoGeralDto>.Ok(SistemaRpgMapper.ToGeral(versao));
     }
 
-    public Task<SistemaOperacaoResultado<SistemaCriacaoConfigDto>> ObterCriacaoAsync(
+    public async Task<SistemaOperacaoResultado<SistemaCriacaoConfigDto>> ObterCriacaoAsync(
         int idSistemaVersao,
-        bool incluirRascunhos = false) =>
-        ObterSecaoAsync(idSistemaVersao, incluirRascunhos, SistemaRpgMapper.ToCriacao);
+        bool incluirRascunhos = false)
+    {
+        SistemaVersao? versao = await _repository.GetVersionAsync(
+            idSistemaVersao,
+            includeConfiguration: true);
+        if (versao is null || (versao.Status == SistemaVersaoStatus.Rascunho && !incluirRascunhos))
+            return NaoEncontrado<SistemaCriacaoConfigDto>("Versão do sistema não encontrada.");
+
+        SistemaCriacaoConfigDto dto = SistemaRpgMapper.ToCriacao(versao);
+        if (EhSistemaPadrao(versao))
+            dto.Racas = await ObterRacasOficiaisDaWikiAsync();
+
+        return SistemaOperacaoResultado<SistemaCriacaoConfigDto>.Ok(dto);
+    }
 
     public async Task<SistemaOperacaoResultado<SistemaCriacaoConfigDto>> AtualizarCriacaoAsync(
         int idSistemaVersao,
@@ -65,11 +77,14 @@ public sealed partial class SistemaRpgService
         SistemaOperacaoResultado<SistemaVersao> lookup = await ObterRascunhoAsync(idSistemaVersao);
         if (!lookup.Sucesso)
             return Propagar<SistemaCriacaoConfigDto>(lookup);
+        SistemaVersao versao = lookup.Dados!;
+        if (EhSistemaPadrao(versao))
+            dto.Racas = await ObterRacasOficiaisDaWikiAsync();
+
         List<string> erros = await ValidarCriacaoAsync(dto);
         if (erros.Count > 0)
             return Validacao<SistemaCriacaoConfigDto>(string.Join(" ", erros));
 
-        SistemaVersao versao = lookup.Dados!;
         _repository.RemoveRange(versao.Racas.Cast<object>()
             .Concat(versao.Atributos.Cast<object>())
             .Concat(versao.Recursos.Cast<object>()).ToList());
@@ -521,6 +536,18 @@ public sealed partial class SistemaRpgService
         versao.SistemaRpg.DataAtualizacao = versao.DataAtualizacao;
         await _repository.SaveChangesAsync();
     }
+
+    private static bool EhSistemaPadrao(SistemaVersao versao) =>
+        string.Equals(
+            versao.SistemaRpg.Codigo,
+            SistemaRpgConfiguration.CodigoPadrao,
+            StringComparison.OrdinalIgnoreCase);
+
+    private async Task<List<SistemaRacaConfigDto>> ObterRacasOficiaisDaWikiAsync() =>
+        (await _repository.GetRacesAsync())
+            .OrderBy(raca => raca.Nome, StringComparer.CurrentCultureIgnoreCase)
+            .Select((raca, index) => SistemaRpgMapper.FromWikiRace(raca, index + 1))
+            .ToList();
 
     private static SistemaOperacaoResultado<T> Propagar<T>(SistemaOperacaoResultado<SistemaVersao> origem) =>
         SistemaOperacaoResultado<T>.Falha(origem.MensagemErro!, origem.TipoErro);

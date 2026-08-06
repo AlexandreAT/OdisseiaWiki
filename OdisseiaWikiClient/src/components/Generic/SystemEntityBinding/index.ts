@@ -1,0 +1,1 @@
+export { SystemEntityBinding } from './SystemEntityBinding';

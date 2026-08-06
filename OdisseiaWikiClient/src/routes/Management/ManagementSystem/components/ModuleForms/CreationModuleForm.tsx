@@ -112,7 +112,9 @@ export const CreationModuleForm = ({
   theme,
   neon,
   raceOptions = [],
+  systemCode,
 }: ModuleFormProps<'criacao'>) => {
+  const mirrorsWikiRaces = systemCode?.toUpperCase() === 'ODISSEIA';
   const raceColumns = useMemo<ConfigTableColumn<SistemaRacaConfig>[]>(() => [
     {
       key: 'idRaca',
@@ -202,7 +204,9 @@ export const CreationModuleForm = ({
 
       <ConfigTable
         title="Raças na versão"
-        description="Associe somente raças já cadastradas; os valores desta tabela são mecânicos e versionados."
+        description={mirrorsWikiRaces
+          ? 'No Sistema ODISSEIA, todas as raças são incluídas automaticamente e estes valores espelham o cadastro da Wiki. Edite-os no formulário da própria raça.'
+          : 'Associe somente raças já cadastradas; os valores desta tabela são mecânicos e versionados.'}
         rows={value.racas}
         columns={raceColumns}
         createRow={createRace}
@@ -217,7 +221,7 @@ export const CreationModuleForm = ({
         })}
         theme={theme}
         neon={neon}
-        readOnly={readOnly}
+        readOnly={readOnly || mirrorsWikiRaces}
         errors={errors}
         errorPath="racas"
       />

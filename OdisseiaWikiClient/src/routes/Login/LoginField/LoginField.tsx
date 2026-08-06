@@ -2,17 +2,44 @@ import { useState } from 'react';
 import { Form, InputContainer, ButtonContainer, GoogleLoginContainer, GoogleLoginLoading, CheckboxContainer, LinkContainer } from './LoginField.style';
 import { CyberButton } from '../../../components/Generic/HighlightButton/HighlightButton';
 import { InputText } from '../../../components/Generic/InputText/InputText';
-import { GoogleLogin } from '@react-oauth/google';
+import { CredentialResponse, GoogleLogin } from '@react-oauth/google';
 import { jwtDecode  } from 'jwt-decode';
 import toast from 'react-hot-toast';
 import { SpanLink } from '../../../components/Generic/SpanLink/SpanLink';
 import { CheckBox } from '../../../components/Generic/CheckBox/CheckBox';
 import TitleGlitch from '../../../components/Generic/TitleGlitch/TitleGlitch';
 import { loginComGoogle, LoginGoogleDto, login } from '../../../services/usuarioService';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 const REMEMBERED_USER_KEY = 'odisseia:last-manual-user';
 const REMEMBERED_PASSWORD_KEY = 'odisseia:last-manual-password';
+
+interface LoginLocationState {
+    returnTo?: unknown;
+}
+
+interface AuthTokenPayload {
+    nickname?: string;
+    imagemUrl?: string;
+    email?: string;
+    id?: string;
+    role?: string;
+}
+
+const getSafeReturnPath = (state: LoginLocationState | null) => {
+    const returnTo = state?.returnTo;
+
+    if (
+        typeof returnTo !== 'string'
+        || !returnTo.startsWith('/')
+        || returnTo.startsWith('//')
+        || returnTo.startsWith('/login')
+    ) {
+        return '/';
+    }
+
+    return returnTo;
+};
 
 interface Props {
     theme: 'dark' | 'light';
@@ -29,6 +56,12 @@ export const LoginField = ({ theme, neon, onRegisterClick }: Props) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
     const navigate = useNavigate();
+    const location = useLocation();
+
+    const navigateAfterLogin = () => {
+        const returnTo = getSafeReturnPath(location.state as LoginLocationState | null);
+        navigate(returnTo, { replace: true });
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -68,7 +101,7 @@ export const LoginField = ({ theme, neon, onRegisterClick }: Props) => {
 
                 localStorage.setItem('token', result.tokenJwt);
 
-                const payload: any = jwtDecode(result.tokenJwt);
+                const payload = jwtDecode<AuthTokenPayload>(result.tokenJwt);
                 localStorage.setItem('usuario', JSON.stringify({
                     nickname: payload.nickname,
                     imagemUrl: payload.imagemUrl,
@@ -78,7 +111,7 @@ export const LoginField = ({ theme, neon, onRegisterClick }: Props) => {
                 }));
 
                 toast.success('Login realizado com sucesso!');
-                navigate('/');
+                navigateAfterLogin();
             } else {
                 toast.error(result.mensagemErro ?? 'Credenciais inválidas.');
             }
@@ -90,7 +123,7 @@ export const LoginField = ({ theme, neon, onRegisterClick }: Props) => {
         }
     };
 
-    const handleGoogleSuccess = async (credentialResponse: any) => {
+    const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
         if (credentialResponse.credential) {
             const dto: LoginGoogleDto = {
             tokenGoogle: credentialResponse.credential,
@@ -103,7 +136,7 @@ export const LoginField = ({ theme, neon, onRegisterClick }: Props) => {
                 if (result.sucesso && result.tokenJwt) {
                     localStorage.setItem('token', result.tokenJwt);
 
-                    const payload: any = jwtDecode(result.tokenJwt);
+                    const payload = jwtDecode<AuthTokenPayload>(result.tokenJwt);
                     localStorage.setItem('usuario', JSON.stringify({
                         nickname: payload.nickname,
                         imagemUrl: payload.imagemUrl,
@@ -113,7 +146,7 @@ export const LoginField = ({ theme, neon, onRegisterClick }: Props) => {
                     }));
 
                     toast.success('Login realizado com sucesso!');
-                    navigate('/');
+                    navigateAfterLogin();
                 } else {
                     toast.error(result.mensagemErro ?? 'Erro inesperado no login com Google');
                 }

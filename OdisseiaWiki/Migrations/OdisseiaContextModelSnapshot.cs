@@ -30,6 +30,11 @@ namespace OdisseiaWiki.Migrations
                         .HasColumnType("varchar(255)")
                         .HasColumnName("IDItem");
 
+                    b.Property<bool>("AcompanharPublicacaoAtual")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(true);
+
                     b.Property<string>("AtributosJson")
                         .HasColumnType("longtext");
 
@@ -50,6 +55,14 @@ namespace OdisseiaWiki.Migrations
                     b.Property<string>("Efeito")
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)");
+
+                    b.Property<int?>("IdSistemaRpg")
+                        .HasColumnType("int")
+                        .HasColumnName("IDSistemaRpg");
+
+                    b.Property<int?>("IdSistemaVersao")
+                        .HasColumnType("int")
+                        .HasColumnName("IDSistemaVersao");
 
                     b.Property<string>("IditemBase")
                         .HasMaxLength(50)
@@ -91,9 +104,18 @@ namespace OdisseiaWiki.Migrations
                     b.HasKey("Iditem")
                         .HasName("PRIMARY");
 
+                    b.HasIndex("IdSistemaRpg")
+                        .HasDatabaseName("IX_Item_SistemaRpg");
+
+                    b.HasIndex("IdSistemaVersao")
+                        .HasDatabaseName("IX_Item_SistemaVersao");
+
                     b.HasIndex("PersonagemIdpersonagem");
 
-                    b.ToTable("itens", (string)null);
+                    b.ToTable("itens", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_itens_SistemaRuntimeVinculo", "(`AcompanharPublicacaoAtual` = 1 AND `IDSistemaVersao` IS NULL) OR (`AcompanharPublicacaoAtual` = 0 AND `IDSistemaRpg` IS NOT NULL AND `IDSistemaVersao` IS NOT NULL)");
+                        });
                 });
 
             modelBuilder.Entity("OdisseiaWiki.Models.Cidade", b =>
@@ -457,6 +479,10 @@ namespace OdisseiaWiki.Migrations
                     b.Property<string>("Historia")
                         .HasColumnType("text");
 
+                    b.Property<int?>("IdSistemaVersao")
+                        .HasColumnType("int")
+                        .HasColumnName("IDSistemaVersao");
+
                     b.Property<int?>("Idcidade")
                         .HasColumnType("int(11)")
                         .HasColumnName("IDCidade");
@@ -522,6 +548,9 @@ namespace OdisseiaWiki.Migrations
 
                     b.HasKey("IdpersonagemJogador")
                         .HasName("PRIMARY");
+
+                    b.HasIndex("IdSistemaVersao")
+                        .HasDatabaseName("IX_PersonagensJogador_SistemaVersao");
 
                     b.HasIndex("PassivaIdpassiva");
 
@@ -605,6 +634,11 @@ namespace OdisseiaWiki.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Idpersonagem"));
 
+                    b.Property<bool>("AcompanharPublicacaoAtual")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(true);
+
                     b.Property<string>("Alinhamento")
                         .HasMaxLength(50)
                         .HasColumnType("varchar(50)");
@@ -623,6 +657,14 @@ namespace OdisseiaWiki.Migrations
 
                     b.Property<string>("Historia")
                         .HasColumnType("longtext");
+
+                    b.Property<int?>("IdSistemaRpg")
+                        .HasColumnType("int")
+                        .HasColumnName("IDSistemaRpg");
+
+                    b.Property<int?>("IdSistemaVersao")
+                        .HasColumnType("int")
+                        .HasColumnName("IDSistemaVersao");
 
                     b.Property<int?>("Idcidade")
                         .HasColumnType("int(11)")
@@ -685,13 +727,22 @@ namespace OdisseiaWiki.Migrations
                     b.HasKey("Idpersonagem")
                         .HasName("PRIMARY");
 
+                    b.HasIndex("IdSistemaRpg")
+                        .HasDatabaseName("IX_Personagem_SistemaRpg");
+
+                    b.HasIndex("IdSistemaVersao")
+                        .HasDatabaseName("IX_Personagem_SistemaVersao");
+
                     b.HasIndex("PassivaIdpassiva");
 
                     b.HasIndex(new[] { "Idcidade" }, "ID cidades");
 
                     b.HasIndex(new[] { "Idraca" }, "ID racas");
 
-                    b.ToTable("personagens", (string)null);
+                    b.ToTable("personagens", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_personagens_SistemaRuntimeVinculo", "(`AcompanharPublicacaoAtual` = 1 AND `IDSistemaVersao` IS NULL) OR (`AcompanharPublicacaoAtual` = 0 AND `IDSistemaRpg` IS NOT NULL AND `IDSistemaVersao` IS NOT NULL)");
+                        });
                 });
 
             modelBuilder.Entity("OdisseiaWiki.Models.Proficiencia", b =>
@@ -739,6 +790,11 @@ namespace OdisseiaWiki.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Idraca"));
 
+                    b.Property<bool>("AcompanharPublicacaoAtual")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(true);
+
                     b.Property<DateTime>("DataCriacao")
                         .HasColumnType("datetime");
 
@@ -750,6 +806,14 @@ namespace OdisseiaWiki.Migrations
 
                     b.Property<string>("GaleriaImagem")
                         .HasColumnType("longtext");
+
+                    b.Property<int?>("IdSistemaRpg")
+                        .HasColumnType("int")
+                        .HasColumnName("IDSistemaRpg");
+
+                    b.Property<int?>("IdSistemaVersao")
+                        .HasColumnType("int")
+                        .HasColumnName("IDSistemaVersao");
 
                     b.Property<string>("Imagem")
                         .HasMaxLength(255)
@@ -775,7 +839,16 @@ namespace OdisseiaWiki.Migrations
                     b.HasKey("Idraca")
                         .HasName("PRIMARY");
 
-                    b.ToTable("racas", (string)null);
+                    b.HasIndex("IdSistemaRpg")
+                        .HasDatabaseName("IX_Raca_SistemaRpg");
+
+                    b.HasIndex("IdSistemaVersao")
+                        .HasDatabaseName("IX_Raca_SistemaVersao");
+
+                    b.ToTable("racas", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_racas_SistemaRuntimeVinculo", "(`AcompanharPublicacaoAtual` = 1 AND `IDSistemaVersao` IS NULL) OR (`AcompanharPublicacaoAtual` = 0 AND `IDSistemaRpg` IS NOT NULL AND `IDSistemaVersao` IS NOT NULL)");
+                        });
                 });
 
             modelBuilder.Entity("OdisseiaWiki.Models.SistemaAcaoConfig", b =>
@@ -1105,6 +1178,208 @@ namespace OdisseiaWiki.Migrations
                     b.ToTable("sistemafontesexperiencia", (string)null);
                 });
 
+            modelBuilder.Entity("OdisseiaWiki.Models.SistemaItemCampo", b =>
+                {
+                    b.Property<int>("IdSistemaItemCampo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("IdSistemaItemCampo"));
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("Descricao")
+                        .HasColumnType("text");
+
+                    b.Property<int>("IdSistemaItemEscopo")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("varchar(150)");
+
+                    b.Property<bool>("Obrigatorio")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<int>("Ordem")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar(30)");
+
+                    b.Property<string>("Unidade")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.HasKey("IdSistemaItemCampo");
+
+                    b.HasIndex("IdSistemaItemEscopo", "Codigo")
+                        .IsUnique();
+
+                    b.ToTable("sistemaitenscampos", (string)null);
+                });
+
+            modelBuilder.Entity("OdisseiaWiki.Models.SistemaItemEscopo", b =>
+                {
+                    b.Property<int>("IdSistemaItemEscopo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("IdSistemaItemEscopo"));
+
+                    b.Property<bool>("Ativo")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("CodigoCaminho")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<string>("Descricao")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("IdEscopoPai")
+                        .HasColumnType("int");
+
+                    b.Property<int>("IdSistemaVersao")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Nivel")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar(30)");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("varchar(150)");
+
+                    b.Property<int>("Ordem")
+                        .HasColumnType("int");
+
+                    b.HasKey("IdSistemaItemEscopo");
+
+                    b.HasIndex("IdEscopoPai");
+
+                    b.HasIndex("IdSistemaVersao", "CodigoCaminho")
+                        .IsUnique()
+                        .HasDatabaseName("UX_SistemaItemEscopo_Versao_Caminho");
+
+                    b.HasIndex("IdSistemaVersao", "Nivel", "Codigo")
+                        .HasDatabaseName("IX_SistemaItemEscopo_Versao_Nivel_Codigo");
+
+                    b.ToTable("sistemaitensescopos", (string)null);
+                });
+
+            modelBuilder.Entity("OdisseiaWiki.Models.SistemaItemFaixa", b =>
+                {
+                    b.Property<int>("IdSistemaItemFaixa")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("IdSistemaItemFaixa"));
+
+                    b.Property<string>("CodigoCampo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("Descricao")
+                        .HasColumnType("text");
+
+                    b.Property<int>("IdSistemaItemEscopo")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("varchar(150)");
+
+                    b.Property<int>("Ordem")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Unidade")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<decimal?>("ValorMaximo")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("ValorMinimo")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("ValorReferencia")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("IdSistemaItemFaixa");
+
+                    b.HasIndex("IdSistemaItemEscopo", "CodigoCampo")
+                        .IsUnique();
+
+                    b.ToTable("sistemaitensfaixas", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_SistemaItemFaixa_Intervalo", "`ValorMinimo` IS NULL OR `ValorMaximo` IS NULL OR `ValorMinimo` <= `ValorMaximo`");
+                        });
+                });
+
+            modelBuilder.Entity("OdisseiaWiki.Models.SistemaItemReferencia", b =>
+                {
+                    b.Property<int>("IdSistemaItemReferencia")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("IdSistemaItemReferencia"));
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("Descricao")
+                        .HasColumnType("text");
+
+                    b.Property<int>("IdSistemaItemEscopo")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("varchar(150)");
+
+                    b.Property<int>("Ordem")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar(30)");
+
+                    b.Property<string>("Valor")
+                        .HasMaxLength(250)
+                        .HasColumnType("varchar(250)");
+
+                    b.HasKey("IdSistemaItemReferencia");
+
+                    b.HasIndex("IdSistemaItemEscopo", "Tipo", "Codigo")
+                        .IsUnique();
+
+                    b.ToTable("sistemaitensreferencias", (string)null);
+                });
+
             modelBuilder.Entity("OdisseiaWiki.Models.SistemaMarcoNivel", b =>
                 {
                     b.Property<int>("IdSistemaMarcoNivel")
@@ -1346,6 +1621,76 @@ namespace OdisseiaWiki.Migrations
                         .IsUnique();
 
                     b.ToTable("sistemaniveis", (string)null);
+                });
+
+            modelBuilder.Entity("OdisseiaWiki.Models.SistemaPatchNote", b =>
+                {
+                    b.Property<int>("IdSistemaPatchNote")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("IdSistemaPatchNote"));
+
+                    b.Property<string>("CodigoSistema")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<DateTime>("DataGeracao")
+                        .HasColumnType("datetime");
+
+                    b.Property<string>("DiffJson")
+                        .IsRequired()
+                        .HasColumnType("json");
+
+                    b.Property<int>("IdSistemaRpg")
+                        .HasColumnType("int");
+
+                    b.Property<int>("IdSistemaVersao")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("IdVersaoAnterior")
+                        .HasColumnType("int");
+
+                    b.Property<string>("NomeSistema")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("varchar(150)");
+
+                    b.Property<string>("NumeroVersaoAnterior")
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("NumeroVersaoNova")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("Resumo")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("varchar(2000)");
+
+                    b.Property<string>("Titulo")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<bool>("VersaoInicial")
+                        .HasColumnType("tinyint(1)");
+
+                    b.HasKey("IdSistemaPatchNote");
+
+                    b.HasIndex("IdSistemaVersao")
+                        .IsUnique()
+                        .HasDatabaseName("UX_SistemaPatchNote_Versao");
+
+                    b.HasIndex("IdVersaoAnterior");
+
+                    b.HasIndex("IdSistemaRpg", "DataGeracao")
+                        .HasDatabaseName("IX_SistemaPatchNote_Sistema_Data");
+
+                    b.ToTable("sistemapatchnotes", (string)null);
                 });
 
             modelBuilder.Entity("OdisseiaWiki.Models.SistemaPontosAcaoConfig", b =>
@@ -1990,11 +2335,27 @@ namespace OdisseiaWiki.Migrations
 
             modelBuilder.Entity("Item", b =>
                 {
+                    b.HasOne("OdisseiaWiki.Models.SistemaRpg", "SistemaRpg")
+                        .WithMany()
+                        .HasForeignKey("IdSistemaRpg")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_Item_SistemaRpg");
+
+                    b.HasOne("OdisseiaWiki.Models.SistemaVersao", "SistemaVersao")
+                        .WithMany()
+                        .HasForeignKey("IdSistemaVersao")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_Item_SistemaVersao");
+
                     b.HasOne("OdisseiaWiki.Models.Personagen", "Personagem")
                         .WithMany()
                         .HasForeignKey("PersonagemIdpersonagem");
 
                     b.Navigation("Personagem");
+
+                    b.Navigation("SistemaRpg");
+
+                    b.Navigation("SistemaVersao");
                 });
 
             modelBuilder.Entity("OdisseiaWiki.Models.Mesa", b =>
@@ -2075,6 +2436,12 @@ namespace OdisseiaWiki.Migrations
 
             modelBuilder.Entity("OdisseiaWiki.Models.PersonagemJogador", b =>
                 {
+                    b.HasOne("OdisseiaWiki.Models.SistemaVersao", "SistemaVersao")
+                        .WithMany()
+                        .HasForeignKey("IdSistemaVersao")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_PersonagensJogador_SistemaVersao");
+
                     b.HasOne("OdisseiaWiki.Models.Cidade", "IdcidadeNavigation")
                         .WithMany()
                         .HasForeignKey("Idcidade")
@@ -2112,6 +2479,8 @@ namespace OdisseiaWiki.Migrations
 
                     b.Navigation("Passiva");
 
+                    b.Navigation("SistemaVersao");
+
                     b.Navigation("Usuario");
                 });
 
@@ -2140,6 +2509,18 @@ namespace OdisseiaWiki.Migrations
 
             modelBuilder.Entity("OdisseiaWiki.Models.Personagen", b =>
                 {
+                    b.HasOne("OdisseiaWiki.Models.SistemaRpg", "SistemaRpg")
+                        .WithMany()
+                        .HasForeignKey("IdSistemaRpg")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_Personagem_SistemaRpg");
+
+                    b.HasOne("OdisseiaWiki.Models.SistemaVersao", "SistemaVersao")
+                        .WithMany()
+                        .HasForeignKey("IdSistemaVersao")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_Personagem_SistemaVersao");
+
                     b.HasOne("OdisseiaWiki.Models.Cidade", "IdcidadeNavigation")
                         .WithMany("Personagens")
                         .HasForeignKey("Idcidade")
@@ -2160,6 +2541,29 @@ namespace OdisseiaWiki.Migrations
                     b.Navigation("IdracaNavigation");
 
                     b.Navigation("Passiva");
+
+                    b.Navigation("SistemaRpg");
+
+                    b.Navigation("SistemaVersao");
+                });
+
+            modelBuilder.Entity("OdisseiaWiki.Models.Raca", b =>
+                {
+                    b.HasOne("OdisseiaWiki.Models.SistemaRpg", "SistemaRpg")
+                        .WithMany()
+                        .HasForeignKey("IdSistemaRpg")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_Raca_SistemaRpg");
+
+                    b.HasOne("OdisseiaWiki.Models.SistemaVersao", "SistemaVersao")
+                        .WithMany()
+                        .HasForeignKey("IdSistemaVersao")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_Raca_SistemaVersao");
+
+                    b.Navigation("SistemaRpg");
+
+                    b.Navigation("SistemaVersao");
                 });
 
             modelBuilder.Entity("OdisseiaWiki.Models.SistemaAcaoConfig", b =>
@@ -2217,6 +2621,57 @@ namespace OdisseiaWiki.Migrations
                     b.Navigation("SistemaVersao");
                 });
 
+            modelBuilder.Entity("OdisseiaWiki.Models.SistemaItemCampo", b =>
+                {
+                    b.HasOne("OdisseiaWiki.Models.SistemaItemEscopo", "Escopo")
+                        .WithMany("Campos")
+                        .HasForeignKey("IdSistemaItemEscopo")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Escopo");
+                });
+
+            modelBuilder.Entity("OdisseiaWiki.Models.SistemaItemEscopo", b =>
+                {
+                    b.HasOne("OdisseiaWiki.Models.SistemaItemEscopo", "EscopoPai")
+                        .WithMany("Filhos")
+                        .HasForeignKey("IdEscopoPai")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("OdisseiaWiki.Models.SistemaVersao", "SistemaVersao")
+                        .WithMany("ItemEscopos")
+                        .HasForeignKey("IdSistemaVersao")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("EscopoPai");
+
+                    b.Navigation("SistemaVersao");
+                });
+
+            modelBuilder.Entity("OdisseiaWiki.Models.SistemaItemFaixa", b =>
+                {
+                    b.HasOne("OdisseiaWiki.Models.SistemaItemEscopo", "Escopo")
+                        .WithMany("Faixas")
+                        .HasForeignKey("IdSistemaItemEscopo")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Escopo");
+                });
+
+            modelBuilder.Entity("OdisseiaWiki.Models.SistemaItemReferencia", b =>
+                {
+                    b.HasOne("OdisseiaWiki.Models.SistemaItemEscopo", "Escopo")
+                        .WithMany("Referencias")
+                        .HasForeignKey("IdSistemaItemEscopo")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Escopo");
+                });
+
             modelBuilder.Entity("OdisseiaWiki.Models.SistemaMarcoNivel", b =>
                 {
                     b.HasOne("OdisseiaWiki.Models.SistemaVersao", "SistemaVersao")
@@ -2270,6 +2725,35 @@ namespace OdisseiaWiki.Migrations
                         .IsRequired();
 
                     b.Navigation("SistemaVersao");
+                });
+
+            modelBuilder.Entity("OdisseiaWiki.Models.SistemaPatchNote", b =>
+                {
+                    b.HasOne("OdisseiaWiki.Models.SistemaRpg", "SistemaRpg")
+                        .WithMany("PatchNotes")
+                        .HasForeignKey("IdSistemaRpg")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_SistemaPatchNote_SistemaRpg");
+
+                    b.HasOne("OdisseiaWiki.Models.SistemaVersao", "SistemaVersao")
+                        .WithOne("PatchNote")
+                        .HasForeignKey("OdisseiaWiki.Models.SistemaPatchNote", "IdSistemaVersao")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_SistemaPatchNote_Versao");
+
+                    b.HasOne("OdisseiaWiki.Models.SistemaVersao", "VersaoAnterior")
+                        .WithMany("PatchNotesComoVersaoAnterior")
+                        .HasForeignKey("IdVersaoAnterior")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_SistemaPatchNote_VersaoAnterior");
+
+                    b.Navigation("SistemaRpg");
+
+                    b.Navigation("SistemaVersao");
+
+                    b.Navigation("VersaoAnterior");
                 });
 
             modelBuilder.Entity("OdisseiaWiki.Models.SistemaPontosAcaoConfig", b =>
@@ -2466,6 +2950,17 @@ namespace OdisseiaWiki.Migrations
                     b.Navigation("Personagens");
                 });
 
+            modelBuilder.Entity("OdisseiaWiki.Models.SistemaItemEscopo", b =>
+                {
+                    b.Navigation("Campos");
+
+                    b.Navigation("Faixas");
+
+                    b.Navigation("Filhos");
+
+                    b.Navigation("Referencias");
+                });
+
             modelBuilder.Entity("OdisseiaWiki.Models.SistemaRacaConfig", b =>
                 {
                     b.Navigation("Passivas");
@@ -2473,6 +2968,8 @@ namespace OdisseiaWiki.Migrations
 
             modelBuilder.Entity("OdisseiaWiki.Models.SistemaRpg", b =>
                 {
+                    b.Navigation("PatchNotes");
+
                     b.Navigation("Versoes");
                 });
 
@@ -2488,6 +2985,8 @@ namespace OdisseiaWiki.Migrations
 
                     b.Navigation("FontesExperiencia");
 
+                    b.Navigation("ItemEscopos");
+
                     b.Navigation("MarcosNivel");
 
                     b.Navigation("Mesas");
@@ -2499,6 +2998,10 @@ namespace OdisseiaWiki.Migrations
                     b.Navigation("Movimento");
 
                     b.Navigation("Niveis");
+
+                    b.Navigation("PatchNote");
+
+                    b.Navigation("PatchNotesComoVersaoAnterior");
 
                     b.Navigation("PontosAcao");
 

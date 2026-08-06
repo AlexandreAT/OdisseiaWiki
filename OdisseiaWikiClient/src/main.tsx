@@ -9,6 +9,7 @@ import store from './redux/store.ts';
 import ErrorPage from './routes/Error/ErrorPage.tsx';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { RouteLoading } from './components/Generic/RouteLoading/RouteLoading.tsx';
+import { ManagementAccessGuard } from './routes/Management/ManagementAccessGuard.tsx';
 
 const Home = lazy(() => import('./routes/Home/Home.tsx'));
 const Login = lazy(() => import('./routes/Login/Login.tsx'));
@@ -61,8 +62,12 @@ const router = createBrowserRouter([{
           ]
         },
         {
-          path: 'management',
-          element: withRouteLoading(<Management />)
+          path: 'management/*',
+          element: (
+            <ManagementAccessGuard>
+              {withRouteLoading(<Management />)}
+            </ManagementAccessGuard>
+          )
         },
         {
           path: 'hub',

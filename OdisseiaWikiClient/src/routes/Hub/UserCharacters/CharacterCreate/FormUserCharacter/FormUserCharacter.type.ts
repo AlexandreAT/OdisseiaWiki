@@ -10,6 +10,7 @@ export interface CharacterFormErrors {
 }
 
 export interface Principais {
+  [codigo: string]: number;
   resistencia: number;
   agilidade: number;
   sabedoria: number;
@@ -18,6 +19,7 @@ export interface Principais {
 }
 
 export interface Secundarios {
+  [codigo: string]: number;
   sanidade: number;
   coragem: number;
   inteligencia: number;

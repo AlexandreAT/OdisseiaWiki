@@ -37,7 +37,9 @@ import { ColorScheme, getColorVars } from '../../utils/getColorVars';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import { ListModal } from '../../components/Generic/ListModal';
 import { BiChevronDown } from 'react-icons/bi';
-import { DEFAULT_MAX_CHARACTER_LEVEL, getDefaultXpRequiredForLevel } from '../../utils/characterProgression';
+import { resolveCharacterProgression } from '../../utils/characterProgression';
+import { useSistemaRuntimeContexto } from '../../hooks/useSistemaRuntimeContexto';
+import { getRuntimeResourceLabel } from '../../utils/systemRuntimeCharacter';
 import { Lightbox } from '../Wiki/components/blocks/shared/Lightbox/Lightbox';
 import { RelatedPageLink, RelatedPages, RelatedPagesTitle } from '../Cidade/CidadePage.style';
 import { detectImageShapeForBackgroundFromUrl } from '../../utils/imageDisplayShape';
@@ -52,6 +54,9 @@ import {
 } from '../../constants';
 import { mapToItem } from '../../utils/mapItem';
 import { openItemPreview } from '../../utils/itemPreview';
+import { SystemRuntimeIndicator } from '../../components/Generic/SystemRuntimeIndicator';
+import { atualizarSistemaPersonagemJogador } from '../../services/personagemJogadorService';
+import toast from 'react-hot-toast';
 
 const isObjectRecord = (value: unknown): value is Record<string, unknown> => (
   typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -351,8 +356,26 @@ const PersonagemPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const id = params.id;
   const characterSource = searchParams.get('tipo') === 'jogador' ? 'player' : 'public';
-  const { loading, error, personagem, relatedPages } = usePersonagem(id, characterSource);
+  const { loading, error, personagem, relatedPages, reload: reloadPersonagem } = usePersonagem(id, characterSource);
   const { theme, neon } = useSelector((state: any) => state.themesReducer);
+  const runtimeRaceId = Number((personagem as any)?.idraca ?? (personagem as any)?.Idraca);
+  const embeddedRuntimeContext = (personagem as any)?.sistemaRuntime ?? null;
+  const {
+    contexto: fetchedRuntimeContext,
+    loading: runtimeLoading,
+    error: runtimeResolutionError,
+  } = useSistemaRuntimeContexto({
+    idPersonagemJogador: characterSource === 'player' && id ? Number(id) : undefined,
+    tipoEntidade: characterSource === 'public' ? 'Npc' : undefined,
+    idEntidade: characterSource === 'public' ? id : undefined,
+    idRaca: runtimeRaceId > 0 ? runtimeRaceId : undefined,
+    enabled: Boolean(
+      personagem
+      && !embeddedRuntimeContext
+      && (characterSource === 'public' ? id : Number(id) > 0)
+    ),
+  });
+  const runtimeContext = embeddedRuntimeContext ?? fetchedRuntimeContext;
   const getField = (obj: any, keys: string[]) => {
     if (!obj) return undefined;
     for (const k of keys) {
@@ -374,6 +397,21 @@ const PersonagemPage: React.FC = () => {
   const [activeAbilityTab, setActiveAbilityTab] = React.useState<'skills' | 'magias'>('skills');
   const [itemBaseItems, setItemBaseItems] = React.useState<Record<string, Item>>({});
   const [listModal, setListModal] = React.useState<'inventory' | 'implants' | 'abilities' | 'proficiencies' | null>(null);
+  const [updatingSystem, setUpdatingSystem] = React.useState(false);
+
+  const updatePlayerSystem = React.useCallback(async () => {
+    if (characterSource !== 'player' || !id) return;
+    setUpdatingSystem(true);
+    try {
+      const result = await atualizarSistemaPersonagemJogador(Number(id));
+      toast.success(result.mensagem ?? 'Sistema do personagem atualizado.');
+      reloadPersonagem();
+    } catch {
+      toast.error('Não foi possível atualizar o Sistema deste personagem.');
+    } finally {
+      setUpdatingSystem(false);
+    }
+  }, [characterSource, id, reloadPersonagem]);
   const characterGalleryImages = React.useMemo(
     () => normalizeGalleryImages(
       personagem && 'galeriaImagem' in personagem ? personagem.galeriaImagem : undefined,
@@ -491,13 +529,17 @@ const PersonagemPage: React.FC = () => {
   if (!personagem) return <div>Personagem não encontrado</div>;
 
   const nome = getField(personagem, ['nome', 'Nome']) || 'Sem nome';
-  const currentLevel = Math.max(1, Math.trunc(Number((personagem as any)?.statusJson?.nivel) || 1));
-  const currentXp = Math.max(0, Number((personagem as any)?.statusJson?.xp) || 0);
-  const isMaximumLevel = currentLevel >= DEFAULT_MAX_CHARACTER_LEVEL;
-  const xpRequiredForNextLevel = getDefaultXpRequiredForLevel(currentLevel);
-  const xpPercentage = isMaximumLevel
-    ? 100
-    : Math.round((currentXp / xpRequiredForNextLevel) * 100);
+  const {
+    level: currentLevel,
+    xp: currentXp,
+    isMaximumLevel,
+    requiredXp: xpRequiredForNextLevel,
+    progress: xpPercentage,
+  } = resolveCharacterProgression(
+    Number((personagem as any)?.statusJson?.nivel),
+    Number((personagem as any)?.statusJson?.xp),
+    runtimeContext?.progressao,
+  );
   const imagem = getField(personagem, ['imagem', 'Imagem', 'imagemUrl', 'ImagemUrl']) as string | undefined;
   const autorNome = getField(personagem, ['autorNome', 'AutorNome']) as string | undefined;
   const historia = getField(personagem, ['historia', 'Historia']) as any | undefined;
@@ -650,6 +692,13 @@ const PersonagemPage: React.FC = () => {
                         <TitleDiv>
                             <TitleGlitch theme={theme} neon={neon} text={nome} fontSize="20px" />
                         </TitleDiv>
+                        <SystemRuntimeIndicator
+                          contexto={runtimeContext}
+                          loading={!embeddedRuntimeContext && runtimeLoading}
+                          error={runtimeResolutionError}
+                          onUpdate={characterSource === 'player' ? updatePlayerSystem : undefined}
+                          updating={updatingSystem}
+                        />
                         <MetaRow>
                             <HeaderStatusController>
                                 <MetaContent as={FlexRow} gap={12} alignItems="flex-start">
@@ -693,7 +742,7 @@ const PersonagemPage: React.FC = () => {
                                   <StatusRightLine $isActive={neon === 'on'} $color="var(--neonRed)" $clearColor="var(--clearneonRed)" $neon={neon === 'on'} />
                                   <MaskIcon src={glassHeart} color={'var(--neonRed)'} size={64} />
                                   <div>
-                                    <BoldLabel>Vida</BoldLabel>
+                                    <BoldLabel>{getRuntimeResourceLabel(runtimeContext, 'vida', 'Vida')}</BoldLabel>
                                     <MutedText>{(personagem as any)?.statusJson?.status?.vida ?? '—'} / {(personagem as any)?.statusJson?.status?.vidaMaxima ?? '—'}</MutedText>
                                     <StatusBarWrapper $color="var(--neonRed)">
                                       <StatusBarFill $color={'var(--neonRed)'} $pct={Math.round(((Number((personagem as any)?.statusJson?.status?.vida) || 0) / (Number((personagem as any)?.statusJson?.status?.vidaMaxima) || 1)) * 100)} />
@@ -709,7 +758,7 @@ const PersonagemPage: React.FC = () => {
                                   <StatusRightLine $isActive={neon === 'on'} $color="var(--neonBlue)" $clearColor="var(--clearneonBlue)" $neon={neon === 'on'} />
                                   <MaskIcon src={rollingEnergy} color={neon === 'on' ? 'var(--clearneonBlue)' : 'var(--neonBlue)'} size={64} />
                                   <div>
-                                    <BoldLabel>Mana</BoldLabel>
+                                    <BoldLabel>{getRuntimeResourceLabel(runtimeContext, 'mana', 'Mana')}</BoldLabel>
                                     <MutedText>{(personagem as any)?.statusJson?.status?.mana ?? '—'} / {(personagem as any)?.statusJson?.status?.manaMaxima ?? '—'}</MutedText>
                                     <StatusBarWrapper $color="var(--neonBlue)">
                                       <StatusBarFill $color={'var(--neonBlue)'} $pct={Math.round(((Number((personagem as any)?.statusJson?.status?.mana) || 0) / (Number((personagem as any)?.statusJson?.status?.manaMaxima) || 1)) * 100)} />
@@ -728,7 +777,7 @@ const PersonagemPage: React.FC = () => {
                                   <StatusRightLine $isActive={neon === 'on'} $color="var(--neonGreen)" $clearColor="var(--clearneonGreen)" $neon={neon === 'on'} />
                                   <MaskIcon src={electric} color={'var(--neonGreen)'} size={64} />
                                   <div>
-                                    <BoldLabel>Estamina</BoldLabel>
+                                    <BoldLabel>{getRuntimeResourceLabel(runtimeContext, 'estamina', 'Estamina')}</BoldLabel>
                                     <MutedText>{(personagem as any)?.statusJson?.status?.estamina ?? '—'} / {(personagem as any)?.statusJson?.status?.estaminaMaxima ?? '—'}</MutedText>
                                     <StatusBarWrapper $color="var(--neonGreen)">
                                       <StatusBarFill $color={'var(--neonGreen)'} $pct={Math.round(((Number((personagem as any)?.statusJson?.status?.estamina) || 0) / (Number((personagem as any)?.statusJson?.status?.estaminaMaxima) || 1)) * 100)} />
@@ -929,7 +978,7 @@ const PersonagemPage: React.FC = () => {
                       type="button"
                       theme={theme}
                       neon={neon}
-                      onClick={() => openItemPreview(selectedInventoryItem)}
+                      onClick={() => openItemPreview(selectedInventoryItem, runtimeContext)}
                       title="Abrir página do item"
                       aria-label="Abrir página completa do item em outra guia"
                     >

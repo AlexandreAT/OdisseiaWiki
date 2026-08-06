@@ -376,12 +376,12 @@ export const StatusDefesaDiv = styled.div<Props>`
     width: 100%;
     gap: clamp(10px, 2vw, 30px);
     min-width: 0;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
 
     @media (max-width: 768px) {
       justify-content: center;
       gap: 6px;
-      flex-wrap: nowrap;
+      flex-wrap: wrap;
     }
 `
 

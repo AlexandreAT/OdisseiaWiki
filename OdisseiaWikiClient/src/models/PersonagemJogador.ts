@@ -1,3 +1,5 @@
+import type { SistemaRuntimeContexto } from './SistemaRpg';
+
 export type JSONContent = {
   type?: string;
   attrs?: Record<string, any>;
@@ -15,6 +17,7 @@ export interface PersonagemJogador {
   idpersonagemJogador: number;
   idusuario: number;
   idmesa: number;
+  idSistemaVersao?: number | null;
   nome: string;
   idraca: number;
   idcidade?: number;
@@ -39,6 +42,7 @@ export interface PersonagemJogador {
   mesaNome?: string;
   autorNome?: string;
   proficiencias?: ProficienciaResumo[];
+  sistemaRuntime?: SistemaRuntimeContexto | null;
 }
 
 export interface ProficienciaResumo {
@@ -63,6 +67,7 @@ export interface PersonagemStatus {
 }
 
 export interface StatusBase {
+  [codigo: string]: number;
   vida: number;
   vidaMaxima: number;
   estamina: number;
@@ -78,6 +83,7 @@ export interface Atributos {
 }
 
 export interface Principais {
+  [codigo: string]: number;
   resistencia: number;
   agilidade: number;
   sabedoria: number;
@@ -86,6 +92,7 @@ export interface Principais {
 }
 
 export interface Secundarios {
+  [codigo: string]: number;
   sanidade: number;
   coragem: number;
   inteligencia: number;
@@ -95,6 +102,7 @@ export interface Secundarios {
 }
 
 export interface Defesas {
+  [codigo: string]: number;
   armadura: number;
   protecao: number;
   escudo: number;

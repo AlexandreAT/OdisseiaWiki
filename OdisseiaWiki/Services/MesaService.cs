@@ -3,7 +3,6 @@ using OdisseiaWiki.Models;
 using OdisseiaWiki.Repositories.Interfaces;
 using OdisseiaWiki.Services.Interfaces;
 using OdisseiaWiki.Services.Helpers;
-using Microsoft.EntityFrameworkCore;
 
 namespace OdisseiaWiki.Services
 {
@@ -73,41 +72,11 @@ namespace OdisseiaWiki.Services
 
         public async Task<Mesa> ObterMesaPadraoAsync()
         {
-            var mesaPadrao = await _repository.GetByCodigoSistemaAsync(SystemMesaConstants.CodigoMesaPadrao);
-            if (mesaPadrao is not null)
-            {
-                if (!mesaPadrao.IdSistemaVersao.HasValue)
-                {
-                    mesaPadrao.IdSistemaVersao = await ResolverVersaoPadraoAsync();
-                    if (mesaPadrao.IdSistemaVersao.HasValue)
-                        mesaPadrao = await _repository.UpdateAsync(mesaPadrao);
-                }
-
-                return mesaPadrao;
-            }
-
             int? idSistemaVersao = await ResolverVersaoPadraoAsync();
-
-            try
-            {
-                return await _repository.CreateAsync(new Mesa
-                {
-                    Nome = SystemMesaConstants.NomeMesaPadrao,
-                    CodigoSistema = SystemMesaConstants.CodigoMesaPadrao,
-                    PadraoSistema = true,
-                    IdusuarioCriacao = null,
-                    IdSistemaVersao = idSistemaVersao,
-                    DataCriacao = DateTime.UtcNow,
-                });
-            }
-            catch (DbUpdateException)
-            {
-                var mesaCriadaPorOutraInstancia = await _repository.GetByCodigoSistemaAsync(SystemMesaConstants.CodigoMesaPadrao);
-                if (mesaCriadaPorOutraInstancia is not null)
-                    return mesaCriadaPorOutraInstancia;
-
-                throw;
-            }
+            return await _repository.EnsureSystemDefaultAsync(
+                SystemMesaConstants.CodigoMesaPadrao,
+                SystemMesaConstants.NomeMesaPadrao,
+                idSistemaVersao);
         }
 
         public async Task<ResultMesa> UpdateAsync(int id, MesaDto dto)
@@ -116,7 +85,7 @@ namespace OdisseiaWiki.Services
             if (mesa is null)
                 return ResultMesaFail("Mesa não encontrada.");
 
-            if (mesa.PadraoSistema)
+            if (EhMesaPadraoFixa(mesa))
                 return ResultMesaFail("A mesa padrão do sistema não pode ser alterada.");
 
             if (string.IsNullOrWhiteSpace(dto.Nome))
@@ -134,7 +103,7 @@ namespace OdisseiaWiki.Services
         public async Task<bool> DeleteAsync(int id)
         {
             var mesa = await _repository.GetByIdAsync(id);
-            if (mesa is null || mesa.PadraoSistema)
+            if (mesa is null || EhMesaPadraoFixa(mesa))
                 return false;
 
             bool deleted = await _repository.DeleteAsync(id);
@@ -156,5 +125,12 @@ namespace OdisseiaWiki.Services
                 ? null
                 : sistemaResolvido.IdSistemaVersao;
         }
+
+        private static bool EhMesaPadraoFixa(Mesa mesa) =>
+            string.Equals(
+                mesa.CodigoSistema,
+                SystemMesaConstants.CodigoMesaPadrao,
+                StringComparison.OrdinalIgnoreCase) ||
+            mesa.PadraoSistema;
     }
 }

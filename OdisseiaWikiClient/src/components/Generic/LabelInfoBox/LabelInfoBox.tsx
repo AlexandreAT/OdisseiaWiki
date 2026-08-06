@@ -5,11 +5,12 @@ interface Props {
     children: ReactElement;
     theme?: 'dark' | 'light';
     neon?: 'on' | 'off';
+    title?: string;
 }
 
-const LabelInfoBoxComponent = ({children, theme, neon}: Props) => {
+const LabelInfoBoxComponent = ({children, theme, neon, title}: Props) => {
   return (
-    <BoxContainer theme={theme} neon={neon}>
+    <BoxContainer theme={theme} neon={neon} title={title}>
         {children}
     </BoxContainer>
   )

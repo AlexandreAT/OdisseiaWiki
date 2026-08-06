@@ -7,6 +7,7 @@ import { AttributeRow, AttributeSubsection, AttributeSubsectionTitle, FormItemAt
 import { ArmaAtributos, ArmaTipo, ArmaTipoDano, ImplanteAtributos, TrajeAtributos } from '../../../../../../models/Itens';
 import { ACERTO_DADO_OPTIONS, ARMA_TIPO_DANO_OPTIONS, ARMA_TIPO_OPTIONS, getPrimeiroAtaqueComGastoEstamina, normalizeDadoAcerto, TRAJE_TIPO_OPTIONS } from '../../../../../../constants';
 import { DadoAcerto } from '../../../../../../models/Dados';
+import { catalogReferenceOptions, SistemaItemFormCatalog } from '../../../../../../utils/systemItemFormCatalog';
 
 interface BaseProps {
   theme: 'dark' | 'light';
@@ -14,6 +15,7 @@ interface BaseProps {
   value: any;
   onChange: (v: any) => void;
   managementLayout?: boolean;
+  sistemaItemCatalogo?: SistemaItemFormCatalog;
 }
 
 const ManagementAttributeGroup = ({
@@ -63,7 +65,7 @@ const withNormalizedAcerto = (value: any, defaults: Record<string, unknown>) => 
   acerto: normalizeDadoAcerto(value?.acerto) || undefined,
 });
 
-export const ArmaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon, managementLayout = false }) => {
+export const ArmaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon, managementLayout = false, sistemaItemCatalogo }) => {
   const initialValue = (value ?? {}) as ArmaAtributos;
   const [local, setLocal] = React.useState<ArmaAtributos>({
     ...initialValue,
@@ -92,6 +94,10 @@ export const ArmaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme,
       };
     }
 
+    if (key === 'tipoArma') {
+      (updated as ArmaAtributos & { codigoArquetipo?: string }).codigoArquetipo = String(val ?? '').toUpperCase();
+    }
+
     setLocal(updated);
     onChange(updated);
   };
@@ -100,8 +106,8 @@ export const ArmaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme,
     <FormItemAtributos>
       <ManagementAttributeGroup enabled={managementLayout} title="Classificação" theme={theme} neon={neon}>
         <AttributeRow $columns={2}>
-          <Select label="Tipo de arma" theme={theme} neon={neon} value={local.tipoArma ?? ''} onChange={e => handleChange('tipoArma', e.target.value as ArmaTipo)} options={ARMA_TIPO_OPTIONS} width="100%" />
-          <Select label="Tipo de dano" theme={theme} neon={neon} value={local.tipoDano ?? ''} onChange={e => handleChange('tipoDano', e.target.value as ArmaTipoDano)} options={ARMA_TIPO_DANO_OPTIONS} width="100%" />
+          <Select label="Tipo de arma" theme={theme} neon={neon} value={local.tipoArma ?? ''} onChange={e => handleChange('tipoArma', e.target.value as ArmaTipo)} options={sistemaItemCatalogo?.archetypeOptions.length ? sistemaItemCatalogo.archetypeOptions : ARMA_TIPO_OPTIONS} width="100%" />
+          <Select label="Tipo de dano" theme={theme} neon={neon} value={local.tipoDano ?? ''} onChange={e => handleChange('tipoDano', e.target.value as ArmaTipoDano)} options={catalogReferenceOptions(sistemaItemCatalogo, 'TipoDano', ARMA_TIPO_DANO_OPTIONS)} width="100%" />
         </AttributeRow>
       </ManagementAttributeGroup>
 
@@ -126,7 +132,7 @@ export const ArmaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme,
         </AttributeRow>
         <AttributeRow $columns={2}>
           <InputText label={`Estamina por ação${getPrimeiroAtaqueComGastoEstamina(local.tipoArma) === 2 ? ' (2ª+)' : ''}`} type="number" theme={theme} neon={neon} value={local.gastoEstaminaPorAtaque ?? ''} onChange={e => handleChange('gastoEstaminaPorAtaque', e.target.value === '' ? undefined : Number(e.target.value))} />
-          <Select label="Acerto" theme={theme} neon={neon} value={normalizeDadoAcerto(local.acerto)} onChange={e => handleChange('acerto', e.target.value as DadoAcerto)} options={ACERTO_DADO_OPTIONS} width="100%" />
+          <Select label="Acerto" theme={theme} neon={neon} value={normalizeDadoAcerto(local.acerto)} onChange={e => handleChange('acerto', e.target.value as DadoAcerto)} options={catalogReferenceOptions(sistemaItemCatalogo, 'Outro', ACERTO_DADO_OPTIONS).filter((option) => /^d(?:6|8|20)$/i.test(option.value)).map((option) => ({ ...option, value: option.value.toUpperCase() }))} width="100%" />
         </AttributeRow>
       </ManagementAttributeGroup>
 
@@ -145,13 +151,17 @@ export const ArmaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme,
   );
 };
 
-export const TrajeAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon }) => {
+export const TrajeAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon, sistemaItemCatalogo }) => {
   const [local, setLocal] = React.useState<TrajeAtributos>(
     value || { tipoTraje: undefined, armaduraBase: 0, protecaoBase: 0, escudoBase: 0, resistencias: [], penalidades: [], especial: "" }
   );
 
   const handleChange = (key: string, val: any) => {
-    const updated = { ...local, [key]: val };
+    const updated = {
+      ...local,
+      [key]: val,
+      ...(key === 'tipoTraje' ? { codigoArquetipo: String(val ?? '').toUpperCase() } : {}),
+    };
     setLocal(updated);
     onChange(updated);
   };
@@ -165,7 +175,7 @@ export const TrajeAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme
           onChange={(e) => handleChange('tipoTraje', e.target.value || undefined)}
           theme={theme}
           neon={neon}
-          options={TRAJE_TIPO_OPTIONS}
+          options={sistemaItemCatalogo?.archetypeOptions.length ? sistemaItemCatalogo.archetypeOptions : TRAJE_TIPO_OPTIONS}
           width="100%"
         />
       </AttributeRow>
@@ -197,7 +207,7 @@ const emptyImplante = (value: ImplanteAtributos | undefined): ImplanteAtributos 
   bonus: {}, especiais: [], modificacoes: [], lacrimas: [], ...value,
 });
 
-export const ImplanteAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon, managementLayout = false }) => {
+export const ImplanteAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon, managementLayout = false, sistemaItemCatalogo }) => {
   const atributos = emptyImplante(value as ImplanteAtributos | undefined);
   const update = (partial: Partial<ImplanteAtributos>) => onChange({ ...atributos, ...partial });
   const updateList = (key: 'especiais', index: number, text: string) => {
@@ -212,12 +222,12 @@ export const ImplanteAtributosForm: React.FC<BaseProps> = ({ value, onChange, th
   };
 
   const placementFields = <AttributeRow $columns={2}>
-    <Select theme={theme} neon={neon} label="Parte do corpo" value={atributos.parteCorpo ?? ''} onChange={(e) => update({ parteCorpo: e.target.value as ImplanteAtributos['parteCorpo'] })} options={[{ label: 'Mão', value: 'mao' }, { label: 'Braço', value: 'braco' }, { label: 'Pé', value: 'pe' }, { label: 'Perna', value: 'perna' }, { label: 'Corpo', value: 'corpo' }, { label: 'Ocular', value: 'ocular' }, { label: 'Outro', value: 'outro' }]} width="100%" />
-    <Select theme={theme} neon={neon} label="Lado" value={atributos.lado ?? ''} onChange={(e) => update({ lado: e.target.value as ImplanteAtributos['lado'] })} options={[{ label: 'Direito', value: 'direito' }, { label: 'Esquerdo', value: 'esquerdo' }, { label: 'Ambos', value: 'ambos' }, { label: 'Não se aplica', value: 'nao-se-aplica' }]} width="100%" />
+    <Select theme={theme} neon={neon} label="Parte do corpo" value={atributos.parteCorpo ?? ''} onChange={(e) => update({ parteCorpo: e.target.value as ImplanteAtributos['parteCorpo'], codigoArquetipo: e.target.value.toUpperCase() } as Partial<ImplanteAtributos>)} options={sistemaItemCatalogo?.archetypeOptions.length ? sistemaItemCatalogo.archetypeOptions : [{ label: 'Mão', value: 'mao' }, { label: 'Braço', value: 'braco' }, { label: 'Pé', value: 'pe' }, { label: 'Perna', value: 'perna' }, { label: 'Corpo', value: 'corpo' }, { label: 'Ocular', value: 'ocular' }, { label: 'Outro', value: 'outro' }]} width="100%" />
+    <Select theme={theme} neon={neon} label="Lado" value={atributos.lado ?? ''} onChange={(e) => update({ lado: e.target.value as ImplanteAtributos['lado'] })} options={catalogReferenceOptions(sistemaItemCatalogo, 'Lado', [{ label: 'Direito', value: 'direito' }, { label: 'Esquerdo', value: 'esquerdo' }, { label: 'Ambos', value: 'ambos' }, { label: 'Não se aplica', value: 'nao-se-aplica' }]).map((option) => ({ ...option, value: option.value === 'nao_se_aplica' ? 'nao-se-aplica' : option.value }))} width="100%" />
   </AttributeRow>;
 
   const materialFields = <AttributeRow $columns={2}>
-    <Select theme={theme} neon={neon} label="Material" value={atributos.material ?? ''} onChange={(e) => update({ material: e.target.value as ImplanteAtributos['material'] })} options={[{ label: 'Simples', value: 'simples' }, { label: 'Carbono', value: 'carbono' }, { label: 'Blindada', value: 'blindada' }, { label: 'Arcana', value: 'arcana' }, { label: 'Titânio', value: 'titanio' }, { label: 'Sicmithril', value: 'sicmithril' }, { label: 'Outro', value: 'outro' }]} width="100%" />
+    <Select theme={theme} neon={neon} label="Material" value={atributos.material ?? ''} onChange={(e) => update({ material: e.target.value as ImplanteAtributos['material'] })} options={catalogReferenceOptions(sistemaItemCatalogo, 'Material', [{ label: 'Simples', value: 'simples' }, { label: 'Carbono', value: 'carbono' }, { label: 'Blindada', value: 'blindada' }, { label: 'Arcana', value: 'arcana' }, { label: 'Titânio', value: 'titanio' }, { label: 'Sicmithril', value: 'sicmithril' }, { label: 'Outro', value: 'outro' }])} width="100%" />
     <InputText label="Modelo" theme={theme} neon={neon} value={atributos.modelo ?? ''} onChange={(e) => update({ modelo: e.target.value })} />
   </AttributeRow>;
 

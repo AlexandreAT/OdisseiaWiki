@@ -9,6 +9,7 @@ export const generateId = () =>
 
 export const mapInventoryForPayload = (itens: Item[]): Item[] => {
   return itens.map((it) => ({
+    ...it,
     id: it.id ?? generateId(),
     idItemBase: it.idItemBase ?? undefined,
     nome: it.nome ?? "Item",
@@ -25,6 +26,7 @@ export const mapInventoryForPayload = (itens: Item[]): Item[] => {
 
 export const mapMagiasForPayload = (magias: Magia[]): Magia[] => {
   return magias.map((magia) => ({
+    ...magia,
     id: magia.id ?? generateId(),
     nome: magia.nome ?? "Magia",
     efeito: magia.efeito ?? undefined,
@@ -37,6 +39,7 @@ export const mapMagiasForPayload = (magias: Magia[]): Magia[] => {
 
 export const mapSkillsForPayload = (skills: Skills[]): Skills[] => {
   return skills.map((skill) => ({
+    ...skill,
     id: skill.id ?? generateId(),
     nome: skill.nome ?? "Skill",
     efeito: skill.efeito ?? undefined,

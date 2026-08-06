@@ -40,6 +40,7 @@ export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
   itemColumns,
   skillsColumns,
   magiasColumns,
+  runtimeContext,
 }) => {
   const inventario = getInventarioItems(itens);
   const updateInventario = (updatedItems: Item[]) => setItens(replaceItemSection(itens, 'inventario', updatedItems));
@@ -52,6 +53,11 @@ export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
   const adicionarProtese = (item: Item) => {
     if (item.tipo === 'implante') handleSelectItem(item);
   };
+  const skillLimit = runtimeContext?.poderes?.skillConfig?.maximoSkills;
+  const magicLimit = runtimeContext?.poderes?.skillConfig?.maximoMagias
+    ?? runtimeContext?.poderes?.limiteMagias;
+  const filledMagicCount = magias.filter((magia) => magia.nome?.trim()).length;
+  const filledSkillCount = skills.filter((skill) => skill.nome?.trim()).length;
 
   return (
     <>
@@ -76,6 +82,7 @@ export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
         avatarUrl={avatarUrl}
         setAvatarUrl={() => undefined}
         raceImageUrl={raceImageUrl}
+        runtimeContext={runtimeContext}
       />
 
       <BottomContentController>
@@ -91,7 +98,7 @@ export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
             searchKeys={['nome', 'tipo', 'descricao']}
             onSelectSearch={adicionarItem}
             isRowEmpty={isEmptyItemRow}
-            onViewRow={openItemPreview}
+            onViewRow={(item) => openItemPreview(item, runtimeContext)}
             theme={theme}
             neon={neon}
           />
@@ -109,14 +116,16 @@ export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
             searchKeys={['nome', 'tipo', 'descricao']}
             onSelectSearch={adicionarProtese}
             isRowEmpty={isEmptyItemRow}
-            onViewRow={openItemPreview}
+            onViewRow={(item) => openItemPreview(item, runtimeContext)}
             theme={theme}
             neon={neon}
           />
         </SectionTable>
 
         <SectionTable>
-          <TableTitle>Magias</TableTitle>
+          <TableTitle>
+            Magias{magicLimit != null ? ` (${filledMagicCount}/${magicLimit})` : ''}
+          </TableTitle>
           <DataTable<Magia>
             data={magias}
             onChange={setMagias}
@@ -128,7 +137,9 @@ export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
         </SectionTable>
 
         <SectionTable>
-          <TableTitle>Skills</TableTitle>
+          <TableTitle>
+            Skills{skillLimit != null ? ` (${filledSkillCount}/${skillLimit})` : ''}
+          </TableTitle>
           <DataTable<Skills>
             data={skills}
             onChange={setSkills}

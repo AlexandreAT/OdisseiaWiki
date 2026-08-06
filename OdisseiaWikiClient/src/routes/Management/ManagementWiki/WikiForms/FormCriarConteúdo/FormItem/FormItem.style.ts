@@ -200,6 +200,11 @@ export const AtributosGrid = styled.div`
   gap: 20px;
   width: 100%;
 
+  > :last-child {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
   }

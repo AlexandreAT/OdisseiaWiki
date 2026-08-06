@@ -18,6 +18,14 @@ public class MesaEntidadeConfigRepository : IMesaEntidadeConfigRepository
             configuracao.TipoEntidade == tipoEntidade &&
             configuracao.Identidade == idEntidade);
 
+    public Task<List<MesaEntidadeConfig>> GetAllAsync(int idMesa, MesaEntidadeTipo tipoEntidade) =>
+        _context.MesaEntidadeConfigs
+            .AsNoTracking()
+            .Where(configuracao =>
+                configuracao.Idmesa == idMesa &&
+                configuracao.TipoEntidade == tipoEntidade)
+            .ToListAsync();
+
     public async Task<MesaEntidadeConfig> CreateAsync(MesaEntidadeConfig configuracao)
     {
         _context.MesaEntidadeConfigs.Add(configuracao);
