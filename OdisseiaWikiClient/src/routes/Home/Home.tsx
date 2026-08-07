@@ -12,8 +12,14 @@ import bannerImage from '../../assets/BannerHome3.jpg';
 import bannerImageLight from '../../assets/BannerHomeLight.jpg';
 import { ScrollRevealBlock } from '../../components/Generic/ScrollRevealBlock';
 
+interface RootState {
+  themesReducer: {
+    theme: 'dark' | 'light';
+  };
+}
+
 const Home = () => {
-  const { theme } = useSelector((state: any) => state.themesReducer);
+  const { theme } = useSelector((state: RootState) => state.themesReducer);
   const homeBannerImage = theme === 'dark' ? bannerImage : bannerImageLight;
 
   const charactersCards = personagensMock.map((p) => ({
@@ -55,7 +61,7 @@ const Home = () => {
         ]}
       />
       </ScrollRevealBlock>
-      <ScrollRevealBlock variant='infoBlock'>
+      <ScrollRevealBlock variant='infoBlock' id='campanha'>
       <InfoBlock
         title='Campanha do RPG'
         subtitle='Insurgência'

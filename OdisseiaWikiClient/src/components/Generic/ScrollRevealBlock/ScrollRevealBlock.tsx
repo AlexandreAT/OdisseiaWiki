@@ -8,6 +8,7 @@ export const ScrollRevealBlock = ({
   threshold = 0.48,
   rootMargin,
   className,
+  id,
 }: ScrollRevealBlockProps) => {
   const isMobile = typeof window !== 'undefined'
     && window.matchMedia('(max-width: 768px)').matches;
@@ -24,7 +25,7 @@ export const ScrollRevealBlock = ({
   });
 
   return (
-    <ScrollRevealSection ref={revealRef} $variant={variant} className={className}>
+    <ScrollRevealSection ref={revealRef} $variant={variant} className={className} id={id}>
       {children}
     </ScrollRevealSection>
   );

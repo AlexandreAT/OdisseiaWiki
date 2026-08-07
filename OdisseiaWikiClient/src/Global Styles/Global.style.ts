@@ -3,12 +3,15 @@ import styled from 'styled-components';
 interface Props {
     theme: 'dark' | 'light';
     neon: 'on' | 'off';
-    isLoginPage?: Boolean;
+    isLoginPage?: boolean;
     isWikiPage?: boolean;
 }
 
 const Page = styled.div<Props>`
     --main-header-height: 85px;
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
 
     @media (max-width: 1100px) {
         --main-header-height: 67px;
@@ -65,8 +68,9 @@ const Header = styled.header<Props>`
     transition: all 0.3s ease-in-out;
 `;
 
-const Body = styled.body<Props>`
+const Body = styled.div<Props>`
     display: flex;
+    flex: 1 0 auto;
     flex-direction: column;
     align-items: center;
     padding: ${props =>
@@ -76,8 +80,7 @@ const Body = styled.body<Props>`
                 ? '84px 0 0'
                 : '84px 0 4rem'};
     width: 100%;
-    min-height: 100vh;
-    height: 100%;
+    min-height: 0;
 
     ${props => props.theme === 'dark' ? `
         background-color: var(--black-blue);
@@ -104,19 +107,4 @@ const Body = styled.body<Props>`
     transition: all 0.3s ease-in-out;
 `;
 
-const Footer = styled.footer<Props>`
-    width: 100%;
-    bottom: 0;
-    z-index: 15;
-    position: relative;
-    
-    ${props => props.theme === 'dark' ? `
-        background-color: var(--black-blue);
-    ` : `
-        background-color: var(--black);
-    `};
-
-    transition: all 0.3s ease-in-out;
-`;
-
-export { Page, Header, Body, Footer };
+export { Page, Header, Body };

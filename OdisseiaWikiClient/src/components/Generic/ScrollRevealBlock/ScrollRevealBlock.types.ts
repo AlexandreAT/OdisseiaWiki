@@ -8,4 +8,5 @@ export interface ScrollRevealBlockProps {
   threshold?: number | number[];
   rootMargin?: string;
   className?: string;
+  id?: string;
 }
