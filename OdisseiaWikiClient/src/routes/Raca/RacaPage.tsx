@@ -16,6 +16,7 @@ import glassHeart from '../../assets/svg/glass-heart.svg';
 import rollingEnergy from '../../assets/svg/rolling-energy.svg';
 import { ListModal } from '../../components/Generic/ListModal';
 import { Modal } from '../../components/Generic/Modal/Modal';
+import { GalleryModal } from '../../components/Generic/GalleryModal';
 import { OdisseiaAnimatedTitle } from '../../components/Generic/OdisseiaAnimatedTitle';
 import { SystemRuntimeIndicator } from '../../components/Generic/SystemRuntimeIndicator/SystemRuntimeIndicator';
 import { RichTextDisplay } from '../../components/Generic/RichTextDisplay/RichTextDisplay';
@@ -52,10 +53,6 @@ import {
   GalleryButton,
   GalleryGrid,
   GalleryImage,
-  GalleryModalButton,
-  GalleryModalImage,
-  GalleryModalTrack,
-  GalleryModalViewport,
   HeroGrid,
   HeroPanel,
   HudCornerAccent,
@@ -553,37 +550,21 @@ const RacaPage = () => {
       )}
 
       {activeModal === 'gallery' && (
-        <Modal
-          title={<CityModalTitle $theme={theme}>{formatCyberpunkTitle(`Galeria — ${race.nome}`)}</CityModalTitle>}
+        <GalleryModal
+          title={formatCyberpunkTitle(`Galeria — ${race.nome}`)}
+          images={galleryImages.map((image, index) => ({
+            url: normalizeImagePath(image.url),
+            caption: image.caption,
+            shape: galleryShapes[index],
+          }))}
           theme={theme}
           neon={neon}
-          showFooter={false}
           onClose={closeModal}
-          width="1280px"
-        >
-          <GalleryModalViewport>
-            <GalleryModalTrack>
-              {galleryImages.map((image, index) => (
-                <GalleryModalButton
-                  key={`${image.url}-${index}`}
-                  $shape={galleryShapes[index] ?? 'square'}
-                  type="button"
-                  onClick={() => {
-                    closeModal();
-                    setGalleryIndex(index);
-                  }}
-                  aria-label={`Ampliar imagem ${index + 1} da galeria`}
-                >
-                  <GalleryModalImage
-                    src={normalizeImagePath(image.url)}
-                    alt={image.caption || `Imagem ${index + 1} da galeria de ${race.nome}`}
-                    fallbackIcon={<BiImage aria-hidden="true" />}
-                  />
-                </GalleryModalButton>
-              ))}
-            </GalleryModalTrack>
-          </GalleryModalViewport>
-        </Modal>
+          onSelect={(index) => {
+            closeModal();
+            setGalleryIndex(index);
+          }}
+        />
       )}
 
       <Lightbox

@@ -10,6 +10,26 @@ export const GalleryBlockContainer = styled.div`
   max-width: 100%;
 `;
 
+export const DesktopGalleryPresentation = styled.div`
+  display: contents;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
+`;
+
+export const MobileGalleryPreview = styled.div`
+  display: none;
+
+  @media (max-width: 768px) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+  }
+`;
+
 export const GalleryItem = styled.button`
   display: flex;
   flex-direction: column;
@@ -63,7 +83,7 @@ export const GalleryGrid = styled.div`
 
   @media (max-width: 768px) {
     width: 100%;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 7px;
     padding: 8px;
   }
@@ -72,6 +92,27 @@ export const GalleryGrid = styled.div`
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 6px;
     padding: 6px;
+  }
+`;
+
+export const GalleryViewMoreButton = styled.button`
+  min-width: 150px;
+  padding: 8px 14px;
+  border: 1px solid var(--clearneonBlue);
+  border-radius: 4px;
+  background: rgba(0, 18, 31, 0.82);
+  color: var(--clearneonBlue);
+  font-family: 'Cyberpunk Is Not Dead', sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.8px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover,
+  &:focus-visible {
+    outline: none;
+    background: rgba(0, 212, 255, 0.12);
+    box-shadow: 0 0 9px rgba(0, 212, 255, 0.38);
   }
 `;
 

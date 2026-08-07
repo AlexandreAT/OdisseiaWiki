@@ -101,6 +101,7 @@ export const ImageContent = styled.div<ImageFloatProps>`
       : css`margin-right: 20px;`
   }
   max-width: 100%;
+  box-sizing: border-box;
   overflow: hidden;
   border-radius: 10px;
   cursor: pointer;
@@ -111,8 +112,8 @@ export const ImageContent = styled.div<ImageFloatProps>`
 
   @media (max-width: 768px) {
     float: none;
-    margin: 0 auto 14px;
-    width: min(78vw, 260px);
+    margin: 0 0 14px;
+    width: 100%;
   }
 
   &:hover {
@@ -137,7 +138,7 @@ export const StyledImage = styled.img`
   @media (max-width: 768px) {
     width: 100%;
     height: auto;
-    max-height: 240px;
+    max-height: none;
   }
 `;
 
@@ -151,7 +152,7 @@ export const ImageWrapper = styled.div`
   cursor: pointer;
 
   @media (max-width: 768px) {
-    width: min(78vw, 280px);
+    width: 100%;
   }
 
   &:hover p {
@@ -218,11 +219,12 @@ export const TextContent = styled.div`
   }
 `;
 
-export const ErrorMessage = styled.div`
+export const ErrorMessage = styled.div<{ $embedded?: boolean }>`
+  margin: ${({ $embedded }) => $embedded ? '0' : 'initial'};
   padding: 12px;
   background-color: rgba(220, 53, 69, 0.1);
   border-left: 4px solid #dc3545;
-  border-radius: 4px;
+  border-radius: ${({ $embedded }) => $embedded ? '0' : '4px'};
   color: #dc3545;
   font-size: 12px;
 

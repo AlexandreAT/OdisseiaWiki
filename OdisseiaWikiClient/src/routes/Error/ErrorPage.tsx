@@ -9,6 +9,7 @@ import {
   ErrorTitle,
   ErrorActionButton,
 } from './ErrorPage.style';
+import { useApiAvailabilityStatus } from '../../hooks/useApiAvailabilityStatus';
 
 interface ErrorLocationState {
   errorTitle?: string;
@@ -61,6 +62,8 @@ const ErrorPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const routeError = useRouteError();
+  const apiAvailabilityStatus = useApiAvailabilityStatus();
+  const isApiUnavailable = apiAvailabilityStatus !== 'idle';
   const locationState = location.state as ErrorLocationState | null;
   const pathContext = getPathContext(location.pathname);
   const responseDescription = isRouteErrorResponse(routeError)
@@ -73,6 +76,11 @@ const ErrorPage = () => {
     ?? pathContext.errorDescription;
 
   const handleBack = () => {
+    if (isApiUnavailable) {
+      navigate('/', { replace: true });
+      return;
+    }
+
     const historyState = window.history.state as { idx?: number } | null;
     const hasPreviousAppRoute = typeof historyState?.idx === 'number'
       ? historyState.idx > 0
@@ -101,7 +109,13 @@ const ErrorPage = () => {
             <BiArrowBack />
             Voltar
           </ErrorActionButton>
-          <ErrorActionButton type="button" $primary onClick={handleWiki}>
+          <ErrorActionButton
+            type="button"
+            $primary
+            onClick={handleWiki}
+            disabled={isApiUnavailable}
+            title={isApiUnavailable ? 'A Wiki estarÃ¡ disponÃ­vel quando o servidor terminar de iniciar.' : undefined}
+          >
             <BiBookOpen />
             Ir para a Wiki
           </ErrorActionButton>

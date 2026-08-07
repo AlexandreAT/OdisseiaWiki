@@ -281,8 +281,10 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
 
         const relatedList = (Array.isArray(relacionados) ? relacionados : [relacionados])
           .map((item) => {
+            if (item === null || item === undefined || item === '') return null;
+
             const id = Number(item);
-            if (Number.isNaN(id)) return null;
+            if (!Number.isInteger(id) || id <= 0) return null;
 
             const found = allPersonagens.find((p: any) => (p.idpersonagem ?? p.Idpersonagem) === id);
             return {
@@ -653,7 +655,9 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
         inventarioJson: inventarioMapped,
         skills: skillsMapped,
         magia: magiasMapped,
-        personagemsVinculados: listPersonagemRelacionado.map((p) => Number(p)) as any,
+        personagemsVinculados: listPersonagemRelacionado
+          .map((personagem) => Number(personagem.id))
+          .filter((id) => Number.isInteger(id) && id > 0),
         statusJson: {
           status: {
             vida: Number(statusBasico.vida) || 0,

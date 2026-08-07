@@ -1,143 +1,88 @@
 import React from 'react';
-import { CardProps } from '../types';
+import { BiEditAlt, BiHide, BiShow, BiStar, BiTrash } from 'react-icons/bi';
+import { normalizeImagePath } from '../../../../../Wiki/utils/imagePathHelper';
+import { CardProps, EntityType } from '../types';
 import {
+  ActionButton,
+  CardActions,
   CardContainer,
+  CardContent,
   CardHeader,
   CardImage,
+  CardMedia,
   CardTitle,
   EntityBadge,
-  CardContent,
-  TagsContainer,
-  Tag,
-  VisibilityIndicator,
-  CardActions,
-  ActionButton,
-  InfoText,
+  ManagementMetadata,
+  MetadataChip,
   SlugText,
+  Tag,
+  TagsContainer,
 } from './ResultCard.style';
 
+const ENTITY_LABELS: Record<EntityType, string> = {
+  Cidade: 'Cidade',
+  Personagem: 'NPC',
+  Item: 'Item',
+  InfoLore: 'Lore',
+  Raca: 'RaÃ§a',
+  Page: 'PÃ¡gina',
+};
+
 export const ResultCard: React.FC<CardProps> = ({ theme, neon, item, onEdit, onDelete }) => {
-  const getEntityLabel = (): string => {
-    switch (item.tipoEntidade) {
-      case 'Cidade':
-        return 'Cidade';
-      case 'Personagem':
-        return 'NPC';
-      case 'Item':
-        return 'Item';
-      case 'InfoLore':
-        return 'Lore';
-      case 'Raca':
-        return 'Raça';
-      case 'Page':
-        return 'Página';
-      default:
-        return 'Desconhecido';
-    }
-  };
-
-  const renderContent = () => {
-    switch (item.tipoEntidade) {
-      case 'Cidade':
-        return (
-          <InfoText theme={theme} neon={neon}>
-            Localização do mundo de Odisseia
-          </InfoText>
-        );
-      
-      case 'Personagem':
-        return (
-          <InfoText theme={theme} neon={neon}>
-            Personagem não-jogador (NPC)
-          </InfoText>
-        );
-      
-      case 'Item':
-        return (
-          <InfoText theme={theme} neon={neon}>
-            Item do inventário
-          </InfoText>
-        );
-      
-      case 'InfoLore':
-        return (
-          <InfoText theme={theme} neon={neon}>
-            Informação de lore do universo
-          </InfoText>
-        );
-      
-      case 'Raca':
-        return (
-          <InfoText theme={theme} neon={neon}>
-            Raça jogável
-          </InfoText>
-        );
-      
-      case 'Page':
-        return (
-          <>
-            <InfoText theme={theme} neon={neon}>
-              Página da Wiki
-            </InfoText>
-            {item.slug && (
-              <SlugText theme={theme} neon={neon} title={item.slug}>
-                Slug: {item.slug}
-              </SlugText>
-            )}
-          </>
-        );
-      
-      default:
-        return null;
-    }
-  };
-
-  const handleEdit = () => {
-    if (onEdit) {
-      onEdit(item);
-    }
-  };
-
-  const handleDelete = () => {
-    if (onDelete) {
-      onDelete(item);
-    }
-  };
+  const entityType = item.tipoEntidade;
+  const visibleTags = item.tags?.slice(0, 3) ?? [];
+  const hiddenTagCount = Math.max(0, (item.tags?.length ?? 0) - visibleTags.length);
 
   return (
-    <CardContainer theme={theme} neon={neon}>
-      <VisibilityIndicator theme={theme} neon={neon} visivel={item.visivel} />
-      
-      <CardImage src={item.imagem} alt={`Imagem de ${item.nome}`} />
-      
+    <CardContainer theme={theme} neon={neon} $type={entityType}>
+      <CardMedia $type={entityType}>
+        <CardImage
+          $type={entityType}
+          src={normalizeImagePath(item.imagem)}
+          alt={`Imagem de ${item.nome}`}
+        />
+      </CardMedia>
+
       <CardHeader>
         <CardTitle theme={theme} neon={neon} title={item.nome}>
           {item.nome}
         </CardTitle>
-        <EntityBadge theme={theme} neon={neon}>
-          {getEntityLabel()}
-        </EntityBadge>
+        <EntityBadge $type={entityType}>{ENTITY_LABELS[entityType]}</EntityBadge>
       </CardHeader>
 
       <CardContent>
-        {renderContent()}
-        
-        {item.tags && item.tags.length > 0 && (
+        <ManagementMetadata>
+          <MetadataChip $active={item.visivel}>
+            {item.visivel ? <BiShow aria-hidden="true" /> : <BiHide aria-hidden="true" />}
+            {item.visivel ? 'VisÃ­vel' : 'Oculto'}
+          </MetadataChip>
+          <MetadataChip $active={Boolean(item.destaque)} $featured>
+            <BiStar aria-hidden="true" />
+            {item.destaque ? 'Destaque' : 'Comum'}
+          </MetadataChip>
+        </ManagementMetadata>
+
+        {entityType === 'Page' && item.slug && (
+          <SlugText theme={theme} neon={neon} title={item.slug}>
+            /{item.slug}
+          </SlugText>
+        )}
+
+        {visibleTags.length > 0 && (
           <TagsContainer>
-            {item.tags.map((tag: string, index: number) => (
-              <Tag key={index} theme={theme} neon={neon}>
-                {tag}
-              </Tag>
-            ))}
+            {visibleTags.map((tag) => <Tag key={tag}>{tag}</Tag>)}
+            {hiddenTagCount > 0 && <Tag>+{hiddenTagCount}</Tag>}
           </TagsContainer>
         )}
       </CardContent>
 
       <CardActions>
-        <ActionButton theme={theme} neon={neon} onClick={handleEdit}>
+        <ActionButton type="button" onClick={() => onEdit?.(item)}>
+          <BiEditAlt aria-hidden="true" />
           Editar
         </ActionButton>
-        <ActionButton theme={theme} neon={neon} onClick={handleDelete}>
+        <ActionButton type="button" $danger onClick={() => onDelete?.(item)}>
+          <BiTrash aria-hidden="true" />
           Excluir
         </ActionButton>
       </CardActions>

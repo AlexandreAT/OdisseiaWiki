@@ -131,6 +131,14 @@ export const ErrorActionButton = styled.button<{ $primary?: boolean }>`
     background: rgba(0, 212, 255, 0.2);
   }
 
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.42;
+    transform: none;
+    border-color: rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.04);
+  }
+
   @media (max-width: 480px) {
     flex: 1 1 130px;
     padding-inline: 10px;

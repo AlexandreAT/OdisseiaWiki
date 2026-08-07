@@ -139,22 +139,20 @@ export const ResultsText = styled.span`
 
 export const ResultsGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(260px, 290px));
   gap: 20px;
   width: 100%;
+  justify-content: center;
   justify-items: center;
   min-width: 0;
 
   @media (max-width: 768px) {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     justify-content: stretch;
     justify-items: stretch;
     gap: 8px;
   }
 
-  @media (max-width: 360px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 `;
 
 export const EmptyState = styled.div<StyledProps>`

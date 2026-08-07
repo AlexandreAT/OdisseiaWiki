@@ -5,7 +5,7 @@ import { ScrollRevealBlockProps } from './ScrollRevealBlock.types';
 export const ScrollRevealBlock = ({
   children,
   variant,
-  threshold = 0.6,
+  threshold = 0.48,
   rootMargin,
   className,
 }: ScrollRevealBlockProps) => {
