@@ -16,12 +16,21 @@ import { WikiContent } from '../WikiContent';
 import { WikiSearchResults } from '../WikiSearchResults';
 import { usePageContent, useWikiSearch } from '../../hooks';
 import { WikiSearchLoading } from '../WikiSearchLoading';
+import { useApiAvailabilityStatus } from '../../../../hooks/useApiAvailabilityStatus';
+
+interface RootState {
+  themesReducer: {
+    theme: 'dark' | 'light';
+    neon: 'on' | 'off';
+  };
+}
 
 export const WikiContainer: React.FC<WikiContainerProps> = () => {
-  const { theme, neon } = useSelector((state: any) => state.themesReducer);
+  const { theme, neon } = useSelector((state: RootState) => state.themesReducer);
   const [searchParams] = useSearchParams();
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [headerExpanded, setHeaderExpanded] = useState(true);
+  const apiAvailabilityStatus = useApiAvailabilityStatus();
   
   const isDark = theme === 'dark';
   const isSearching = searchParams.has('q') || searchParams.has('type');
@@ -78,7 +87,7 @@ export const WikiContainer: React.FC<WikiContainerProps> = () => {
         <WikiMainSection $isDark={isDark} $sidebarExpanded={!isSearching && sidebarExpanded} $headerExpanded={headerExpanded}>
           {isSearching ? (
             <>
-              {searchLoading && (
+              {searchLoading && apiAvailabilityStatus === 'idle' && (
                 <LoadingContainer $isDark={isDark}>
                   <WikiSearchLoading />
                 </LoadingContainer>
@@ -102,7 +111,7 @@ export const WikiContainer: React.FC<WikiContainerProps> = () => {
             </>
           ) : (
             <>
-              {pageLoading && (
+              {pageLoading && apiAvailabilityStatus === 'idle' && (
                 <LoadingContainer $isDark={isDark}>
                   <WikiSearchLoading label="Carregando página" />
                 </LoadingContainer>

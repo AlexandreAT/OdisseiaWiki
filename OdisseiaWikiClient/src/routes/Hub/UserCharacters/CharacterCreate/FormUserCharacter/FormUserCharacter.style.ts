@@ -281,6 +281,10 @@ export const StatusContent = styled.div<Props>`
 
     @media (max-width: 768px) {
         grid-template-columns: minmax(82px, 0.9fr) minmax(150px, 1.7fr) minmax(88px, 0.95fr);
+        grid-template-areas:
+          "defenses defenses defenses"
+          "primary image secondary";
+        grid-template-rows: auto minmax(0, 1fr);
         column-gap: 4px;
     }
 
@@ -366,6 +370,11 @@ export const StatusDefesaController = styled.div<Props>`
         font-size: 12px;
       }
     }
+
+    @media (max-width: 768px) {
+      align-self: stretch;
+      padding-inline: 8px;
+    }
 `
 
 export const StatusDefesaDiv = styled.div<Props>`
@@ -380,8 +389,14 @@ export const StatusDefesaDiv = styled.div<Props>`
 
     @media (max-width: 768px) {
       justify-content: center;
-      gap: 6px;
-      flex-wrap: wrap;
+      gap: 4px;
+      flex-wrap: nowrap;
+
+      > * {
+        flex: 1 1 0;
+        width: auto;
+        min-width: 0;
+      }
     }
 `
 
@@ -392,58 +407,38 @@ export const StatusImageDiv = styled.div`
     position: relative;
     width: 100%;
     height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    isolation: isolate;
+    border-radius: 5px;
 
     @media (max-width: 1100px) {
       grid-area: image;
       width: 100%;
-      height: auto;
-      min-height: clamp(160px, 42vw, 230px);
+      height: 100%;
+      min-height: 0;
       align-items: flex-start;
-      align-self: start;
-      margin-top: -2px;
-    }
-
-    @media (max-width: 768px) {
-      min-height: clamp(136px, 32vw, 190px);
-    }
-
-    @media (max-width: 480px) {
-      min-height: clamp(124px, 31vw, 145px);
-    }
-
-    @media (max-width: 360px) {
-      min-height: 122px;
+      align-self: stretch;
     }
 `
 
 export const InfoImage = styled.img`
-    top: 60px;
+    inset: 0;
     position: absolute;
-    z-index: -1;
-    height: calc(100% - 60px);
+    z-index: 0;
+    height: 100%;
     width: 100%;
     border-radius: 5px;
     box-shadow: 0px 0px 15px black;
     object-fit: cover;
     object-position: center;
 
-    @media (max-width: 1250px) {
-        height: 100%;
-        max-width: 100%;
-    }
-
-    @media (max-width: 1100px) {
-        height: auto;
-        max-width: 100%;
-    }
-
-    @media (max-width: 480px) {
-        height: auto;
-        width: 80%;
-    }
+    max-width: 100%;
 `;
 
 export const AvatarController = styled.div<{ hasImage: boolean, imageSize?: number }>`
+  position: relative;
+  z-index: 1;
   border-radius: 50%;
   background: var(--black);
   display: flex;
@@ -523,6 +518,7 @@ export const StatusAtributosDiv = styled.div<Props>`
     justify-content: flex-start;
     gap: 30px;
     padding: 20px 5px;
+    box-sizing: border-box;
     border-radius: 10px;
     background: ${({ theme, neon }) =>
         theme === "dark"

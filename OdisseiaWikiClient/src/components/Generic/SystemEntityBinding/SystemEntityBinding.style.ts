@@ -4,11 +4,16 @@ export const BindingSection = styled.section`
   display: grid;
   gap: 12px;
   width: 100%;
+  margin-block: 12px 18px;
   padding: 14px;
   box-sizing: border-box;
   border: 1px solid rgba(150, 150, 150, 0.35);
   border-radius: 5px;
   background: rgba(0, 9, 20, 0.28);
+
+  @media (max-width: 700px) {
+    margin-block: 10px 16px;
+  }
 `;
 
 export const BindingHeader = styled.header`

@@ -19,7 +19,7 @@ export const ModalOverlay = styled.div<{ $mobileInset?: boolean }>`
   box-sizing: border-box;
 
   @media (max-width: 767px) {
-    padding: ${({ $mobileInset }) => $mobileInset ? '12px' : '0'};
+    padding: ${({ $mobileInset }) => $mobileInset ? 'clamp(22px, 6dvh, 48px) 10px' : '0'};
   }
 `;
 
@@ -52,7 +52,7 @@ export const ModalContainer = styled.div<{
     width: ${({ $mobileInset }) => $mobileInset ? '100%' : '100vw'};
     max-width: ${({ $mobileInset }) => $mobileInset ? '100%' : '100vw'};
     height: ${({ $mobileInset }) => $mobileInset ? 'auto' : '100dvh'};
-    max-height: ${({ $mobileInset }) => $mobileInset ? 'calc(100dvh - 24px)' : '100dvh'};
+    max-height: ${({ $mobileInset }) => $mobileInset ? 'calc(100dvh - clamp(44px, 12dvh, 96px))' : '100dvh'};
     margin: 0;
     border-radius: ${({ $mobileInset }) => $mobileInset ? '8px' : '0'};
 

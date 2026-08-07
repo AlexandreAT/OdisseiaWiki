@@ -1,323 +1,212 @@
-import styled from "styled-components";
+import styled from 'styled-components';
 import { FallbackImage } from '../../../../../../components/Generic/FallbackImage/FallbackImage';
+import { EntityType } from '../types';
 
 interface StyledCardProps {
   theme: 'dark' | 'light';
   neon: 'on' | 'off';
 }
 
-export const CardContainer = styled.div<StyledCardProps>`
+const getEntityColor = (type: EntityType) => ({
+  Page: 'var(--clearneonBlue)',
+  InfoLore: 'var(--clearneonBlue)',
+  Personagem: 'var(--clearneonPink)',
+  Cidade: 'var(--clearneonYellow)',
+  Raca: 'var(--clearneonGreen)',
+  Item: 'var(--clearneonViolet)',
+}[type]);
+
+export const CardContainer = styled.article<StyledCardProps & { $type: EntityType }>`
   display: flex;
   flex-direction: column;
-  width: 280px;
-  min-height: 320px;
-  max-height: 380px;
-  border-radius: 8px;
-  padding: 16px;
-  gap: 12px;
-  position: relative;
-  overflow: hidden;
-  
-  background-color: ${({ theme }) => 
-    theme === 'light' ? 'var(--clearWhite)' : 'var(--deepgray)'};
-  
-  border: 2px solid ${({ theme, neon }) =>
-    neon === 'on'
-      ? theme === 'light'
-        ? 'var(--neonViolet)'
-        : 'var(--clearneonBlue)'
-      : theme === 'light'
-        ? 'var(--deepneonViolet)'
-        : 'var(--neonBlue)'};
-
-  box-shadow: ${({ theme, neon }) =>
-    neon === 'on'
-      ? theme === 'light'
-        ? '0 0 12px var(--clearneonViolet)'
-        : '0 0 12px var(--clearneonPink)'
-      : 'none'};
-
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  max-width: 100%;
+  gap: 11px;
+  width: 100%;
+  max-width: 290px;
+  height: 460px;
   min-width: 0;
+  padding: 12px;
   box-sizing: border-box;
+  overflow: hidden;
+  border: 2px solid ${({ theme }) => theme === 'light' ? '#b9bec7' : '#333'};
+  border-radius: 8px;
+  background: ${({ theme }) => theme === 'light' ? '#f4f5f8' : '#1a1a1a'};
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
 
-  @media (max-width: 768px) {
-    width: 100%;
-    max-width: none;
-    justify-self: stretch;
-    min-height: 0;
-    max-height: none;
-    padding: 6px;
-    gap: 5px;
-    border-width: 1px;
+  &:hover,
+  &:focus-within {
+    border-color: ${({ $type }) => getEntityColor($type)};
+    box-shadow: ${({ neon, $type }) => neon === 'on'
+      ? `0 0 14px ${getEntityColor($type)}`
+      : '0 8px 18px rgba(0, 0, 0, 0.28)'};
+    transform: translateY(-3px);
   }
 
-  &:hover {
-    transform: translateY(-4px);
-    box-shadow: ${({ theme, neon }) =>
-      neon === 'on'
-        ? theme === 'light'
-          ? '0 4px 20px var(--clearneonViolet)'
-          : '0 4px 20px var(--clearneonPink)'
-        : '0 4px 12px rgba(0, 0, 0, 0.15)'};
+  @media (max-width: 768px) {
+    max-width: none;
+    height: clamp(360px, calc(50vw + 180px), 520px);
+    padding: 8px;
+    gap: 7px;
   }
 `;
 
-export const CardHeader = styled.div`
+export const CardMedia = styled.div<{ $type: EntityType }>`
   display: flex;
-  flex-direction: row;
   align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: auto;
+  flex: 0 0 auto;
+  overflow: hidden;
+  border-radius: 6px;
+  background: transparent;
+`;
+
+export const CardImage = styled(FallbackImage)<{ $type: EntityType }>`
+  width: 100%;
+  height: auto;
+  aspect-ratio: ${({ $type }) => $type === 'Personagem' || $type === 'Raca' || $type === 'Item'
+    ? '1 / 1'
+    : '16 / 9'};
+  flex: 0 0 auto;
+  border: ${({ $type }) => $type === 'Personagem' ? '2px solid var(--mediumgrey)' : '0'};
+  border-radius: ${({ $type }) => $type === 'Personagem' ? '50%' : $type === 'Raca' || $type === 'Item' ? '6px' : '0'};
+  color: ${({ $type }) => getEntityColor($type)};
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+`;
+
+export const CardHeader = styled.header`
+  display: flex;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
-  width: 100%;
   min-width: 0;
-  flex-wrap: wrap;
-
-  @media (max-width: 768px) {
-    align-items: flex-start;
-    gap: 4px;
-  }
-`;
-
-export const CardImage = styled(FallbackImage)`
-  width: 100%;
-  height: 140px;
-  border-radius: 6px;
-  flex-shrink: 0;
-
-  @media (max-width: 768px) {
-    height: auto;
-    aspect-ratio: 4 / 3;
-  }
 `;
 
 export const CardTitle = styled.h3<StyledCardProps>`
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0;
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
   min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: ${({ theme }) => theme === 'light' ? 'var(--black)' : 'var(--whitesmoke)'};
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 
-  @media (max-width: 768px) {
-    display: -webkit-box;
-    flex-basis: 100%;
-    font-size: 11px;
-    line-height: 1.2;
-    white-space: normal;
-    overflow-wrap: anywhere;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-  }
-  
-  color: ${({ theme, neon }) =>
-    neon === 'on'
-      ? theme === 'light'
-        ? 'var(--clearneonViolet)'
-        : 'var(--clearneonBlue)'
-      : theme === 'light'
-        ? 'var(--black)'
-        : 'var(--whitesmoke)'};
+  @media (max-width: 768px) { font-size: 12px; }
 `;
 
-export const EntityBadge = styled.span<StyledCardProps>`
-  font-size: 12px;
-  font-weight: 500;
-  padding: 4px 10px;
-  border-radius: 12px;
-  white-space: nowrap;
-  
-  background-color: ${({ theme, neon }) =>
-    neon === 'on'
-      ? theme === 'light'
-        ? 'var(--clearneonViolet)'
-        : 'var(--clearneonBlue)'
-      : theme === 'light'
-        ? 'var(--neonViolet)'
-        : 'var(--neonBlue)'};
-  
-  color: ${({ theme }) =>
-    theme === 'light' ? 'var(--white)' : 'var(--black)'};
-
-  @media (max-width: 768px) {
-    max-width: 100%;
-    padding: 2px 4px;
-    font-size: 8px;
-    white-space: normal;
-    overflow-wrap: anywhere;
-  }
+export const EntityBadge = styled.span<{ $type: EntityType }>`
+  flex: 0 0 auto;
+  padding: 3px 7px;
+  border: 1px solid ${({ $type }) => getEntityColor($type)} !important;
+  border-radius: 999px;
+  background-color: transparent !important;
+  color: ${({ $type }) => getEntityColor($type)} !important;
+  font-family: 'Cyberpunk Is Not Dead', sans-serif;
+  font-size: 9px;
+  letter-spacing: 0.5px;
 `;
 
 export const CardContent = styled.div`
   display: flex;
-  flex-direction: column;
-  gap: 8px;
   flex: 1;
-  overflow: hidden;
+  flex-direction: column;
+  gap: 7px;
+  min-height: 0;
+`;
 
-  @media (max-width: 768px) {
-    gap: 4px;
-  }
+export const ManagementMetadata = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+`;
+
+export const MetadataChip = styled.span<{ $active: boolean; $featured?: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  border: 1px solid ${({ $active, $featured }) => $active
+    ? $featured ? 'var(--clearneonYellow)' : 'var(--clearneonGreen)'
+    : 'rgba(160, 166, 176, 0.48)'};
+  border-radius: 4px;
+  color: ${({ $active, $featured }) => $active
+    ? $featured ? 'var(--clearneonYellow)' : 'var(--clearneonGreen)'
+    : 'rgba(205, 210, 218, 0.66)'};
+  font-size: 10px;
+  white-space: nowrap;
+
+  svg { width: 13px; height: 13px; }
 `;
 
 export const TagsContainer = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  max-height: 60px;
-  overflow-y: auto;
-
-  @media (max-width: 768px) {
-    gap: 3px;
-    max-height: 38px;
-  }
-  
-  &::-webkit-scrollbar {
-    width: 4px;
-  }
-  
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  
-  &::-webkit-scrollbar-thumb {
-    background: var(--gray);
-    border-radius: 2px;
-  }
+  gap: 5px;
+  min-height: 0;
+  overflow: hidden;
 `;
 
-export const Tag = styled.span<StyledCardProps>`
-  font-size: 11px;
-  padding: 3px 8px;
-  border-radius: 10px;
+export const Tag = styled.span`
+  max-width: 100%;
+  padding: 2px 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(125, 132, 145, 0.18);
+  color: rgba(235, 238, 244, 0.72);
+  font-size: 9px;
+  text-overflow: ellipsis;
   white-space: nowrap;
-  
-  background-color: ${({ theme }) =>
-    theme === 'light' ? 'var(--lightgray)' : 'var(--gray)'};
-  
-  color: ${({ theme }) =>
-    theme === 'light' ? 'var(--black)' : 'var(--whitesmoke)'};
-
-  @media (max-width: 768px) {
-    max-width: 100%;
-    padding: 2px 4px;
-    overflow: hidden;
-    font-size: 8px;
-    text-overflow: ellipsis;
-  }
-`;
-
-export const VisibilityIndicator = styled.div<StyledCardProps & { visivel: boolean }>`
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  
-  background-color: ${({ visivel }) =>
-    visivel ? 'var(--success)' : 'var(--error)'};
-  
-  box-shadow: 0 0 6px ${({ visivel }) =>
-    visivel ? 'var(--success)' : 'var(--error)'};
-
-  @media (max-width: 768px) {
-    top: 6px;
-    right: 6px;
-    width: 8px;
-    height: 8px;
-  }
-`;
-
-export const CardActions = styled.div`
-  display: flex;
-  flex-direction: row;
-  gap: 8px;
-  margin-top: auto;
-  flex-wrap: wrap;
-
-  @media (max-width: 768px) {
-    gap: 4px;
-  }
-`;
-
-export const ActionButton = styled.button<StyledCardProps>`
-  flex: 1;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  
-  background-color: ${({ theme, neon }) =>
-    neon === 'on'
-      ? theme === 'light'
-        ? 'var(--clearneonViolet)'
-        : 'var(--clearneonBlue)'
-      : theme === 'light'
-        ? 'var(--neonViolet)'
-        : 'var(--neonBlue)'};
-  
-  color: ${({ theme }) =>
-    theme === 'light' ? 'var(--white)' : 'var(--black)'};
-
-  @media (max-width: 768px) {
-    min-width: 0;
-    padding: 4px 3px;
-    font-size: 9px;
-  }
-
-  &:hover {
-    opacity: 0.8;
-    transform: scale(1.02);
-  }
-
-  &:active {
-    transform: scale(0.98);
-  }
-`;
-
-export const InfoText = styled.p<StyledCardProps>`
-  font-size: 13px;
-  margin: 0;
-  line-height: 1.4;
-  overflow-wrap: anywhere;
-  
-  color: ${({ theme }) =>
-    theme === 'light' ? 'var(--darkgray)' : 'var(--lightgray)'};
-
-  @media (max-width: 768px) {
-    display: -webkit-box;
-    overflow: hidden;
-    font-size: 9px;
-    line-height: 1.25;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-  }
 `;
 
 export const SlugText = styled.p<StyledCardProps>`
   margin: 0;
   overflow: hidden;
-  color: ${({ theme, neon }) =>
-    neon === 'on'
-      ? theme === 'light'
-        ? 'var(--deepneonViolet)'
-        : 'var(--clearneonBlue)'
-      : theme === 'light'
-        ? 'var(--darkgray)'
-        : 'var(--lightgray)'};
-  font-size: 11px;
-  line-height: 1.3;
+  color: ${({ neon }) => neon === 'on' ? 'var(--clearneonBlue)' : 'rgba(215, 221, 229, 0.68)'};
+  font-size: 10px;
   text-overflow: ellipsis;
   white-space: nowrap;
+`;
 
-  @media (max-width: 768px) {
-    font-size: 8px;
+export const CardActions = styled.footer`
+  display: flex;
+  gap: 7px;
+  margin-top: auto;
+`;
+
+export const ActionButton = styled.button<{ $danger?: boolean }>`
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 0;
+  min-height: 34px;
+  padding: 5px 8px;
+  border: 1px solid ${({ $danger }) => $danger ? 'rgba(255, 66, 94, 0.65)' : 'rgba(0, 212, 255, 0.65)'};
+  border-radius: 4px;
+  background: transparent;
+  color: ${({ $danger }) => $danger ? 'var(--clearneonRed)' : 'var(--clearneonBlue)'};
+  font-family: 'Cyberpunk Is Not Dead', sans-serif;
+  font-size: 10px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover,
+  &:focus-visible {
+    outline: none;
+    background: ${({ $danger }) => $danger ? 'rgba(255, 66, 94, 0.12)' : 'rgba(0, 212, 255, 0.12)'};
+    box-shadow: 0 0 7px currentColor;
   }
+
+  svg { width: 14px; height: 14px; }
 `;

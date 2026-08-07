@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { Page, PageBlockType } from '../../../models/Pages';
+import { ImageBlockContent, Page, PageBlockType } from '../../../models/Pages';
 import { JSONContent } from '../../../models/Characters';
 import { WikiContextualBlock, WikiSidebarSection } from '../types';
 
@@ -64,16 +64,20 @@ export const useSidebarNavigation = (page: Page | null) => {
     const textHeadings: WikiContextualBlock[] = [];
 
     sortedBlocks.forEach((block, blockIndex) => {
-      if (block.tipo !== PageBlockType.RICH_TEXT) return;
+      const headingContent = block.tipo === PageBlockType.RICH_TEXT
+        ? block.conteudo
+        : block.tipo === PageBlockType.IMAGE
+          ? (block.conteudo as ImageBlockContent | undefined)?.texto
+          : undefined;
 
-      extractHeadingsFromRichText(block.conteudo).forEach((heading, headingIndex) => {
+      extractHeadingsFromRichText(headingContent).forEach((heading, headingIndex) => {
         const targetId = createHeadingId(blockIndex, headingIndex);
         textHeadings.push({
           id: targetId,
           targetId,
           title: heading.text,
           level: heading.level,
-          type: PageBlockType.RICH_TEXT,
+          type: block.tipo,
           blockIndex,
         });
       });

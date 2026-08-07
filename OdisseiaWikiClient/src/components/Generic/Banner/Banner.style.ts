@@ -105,9 +105,12 @@ const BannerContent = styled.div<Props>`
     flex-direction: column;
     gap: 10px;
     padding: 10px;
-    padding-left: 25px;
-    width: 100%;
-    margin-left: -15px;
+    top: 50%;
+    left: 50%;
+    width: min(88%, 1240px);
+    margin: 0;
+    padding: clamp(18px, 2vw, 30px);
+    transform: translate(-50%, -46%);
     position: absolute;
     z-index: 2;
     isolation: isolate;
@@ -116,38 +119,72 @@ const BannerContent = styled.div<Props>`
     &::before {
         content: '';
         position: absolute;
-        inset: 0;
+        top: 0;
+        bottom: 0;
+        left: 50%;
+        width: 100vw;
+        margin-left: -50vw;
         z-index: -1;
         transform: scaleX(0);
         transform-origin: left center;
         animation: ${drawBannerTextBackground} 1.05s cubic-bezier(0.22, 1, 0.36, 1) 120ms forwards;
         background: ${props => props.theme === 'dark'
-            ? 'linear-gradient(90deg, var(--black-blue) 20%, rgba(77,238,234,0) 100%)'
-            : 'linear-gradient(90deg, #ccf0e4 20%, rgba(77,238,234,0) 95%)'};
+            ? 'linear-gradient(90deg, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.82) 34%, rgba(0, 0, 0, 0.46) 68%, rgba(0, 0, 0, 0) 100%)'
+            : 'linear-gradient(90deg, rgba(238, 246, 244, 0.94) 0%, rgba(238, 246, 244, 0.82) 38%, rgba(238, 246, 244, 0.36) 74%, rgba(238, 246, 244, 0) 100%)'};
         pointer-events: none;
     }
 
     @media (max-width: 480px) {
         gap: 12px;
         padding: 15px 2px 15px 28px;
-        width: calc(100% - 12px);
-        max-width: 390px;
+        left: 50%;
+        width: calc(100% - 20px);
+        max-width: 430px;
 
         &::before {
             background: ${props => props.theme === 'dark'
-                ? 'linear-gradient(90deg, var(--black-blue) 40%, rgba(77,238,234,0) 100%)'
-                : 'linear-gradient(90deg, #ccf0e4 40%, rgba(77,238,234,0) 95%)'};
+                ? 'linear-gradient(90deg, rgba(0, 0, 0, 0.94) 0%, rgba(0, 0, 0, 0.84) 48%, rgba(0, 0, 0, 0) 100%)'
+                : 'linear-gradient(90deg, rgba(238, 246, 244, 0.96) 0%, rgba(238, 246, 244, 0.84) 48%, rgba(238, 246, 244, 0) 100%)'};
         }
     };
+`;
+
+const BannerTitleRow = styled.div`
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+
+    svg {
+        width: clamp(360px, 42vw, 720px);
+        height: clamp(54px, 7vw, 104px);
+    }
+
+    @media (max-width: 768px) {
+        svg {
+            width: min(86vw, 520px);
+            height: clamp(48px, 12vw, 76px);
+        }
+    }
+
+    @media (max-width: 480px) {
+        svg {
+            width: min(88vw, 390px);
+            height: clamp(42px, 13vw, 62px);
+        }
+    }
 `;
 
 const BannerText = styled.div`
     display: flex;
     flex-direction: column;
     gap: 5px;
+    width: min(82%, 980px);
+    margin: 0 auto;
 
     @media (max-width: 768px) {
         gap: 8px;
+        width: 92%;
     };
 `;
 
@@ -199,7 +236,7 @@ const Title = styled.h1<Props>`
 `;
 
 const Paragraph = styled.p<Props>`
-    width: 90%;
+    width: 100%;
     text-shadow: 0px 0px 2px var(--clearneonBlue);
     font-size: 24px;
 
@@ -242,6 +279,7 @@ export {
     BannerBackground,
     BannerEfect,
     BannerContent,
+    BannerTitleRow,
     BannerRevealItem,
     BannerText,
     Title,

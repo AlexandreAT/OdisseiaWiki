@@ -251,6 +251,10 @@ export const StatusContent = styled.div<Props>`
 
     @media (max-width: 768px) {
         grid-template-columns: minmax(82px, 0.9fr) minmax(150px, 1.7fr) minmax(88px, 0.95fr);
+        grid-template-areas:
+          "defenses defenses defenses"
+          "primary image secondary";
+        grid-template-rows: auto minmax(0, 1fr);
         column-gap: 4px;
     }
 
@@ -291,7 +295,10 @@ export const StatusDefesaController = styled.div<Props>`
     align-items: center;
     gap: 10px;
     width: 100%;
+    min-width: 0;
+    max-width: 100%;
     padding: 20px 10px 10px;
+    box-sizing: border-box;
     border-radius: 10px;
     background: ${({ theme, neon }) =>
         theme === "dark"
@@ -319,6 +326,15 @@ export const StatusDefesaController = styled.div<Props>`
         padding: 10px 6px 6px;
         gap: 6px;
         align-self: start;
+
+        > h2 {
+            font-size: 12px;
+        }
+    }
+
+    @media (max-width: 768px) {
+        align-self: stretch;
+        padding-inline: 8px;
     }
 
     @media (max-width: 360px) {
@@ -338,8 +354,14 @@ export const StatusDefesaDiv = styled.div<Props>`
 
     @media (max-width: 768px) {
         justify-content: center;
-        gap: 8px;
+        gap: 4px;
         flex-wrap: nowrap;
+
+        > * {
+            flex: 1 1 0;
+            width: auto;
+            min-width: 0;
+        }
     }
 `
 
@@ -350,49 +372,38 @@ export const StatusImageDiv = styled.div`
     position: relative;
     width: 100%;
     height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    isolation: isolate;
+    border-radius: 5px;
 
     @media (max-width: 1100px) {
         grid-area: image;
         width: 100%;
-        height: auto;
-        min-height: clamp(160px, 42vw, 230px);
+        height: 100%;
+        min-height: 0;
         align-items: center;
-        align-self: start;
-    }
-
-    @media (max-width: 360px) {
-        min-height: 140px;
+        align-self: stretch;
     }
 `
 
 export const InfoImage = styled.img`
-    top: 60px;
+    inset: 0;
     position: absolute;
-    z-index: -1;
-    height: calc(100% - 60px);
+    z-index: 0;
+    height: 100%;
     width: 100%;
     border-radius: 5px;
     box-shadow: 0px 0px 15px black;
     object-fit: cover;
     object-position: center;
 
-    @media (max-width: 1250px) {
-        height: 100%;
-        max-width: 100%;
-    }
-
-    @media (max-width: 1100px) {
-        height: auto;
-        max-width: 100%;
-    }
-
-    @media (max-width: 480px) {
-        height: auto;
-        width: 80%;
-    }
+    max-width: 100%;
 `;
 
 export const AvatarController = styled.div<{ hasImage: boolean }>`
+  position: relative;
+  z-index: 1;
   border-radius: 50%;
   background: var(--black);
   display: flex;
@@ -412,6 +423,11 @@ export const AvatarController = styled.div<{ hasImage: boolean }>`
   }
 
   @media (max-width: 768px) {
+    min-width: clamp(136px, 32vw, 190px);
+    min-height: clamp(136px, 32vw, 190px);
+    width: clamp(136px, 32vw, 190px);
+    height: clamp(136px, 32vw, 190px);
+
     > button {
       width: 100% !important;
       height: 100% !important;
@@ -419,11 +435,18 @@ export const AvatarController = styled.div<{ hasImage: boolean }>`
     }
   }
 
+  @media (max-width: 480px) {
+    min-width: clamp(124px, 31vw, 145px);
+    min-height: clamp(124px, 31vw, 145px);
+    width: clamp(124px, 31vw, 145px);
+    height: clamp(124px, 31vw, 145px);
+  }
+
   @media (max-width: 360px) {
-    min-width: 140px;
-    min-height: 140px;
-    width: 140px;
-    height: 140px;
+    min-width: 122px;
+    min-height: 122px;
+    width: 122px;
+    height: 122px;
   }
 `;
 
@@ -460,6 +483,7 @@ export const StatusAtributosDiv = styled.div<Props>`
     justify-content: flex-start;
     gap: 30px;
     padding: 20px 5px;
+    box-sizing: border-box;
     border-radius: 10px;
     background: ${({ theme, neon }) =>
         theme === "dark"

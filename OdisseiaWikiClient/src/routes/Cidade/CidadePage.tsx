@@ -13,6 +13,7 @@ import { OdisseiaAnimatedTitle } from '../../components/Generic/OdisseiaAnimated
 import { RichTextDisplay } from '../../components/Generic/RichTextDisplay/RichTextDisplay';
 import { ListModal } from '../../components/Generic/ListModal';
 import { Modal } from '../../components/Generic/Modal/Modal';
+import { GalleryModal } from '../../components/Generic/GalleryModal';
 import { WikiSearchLoading } from '../Wiki/components/WikiSearchLoading/WikiSearchLoading';
 import { Lightbox } from '../Wiki/components/blocks/shared/Lightbox/Lightbox';
 import { normalizeImagePath } from '../Wiki/utils/imagePathHelper';
@@ -42,10 +43,6 @@ import {
   GalleryButton,
   GalleryGrid,
   GalleryImage,
-  GalleryModalButton,
-  GalleryModalImage,
-  GalleryModalTrack,
-  GalleryModalViewport,
   HudPanel,
   HudCornerAccent,
   HudBorderLine,
@@ -472,41 +469,21 @@ const CidadePage = () => {
       )}
 
       {activeModal === 'gallery' && (
-        <Modal
-          title={(
-            <CityModalTitle $theme={theme}>
-              {formatCyberpunkTitle(`Galeria — ${city.nome}`)}
-            </CityModalTitle>
-          )}
+        <GalleryModal
+          title={formatCyberpunkTitle(`Galeria — ${city.nome}`)}
+          images={galleryImages.map((image, index) => ({
+            url: normalizeImagePath(image.url),
+            caption: image.caption,
+            shape: galleryShapes[index],
+          }))}
           theme={theme}
           neon={neon}
-          showFooter={false}
           onClose={closeModal}
-          width="min(1500px, calc(100vw - 40px))"
-        >
-          <GalleryModalViewport>
-            <GalleryModalTrack>
-              {galleryImages.map((image, index) => (
-                <GalleryModalButton
-                  key={`${image.url}-modal-${index}`}
-                  $shape={galleryShapes[index] ?? 'square'}
-                  type="button"
-                  onClick={() => {
-                    closeModal();
-                    setGalleryIndex(index);
-                  }}
-                  aria-label={`Ampliar imagem ${index + 1} da galeria`}
-                >
-                  <GalleryModalImage
-                    src={normalizeImagePath(image.url)}
-                    alt={image.caption || `Imagem ${index + 1} da galeria de ${city.nome}`}
-                    fallbackIcon={<BiImage aria-hidden="true" />}
-                  />
-                </GalleryModalButton>
-              ))}
-            </GalleryModalTrack>
-          </GalleryModalViewport>
-        </Modal>
+          onSelect={(index) => {
+            closeModal();
+            setGalleryIndex(index);
+          }}
+        />
       )}
 
       <Lightbox

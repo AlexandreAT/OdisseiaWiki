@@ -49,6 +49,21 @@ export const wikiParagraphStyle = `
 export const wikiListStyle = `
   padding-left: 2em;
 
+  &:where(ul) {
+    list-style: none;
+  }
+
+  &:where(ul) > li {
+    position: relative;
+  }
+
+  &:where(ul) > li::before {
+    content: '•';
+    position: absolute;
+    left: -1.2em;
+    color: currentColor;
+  }
+
   li {
     line-height: 1.8;
     font-size: 14px;

@@ -15,7 +15,10 @@ import {
   ImageContent,
 } from './ImageBlock.style';
 
-export const ImageBlock: React.FC<ImageBlockProps> = ({ block, theme: _theme, neon: _neon }) => {
+export const ImageBlock: React.FC<ImageBlockProps> = ({
+  block,
+  blockIndex,
+}) => {
   const [imageError, setImageError] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
@@ -60,14 +63,14 @@ export const ImageBlock: React.FC<ImageBlockProps> = ({ block, theme: _theme, ne
                   onError={() => setImageError(true)}
                 />
             ) : (
-              <ErrorMessage style={{ margin: 0, borderRadius: 0 }}>
+              <ErrorMessage $embedded>
                 <p>Erro ao carregar a imagem</p>
               </ErrorMessage>
             )}
             {legenda && <ImageCaption>{legenda}</ImageCaption>}
           </ImageContent>
           <TextSide>
-            <ImageTextRenderer content={texto} />
+            <ImageTextRenderer content={texto} blockIndex={blockIndex} />
           </TextSide>
         </ImageWithTextContainer>
 
@@ -82,7 +85,7 @@ export const ImageBlock: React.FC<ImageBlockProps> = ({ block, theme: _theme, ne
 
   return (
     <ImageBlockContainer>
-      <ImageWrapper onClick={handleImageClick} style={{ cursor: 'pointer' }}>
+      <ImageWrapper onClick={handleImageClick}>
         {!imageError ? (
           <StyledImage
             src={normalizeImagePath(url)}
@@ -90,7 +93,7 @@ export const ImageBlock: React.FC<ImageBlockProps> = ({ block, theme: _theme, ne
             onError={() => setImageError(true)}
           />
         ) : (
-          <ErrorMessage style={{ margin: 0, borderRadius: 0 }}>
+          <ErrorMessage $embedded>
             <p>Erro ao carregar a imagem</p>
           </ErrorMessage>
         )}

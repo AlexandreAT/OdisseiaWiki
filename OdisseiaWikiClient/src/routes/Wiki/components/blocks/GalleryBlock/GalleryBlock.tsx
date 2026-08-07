@@ -1,27 +1,37 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { BiImage, BiChevronLeft, BiChevronRight } from 'react-icons/bi';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { BiChevronLeft, BiChevronRight, BiImage } from 'react-icons/bi';
+import { GalleryModal } from '../../../../../components/Generic/GalleryModal';
 import { normalizeImagePath } from '../../../utils/imagePathHelper';
-import { GalleryBlockProps } from './types';
+import { ImageBlockContent } from '../../../../../models/Pages';
 import { Lightbox } from '../shared/Lightbox/Lightbox';
 import {
+  CarouselArrow,
+  CarouselViewport,
+  CarouselWrapper,
+  DesktopGalleryPresentation,
+  ErrorMessage,
   GalleryBlockContainer,
   GalleryGrid,
   GalleryItem,
   GalleryItemImage,
   GalleryItemPlaceholder,
-  CarouselWrapper,
-  CarouselViewport,
-  CarouselArrow,
-  ErrorMessage,
+  GalleryViewMoreButton,
+  MobileGalleryPreview,
 } from './GalleryBlock.style';
+import { GalleryBlockProps } from './types';
 
 const CAROUSEL_LIMIT = 5;
+const MOBILE_PREVIEW_LIMIT = 6;
 
-export const GalleryBlock: React.FC<GalleryBlockProps> = ({ block, theme: _theme, neon: _neon }) => {
+export const GalleryBlock: React.FC<GalleryBlockProps> = ({
+  block,
+  theme = 'dark',
+  neon = 'off',
+}) => {
+  const imagens = (block.conteudo?.imagens ?? []) as ImageBlockContent[];
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [galleryModalOpen, setGalleryModalOpen] = useState(false);
   const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
-
-  /* ── drag-to-scroll state ── */
   const viewportRef = useRef<HTMLDivElement>(null);
   const dragPointerId = useRef<number | null>(null);
   const dragStartX = useRef(0);
@@ -29,19 +39,9 @@ export const GalleryBlock: React.FC<GalleryBlockProps> = ({ block, theme: _theme
   const didDrag = useRef(false);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
-
-  if (!block.conteudo || !block.conteudo.imagens || block.conteudo.imagens.length === 0) {
-    return (
-      <ErrorMessage>
-        <p>Nenhuma imagem disponível nesta galeria</p>
-      </ErrorMessage>
-    );
-  }
-
-  const imagens = block.conteudo.imagens;
   const isCarousel = imagens.length > CAROUSEL_LIMIT;
 
-  const lightboxImages = imagens.map((imagem: any) => ({
+  const lightboxImages = imagens.map((imagem) => ({
     url: normalizeImagePath(imagem.url),
     caption: imagem.legenda,
   }));
@@ -54,84 +54,76 @@ export const GalleryBlock: React.FC<GalleryBlockProps> = ({ block, theme: _theme
     setSelectedIndex(index);
   };
 
-  const handleCloseModal = useCallback(() => {
-    setSelectedIndex(null);
-  }, []);
-
   const handleImageError = (index: number) => {
-    setImageErrors(prev => new Set(prev).add(index));
+    setImageErrors((current) => new Set(current).add(index));
   };
 
   const handlePrevious = useCallback(() => {
-    setSelectedIndex(prev => (prev !== null && prev > 0 ? prev - 1 : prev));
+    setSelectedIndex((current) => current !== null && current > 0 ? current - 1 : current);
   }, []);
 
   const handleNext = useCallback(() => {
-    setSelectedIndex(prev =>
-      prev !== null && prev < imagens.length - 1 ? prev + 1 : prev
-    );
+    setSelectedIndex((current) => (
+      current !== null && current < imagens.length - 1 ? current + 1 : current
+    ));
   }, [imagens.length]);
 
-  /* ── scroll arrow helpers ── */
   const updateScrollButtons = useCallback(() => {
-    const el = viewportRef.current;
-    if (!el) return;
-    setCanScrollLeft(el.scrollLeft > 4);
-    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    setCanScrollLeft(viewport.scrollLeft > 4);
+    setCanScrollRight(viewport.scrollLeft + viewport.clientWidth < viewport.scrollWidth - 4);
   }, []);
 
   useEffect(() => {
-    const el = viewportRef.current;
-    if (!el || !isCarousel) return;
+    const viewport = viewportRef.current;
+    if (!viewport || !isCarousel) return;
     updateScrollButtons();
-    el.addEventListener('scroll', updateScrollButtons, { passive: true });
-    return () => el.removeEventListener('scroll', updateScrollButtons);
+    viewport.addEventListener('scroll', updateScrollButtons, { passive: true });
+    return () => viewport.removeEventListener('scroll', updateScrollButtons);
   }, [isCarousel, updateScrollButtons]);
 
+  if (imagens.length === 0) {
+    return (
+      <ErrorMessage>
+        <p>Nenhuma imagem disponÃ­vel nesta galeria</p>
+      </ErrorMessage>
+    );
+  }
+
   const scrollByArrow = (direction: 'left' | 'right') => {
-    const el = viewportRef.current;
-    if (!el) return;
-    const itemWidth = el.querySelector('button')?.offsetWidth ?? 200;
-    const gap = 18;
-    const scrollAmount = itemWidth + gap;
-    el.scrollBy({
-      left: direction === 'left' ? -scrollAmount : scrollAmount,
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const itemWidth = viewport.querySelector('button')?.offsetWidth ?? 200;
+    viewport.scrollBy({
+      left: direction === 'left' ? -(itemWidth + 18) : itemWidth + 18,
       behavior: 'smooth',
     });
   };
 
-  /* ── drag-to-scroll handlers ── */
-  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.pointerType === 'mouse' && e.button !== 0) return;
-    const el = e.currentTarget;
-    dragPointerId.current = e.pointerId;
+  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    dragPointerId.current = event.pointerId;
     didDrag.current = false;
-    dragStartX.current = e.clientX;
-    dragScrollLeft.current = el.scrollLeft;
+    dragStartX.current = event.clientX;
+    dragScrollLeft.current = event.currentTarget.scrollLeft;
   };
 
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    const el = e.currentTarget;
-    if (dragPointerId.current !== e.pointerId) return;
-    const distance = e.clientX - dragStartX.current;
+  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (dragPointerId.current !== event.pointerId) return;
+    const distance = event.clientX - dragStartX.current;
     if (Math.abs(distance) > 3) didDrag.current = true;
     if (!didDrag.current) return;
-    e.preventDefault();
-    el.scrollLeft = dragScrollLeft.current - distance * 1.5;
+    event.preventDefault();
+    event.currentTarget.scrollLeft = dragScrollLeft.current - distance * 1.5;
   };
 
-  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (dragPointerId.current !== e.pointerId) return;
-    dragPointerId.current = null;
+  const handlePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (dragPointerId.current === event.pointerId) dragPointerId.current = null;
   };
 
-  /* ── render item ── */
-  const renderItem = (imagem: any, index: number) => (
-    <GalleryItem
-      key={index}
-      onClick={() => handleImageClick(index)}
-      type="button"
-    >
+  const renderItem = (imagem: (typeof imagens)[number], index: number) => (
+    <GalleryItem key={`${imagem.url}-${index}`} onClick={() => handleImageClick(index)} type="button">
       {!imageErrors.has(index) && imagem.url ? (
         <GalleryItemImage
           src={normalizeImagePath(imagem.url)}
@@ -139,9 +131,7 @@ export const GalleryBlock: React.FC<GalleryBlockProps> = ({ block, theme: _theme
           onError={() => handleImageError(index)}
         />
       ) : (
-        <GalleryItemPlaceholder>
-          <BiImage />
-        </GalleryItemPlaceholder>
+        <GalleryItemPlaceholder><BiImage /></GalleryItemPlaceholder>
       )}
     </GalleryItem>
   );
@@ -149,43 +139,64 @@ export const GalleryBlock: React.FC<GalleryBlockProps> = ({ block, theme: _theme
   return (
     <>
       <GalleryBlockContainer>
-        {isCarousel ? (
-          <CarouselWrapper>
-            <CarouselArrow
-              $direction="left"
-              disabled={!canScrollLeft}
-              onClick={() => scrollByArrow('left')}
-              aria-label="Anterior"
-            >
-              <BiChevronLeft />
-            </CarouselArrow>
+        <DesktopGalleryPresentation>
+          {isCarousel ? (
+            <CarouselWrapper>
+              <CarouselArrow
+                $direction="left"
+                disabled={!canScrollLeft}
+                onClick={() => scrollByArrow('left')}
+                aria-label="Anterior"
+              >
+                <BiChevronLeft />
+              </CarouselArrow>
+              <CarouselViewport
+                ref={viewportRef}
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                onPointerCancel={handlePointerUp}
+                onDragStart={(event) => event.preventDefault()}
+              >
+                {imagens.map(renderItem)}
+              </CarouselViewport>
+              <CarouselArrow
+                $direction="right"
+                disabled={!canScrollRight}
+                onClick={() => scrollByArrow('right')}
+                aria-label="PrÃ³ximo"
+              >
+                <BiChevronRight />
+              </CarouselArrow>
+            </CarouselWrapper>
+          ) : (
+            <GalleryGrid>{imagens.map(renderItem)}</GalleryGrid>
+          )}
+        </DesktopGalleryPresentation>
 
-            <CarouselViewport
-              ref={viewportRef}
-              onPointerDown={handlePointerDown}
-              onPointerMove={handlePointerMove}
-              onPointerUp={handlePointerUp}
-              onPointerCancel={handlePointerUp}
-              onDragStart={e => e.preventDefault()}
-            >
-              {imagens.map((imagem: any, index: number) => renderItem(imagem, index))}
-            </CarouselViewport>
-
-            <CarouselArrow
-              $direction="right"
-              disabled={!canScrollRight}
-              onClick={() => scrollByArrow('right')}
-              aria-label="Próximo"
-            >
-              <BiChevronRight />
-            </CarouselArrow>
-          </CarouselWrapper>
-        ) : (
-          <GalleryGrid>
-            {imagens.map((imagem: any, index: number) => renderItem(imagem, index))}
-          </GalleryGrid>
-        )}
+        <MobileGalleryPreview>
+          <GalleryGrid>{imagens.slice(0, MOBILE_PREVIEW_LIMIT).map(renderItem)}</GalleryGrid>
+          {imagens.length > MOBILE_PREVIEW_LIMIT && (
+            <GalleryViewMoreButton type="button" onClick={() => setGalleryModalOpen(true)}>
+              Ver mais ({imagens.length})
+            </GalleryViewMoreButton>
+          )}
+        </MobileGalleryPreview>
       </GalleryBlockContainer>
+
+      {galleryModalOpen && (
+        <GalleryModal
+          title="Galeria da pÃ¡gina"
+          images={lightboxImages}
+          theme={theme}
+          neon={neon}
+          onClose={() => setGalleryModalOpen(false)}
+          onSelect={(index) => {
+            setGalleryModalOpen(false);
+            setSelectedIndex(index);
+          }}
+        />
+      )}
 
       <Lightbox
         isOpen={selectedIndex !== null}
@@ -193,7 +204,7 @@ export const GalleryBlock: React.FC<GalleryBlockProps> = ({ block, theme: _theme
         selectedIndex={selectedIndex ?? 0}
         onPrevious={handlePrevious}
         onNext={handleNext}
-        onClose={handleCloseModal}
+        onClose={() => setSelectedIndex(null)}
       />
     </>
   );

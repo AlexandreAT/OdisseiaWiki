@@ -1,10 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
 import {
-  getApiAvailabilityStatus,
-  subscribeToApiAvailability,
   wakeApiServer,
 } from '../../../services/apiAvailability';
+import { useApiAvailabilityStatus } from '../../../hooks/useApiAvailabilityStatus';
 import {
   NoticeAction,
   NoticeActions,
@@ -24,19 +23,25 @@ interface RootState {
 }
 
 export const ServerStatusNotice = () => {
-  const [status, setStatus] = useState(getApiAvailabilityStatus);
+  const status = useApiAvailabilityStatus();
   const [showServerInfo, setShowServerInfo] = useState(false);
+  const previousStatusRef = useRef(status);
   const { theme, neon } = useSelector((state: RootState) => state.themesReducer);
 
   useEffect(() => {
-    const unsubscribe = subscribeToApiAvailability(setStatus);
-
     if (import.meta.env.PROD) {
       void wakeApiServer().catch(() => undefined);
     }
-
-    return unsubscribe;
   }, []);
+
+  useEffect(() => {
+    const previousStatus = previousStatusRef.current;
+    previousStatusRef.current = status;
+
+    if (previousStatus === 'starting' && status === 'idle') {
+      window.location.reload();
+    }
+  }, [status]);
 
   if (status === 'idle') return null;
 

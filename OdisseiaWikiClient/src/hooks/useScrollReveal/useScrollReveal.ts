@@ -34,7 +34,7 @@ export const useScrollReveal = <T extends HTMLElement = HTMLElement>({
     const requestedThreshold = getEnterThreshold(configuredThresholds);
     const elementHeight = Math.max(element.getBoundingClientRect().height, 1);
     const maximumVisibleRatio = Math.min(1, window.innerHeight / elementHeight);
-    const enterThreshold = Math.min(requestedThreshold, maximumVisibleRatio * 0.9);
+    const enterThreshold = Math.min(requestedThreshold, maximumVisibleRatio * 0.72);
     const observerThresholds = normalizeThresholds([
       ...configuredThresholds,
       enterThreshold,

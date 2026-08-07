@@ -3,6 +3,7 @@ import {
     BannerBackground,
     BannerEfect,
     BannerContent,
+    BannerTitleRow,
     BannerRevealItem,
     BannerText,
     Title,
@@ -20,13 +21,20 @@ interface Props {
     textAnimationDuration?: number;
 }
 
+interface RootState {
+    themesReducer: {
+        theme: 'dark' | 'light';
+        neon: 'on' | 'off';
+    };
+}
+
 export const Banner = ({
     title,
     imageSrc,
     paragraph,
     textAnimationDuration,
 }: Props) => {
-    const { theme, neon } = useSelector((state: any) => state.themesReducer);
+    const { theme, neon } = useSelector((state: RootState) => state.themesReducer);
 
     return (
         <ContainerBanner theme={theme} neon={neon} image={imageSrc}>
@@ -34,11 +42,13 @@ export const Banner = ({
             <BannerEfect theme={theme} neon={neon}/>
             <BannerContent theme={theme} neon={neon}>
                 <BannerRevealItem $delay={350}>
+                  <BannerTitleRow>
                     {title === 'Odisseia' ? (
                         <OdisseiaAnimatedTitle theme={theme} neon={neon} />
                     ) : (
                         <Title theme={theme} neon={neon}>{title}</Title>
                     )}
+                  </BannerTitleRow>
                 </BannerRevealItem>
                 <BannerText>
                     {paragraph.map((text, index) => (
