@@ -31,7 +31,7 @@ export const NoticeWrapper = styled.div<{ $error: boolean; $modalOpen: boolean }
   }
 
   @media (max-width: 480px) {
-    flex-wrap: wrap;
+    align-items: center;
   }
 `;
 
@@ -71,8 +71,9 @@ export const NoticeActions = styled.div`
   gap: 8px;
 
   @media (max-width: 480px) {
-    width: 100%;
-    justify-content: flex-end;
+    width: auto;
+    justify-content: center;
+    padding-left: 4px;
   }
 `;
 

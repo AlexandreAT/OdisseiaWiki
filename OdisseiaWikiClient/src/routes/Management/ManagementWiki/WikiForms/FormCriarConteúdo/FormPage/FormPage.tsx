@@ -9,7 +9,7 @@ import { TextArea } from '../../../../../../components/Generic/TextArea/TextArea
 import { VisibilityToggle } from '../../../../../../components/Generic/VisibilityToggle';
 import { FeaturedToggle } from '../../../../../../components/Generic/FeaturedToggle';
 import { ImageUploader } from '../../../../../../components/Generic/ImageUploader/ImageUploader';
-import type { CropPreset } from '../../../../../../components/Generic/ImageUploader/types';
+import type { CropPreset, CropResult } from '../../../../../../components/Generic/ImageUploader/types';
 import {
   RichTextBlockEditor,
   ImageBlockEditor,
@@ -34,6 +34,7 @@ import {
   BlockActions,
   IconButton,
   DragHandle,
+  DragPreview,
   BlockContent,
   AddBlockContainer,
   BlockTypeSelector,
@@ -45,6 +46,7 @@ import {
 import { BiTrash, BiPlus, BiMoveVertical, BiInfoCircle } from 'react-icons/bi';
 import { EntityEditFloatingActions } from '../../FormBuscarConteúdo/EntityEditFloatingActions';
 import { revealFirstValidationError } from '../../../../../../utils/formValidationFeedback';
+import { useEntityEditSync } from '../../../../../../hooks/useEntityEditSync';
 
 const BLOCK_TYPES: PageBlockType[] = [
   PageBlockType.RICH_TEXT,
@@ -108,7 +110,10 @@ export const FormPage: React.FC<FormPageProps> = ({
   const [coverImageUrl, setCoverImageUrl] = useState(initialPage?.coverImage || '');
   const [showSlugInfo, setShowSlugInfo] = useState(false);
   const [draggingBlockId, setDraggingBlockId] = useState<string | null>(null);
+  const [dragPointer, setDragPointer] = useState({ x: 0, y: 0 });
   const draggingBlockIdRef = React.useRef<string | null>(null);
+  const dragPointerRef = React.useRef({ x: 0, y: 0 });
+  const autoScrollFrameRef = React.useRef<number | null>(null);
   const slugInfoRef = React.useRef<HTMLDivElement>(null);
   const persistInFlightRef = React.useRef(false);
   const blocksContainerRef = React.useRef<HTMLDivElement>(null);
@@ -144,8 +149,11 @@ export const FormPage: React.FC<FormPageProps> = ({
     destaque,
     blocks,
   }), [titulo, slug, descricao, coverImageUrl, visivel, destaque, blocks]);
-  const [lastSavedSnapshot, setLastSavedSnapshot] = React.useState(snapshot);
-  const isSynced = snapshot === lastSavedSnapshot;
+  const { isSynced, markSaved } = useEntityEditSync({
+    snapshot,
+    identity: pageId,
+    enabled: Boolean(pageId),
+  });
 
   const persist = async (stayOnPage: boolean, e?: React.FormEvent) => {
     e?.preventDefault();
@@ -155,7 +163,7 @@ export const FormPage: React.FC<FormPageProps> = ({
       const result = await handleSubmit();
       if (!result?.success) return;
 
-      setLastSavedSnapshot(snapshot);
+      markSaved();
       await onSaveSuccess?.({ stayOnPage });
     } finally {
       persistInFlightRef.current = false;
@@ -163,32 +171,67 @@ export const FormPage: React.FC<FormPageProps> = ({
   };
 
   const stopDragging = () => {
+    if (autoScrollFrameRef.current !== null) {
+      cancelAnimationFrame(autoScrollFrameRef.current);
+      autoScrollFrameRef.current = null;
+    }
     draggingBlockIdRef.current = null;
     setDraggingBlockId(null);
+  };
+
+  React.useEffect(() => () => {
+    if (autoScrollFrameRef.current !== null) cancelAnimationFrame(autoScrollFrameRef.current);
+  }, []);
+
+  const moveDraggedBlockAtPoint = (draggedId: string, x: number, y: number) => {
+    const targetBlock = document
+      .elementFromPoint(x, y)
+      ?.closest<HTMLElement>('[data-block-id]');
+    const targetId = targetBlock?.dataset.blockId;
+    if (targetId && targetId !== draggedId) moveBlock(draggedId, targetId);
+  };
+
+  const startAutoScroll = (draggedId: string) => {
+    const tick = () => {
+      if (draggingBlockIdRef.current !== draggedId) return;
+
+      const { x, y } = dragPointerRef.current;
+      const threshold = Math.min(120, window.innerHeight * 0.18);
+      let scrollSpeed = 0;
+      if (y < threshold) scrollSpeed = -Math.ceil(((threshold - y) / threshold) * 18);
+      if (y > window.innerHeight - threshold) {
+        scrollSpeed = Math.ceil(((y - (window.innerHeight - threshold)) / threshold) * 18);
+      }
+
+      if (scrollSpeed !== 0) {
+        window.scrollBy(0, scrollSpeed);
+        moveDraggedBlockAtPoint(draggedId, x, y);
+      }
+
+      autoScrollFrameRef.current = requestAnimationFrame(tick);
+    };
+
+    autoScrollFrameRef.current = requestAnimationFrame(tick);
   };
 
   const startDragging = (event: React.PointerEvent<HTMLButtonElement>, blockId: string) => {
     if (event.button !== 0) return;
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
+    dragPointerRef.current = { x: event.clientX, y: event.clientY };
+    setDragPointer(dragPointerRef.current);
     draggingBlockIdRef.current = blockId;
     setDraggingBlockId(blockId);
+    startAutoScroll(blockId);
   };
 
   const dragBlockOver = (event: React.PointerEvent<HTMLButtonElement>) => {
     const draggedId = draggingBlockIdRef.current;
     if (!draggedId) return;
     event.preventDefault();
-
-    const targetBlock = document
-      .elementFromPoint(event.clientX, event.clientY)
-      ?.closest<HTMLElement>('[data-block-id]');
-    const targetId = targetBlock?.dataset.blockId;
-    if (targetId && targetId !== draggedId) moveBlock(draggedId, targetId);
-
-    const scrollThreshold = 72;
-    if (event.clientY < scrollThreshold) window.scrollBy({ top: -14 });
-    if (event.clientY > window.innerHeight - scrollThreshold) window.scrollBy({ top: 14 });
+    dragPointerRef.current = { x: event.clientX, y: event.clientY };
+    setDragPointer(dragPointerRef.current);
+    moveDraggedBlockAtPoint(draggedId, event.clientX, event.clientY);
   };
 
   const coverImageCropPreset: CropPreset = {
@@ -199,7 +242,7 @@ export const FormPage: React.FC<FormPageProps> = ({
     label: 'Retângulo (16:9)',
   };
 
-  const handleCoverImageUpload = (result: any) => {
+  const handleCoverImageUpload = (result: CropResult) => {
     setCoverImageFile(result.file);
     setCoverImageUrl(result.preview);
   };
@@ -217,7 +260,7 @@ export const FormPage: React.FC<FormPageProps> = ({
       block,
       theme,
       neon,
-      onUpdate: (content: any) => updateBlock(blockTempId, content),
+      onUpdate: (content: unknown) => updateBlock(blockTempId, content),
     };
 
     switch (block.tipo) {
@@ -314,7 +357,7 @@ export const FormPage: React.FC<FormPageProps> = ({
             initialImage={coverImageUrl}
             onImageCropped={handleCoverImageUpload}
             cropPreset={coverImageCropPreset}
-            mobileSize="main"
+            mobileSize="full"
           />
         </FullWidthInput>
 
@@ -408,6 +451,22 @@ export const FormPage: React.FC<FormPageProps> = ({
             ))
           )}
         </BlocksContainer>
+        {draggingBlockId && (
+          <DragPreview
+            $isDark={theme === 'dark'}
+            $neon={neon === 'on'}
+            style={{
+              left: Math.min(dragPointer.x, Math.max(8, window.innerWidth - 292)),
+              top: Math.min(dragPointer.y, Math.max(8, window.innerHeight - 92)),
+            }}
+            aria-hidden="true"
+          >
+            <BiMoveVertical />
+            <span>
+              Movendo {blockTypeLabels[blocks.find((block) => block.tempId === draggingBlockId)?.tipo ?? PageBlockType.RICH_TEXT]}
+            </span>
+          </DragPreview>
+        )}
         {blocksError && <BlocksValidationMessage role="alert">{blocksError}</BlocksValidationMessage>}
 
         <AddBlockContainer>

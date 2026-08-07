@@ -21,6 +21,7 @@ import { BasicInfoFormProps } from './BasicInfoForm.type';
 import { getInventarioItems, getProtesesItems, getProtesesTableItems, isEmptyItemRow, replaceItemSection } from '../../../../../../utils/itemInventorySections';
 import { openItemPreview } from '../../../../../../utils/itemPreview';
 import { getRuntimeResourceLabel } from '../../../../../../utils/systemRuntimeCharacter';
+import { ItemComparisonModal } from '../../../../../../components/ItemComparison';
 
 export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
   theme,
@@ -82,6 +83,7 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
   magiasColumns,
   runtimeContext,
 }) => {
+  const [comparisonItem, setComparisonItem] = React.useState<Item | null>(null);
   const inventario = getInventarioItems(itens);
   const updateInventario = (updatedItems: Item[]) => setItens(replaceItemSection(itens, 'inventario', updatedItems));
   const updateProteses = (updatedItems: Item[]) => setItens(
@@ -342,6 +344,7 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
           onSelectSearch={(item) => item.tipo !== 'implante' && handleSelectItem(item)}
           isRowEmpty={isEmptyItemRow}
           onViewRow={(item) => openItemPreview(item, runtimeContext)}
+          onCompareRow={setComparisonItem}
           theme={theme}
           neon={neon}
         />
@@ -360,6 +363,7 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
           onSelectSearch={(item) => item.tipo === 'implante' && handleSelectItem(item)}
           isRowEmpty={isEmptyItemRow}
           onViewRow={(item) => openItemPreview(item, runtimeContext)}
+          onCompareRow={setComparisonItem}
           theme={theme}
           neon={neon}
         />
@@ -392,6 +396,15 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
           neon={neon}
         />
       </SectionTable>
+      <ItemComparisonModal
+        open={Boolean(comparisonItem)}
+        item={comparisonItem}
+        onClose={() => setComparisonItem(null)}
+        theme={theme}
+        neon={neon}
+        runtimeContext={runtimeContext}
+        availableItems={listItens}
+      />
     </>
   );
 };

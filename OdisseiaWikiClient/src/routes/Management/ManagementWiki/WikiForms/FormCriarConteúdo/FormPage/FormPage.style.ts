@@ -300,6 +300,39 @@ export const DragHandle = styled(IconButton)<{ $dragging?: boolean }>`
   &:active { cursor: grabbing; }
 `;
 
+export const DragPreview = styled.div<{ $isDark?: boolean; $neon?: boolean }>`
+  position: fixed;
+  z-index: 2200;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: min(260px, calc(100vw - 32px));
+  padding: 10px 14px;
+  border: 1px solid ${({ $neon, $isDark }) => $neon
+    ? 'var(--clearneonBlue)'
+    : ($isDark ? '#617181' : '#718693')};
+  border-radius: 6px;
+  background: ${({ $isDark }) => $isDark
+    ? 'rgba(1, 12, 27, 0.94)'
+    : 'rgba(239, 248, 252, 0.96)'};
+  color: ${({ $isDark }) => $isDark ? 'var(--whitesmoke)' : 'var(--deepgrey)'};
+  box-shadow: ${({ $neon }) => $neon
+    ? '0 0 14px rgba(0, 204, 255, 0.3)'
+    : '0 8px 22px rgba(0, 0, 0, 0.24)'};
+  font-family: 'DO Futuristic', sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  opacity: 0.92;
+  pointer-events: none;
+  transform: translate(14px, 14px);
+
+  svg {
+    flex: 0 0 auto;
+    color: var(--clearneonBlue);
+    font-size: 18px;
+  }
+`;
+
 export const BlockContent = styled.div`
   display: flex;
   flex-direction: column;

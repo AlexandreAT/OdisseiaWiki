@@ -22,7 +22,7 @@ export const CardContainer = styled.article<StyledCardProps & { $type: EntityTyp
   gap: 11px;
   width: 100%;
   max-width: 290px;
-  height: 460px;
+  height: 415px;
   min-width: 0;
   padding: 12px;
   box-sizing: border-box;
@@ -43,7 +43,7 @@ export const CardContainer = styled.article<StyledCardProps & { $type: EntityTyp
 
   @media (max-width: 768px) {
     max-width: none;
-    height: clamp(360px, calc(50vw + 180px), 520px);
+    height: clamp(310px, calc(50vw + 145px), 390px);
     padding: 8px;
     gap: 7px;
   }

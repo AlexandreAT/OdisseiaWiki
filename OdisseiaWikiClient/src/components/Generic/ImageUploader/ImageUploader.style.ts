@@ -11,7 +11,7 @@ interface ContainerProps extends Props {
   height?: string;
   aspectRatio?: number;
   shape?: 'square' | 'circle' | 'rectangle';
-  $mobileSize?: 'main' | 'compact';
+  $mobileSize?: 'main' | 'compact' | 'full';
 }
 
 interface LabelProps {
@@ -67,12 +67,16 @@ export const ImageContainer = styled.div<ContainerProps>`
   box-sizing: border-box;
 
   @media (max-width: 768px) {
-    width: ${({ $mobileSize }) => $mobileSize === 'main'
-      ? 'min(68vw, 240px)'
-      : 'min(36vw, 130px)'};
-    max-width: ${({ $mobileSize }) => $mobileSize === 'main' ? '240px' : '130px'};
+    width: ${({ $mobileSize }) => $mobileSize === 'full'
+      ? '100%'
+      : $mobileSize === 'main' ? 'min(68vw, 240px)' : 'min(36vw, 130px)'};
+    max-width: ${({ $mobileSize }) => $mobileSize === 'full'
+      ? '100%'
+      : $mobileSize === 'main' ? '240px' : '130px'};
     height: auto;
-    max-height: ${({ $mobileSize }) => $mobileSize === 'main' ? '240px' : '150px'};
+    max-height: ${({ $mobileSize }) => $mobileSize === 'full'
+      ? 'none'
+      : $mobileSize === 'main' ? '240px' : '150px'};
 
     img {
       object-fit: cover;

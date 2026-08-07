@@ -10,6 +10,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import SettingsSuggestOutlinedIcon from '@mui/icons-material/SettingsSuggestOutlined';
 import UndoIcon from '@mui/icons-material/Undo';
+import { LoadingIndicator } from '../../../../../components/Generic/LoadingIndicator';
 import {
   getSistemaVersaoStatusLabel,
   isSistemaVersaoRascunho,
@@ -186,7 +187,7 @@ export const SystemWorkspace = ({
 
         {versionsLoading && (
           <StatePanel theme={theme} neon={neon} role="status">
-            <SettingsSuggestOutlinedIcon /> Carregando versões...
+            <LoadingIndicator compact label="Carregando versões" />
           </StatePanel>
         )}
         {!versionsLoading && versionsError && (

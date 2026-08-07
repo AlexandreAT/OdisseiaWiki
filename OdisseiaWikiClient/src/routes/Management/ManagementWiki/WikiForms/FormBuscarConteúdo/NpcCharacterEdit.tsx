@@ -20,6 +20,7 @@ import { EditHeader } from './EditFormStyles';
 import { getApiErrorMessage } from '../../../../../utils/apiError';
 import { normalizeGalleryImages } from '../../../../../models/GalleryImage';
 import { SystemEntityBinding } from '../../../../../components/Generic/SystemEntityBinding';
+import { LoadingIndicator } from '../../../../../components/Generic/LoadingIndicator';
 
 interface NpcCharacterEditProps {
   theme: 'dark' | 'light';
@@ -758,7 +759,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
   }, [handleSave]);
 
   if (isLoadingCharacter) {
-    return <div>Carregando personagem...</div>;
+    return <LoadingIndicator label="Carregando personagem" />;
   }
 
   if (loadingError) {

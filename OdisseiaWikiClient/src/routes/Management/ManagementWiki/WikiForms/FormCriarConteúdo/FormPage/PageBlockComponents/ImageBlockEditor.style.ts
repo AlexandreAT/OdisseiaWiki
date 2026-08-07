@@ -1,9 +1,5 @@
 import styled from 'styled-components';
 
-interface ThemeProps {
-  $isDark?: boolean;
-}
-
 export const Container = styled.div`
   width: 100%;
   display: flex;
@@ -81,52 +77,4 @@ export const RichTextSection = styled.div`
   flex-direction: column;
   gap: 8px;
   min-width: 0;
-`;
-
-export const PreviewContainer = styled.div<ThemeProps>`
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 12px;
-  border-radius: 8px;
-  background-color: ${props => (props.$isDark ? '#1a1a1a' : '#f5f5f5')};
-  border: 1px solid ${props => (props.$isDark ? '#333' : '#ddd')};
-  min-width: 0;
-  max-width: 100%;
-  box-sizing: border-box;
-
-  @media (max-width: 768px) {
-    width: min(36vw, 130px);
-    max-width: 130px;
-    height: auto;
-    max-height: 150px;
-    align-self: center;
-    padding: 8px;
-    gap: 6px;
-    overflow: hidden;
-  }
-`;
-
-export const ImagePreview = styled.img`
-  width: 100%;
-  max-height: 300px;
-  object-fit: cover;
-  border-radius: 6px;
-
-  @media (max-width: 768px) {
-    width: 100%;
-    max-width: 100%;
-    height: auto;
-    max-height: 118px;
-    align-self: center;
-    object-fit: cover;
-  }
-`;
-
-export const PreviewLabel = styled.p`
-  margin: 0;
-  font-size: 12px;
-  font-weight: 600;
-  color: ${props => (props.color || '#666')};
 `;

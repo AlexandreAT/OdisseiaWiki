@@ -15,6 +15,7 @@ import { EntityEditFloatingActions } from '../../FormBuscarConteúdo/EntityEditF
 import { SystemEntityBinding } from '../../../../../../components/Generic/SystemEntityBinding';
 import { normalizeImagePath } from '../../../../../Wiki/utils/imagePathHelper';
 import { RacaPassiva, RacaVariacao } from '../../../../../../services/racasService';
+import { useEntityEditSync } from '../../../../../../hooks/useEntityEditSync';
 import { useFormRace } from './useFormRace';
 import {
   FormController,
@@ -188,8 +189,12 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
     tags, visivel, destaque, vida, estamina, mana, capacidadeCarga, atributoInicial,
     passivas, variacoes, sistema.vinculo,
   ]);
-  const [lastSavedSnapshot, setLastSavedSnapshot] = React.useState(snapshot);
-  const isSynced = snapshot === lastSavedSnapshot;
+  const { isSynced, markSaved } = useEntityEditSync({
+    snapshot,
+    identity: initialRaca?.idraca,
+    enabled: Boolean(initialRaca?.idraca),
+    ready: !sistema.loading,
+  });
 
   const persist = async (stayOnPage: boolean, event?: React.FormEvent) => {
     event?.preventDefault();
@@ -200,7 +205,7 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
       const result = await handleSubmit(event, variationImageFilesRef.current);
       if (result?.success) {
         toast.success(result.message);
-        setLastSavedSnapshot(snapshot);
+        markSaved();
         await onSaveSuccess?.({ stayOnPage });
       } else {
         toast.error(result?.message || 'Erro ao salvar raça');
@@ -269,7 +274,7 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
           initialImage={imagemUrl}
           onImageCropped={(result: CropResult) => handleImagemUpload(result.file)}
           cropPreset={RACE_IMAGE_CROP_PRESET}
-          mobileSize="main"
+          mobileSize="full"
         />
       </ImageSection>
 

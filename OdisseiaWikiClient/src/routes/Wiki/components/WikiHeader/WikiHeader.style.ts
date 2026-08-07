@@ -208,6 +208,12 @@ export const ToggleHeaderButton = styled.button<{ $isExpanded: boolean }>`
 
   @media (max-width: 768px) {
     right: 8px;
+    width: 36px;
+    height: 36px;
+    border: 1px solid #333;
+    border-radius: 4px;
+    background-color: rgba(0, 8, 18, 0.96);
+    z-index: 45;
   }
 `;
 

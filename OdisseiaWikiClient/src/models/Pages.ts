@@ -71,6 +71,7 @@ export interface ImageBlockContent {
   legenda?: string;
   texto?: JSONContent;
   posicaoTexto?: 'left' | 'right';
+  proporcao?: 'square' | 'rectangle';
 }
 
 export interface GalleryBlockContent {

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { CyberButton } from '../../../../../components/Generic/HighlightButton/HighlightButton';
 import { ConfirmDialog } from '../../../../../components/Generic/ConfirmDialog/ConfirmDialog';
+import { LoadingIndicator } from '../../../../../components/Generic/LoadingIndicator';
 import { getPageById, deletePage } from '../../../../../services/pageService';
 import { FormPage } from '../FormCriarConteúdo/FormPage/FormPage';
 import { PageBlock, Page } from '../../../../../models/Pages';
@@ -101,7 +102,7 @@ export const PageEdit: React.FC<PageEditProps> = ({ theme, neon, pageId, onBack,
   if (isLoading) {
     return (
       <LoadingContainer>
-        <span>Carregando página...</span>
+        <LoadingIndicator label="Carregando página" />
       </LoadingContainer>
     );
   }

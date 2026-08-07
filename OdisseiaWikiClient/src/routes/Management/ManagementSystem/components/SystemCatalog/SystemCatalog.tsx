@@ -8,6 +8,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import SearchIcon from '@mui/icons-material/Search';
 import SettingsSuggestOutlinedIcon from '@mui/icons-material/SettingsSuggestOutlined';
 import { Search } from '../../../../../components/Generic/Search/Search';
+import { LoadingIndicator } from '../../../../../components/Generic/LoadingIndicator';
 import { Select } from '../../../../../components/Generic/Select/Select';
 import TitleGlitch from '../../../../../components/Generic/TitleGlitch/TitleGlitch';
 import { SistemaRpgResumo } from '../../../../../models/SistemaRpg';
@@ -141,7 +142,7 @@ export const SystemCatalog = ({
       {loading && (
         <StatePanel theme={theme} neon={neon} role="status">
           <SettingsSuggestOutlinedIcon />
-          Carregando sistemas configuráveis...
+          <LoadingIndicator label="Carregando sistemas configuráveis" />
         </StatePanel>
       )}
 

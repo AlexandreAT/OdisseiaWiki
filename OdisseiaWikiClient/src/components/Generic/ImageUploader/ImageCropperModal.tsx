@@ -39,6 +39,8 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
   const [modalRoot, setModalRoot] = useState<HTMLElement | null>(null);
   const cropAreaRef = useRef<HTMLDivElement>(null);
   const dragStartRef = useRef<{ x: number; y: number; pointerId: number } | null>(null);
+  const activePointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const pinchStartRef = useRef<{ distance: number; scale: number } | null>(null);
 
   useEffect(() => {
     let root = document.getElementById('modal-root');
@@ -115,6 +117,19 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
 
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
+    activePointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+    if (activePointersRef.current.size === 2) {
+      const [first, second] = Array.from(activePointersRef.current.values());
+      pinchStartRef.current = {
+        distance: Math.hypot(second.x - first.x, second.y - first.y),
+        scale: cropState.scale,
+      };
+      dragStartRef.current = null;
+      setIsDragging(true);
+      return;
+    }
+
     dragStartRef.current = {
       x: event.clientX,
       y: event.clientY,
@@ -124,6 +139,23 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
   };
 
   const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (activePointersRef.current.has(event.pointerId)) {
+      activePointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    }
+
+    if (activePointersRef.current.size >= 2 && pinchStartRef.current) {
+      event.preventDefault();
+      const [first, second] = Array.from(activePointersRef.current.values());
+      const currentDistance = Math.hypot(second.x - first.x, second.y - first.y);
+
+      if (pinchStartRef.current.distance > 0) {
+        handleScaleChange(
+          pinchStartRef.current.scale * (currentDistance / pinchStartRef.current.distance),
+        );
+      }
+      return;
+    }
+
     const dragStart = dragStartRef.current;
     if (!dragStart || dragStart.pointerId !== event.pointerId) return;
 
@@ -140,11 +172,22 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
   };
 
   const handlePointerEnd = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (dragStartRef.current?.pointerId !== event.pointerId) return;
-
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
+    activePointersRef.current.delete(event.pointerId);
+
+    if (activePointersRef.current.size < 2) {
+      pinchStartRef.current = null;
+    }
+
+    const remainingPointer = Array.from(activePointersRef.current.entries())[0];
+    if (remainingPointer) {
+      const [pointerId, position] = remainingPointer;
+      dragStartRef.current = { ...position, pointerId };
+      return;
+    }
+
     dragStartRef.current = null;
     setIsDragging(false);
   };

@@ -3,6 +3,7 @@ import { Add, ArrowBack, DeleteOutline, FilterAlt, Checklist, SortByAlpha } from
 import toast from 'react-hot-toast';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ConfirmDialog } from '../../../components/Generic/ConfirmDialog/ConfirmDialog';
+import { LoadingIndicator } from '../../../components/Generic/LoadingIndicator';
 import { PersonagemJogador, StatusBase } from '../../../models/PersonagemJogador';
 import { CidadePayload, getCidades, getCidadesByIds } from '../../../services/cidadesService';
 import { getMesas } from '../../../services/mesaService';
@@ -377,7 +378,7 @@ export const UserCharacters = ({
     }
   };
 
-  if (loading) return <div>Carregando personagens...</div>;
+  if (loading) return <LoadingIndicator label="Carregando personagens" />;
 
   if (viewMode === 'create') {
     return (

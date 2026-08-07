@@ -73,7 +73,7 @@ export const ImageSection = styled.div`
   }
 
   @media (max-width: 768px) {
-    width: min(100%, 260px);
+    width: 100%;
   }
 `;
 

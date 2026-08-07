@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { CyberButton } from '../../../../../components/Generic/HighlightButton/HighlightButton';
 import { ConfirmDialog } from '../../../../../components/Generic/ConfirmDialog/ConfirmDialog';
+import { LoadingIndicator } from '../../../../../components/Generic/LoadingIndicator';
 import { getRacaById, deleteRaca, normalizeRacaStatus, normalizeRacaVariacoes } from '../../../../../services/racasService';
 import { FormRace } from '../FormCriarConteúdo/FormRace/FormRace';
 import { RacaPayload } from '../../../../../services/racasService';
@@ -105,7 +106,7 @@ export const RaceEdit: React.FC<RaceEditProps> = ({ theme, neon, raceId, onBack,
   if (isLoading) {
     return (
       <LoadingContainer>
-        <span>Carregando raça...</span>
+        <LoadingIndicator label="Carregando raça" />
       </LoadingContainer>
     );
   }

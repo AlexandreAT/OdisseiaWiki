@@ -60,7 +60,7 @@ const removeExpiredPreviews = () => {
   }
 };
 
-const buildRuntimeQuery = (
+export const buildItemRuntimeQuery = (
   item: Item,
   runtimeContext?: SistemaRuntimeContexto | null,
 ): SistemaRuntimeConsulta => {
@@ -101,7 +101,7 @@ export const openItemPreview = (
       // A nova guia resolve novamente somente o escopo efetivo deste item.
       sistemaRuntime: null,
     }, previewId),
-    runtimeQuery: buildRuntimeQuery(item, effectiveRuntimeContext),
+    runtimeQuery: buildItemRuntimeQuery(item, effectiveRuntimeContext),
   };
   localStorage.setItem(`${PREVIEW_PREFIX}${previewId}`, JSON.stringify(storedPreview));
 

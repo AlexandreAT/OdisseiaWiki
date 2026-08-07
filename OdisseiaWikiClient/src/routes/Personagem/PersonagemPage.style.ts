@@ -634,6 +634,10 @@ export const HistoryModalOverlay = styled.div`
   justify-content: center;
   z-index: 10100;
   padding: 20px;
+
+  @media (max-width: 767px) {
+    padding: clamp(24px, 6dvh, 52px) 10px;
+  }
 `;
 
 export const HistoryModalSheet = styled.div<{ theme: 'dark' | 'light'; neon: 'on' | 'off' }>`
@@ -658,9 +662,10 @@ export const HistoryModalSheet = styled.div<{ theme: 'dark' | 'light'; neon: 'on
   }
 
   @media (max-width: 767px) {
-    max-width: 100vw;
-    max-height: calc(100vh - 16px);
-    border-radius: 0;
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100dvh - clamp(48px, 12dvh, 104px));
+    border-radius: 8px;
   }
 
   @media (prefers-reduced-motion: reduce) {

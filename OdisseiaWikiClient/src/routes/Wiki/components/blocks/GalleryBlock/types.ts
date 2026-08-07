@@ -5,4 +5,6 @@ export interface GalleryBlockProps {
   blockIndex: number;
   theme?: 'dark' | 'light';
   neon?: 'on' | 'off';
+  alwaysShowModalButton?: boolean;
+  modalTitle?: string;
 }

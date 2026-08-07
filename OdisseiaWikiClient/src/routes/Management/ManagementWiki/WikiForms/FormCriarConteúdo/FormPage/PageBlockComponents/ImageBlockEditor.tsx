@@ -6,12 +6,11 @@ import { ImageUploader } from '../../../../../../../components/Generic/ImageUplo
 import { InputText } from '../../../../../../../components/Generic/InputText/InputText';
 import { RichTextEditor } from '../../../../../../../components/Generic/RichTextEditor/RichTextEditor';
 import { saveAsset } from '../../../../../../../services/assetsService';
-import type { CropPreset } from '../../../../../../../components/Generic/ImageUploader/types';
+import type { CropPreset, CropResult } from '../../../../../../../components/Generic/ImageUploader/types';
+import { normalizeImagePath } from '../../../../../../Wiki/utils/imagePathHelper';
+import { detectImageShapeFromUrl } from '../../../../../../../utils/imageDisplayShape';
 import {
   Container,
-  PreviewContainer,
-  ImagePreview,
-  PreviewLabel,
   AspectRatioSelector,
   AspectButton,
   PositionSelector,
@@ -38,7 +37,18 @@ export const ImageBlockEditor: React.FC<ImageBlockEditorProps> = ({
   const [legenda, setLegenda] = useState(content.legenda || '');
   const [texto, setTexto] = useState<JSONContent | undefined>(content.texto);
   const [posicaoTexto, setPosicaoTexto] = useState<'left' | 'right'>(content.posicaoTexto || 'right');
-  const [aspectRatio, setAspectRatio] = useState<'square' | 'rectangle'>('rectangle');
+  const [aspectRatio, setAspectRatio] = useState<'square' | 'rectangle'>(content.proporcao || 'rectangle');
+
+  React.useEffect(() => {
+    if (content.proporcao || !content.url) return;
+
+    let active = true;
+    detectImageShapeFromUrl(normalizeImagePath(content.url)).then((shape) => {
+      if (active) setAspectRatio(shape === 'rectangle' ? 'rectangle' : 'square');
+    });
+
+    return () => { active = false; };
+  }, [content.proporcao, content.url]);
 
   const getCropPreset = (): CropPreset => {
     if (aspectRatio === 'square') {
@@ -59,7 +69,7 @@ export const ImageBlockEditor: React.FC<ImageBlockEditorProps> = ({
     };
   };
 
-  const handleImageUpload = async (result: any) => {
+  const handleImageUpload = async (result: CropResult) => {
     try {
       const assetResult = await saveAsset({
         imageFile: result.file,
@@ -68,7 +78,7 @@ export const ImageBlockEditor: React.FC<ImageBlockEditorProps> = ({
       });
       
       setImagemUrl(assetResult.path);
-      onUpdate({ url: assetResult.path, legenda, texto, posicaoTexto });
+      onUpdate({ url: assetResult.path, legenda, texto, posicaoTexto, proporcao: aspectRatio });
       toast.success('Imagem salva com sucesso!');
     } catch (error) {
       toast.error('Erro ao salvar imagem');
@@ -79,18 +89,18 @@ export const ImageBlockEditor: React.FC<ImageBlockEditorProps> = ({
   const handleLegendaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newLegenda = e.target.value;
     setLegenda(newLegenda);
-    onUpdate({ url: imagemUrl, legenda: newLegenda, texto, posicaoTexto });
+    onUpdate({ url: imagemUrl, legenda: newLegenda, texto, posicaoTexto, proporcao: aspectRatio });
   };
 
   const handleTextoChange = useCallback((newTexto: JSONContent | string) => {
     const textoContent = newTexto as JSONContent;
     setTexto(textoContent);
-    onUpdate({ url: imagemUrl, legenda, texto: textoContent, posicaoTexto });
-  }, [imagemUrl, legenda, posicaoTexto, onUpdate]);
+    onUpdate({ url: imagemUrl, legenda, texto: textoContent, posicaoTexto, proporcao: aspectRatio });
+  }, [imagemUrl, legenda, posicaoTexto, aspectRatio, onUpdate]);
 
   const handlePosicaoChange = (novaPosicao: 'left' | 'right') => {
     setPosicaoTexto(novaPosicao);
-    onUpdate({ url: imagemUrl, legenda, texto, posicaoTexto: novaPosicao });
+    onUpdate({ url: imagemUrl, legenda, texto, posicaoTexto: novaPosicao, proporcao: aspectRatio });
   };
 
   return (
@@ -122,6 +132,7 @@ export const ImageBlockEditor: React.FC<ImageBlockEditorProps> = ({
         initialImage={imagemUrl}
         onImageCropped={handleImageUpload}
         cropPreset={getCropPreset()}
+        mobileSize="main"
       />
 
       <InputText
@@ -166,13 +177,6 @@ export const ImageBlockEditor: React.FC<ImageBlockEditorProps> = ({
           </PositionButton>
         </div>
       </PositionSelector>
-
-      {imagemUrl && (
-        <PreviewContainer $isDark={theme === 'dark'}>
-          <PreviewLabel>Preview:</PreviewLabel>
-          <ImagePreview src={imagemUrl} alt={legenda || 'Imagem do bloco'} />
-        </PreviewContainer>
-      )}
     </Container>
   );
 };

@@ -8,6 +8,7 @@ import {
   CarouselArrow,
   CarouselViewport,
   CarouselWrapper,
+  DesktopGalleryModalButton,
   DesktopGalleryPresentation,
   ErrorMessage,
   GalleryBlockContainer,
@@ -27,6 +28,8 @@ export const GalleryBlock: React.FC<GalleryBlockProps> = ({
   block,
   theme = 'dark',
   neon = 'off',
+  alwaysShowModalButton = false,
+  modalTitle = 'Galeria da página',
 }) => {
   const imagens = (block.conteudo?.imagens ?? []) as ImageBlockContent[];
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
@@ -174,11 +177,19 @@ export const GalleryBlock: React.FC<GalleryBlockProps> = ({
           )}
         </DesktopGalleryPresentation>
 
+        {alwaysShowModalButton && (
+          <DesktopGalleryModalButton>
+            <GalleryViewMoreButton type="button" onClick={() => setGalleryModalOpen(true)}>
+              Abrir galeria ({imagens.length})
+            </GalleryViewMoreButton>
+          </DesktopGalleryModalButton>
+        )}
+
         <MobileGalleryPreview>
           <GalleryGrid>{imagens.slice(0, MOBILE_PREVIEW_LIMIT).map(renderItem)}</GalleryGrid>
-          {imagens.length > MOBILE_PREVIEW_LIMIT && (
+          {(imagens.length > MOBILE_PREVIEW_LIMIT || alwaysShowModalButton) && (
             <GalleryViewMoreButton type="button" onClick={() => setGalleryModalOpen(true)}>
-              Ver mais ({imagens.length})
+              {imagens.length > MOBILE_PREVIEW_LIMIT ? 'Ver mais' : 'Abrir galeria'} ({imagens.length})
             </GalleryViewMoreButton>
           )}
         </MobileGalleryPreview>
@@ -186,7 +197,7 @@ export const GalleryBlock: React.FC<GalleryBlockProps> = ({
 
       {galleryModalOpen && (
         <GalleryModal
-          title="Galeria da pÃ¡gina"
+          title={modalTitle}
           images={lightboxImages}
           theme={theme}
           neon={neon}

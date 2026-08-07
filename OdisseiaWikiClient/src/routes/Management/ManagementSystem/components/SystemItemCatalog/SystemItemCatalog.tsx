@@ -6,6 +6,7 @@ import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { InputText } from '../../../../../components/Generic/InputText/InputText';
+import { LoadingIndicator } from '../../../../../components/Generic/LoadingIndicator';
 import { TextArea } from '../../../../../components/Generic/TextArea/TextArea';
 import {
   SistemaItemCampoRuntime,
@@ -566,7 +567,7 @@ export const SystemItemCatalog = ({
             Este catálogo é somente leitura. Duplique a versão para alterar suas regras de itens.
           </CatalogNotice>
         )}
-        {loading && <CatalogNotice role="status">Carregando catálogo de itens...</CatalogNotice>}
+        {loading && <CatalogNotice role="status"><LoadingIndicator compact label="Carregando catálogo de itens" /></CatalogNotice>}
         {!loading && error && (
           <CatalogNotice $error role="alert">{error}</CatalogNotice>
         )}

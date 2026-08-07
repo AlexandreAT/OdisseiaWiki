@@ -30,7 +30,7 @@ export interface ImageUploaderProps {
   onCancel?: () => void;
   accept?: string;
   label?: string;
-  mobileSize?: 'main' | 'compact';
+  mobileSize?: 'main' | 'compact' | 'full';
 }
 
 export interface ImageCropperModalProps {

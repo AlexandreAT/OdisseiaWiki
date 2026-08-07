@@ -18,6 +18,16 @@ export const DesktopGalleryPresentation = styled.div`
   }
 `;
 
+export const DesktopGalleryModalButton = styled.div`
+  display: flex;
+  justify-content: center;
+  width: 100%;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
+`;
+
 export const MobileGalleryPreview = styled.div`
   display: none;
 

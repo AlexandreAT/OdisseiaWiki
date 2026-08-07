@@ -6,6 +6,7 @@ import { Select } from '../../../../../components/Generic/Select/Select';
 import { VisibilityToggle } from '../../../../../components/Generic/VisibilityToggle';
 import { RichTextEditor } from '../../../../../components/Generic/RichTextEditor/RichTextEditor';
 import { ImageUploader } from '../../../../../components/Generic/ImageUploader/ImageUploader';
+import { LoadingIndicator } from '../../../../../components/Generic/LoadingIndicator';
 import type { CropPreset } from '../../../../../components/Generic/ImageUploader/types';
 import { InputText } from '../../../../../components/Generic/InputText/InputText';
 import { HorizontalList } from '../../../../../components/Generic/HorizontalList/HorizontalList';
@@ -13,6 +14,7 @@ import { getItemById, excluirItem } from '../../../../../services/itensService';
 import { useFormItem } from '../FormCriarConteúdo/FormItem/useFormItem';
 import { ItemPayload } from '../../../../../services/itensService';
 import { ItemTipo } from '../../../../../models/Itens';
+import { useEntityEditSync } from '../../../../../hooks/useEntityEditSync';
 import { atributosFormMap } from '../FormCriarConteúdo/FormCharacter/MapItensForm';
 import {
   FormController,
@@ -74,7 +76,7 @@ export const ItemEdit: React.FC<ItemEditProps> = ({ theme, neon, itemId, onBack,
   if (isLoading) {
     return (
       <LoadingContainer>
-        <span>Carregando item...</span>
+        <LoadingIndicator label="Carregando item" />
       </LoadingContainer>
     );
   }
@@ -221,8 +223,12 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
     visivel,
     sistema: sistema.vinculo,
   }), [nome, tipo, descricao, quantidade, peso, discricao, imagemUrl, atributos, tags, visivel, sistema.vinculo]);
-  const [lastSavedSnapshot, setLastSavedSnapshot] = React.useState(snapshot);
-  const isSynced = snapshot === lastSavedSnapshot;
+  const { isSynced, markSaved } = useEntityEditSync({
+    snapshot,
+    identity: initialItem.iditem,
+    enabled: Boolean(initialItem.iditem),
+    ready: !sistema.loading,
+  });
   const persistInFlightRef = React.useRef(false);
 
   const persist = async (stayOnPage: boolean, e?: React.FormEvent) => {
@@ -234,7 +240,7 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
 
       if (result?.success) {
         toast.success(result.message);
-        setLastSavedSnapshot(snapshot);
+        markSaved();
         await onSave?.();
         if (!stayOnPage) onBack();
       } else {
@@ -406,7 +412,7 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
           initialImage={imagemUrl}
           onImageCropped={handleItemImageUpload}
           cropPreset={itemImageCropPreset}
-          mobileSize="main"
+          mobileSize="full"
         />
       </ImageSection>
 

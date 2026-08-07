@@ -12,6 +12,7 @@ import {
 import { getRankedSuggestions, getSuggestionDisplayLabel } from '../../../utils/searchSuggestions';
 import { FormLabelText } from '../FormLabelText';
 import { revealFirstValidationError } from '../../../utils/formValidationFeedback';
+import { LoadingIndicator } from '../LoadingIndicator';
 
 interface Props {
   theme: 'dark' | 'light';
@@ -167,7 +168,7 @@ const SearchComponent = ({
 
   const renderSuggestions = (style?: CSSProperties) => (
     <SuggestionsList ref={suggestionsRef} theme={theme} neon={neon} style={style}>
-      {loading && <li>Buscando...</li>}
+      {loading && <li><LoadingIndicator compact label="Buscando" /></li>}
       {!loading && rankedSuggestions.map((suggestion, index) => (
         <li
           key={`${suggestion}-${index}`}
