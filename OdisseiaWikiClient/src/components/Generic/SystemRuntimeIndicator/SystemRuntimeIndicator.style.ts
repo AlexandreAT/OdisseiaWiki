@@ -42,6 +42,10 @@ export const RuntimeMeta = styled.span`
   color: var(--grey);
   font-size: 0.69rem;
   line-height: 1.35;
+
+  @media (max-width: 600px) {
+    font-size: 0.78rem;
+  }
 `;
 
 export const RuntimeWarningGroup = styled.div`
@@ -74,6 +78,13 @@ export const RuntimeWarning = styled.button<{ $outdated?: boolean }>`
     width: 16px;
     height: 16px;
   }
+
+  @media (max-width: 600px) {
+    padding: 4px 3px;
+    font-size: 0.78rem;
+    line-height: 1.35;
+    text-align: left;
+  }
 `;
 
 export const RuntimeMessagePanel = styled.div`
@@ -105,6 +116,7 @@ export const RuntimeMessagePanel = styled.div`
     left: 0;
     width: min(390px, calc(100vw - 32px));
     max-height: min(210px, 38vh);
+    padding: 12px 13px;
   }
 `;
 
@@ -119,6 +131,13 @@ export const RuntimeMessageList = styled.ul`
 
   li::marker {
     color: var(--clearneonYellow);
+  }
+
+  @media (max-width: 600px) {
+    gap: 9px;
+    padding-left: 18px;
+    font-size: 0.84rem;
+    line-height: 1.5;
   }
 `;
 
@@ -149,5 +168,10 @@ export const RuntimeUpdateButton = styled.button`
   &:disabled {
     opacity: 0.55;
     cursor: wait;
+  }
+
+  @media (max-width: 600px) {
+    padding: 7px 10px;
+    font-size: 0.76rem;
   }
 `;

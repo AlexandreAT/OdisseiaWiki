@@ -12,6 +12,7 @@ import { ImageGalleryWithCrop } from '../../../../../../components/Generic/Image
 import { HorizontalList } from '../../../../../../components/Generic/HorizontalList/HorizontalList';
 import { DataTable } from '../../../../../../components/Generic/DataTable/DataTable';
 import { PontoDeInteresse } from '../../../../../../models/Cities';
+import { useEntityEditSync } from '../../../../../../hooks/useEntityEditSync';
 import { normalizeImagePath } from '../../../../../Wiki/utils/imagePathHelper';
 import { EntityEditFloatingActions } from '../../FormBuscarConteúdo/EntityEditFloatingActions';
 import {
@@ -163,8 +164,11 @@ export const FormCity = ({ theme, neon, initialCity, onSaveSuccess, contentType 
     visivel,
     destaque,
   }), [nome, descricao, imagemUrl, imagemFile, galeriaUrls, galeriaFiles, galeriaCaptions, tags, pontosDeInteresse, visivel, destaque]);
-  const [lastSavedSnapshot, setLastSavedSnapshot] = React.useState(snapshot);
-  const isSynced = snapshot === lastSavedSnapshot;
+  const { isSynced, markSaved } = useEntityEditSync({
+    snapshot,
+    identity: initialCity?.idcidade,
+    enabled: Boolean(initialCity?.idcidade),
+  });
 
   const persist = async (stayOnPage: boolean, e?: React.FormEvent) => {
     e?.preventDefault();
@@ -176,7 +180,7 @@ export const FormCity = ({ theme, neon, initialCity, onSaveSuccess, contentType 
       if (result?.success) {
         pointImageFilesRef.current.clear();
         toast.success(result.message);
-        setLastSavedSnapshot(snapshot);
+        markSaved();
         if (onSaveSuccess) {
           await onSaveSuccess({ stayOnPage });
         }
@@ -247,7 +251,7 @@ export const FormCity = ({ theme, neon, initialCity, onSaveSuccess, contentType 
             initialImage={imagemUrl}
             onImageCropped={handleCityImageUpload}
             cropPreset={cityImageCropPreset}
-            mobileSize="main"
+            mobileSize="full"
           />
         </ImageSection>
       </FormHeader>

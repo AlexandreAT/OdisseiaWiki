@@ -1,23 +1,12 @@
-import { BiLoaderAlt } from 'react-icons/bi';
+import { LoadingIndicator } from '../../../../components/Generic/LoadingIndicator';
 import { WikiSearchLoadingProps } from './types';
-import {
-  AnimatedDots,
-  LoadingIcon,
-  LoadingText,
-  WikiSearchLoadingWrapper,
-} from './WikiSearchLoading.style';
+import { WikiSearchLoadingWrapper } from './WikiSearchLoading.style';
 
 export const WikiSearchLoading = ({
   compact = false,
   label = 'Buscando entidades',
 }: WikiSearchLoadingProps) => (
   <WikiSearchLoadingWrapper $compact={compact} role="status" aria-live="polite">
-    <LoadingIcon $compact={compact} aria-hidden="true">
-      <BiLoaderAlt />
-    </LoadingIcon>
-    <LoadingText $compact={compact}>
-      {label}
-      <AnimatedDots aria-hidden="true" />
-    </LoadingText>
+    <LoadingIndicator compact={compact} label={label} />
   </WikiSearchLoadingWrapper>
 );

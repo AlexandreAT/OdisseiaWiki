@@ -27,6 +27,7 @@ export const ListModal = <T,>({
     showFooter={false}
     onClose={onClose}
     width={width}
+    mobileInset
   >
     {items.length > 0 ? (
       <ListModalViewport $maxVisibleRows={maxVisibleRows} $itemHeight={itemHeight}>

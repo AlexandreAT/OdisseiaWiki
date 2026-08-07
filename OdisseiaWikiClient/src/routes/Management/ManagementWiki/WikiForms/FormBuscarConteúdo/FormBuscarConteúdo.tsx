@@ -2,6 +2,7 @@ import React from 'react';
 import toast from 'react-hot-toast';
 import { InputText } from '../../../../../components/Generic/InputText/InputText';
 import { ConfirmDialog } from '../../../../../components/Generic/ConfirmDialog/ConfirmDialog';
+import { LoadingIndicator } from '../../../../../components/Generic/LoadingIndicator';
 import { SearchResultItem } from '../../../../../services/infoLoreService';
 import { ResultCard } from './ResultCard/ResultCard';
 import { useFormBuscarConteúdo } from './useFormBuscarConteúdo';
@@ -22,7 +23,6 @@ import {
   EmptyStateIcon,
   EmptyStateText,
   LoadingContainer,
-  LoadingSpinner,
   ErrorText,
 } from './FormBuscarConteúdo.style';
 
@@ -82,7 +82,7 @@ export const FormBuscarConteúdo: React.FC<FormBuscarConteúdoProps> = ({ theme,
     if (isSearching) {
       return (
         <LoadingContainer>
-          <LoadingSpinner theme={theme} neon={neon} />
+          <LoadingIndicator label="Buscando conteúdos" />
         </LoadingContainer>
       );
     }

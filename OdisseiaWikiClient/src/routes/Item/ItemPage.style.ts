@@ -594,6 +594,13 @@ export const MetricReferenceTooltip = styled.span`
   transform: translate(-50%, 3px);
   transition: opacity 140ms ease, transform 140ms ease;
 
+  @media (max-width: 600px) {
+    max-width: min(260px, 72vw);
+    padding: 8px 10px;
+    font-size: 11px;
+    line-height: 1.5;
+  }
+
   ${MetricReferenceMarker}[data-alignment='left'] & {
     left: -3px;
     transform: translate(0, 3px);

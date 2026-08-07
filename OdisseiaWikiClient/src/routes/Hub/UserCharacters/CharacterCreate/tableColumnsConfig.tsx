@@ -209,6 +209,7 @@ const SkillAtributosEditor = memo(({
           onSubmit={() => setOpen(false)}
           theme={theme}
           neon={neon}
+          mobileInset
         >
           <FormComponent value={value} onChange={onChange} theme={theme} neon={neon} />
         </Modal>
@@ -251,6 +252,7 @@ const MagiaAtributosEditor = memo(({
           onSubmit={() => setOpen(false)}
           theme={theme}
           neon={neon}
+          mobileInset
         >
           <FormComponent value={value} onChange={onChange} theme={theme} neon={neon} />
         </Modal>

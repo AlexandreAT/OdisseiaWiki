@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
-import { CircularProgress } from '@mui/material';
 import { ButtonClipController, ButtonBoxShadow, ButtonClipBorder, ButtonContentContainer } from './HighlightButton.styles';
 import { useApiRequestActivity } from '../../../services/apiRequestActivity';
+import { LoadingIndicator } from '../LoadingIndicator';
 
 interface CyberButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     backgroundColor?: string;
@@ -67,10 +67,7 @@ const CyberButtonComponent = ({
         {...rest}
       >
         {loading || hasActiveApiRequest ? (
-          <CircularProgress 
-            size={20} 
-            sx={{ color: theme === 'dark' ? '#00ff00' : '#000000' }}
-          />
+          <LoadingIndicator compact label={text || 'Processando'} />
         ) : (
           children || text
         )}

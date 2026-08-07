@@ -1,4 +1,5 @@
 import React, { lazy, Suspense } from 'react';
+import { LoadingIndicator } from '../../../../../components/Generic/LoadingIndicator';
 import { PageBlockType } from '../../../../../models/Pages';
 import { WikiBlockRendererProps } from './types';
 import {
@@ -23,7 +24,7 @@ const RelationBlock = lazy(() =>
   import('../RelationBlock').then(m => ({ default: m.RelationBlock }))
 );
 
-const BlockFallback = () => <div style={{ padding: '16px' }}>Carregando bloco...</div>;
+const BlockFallback = () => <LoadingIndicator compact label="Carregando bloco" />;
 
 export const WikiBlockRenderer: React.FC<WikiBlockRendererProps> = ({
   block,

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { CyberButton } from '../../../../../components/Generic/HighlightButton/HighlightButton';
 import { ConfirmDialog } from '../../../../../components/Generic/ConfirmDialog/ConfirmDialog';
+import { LoadingIndicator } from '../../../../../components/Generic/LoadingIndicator';
 import { getCidadeById, deleteCidade } from '../../../../../services/cidadesService';
 import { FormCity } from '../FormCriarConteúdo/FormCity/FormCity';
 import { CidadePayload } from '../../../../../services/cidadesService';
@@ -77,7 +78,7 @@ export const CityEdit: React.FC<CityEditProps> = ({ theme, neon, cityId, onBack,
   if (isLoading) {
     return (
       <LoadingContainer>
-        <span>Carregando cidade...</span>
+        <LoadingIndicator label="Carregando cidade" />
       </LoadingContainer>
     );
   }

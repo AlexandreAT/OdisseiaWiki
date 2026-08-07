@@ -49,6 +49,12 @@ export const ImageSection = styled.div`
   > div {
     width: min(100%, 380px);
   }
+
+  @media (max-width: 768px) {
+    > div {
+      width: 100%;
+    }
+  }
 `;
 
 export const StatusSection = styled.div<Props>`

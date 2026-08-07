@@ -109,7 +109,7 @@ export const FloatingActions = styled.div`
 
   @media (max-width: 768px) {
     gap: 6px;
-    right: max(8px, env(safe-area-inset-right));
+    right: max(16px, calc(env(safe-area-inset-right) + 8px));
     bottom: max(72px, calc(env(safe-area-inset-bottom) + 64px));
   }
 `;

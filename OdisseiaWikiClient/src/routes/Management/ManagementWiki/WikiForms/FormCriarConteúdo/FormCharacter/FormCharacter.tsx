@@ -27,6 +27,7 @@ import { TRAITS_OPTIONS, ALIGNMENT_OPTIONS } from '../../formOptions';
 import { getInventarioItems, getProtesesItems, getProtesesTableItems, isEmptyItemRow, replaceItemSection } from '../../../../../../utils/itemInventorySections';
 import { openItemPreview } from '../../../../../../utils/itemPreview';
 import { SystemEntityBinding } from '../../../../../../components/Generic/SystemEntityBinding';
+import { ItemComparisonModal } from '../../../../../../components/ItemComparison';
 //import OrcBack from '../../../../../../assets/racas/orc/OrcBackground.jpeg';
 
 interface FormProps {
@@ -36,6 +37,7 @@ interface FormProps {
 }
 
 export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
+  const [comparisonItem, setComparisonItem] = React.useState<Item | null>(null);
   const {
     step, handleNext, handleSubmit,
     isSubmitting,
@@ -392,6 +394,7 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
               onSelectSearch={(item) => item.tipo !== 'implante' && handleSelectItem(item)}
               isRowEmpty={isEmptyItemRow}
               onViewRow={(item) => openItemPreview(item, sistema.contexto)}
+              onCompareRow={setComparisonItem}
               theme={theme}
               neon={neon}
             />
@@ -410,6 +413,7 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
               onSelectSearch={(item) => item.tipo === 'implante' && handleSelectItem(item)}
               isRowEmpty={isEmptyItemRow}
               onViewRow={(item) => openItemPreview(item, sistema.contexto)}
+              onCompareRow={setComparisonItem}
               theme={theme}
               neon={neon}
             />
@@ -664,6 +668,16 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
           loading={isLastStep && isSubmitting}
         />
       </NavegationButtons>
+
+      <ItemComparisonModal
+        open={Boolean(comparisonItem)}
+        item={comparisonItem}
+        onClose={() => setComparisonItem(null)}
+        theme={theme}
+        neon={neon}
+        runtimeContext={sistema.contexto}
+        availableItems={listItens}
+      />
 
     </FormController>
   );

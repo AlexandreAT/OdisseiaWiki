@@ -1,5 +1,6 @@
 import RefreshIcon from '@mui/icons-material/Refresh';
 import SettingsSuggestOutlinedIcon from '@mui/icons-material/SettingsSuggestOutlined';
+import { LoadingIndicator } from '../../../../../components/Generic/LoadingIndicator';
 import {
   SistemaModuloConfigMap,
   SistemaModuloKey,
@@ -58,7 +59,7 @@ export const ModuleEditor = ({
       <ModuleContent>
         <StatePanel theme={theme} neon={neon} role="status">
           <SettingsSuggestOutlinedIcon />
-          Carregando configuração do módulo...
+          <LoadingIndicator compact label="Carregando configuração do módulo" />
         </StatePanel>
       </ModuleContent>
     );

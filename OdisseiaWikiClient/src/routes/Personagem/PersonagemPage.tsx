@@ -26,6 +26,7 @@ import { SpanLink } from '../../components/Generic/SpanLink/SpanLink';
 import { getPersonagensByIds } from '../../services/personagensService';
 import CloseIcon from '@mui/icons-material/Close';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import AccountCircleOutlinedIcon from '@mui/icons-material/AccountCircleOutlined';
 import backgroundVideo from '../../assets/backgroundLinesScifiAnimation.mp4';
 import { ScrollRevealBlock } from '../../components/Generic/ScrollRevealBlock';
@@ -57,6 +58,8 @@ import { openItemPreview } from '../../utils/itemPreview';
 import { SystemRuntimeIndicator } from '../../components/Generic/SystemRuntimeIndicator';
 import { atualizarSistemaPersonagemJogador } from '../../services/personagemJogadorService';
 import toast from 'react-hot-toast';
+import { ItemComparisonModal } from '../../components/ItemComparison';
+import { LoadingIndicator } from '../../components/Generic/LoadingIndicator';
 
 const isObjectRecord = (value: unknown): value is Record<string, unknown> => (
   typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -394,6 +397,7 @@ const PersonagemPage: React.FC = () => {
   const [mainImageBackground, setMainImageBackground] = React.useState<string | null>(null);
   const [historyModalOpen, setHistoryModalOpen] = React.useState(false);
   const [selectedInventoryItem, setSelectedInventoryItem] = React.useState<Item | null>(null);
+  const [comparisonItem, setComparisonItem] = React.useState<Item | null>(null);
   const [activeAbilityTab, setActiveAbilityTab] = React.useState<'skills' | 'magias'>('skills');
   const [itemBaseItems, setItemBaseItems] = React.useState<Record<string, Item>>({});
   const [listModal, setListModal] = React.useState<'inventory' | 'implants' | 'abilities' | 'proficiencies' | null>(null);
@@ -523,7 +527,7 @@ const PersonagemPage: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [historyModalOpen, selectedInventoryItem]);
 
-  if (loading) return <PageLoadingState>Carregando personagem...</PageLoadingState>;
+  if (loading) return <PageLoadingState><LoadingIndicator label="Carregando personagem" /></PageLoadingState>;
   if (error) return <div>Erro: {error}</div>;
   console.log("🚀 ~ PersonagemPage ~ personagem:", personagem)
   if (!personagem) return <div>Personagem não encontrado</div>;
@@ -883,7 +887,7 @@ const PersonagemPage: React.FC = () => {
                                       </React.Fragment>
                                     ))
                                   ) : (
-                                    <MutedText>Carregando...</MutedText>
+                                    <LoadingIndicator compact label="Carregando relacionados" />
                                   )}
                                 </InfoItem>
                             </InfoList>
@@ -978,6 +982,21 @@ const PersonagemPage: React.FC = () => {
                       type="button"
                       theme={theme}
                       neon={neon}
+                      onClick={() => {
+                        setComparisonItem(selectedInventoryItem);
+                        setSelectedInventoryItem(null);
+                      }}
+                      title="Comparar item"
+                      aria-label="Comparar este item com outro item do mesmo tipo"
+                    >
+                      <CompareArrowsIcon />
+                    </ItemModalViewButton>
+                  )}
+                  {isSelectedInventoryItem && (
+                    <ItemModalViewButton
+                      type="button"
+                      theme={theme}
+                      neon={neon}
                       onClick={() => openItemPreview(selectedInventoryItem, runtimeContext)}
                       title="Abrir página do item"
                       aria-label="Abrir página completa do item em outra guia"
@@ -1016,6 +1035,15 @@ const PersonagemPage: React.FC = () => {
           </HistoryModalOverlay>,
           document.getElementById('modal-root') || document.body
         )}
+
+        <ItemComparisonModal
+          open={Boolean(comparisonItem)}
+          item={comparisonItem}
+          onClose={() => setComparisonItem(null)}
+          theme={theme}
+          neon={neon}
+          runtimeContext={runtimeContext}
+        />
 
         {listModal === 'inventory' && (
           <ListModal
@@ -1098,6 +1126,8 @@ const PersonagemPage: React.FC = () => {
                       blockIndex={0}
                       theme={theme}
                       neon={neon}
+                      alwaysShowModalButton
+                      modalTitle={`GALERIA — ${nome}`}
                   />
                 </GalleryContent>
               )}

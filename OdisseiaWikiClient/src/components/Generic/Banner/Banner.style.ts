@@ -103,14 +103,13 @@ const BannerEfect = styled.div<Props>`
 const BannerContent = styled.div<Props>`
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding: 10px;
+    gap: 12px;
     top: 50%;
-    left: 50%;
-    width: min(88%, 1240px);
+    left: 0;
+    width: 65%;
     margin: 0;
-    padding: clamp(18px, 2vw, 30px);
-    transform: translate(-50%, -46%);
+    padding: 32px 24px 32px 50px;
+    transform: translateY(-50%);
     position: absolute;
     z-index: 2;
     isolation: isolate;
@@ -121,9 +120,9 @@ const BannerContent = styled.div<Props>`
         position: absolute;
         top: 0;
         bottom: 0;
-        left: 50%;
+        left: 0;
         width: 100vw;
-        margin-left: -50vw;
+        margin-left: 0;
         z-index: -1;
         transform: scaleX(0);
         transform-origin: left center;
@@ -134,12 +133,19 @@ const BannerContent = styled.div<Props>`
         pointer-events: none;
     }
 
+    @media (max-width: 1100px) {
+        width: 80%;
+        padding-left: 32px;
+    }
+
+    @media (max-width: 768px) {
+        width: 100%;
+        padding: 24px 18px;
+    }
+
     @media (max-width: 480px) {
         gap: 12px;
-        padding: 15px 2px 15px 28px;
-        left: 50%;
-        width: calc(100% - 20px);
-        max-width: 430px;
+        padding: 22px 16px;
 
         &::before {
             background: ${props => props.theme === 'dark'
@@ -152,25 +158,27 @@ const BannerContent = styled.div<Props>`
 const BannerTitleRow = styled.div`
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     width: 100%;
 
     svg {
-        width: clamp(360px, 42vw, 720px);
-        height: clamp(54px, 7vw, 104px);
+        width: clamp(280px, 34vw, 520px);
+        height: clamp(48px, 6vw, 72px);
     }
 
     @media (max-width: 768px) {
+        justify-content: center;
+
         svg {
-            width: min(86vw, 520px);
-            height: clamp(48px, 12vw, 76px);
+            width: min(82vw, 430px);
+            height: clamp(44px, 10vw, 66px);
         }
     }
 
     @media (max-width: 480px) {
         svg {
-            width: min(88vw, 390px);
-            height: clamp(42px, 13vw, 62px);
+            width: min(84vw, 360px);
+            height: clamp(40px, 12vw, 58px);
         }
     }
 `;
@@ -179,12 +187,12 @@ const BannerText = styled.div`
     display: flex;
     flex-direction: column;
     gap: 5px;
-    width: min(82%, 980px);
-    margin: 0 auto;
+    width: 100%;
+    margin: 0;
 
     @media (max-width: 768px) {
         gap: 8px;
-        width: 92%;
+        width: 100%;
     };
 `;
 
@@ -238,7 +246,8 @@ const Title = styled.h1<Props>`
 const Paragraph = styled.p<Props>`
     width: 100%;
     text-shadow: 0px 0px 2px var(--clearneonBlue);
-    font-size: 24px;
+    font-size: 18px;
+    line-height: 1.6;
 
     ${props => props.theme === 'light' && `
         width: 90%;
@@ -256,19 +265,19 @@ const Paragraph = styled.p<Props>`
     `};
 
     @media (min-width: 1600px) {
-        font-size: 28px;
+        font-size: 21px;
     };
 
     @media (max-width: 1200px) {
-        font-size: 22px;
+        font-size: 17px;
     };
 
     @media (max-width: 768px) {
-        font-size: 20px;
+        font-size: 16px;
     };
 
     @media (max-width: 480px) {
-        font-size: 16px;
+        font-size: 15px;
     };
 
     transition: all 0.3s ease-in-out;

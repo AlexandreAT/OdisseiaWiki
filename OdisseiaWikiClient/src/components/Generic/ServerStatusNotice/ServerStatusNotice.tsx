@@ -9,11 +9,11 @@ import {
   NoticeActions,
   NoticeContent,
   NoticeHelpButton,
-  NoticeSpinner,
   NoticeWrapper,
   ServerInfoContent,
 } from './ServerStatusNotice.style';
 import { Modal } from '../Modal/Modal';
+import { LoadingIndicator } from '../LoadingIndicator';
 
 interface RootState {
   themesReducer: {
@@ -61,9 +61,12 @@ export const ServerStatusNotice = () => {
       $error={status === 'unavailable'}
       $modalOpen={showServerInfo}
     >
-      {status === 'starting' && <NoticeSpinner aria-hidden="true" />}
       <NoticeContent>
-        <strong>{status === 'starting' ? 'Iniciando o servidor...' : 'Servidor temporariamente indisponível'}</strong>
+        <strong>
+          {status === 'starting'
+            ? <LoadingIndicator compact label="Iniciando o servidor" />
+            : 'Servidor temporariamente indisponível'}
+        </strong>
         <span>
           {status === 'starting'
             ? 'A conexão e o banco estão sendo preparados. Isso costuma levar cerca de um minuto.'

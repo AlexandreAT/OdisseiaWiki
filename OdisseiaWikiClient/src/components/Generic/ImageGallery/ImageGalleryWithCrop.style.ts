@@ -40,7 +40,7 @@ export const ImagesGrid = styled.div`
 
   @media (max-width: 768px) {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 6px;
     align-items: start;
   }
@@ -189,6 +189,7 @@ export const AddButton = styled.button`
     height: auto;
     max-height: none;
     aspect-ratio: 1;
+    grid-column: span 1;
     gap: 4px;
     font-size: 10px;
 

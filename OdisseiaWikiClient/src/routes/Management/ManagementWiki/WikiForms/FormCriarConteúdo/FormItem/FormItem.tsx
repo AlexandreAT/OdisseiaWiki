@@ -233,7 +233,7 @@ export const FormItem = ({ theme, neon, contentType }: FormItemProps) => {
           initialImage={imagemUrl}
           onImageCropped={handleItemImageUpload}
           cropPreset={itemImageCropPreset}
-          mobileSize="main"
+          mobileSize="full"
         />
       </ImageSection>
 

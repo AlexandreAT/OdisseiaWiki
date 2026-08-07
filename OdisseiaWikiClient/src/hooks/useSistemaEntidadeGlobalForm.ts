@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import api from '../axios/api';
 import {
   SistemaEntidadeGlobalTipo,
   SistemaItemEscopoRuntime,
@@ -8,7 +7,7 @@ import {
   SistemaVersaoResumo,
   getSistemaVersaoStatusLabel,
 } from '../models/SistemaRpg';
-import { listarSistemasRpg, listarVersoesSistemaRpg } from '../services/sistemasRpgService';
+import { listarSistemasRpg, listarVersoesSistemaRpg, obterCatalogoItensSistemaRpg } from '../services/sistemasRpgService';
 import { getApiErrorMessage } from '../utils/apiError';
 import { useSistemaRuntimeContexto } from './useSistemaRuntimeContexto';
 
@@ -123,23 +122,19 @@ export const useSistemaEntidadeGlobalForm = ({
   }, [runtime.contexto?.idSistemaVersao, selectedSystem?.idVersaoPublicada, vinculo]);
 
   useEffect(() => {
-    if (tipoEntidade !== 'Item') return undefined;
     if (!effectiveVersionId) {
       setCatalogTypes(runtime.contexto?.itens?.tipos ?? []);
       return undefined;
     }
 
     const controller = new AbortController();
-    api.get<{ tipos: SistemaItemEscopoRuntime[] }>(
-      `/sistemas-rpg/versoes/${effectiveVersionId}/itens`,
-      { signal: controller.signal },
-    )
-      .then((response) => setCatalogTypes(response.data?.tipos ?? []))
+    obterCatalogoItensSistemaRpg(effectiveVersionId, { signal: controller.signal })
+      .then((response) => setCatalogTypes(response.tipos ?? []))
       .catch(() => {
         if (!controller.signal.aborted) setCatalogTypes(runtime.contexto?.itens?.tipos ?? []);
       });
     return () => controller.abort();
-  }, [effectiveVersionId, runtime.contexto?.itens?.tipos, tipoEntidade]);
+  }, [effectiveVersionId, runtime.contexto?.itens?.tipos]);
 
   const selectSystem = useCallback((idSistemaRpg: number | null) => {
     setVinculoState((current) => ({
@@ -179,8 +174,11 @@ export const useSistemaEntidadeGlobalForm = ({
         : (vinculo.acompanharPublicacaoAtual ? 'PublicacaoAtualEntidade' : 'VersaoFixadaEntidade'),
       acompanhaPublicacaoAtual: vinculo.acompanharPublicacaoAtual,
       idVersaoFixada: vinculo.acompanharPublicacaoAtual ? null : effectiveVersionId,
+      itens: {
+        tipos: catalogTypes.length > 0 ? catalogTypes : base.itens.tipos,
+      },
     };
-  }, [effectiveSystemId, effectiveVersionId, runtime.contexto, selectedSystem, versions, vinculo.acompanharPublicacaoAtual]);
+  }, [catalogTypes, effectiveSystemId, effectiveVersionId, runtime.contexto, selectedSystem, versions, vinculo.acompanharPublicacaoAtual]);
 
   return {
     vinculo,

@@ -107,16 +107,19 @@ export const ImageItem = styled.div<ThemeProps>`
   }
 `;
 
-export const ImageThumb = styled.img`
+export const ImageThumb = styled.img<{ $proporcao?: 'square' | 'rectangle' }>`
   width: 100%;
-  aspect-ratio: 1;
-  object-fit: cover;
+  height: auto;
+  aspect-ratio: ${({ $proporcao }) => $proporcao === 'rectangle'
+    ? '16 / 9'
+    : $proporcao === 'square' ? '1' : 'auto'};
+  object-fit: contain;
   display: block;
 
   @media (max-width: 768px) {
     height: auto;
     max-height: none;
-    object-fit: cover;
+    object-fit: contain;
   }
 `;
 

@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import { PageBlock, GalleryBlockContent, ImageBlockContent } from '../../../../../../../models/Pages';
 import { ImageUploader } from '../../../../../../../components/Generic/ImageUploader/ImageUploader';
 import { saveAsset } from '../../../../../../../services/assetsService';
-import type { CropPreset } from '../../../../../../../components/Generic/ImageUploader/types';
+import type { CropPreset, CropResult } from '../../../../../../../components/Generic/ImageUploader/types';
 import {
   Container,
   GalleryContainer,
@@ -52,7 +52,7 @@ export const GalleryBlockEditor: React.FC<GalleryBlockEditorProps> = ({
     };
   };
 
-  const handleImageUpload = async (result: any) => {
+  const handleImageUpload = async (result: CropResult) => {
     try {
       const assetResult = await saveAsset({
         imageFile: result.file,
@@ -62,6 +62,7 @@ export const GalleryBlockEditor: React.FC<GalleryBlockEditorProps> = ({
       
       const novaImagem: ImageBlockContent = {
         url: assetResult.path,
+        proporcao: aspectRatio,
       };
 
       const novasImagens = [...imagens, novaImagem];
@@ -120,6 +121,7 @@ export const GalleryBlockEditor: React.FC<GalleryBlockEditorProps> = ({
           label="Adicionar Imagem"
           onImageCropped={handleImageUpload}
           cropPreset={getCropPreset()}
+          mobileSize="main"
         />
       </Container>
 
@@ -131,7 +133,11 @@ export const GalleryBlockEditor: React.FC<GalleryBlockEditorProps> = ({
           <GalleryGrid>
             {imagens.map((img, idx) => (
               <ImageItem key={idx} $isDark={theme === 'dark'}>
-                <ImageThumb src={img.url} alt={img.legenda || `Imagem ${idx + 1}`} />
+                <ImageThumb
+                  $proporcao={img.proporcao}
+                  src={img.url}
+                  alt={img.legenda || `Imagem ${idx + 1}`}
+                />
                 <div style={{ padding: '4px 6px', flexShrink: 0 }}>
                   <input
                     type="text"

@@ -8,6 +8,7 @@ import { CheckBox } from '../../../../../components/Generic/CheckBox/CheckBox';
 import { CyberButton } from '../../../../../components/Generic/HighlightButton/HighlightButton';
 import { InputText } from '../../../../../components/Generic/InputText/InputText';
 import { Modal } from '../../../../../components/Generic/Modal/Modal';
+import { LoadingIndicator } from '../../../../../components/Generic/LoadingIndicator';
 import {
   MesaMigracaoPreview,
   SistemaPatchImpacto,
@@ -235,7 +236,7 @@ export const SystemVersionOperations = ({
           </div>
         </PatchPanelHeader>
 
-        {patchLoading && <PatchState role="status">Carregando patch note...</PatchState>}
+        {patchLoading && <PatchState role="status"><LoadingIndicator compact label="Carregando patch note" /></PatchState>}
         {!patchLoading && patchError && (
           <PatchState $error role="alert">{patchError}</PatchState>
         )}

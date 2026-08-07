@@ -19,7 +19,7 @@ export const ModalOverlay = styled.div`
   padding: 20px;
 
   @media (max-width: 768px) {
-    padding: 8px;
+    padding: clamp(24px, 6dvh, 52px) 10px;
   }
 `;
 
@@ -44,8 +44,8 @@ export const ModalSheet = styled.div<ThemeProps>`
   animation: slideIn 0.3s ease-out;
 
   @media (max-width: 768px) {
-    max-height: calc(100dvh - 16px);
-    border-radius: 6px;
+    max-height: calc(100dvh - clamp(48px, 12dvh, 104px));
+    border-radius: 8px;
   }
 
   @keyframes slideIn {

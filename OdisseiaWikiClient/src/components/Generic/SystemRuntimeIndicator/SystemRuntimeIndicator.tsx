@@ -1,4 +1,5 @@
 import { BiErrorCircle, BiInfoCircle } from 'react-icons/bi';
+import { LoadingIndicator } from '../LoadingIndicator';
 import { SistemaRuntimeContexto, SistemaRuntimeOrigem } from '../../../models/SistemaRpg';
 import {
   RuntimeIdentity,
@@ -64,7 +65,7 @@ export const SystemRuntimeIndicator = ({
     return (
       <RuntimeIndicator $hasWarnings={false} aria-live="polite">
         <RuntimeIdentity>
-          <RuntimeName>Resolvendo Sistema...</RuntimeName>
+          <RuntimeName><LoadingIndicator compact label="Resolvendo Sistema" /></RuntimeName>
           <RuntimeMeta>Carregando regras da Mesa</RuntimeMeta>
         </RuntimeIdentity>
       </RuntimeIndicator>

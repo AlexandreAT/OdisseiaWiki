@@ -1,7 +1,7 @@
 import React, { useState, memo, useCallback, useMemo, useRef, useEffect } from "react";
 import MUIDataTable from "mui-datatables";
 import { TextField, IconButton } from "@mui/material";
-import { Add, Delete, Visibility } from "@mui/icons-material";
+import { Add, CompareArrows, Delete, Visibility } from "@mui/icons-material";
 import { Search } from "../Search/Search";
 import { BiSearchAlt } from "react-icons/bi";
 import {
@@ -34,6 +34,8 @@ interface DataTableProps<T> {
   isRowEmpty?: (row: T) => boolean;
   onViewRow?: (row: T) => void;
   canViewRow?: (row: T) => boolean;
+  onCompareRow?: (row: T) => void;
+  canCompareRow?: (row: T) => boolean;
 }
 
 interface ColumnConfig<T> {
@@ -153,6 +155,8 @@ function DataTableComponent<T extends { [key: string]: any }>({
   isRowEmpty,
   onViewRow,
   canViewRow,
+  onCompareRow,
+  canCompareRow,
 }: DataTableProps<T>) {
   const [search, setSearch] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
@@ -317,8 +321,19 @@ function DataTableComponent<T extends { [key: string]: any }>({
         const isEmpty = !row || rowIsEmpty(row);
         const isPersistedRow = dataIndex < data.length;
         const showView = Boolean(row && onViewRow && !isEmpty && (canViewRow?.(row) ?? true));
+        const showCompare = Boolean(row && onCompareRow && !isEmpty && (canCompareRow?.(row) ?? true));
         return (
           <RowActions>
+            {showCompare && (
+              <IconButton
+                type="button"
+                onClick={() => onCompareRow?.(row)}
+                title="Comparar item"
+                aria-label="Comparar item"
+              >
+                <CompareArrows className="iconCompare" />
+              </IconButton>
+            )}
             {showView && (
               <IconButton
                 type="button"
@@ -353,7 +368,7 @@ function DataTableComponent<T extends { [key: string]: any }>({
         );
       },
     },
-  }), [tableData, data.length, rowIsEmpty, onViewRow, canViewRow, handleAddRow, handleRemoveRow]);
+  }), [tableData, data.length, rowIsEmpty, onCompareRow, canCompareRow, onViewRow, canViewRow, handleAddRow, handleRemoveRow]);
 
   return (
     <DataTableContainer

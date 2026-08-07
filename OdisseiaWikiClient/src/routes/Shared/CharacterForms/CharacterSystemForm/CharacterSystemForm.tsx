@@ -8,6 +8,7 @@ import { StatusForm } from '../../../Hub/UserCharacters/CharacterCreate/FormUser
 import { CharacterSystemFormProps } from './CharacterSystemForm.type';
 import { getInventarioItems, getProtesesItems, getProtesesTableItems, isEmptyItemRow, replaceItemSection } from '../../../../utils/itemInventorySections';
 import { openItemPreview } from '../../../../utils/itemPreview';
+import { ItemComparisonModal } from '../../../../components/ItemComparison';
 
 export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
   theme,
@@ -42,6 +43,7 @@ export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
   magiasColumns,
   runtimeContext,
 }) => {
+  const [comparisonItem, setComparisonItem] = React.useState<Item | null>(null);
   const inventario = getInventarioItems(itens);
   const updateInventario = (updatedItems: Item[]) => setItens(replaceItemSection(itens, 'inventario', updatedItems));
   const updateProteses = (updatedItems: Item[]) => setItens(
@@ -99,6 +101,7 @@ export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
             onSelectSearch={adicionarItem}
             isRowEmpty={isEmptyItemRow}
             onViewRow={(item) => openItemPreview(item, runtimeContext)}
+            onCompareRow={setComparisonItem}
             theme={theme}
             neon={neon}
           />
@@ -117,6 +120,7 @@ export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
             onSelectSearch={adicionarProtese}
             isRowEmpty={isEmptyItemRow}
             onViewRow={(item) => openItemPreview(item, runtimeContext)}
+            onCompareRow={setComparisonItem}
             theme={theme}
             neon={neon}
           />
@@ -150,6 +154,15 @@ export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
           />
         </SectionTable>
       </BottomContentController>
+      <ItemComparisonModal
+        open={Boolean(comparisonItem)}
+        item={comparisonItem}
+        onClose={() => setComparisonItem(null)}
+        theme={theme}
+        neon={neon}
+        runtimeContext={runtimeContext}
+        availableItems={listItens}
+      />
     </>
   );
 };
