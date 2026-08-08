@@ -21,6 +21,10 @@ import { getApiErrorMessage } from '../../../../../utils/apiError';
 import { normalizeGalleryImages } from '../../../../../models/GalleryImage';
 import { SystemEntityBinding } from '../../../../../components/Generic/SystemEntityBinding';
 import { LoadingIndicator } from '../../../../../components/Generic/LoadingIndicator';
+import {
+  normalizeRuntimeAttributeValues,
+  normalizeRuntimeDefenseValues,
+} from '../../../../../utils/systemRuntimeCharacter';
 
 interface NpcCharacterEditProps {
   theme: 'dark' | 'light';
@@ -331,26 +335,29 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
           manaMaxima: status.status?.manaMaxima ?? status.status?.mana ?? 0,
           capacidadeCarga: status.status?.capacidadeCarga ?? 0,
         });
-        setAtributosPrincipais(status.atributos?.principais ?? {
+        setAtributosPrincipais({
           resistencia: 0,
           agilidade: 0,
           sabedoria: 0,
           precisao: 0,
           forca: 0,
+          ...normalizeRuntimeAttributeValues(status.atributos?.principais),
         });
-        setAtributosSecundarios(status.atributos?.secundarios ?? {
+        setAtributosSecundarios({
           sanidade: 0,
           coragem: 0,
           inteligencia: 0,
           percepcao: 0,
           labia: 0,
           intimidacao: 0,
+          ...normalizeRuntimeAttributeValues(status.atributos?.secundarios),
         });
-        setDefesas(status.defesas ?? {
+        setDefesas({
           armadura: 0,
           protecao: 0,
           escudo: 0,
           outras: 0,
+          ...normalizeRuntimeDefenseValues(status.defesas),
         });
         setLevel(status.nivel ?? 1);
         setXp(status.xp ?? 0);
@@ -671,6 +678,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
           },
           atributos: {
             principais: {
+              ...normalizeRuntimeAttributeValues(atributosPrincipais),
               resistencia: Number(atributosPrincipais.resistencia) || 0,
               agilidade: Number(atributosPrincipais.agilidade) || 0,
               sabedoria: Number(atributosPrincipais.sabedoria) || 0,
@@ -678,6 +686,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
               forca: Number(atributosPrincipais.forca) || 0,
             },
             secundarios: {
+              ...normalizeRuntimeAttributeValues(atributosSecundarios),
               sanidade: Number(atributosSecundarios.sanidade) || 0,
               coragem: Number(atributosSecundarios.coragem) || 0,
               inteligencia: Number(atributosSecundarios.inteligencia) || 0,
@@ -690,6 +699,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
           xp: Number(xp) || 0,
           ...statusExtras,
           defesas: {
+            ...normalizeRuntimeDefenseValues(defesas),
             armadura: Number(defesas.armadura) || 0,
             protecao: Number(defesas.protecao) || 0,
             escudo: Number(defesas.escudo) || 0,
@@ -837,6 +847,8 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
             skillsColumns={skillsColumns}
             magiasColumns={magiasColumns}
             runtimeContext={sistema.contexto}
+            comparisonSource="Npc"
+            comparisonId={Number(characterId)}
           />
           </>
         )}

@@ -2,6 +2,7 @@ import React from 'react';
 import { BiEditAlt, BiHide, BiShow, BiStar, BiTrash } from 'react-icons/bi';
 import { normalizeImagePath } from '../../../../../Wiki/utils/imagePathHelper';
 import { CardProps, EntityType } from '../types';
+import { CharacterComparisonButton, CharacterComparisonModal } from '../../../../../../components/CharacterComparison';
 import {
   ActionButton,
   CardActions,
@@ -29,12 +30,25 @@ const ENTITY_LABELS: Record<EntityType, string> = {
 };
 
 export const ResultCard: React.FC<CardProps> = ({ theme, neon, item, onEdit, onDelete }) => {
+  const [comparisonOpen, setComparisonOpen] = React.useState(false);
   const entityType = item.tipoEntidade;
+  const comparisonCharacterId = Number(item.idString ?? item.id);
+  const canCompareCharacter = entityType === 'Personagem'
+    && Number.isInteger(comparisonCharacterId)
+    && comparisonCharacterId > 0;
   const visibleTags = item.tags?.slice(0, 3) ?? [];
   const hiddenTagCount = Math.max(0, (item.tags?.length ?? 0) - visibleTags.length);
 
   return (
     <CardContainer theme={theme} neon={neon} $type={entityType}>
+      {canCompareCharacter && (
+        <CharacterComparisonButton
+          absolute
+          theme={theme}
+          neon={neon}
+          onClick={() => setComparisonOpen(true)}
+        />
+      )}
       <CardMedia $type={entityType}>
         <CardImage
           $type={entityType}
@@ -86,6 +100,16 @@ export const ResultCard: React.FC<CardProps> = ({ theme, neon, item, onEdit, onD
           Excluir
         </ActionButton>
       </CardActions>
+      {canCompareCharacter && (
+        <CharacterComparisonModal
+          open={comparisonOpen}
+          source="Npc"
+          sourceId={comparisonCharacterId}
+          onClose={() => setComparisonOpen(false)}
+          theme={theme}
+          neon={neon}
+        />
+      )}
     </CardContainer>
   );
 };

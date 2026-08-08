@@ -17,6 +17,7 @@ const getEntityColor = (type: EntityType) => ({
 }[type]);
 
 export const CardContainer = styled.article<StyledCardProps & { $type: EntityType }>`
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 11px;

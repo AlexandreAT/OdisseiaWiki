@@ -484,6 +484,7 @@ public class Program
         services.AddScoped<IUsuarioService, UsuarioService>();
         services.AddScoped<IPersonagemService, PersonagemService>();
         services.AddScoped<IPersonagemJogadorService, PersonagemJogadorService>();
+        services.AddScoped<IPersonagemComparacaoService, PersonagemComparacaoService>();
         services.AddScoped<IRacaService, RacaService>();
         services.AddScoped<ICidadeService, CidadeService>();
         services.AddScoped<IItemService, ItemService>();

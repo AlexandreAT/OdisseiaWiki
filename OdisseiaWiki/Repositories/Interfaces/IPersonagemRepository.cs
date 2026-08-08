@@ -14,5 +14,10 @@ namespace OdisseiaWiki.Repositories.Interfaces
         Task<bool> DeleteAsync(int id);
         Task<List<Personagen>> SearchAsync(string termo);
         Task<List<Personagen>> GetBatchAsync(List<int> ids);
+        Task<List<PersonagemComparacaoRegistro>> SearchVisibleForComparisonAsync(
+            string term,
+            int? excludedId,
+            int limit);
+        Task<PersonagemComparacaoRegistro?> GetForComparisonAsync(int id, bool requireVisible);
     }
 }

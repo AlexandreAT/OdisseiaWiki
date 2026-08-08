@@ -42,6 +42,10 @@ export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
   skillsColumns,
   magiasColumns,
   runtimeContext,
+  comparisonSource,
+  comparisonId,
+  comparisonTableId,
+  comparisonTableName,
 }) => {
   const [comparisonItem, setComparisonItem] = React.useState<Item | null>(null);
   const inventario = getInventarioItems(itens);
@@ -85,6 +89,11 @@ export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
         setAvatarUrl={() => undefined}
         raceImageUrl={raceImageUrl}
         runtimeContext={runtimeContext}
+        comparisonSource={comparisonSource}
+        comparisonId={comparisonId}
+        comparisonTableId={comparisonTableId}
+        comparisonTableName={comparisonTableName}
+        comparisonSkillCount={filledSkillCount}
       />
 
       <BottomContentController>

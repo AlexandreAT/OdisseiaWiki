@@ -8,6 +8,7 @@ import { getPagesReferencingEntity } from '../../services/pageService';
 export type NormalizedPersonagem = ReturnType<typeof normalizePersonagem> | {
   // fallback shape for personagensService payloads (minimal)
   id?: string | number;
+  idmesa?: number;
   nome?: string;
   imagem?: string;
   historia?: any;

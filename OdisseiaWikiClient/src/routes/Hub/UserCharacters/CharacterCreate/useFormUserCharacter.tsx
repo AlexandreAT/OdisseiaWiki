@@ -28,6 +28,8 @@ import {
   createRuntimeAttributeDefaults,
   createRuntimeDefenseDefaults,
   createRuntimeResourceDefaults,
+  normalizeRuntimeAttributeValues,
+  normalizeRuntimeDefenseValues,
 } from '../../../../utils/systemRuntimeCharacter';
 
 const parseJson = <T,>(value: unknown, fallback: T): T => {
@@ -582,29 +584,31 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     });
 
     setDefesas({
-      ...status.defesas,
-      armadura: status.defesas?.armadura ?? 0,
-        protecao: status.defesas?.protecao ?? 0,
-        escudo: status.defesas?.escudo ?? 0,
-        outras: status.defesas?.outras ?? 0,
-    });
+      armadura: 0,
+      protecao: 0,
+      escudo: 0,
+      outras: 0,
+      ...normalizeRuntimeDefenseValues(status.defesas),
+    } as Defesas);
 
-    setAtributosPrincipais(status.atributos?.principais ?? {
+    setAtributosPrincipais({
         resistencia: 0,
         agilidade: 0,
         sabedoria: 0,
         precisao: 0,
         forca: 0,
-    });
+        ...normalizeRuntimeAttributeValues(status.atributos?.principais),
+    } as Principais);
 
-    setAtributosSecundarios(status.atributos?.secundarios ?? {
+    setAtributosSecundarios({
         sanidade: 0,
         coragem: 0,
         inteligencia: 0,
         percepcao: 0,
         labia: 0,
         intimidacao: 0,
-    });
+        ...normalizeRuntimeAttributeValues(status.atributos?.secundarios),
+    } as Secundarios);
 
     setSkills(skills);
     setMagias(magias);
@@ -769,13 +773,13 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
         statusJson: {
           status: statusForPayload,
           atributos: {
-            principais: atributosPrincipais,
-            secundarios: atributosSecundarios,
+            principais: normalizeRuntimeAttributeValues(atributosPrincipais) as Principais,
+            secundarios: normalizeRuntimeAttributeValues(atributosSecundarios) as Secundarios,
           },
           nivel: level,
           xp: xp,
           ...statusExtras,
-          defesas: defesas,
+          defesas: normalizeRuntimeDefenseValues(defesas) as Defesas,
         },
       };
 
@@ -880,13 +884,13 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
         statusJson: {
           status: statusForPayload,
           atributos: {
-            principais: atributosPrincipais,
-            secundarios: atributosSecundarios,
+            principais: normalizeRuntimeAttributeValues(atributosPrincipais) as Principais,
+            secundarios: normalizeRuntimeAttributeValues(atributosSecundarios) as Secundarios,
           },
           nivel: level,
           xp: xp,
           ...statusExtras,
-          defesas: defesas,
+          defesas: normalizeRuntimeDefenseValues(defesas) as Defesas,
         },
       };
       const result = await criarPersonagemJogador(payload);
