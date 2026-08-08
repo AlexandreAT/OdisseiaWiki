@@ -14,5 +14,12 @@ namespace OdisseiaWiki.Repositories.Interfaces
         Task<PersonagemJogador> UpdateAsync(PersonagemJogador personagem);
         Task<bool> DeleteAsync(int id);
         Task<int> DeleteManyAsync(IEnumerable<int> ids);
+        Task<int?> GetTableIdAsync(int id);
+        Task<List<PersonagemComparacaoRegistro>> SearchTableForComparisonAsync(
+            int tableId,
+            string term,
+            int? excludedId,
+            int limit);
+        Task<PersonagemComparacaoRegistro?> GetForComparisonAsync(int id);
     }
 }

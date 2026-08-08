@@ -200,6 +200,10 @@ const CharacterCreateComponent = ({ theme, neon, userId, onSave }: UserCharacter
           setAvatarUrl={setAvatarUrl}
           raceImageUrl={raceImageUrl}
           runtimeContext={runtimeContext}
+          comparisonSource="Jogador"
+          comparisonTableId={selectedMesa}
+          comparisonTableName={listMesas.find((mesa) => mesa.idmesa === selectedMesa)?.nome}
+          comparisonSkillCount={skills.filter((skill) => skill.nome?.trim()).length}
         />
       )}
 

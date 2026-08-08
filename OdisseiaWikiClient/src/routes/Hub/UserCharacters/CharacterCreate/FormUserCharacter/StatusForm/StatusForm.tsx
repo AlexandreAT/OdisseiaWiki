@@ -10,6 +10,11 @@ import {
   getRuntimeResourceFields,
   getRuntimeResourceLabel,
 } from '../../../../../../utils/systemRuntimeCharacter';
+import {
+  CharacterComparisonButton,
+  CharacterComparisonModal,
+  createCharacterComparisonData,
+} from '../../../../../../components/CharacterComparison';
 
 export const StatusForm: React.FC<StatusFormProps> = ({
   theme,
@@ -32,7 +37,13 @@ export const StatusForm: React.FC<StatusFormProps> = ({
   setAvatarUrl,
   raceImageUrl,
   runtimeContext,
+  comparisonSource,
+  comparisonId,
+  comparisonTableId,
+  comparisonTableName,
+  comparisonSkillCount = 0,
 }) => {
+  const [comparisonOpen, setComparisonOpen] = React.useState(false);
   const primaryFields = React.useMemo(
     () => getRuntimeAttributeFields(runtimeContext, 'Principal', atributosPrincipais),
     [atributosPrincipais, runtimeContext],
@@ -57,6 +68,43 @@ export const StatusForm: React.FC<StatusFormProps> = ({
     'capacidadeCarga',
     'Carga',
   );
+  const comparisonCharacter = React.useMemo(() => comparisonSource
+    ? createCharacterComparisonData({
+        id: comparisonId,
+        origem: comparisonSource,
+        nome: userName,
+        imagem: avatarUrl,
+        idMesa: comparisonTableId,
+        mesaNome: comparisonTableName,
+        quantidadeSkills: comparisonSkillCount,
+        sistemaRuntime: runtimeContext,
+        status: {
+          status: statusBasico,
+          atributos: {
+            principais: atributosPrincipais,
+            secundarios: atributosSecundarios,
+          },
+          nivel: level,
+          xp,
+          defesas,
+        },
+      })
+    : null, [
+      atributosPrincipais,
+      atributosSecundarios,
+      avatarUrl,
+      comparisonId,
+      comparisonSkillCount,
+      comparisonSource,
+      comparisonTableId,
+      comparisonTableName,
+      defesas,
+      level,
+      runtimeContext,
+      statusBasico,
+      userName,
+      xp,
+    ]);
 
   return (
     <>
@@ -117,6 +165,13 @@ export const StatusForm: React.FC<StatusFormProps> = ({
               </>
             </LabelInfoBox>
           ))}
+          {comparisonSource && (
+            <CharacterComparisonButton
+              theme={theme}
+              neon={neon}
+              onClick={() => setComparisonOpen(true)}
+            />
+          )}
         </HeaderInfo>
         <SectionStatus theme={theme} neon={neon}>
           <StatusInput
@@ -169,6 +224,18 @@ export const StatusForm: React.FC<StatusFormProps> = ({
           />
         </SectionStatus>
       </StatusHeader>
+      {comparisonSource && (
+        <CharacterComparisonModal
+          open={comparisonOpen}
+          current={comparisonCharacter}
+          source={comparisonSource}
+          sourceId={comparisonId}
+          tableId={comparisonTableId}
+          onClose={() => setComparisonOpen(false)}
+          theme={theme}
+          neon={neon}
+        />
+      )}
       
       <StatusContent>
         <AtributeController>

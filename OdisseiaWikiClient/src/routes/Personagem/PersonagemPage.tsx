@@ -5,6 +5,7 @@ import { useSelector } from 'react-redux';
 import { usePersonagem } from './usePersonagem';
 import { PageContainer, TopSection, BottomSection, AvatarWrapper, MetaRow, Sections, CardContent, InfoList, InfoItem, MetaContent, SectionSpacer, AvatarDivController, SatusDivController, StatusList, StatusDiv, HeaderStatusController, StatusController, StatusHeader, StatusBarWrapper, StatusBarFill, InfoControllers, TitleDiv, TagItem, TagList, RelatedLink, HistoryWrapper, HistoryModalOverlay, HistoryModalSheet, HistoryModalHeader, HistoryModalTitle, HistoryModalClose, HistoryModalContent, HistoryModalActions, ItemModalViewButton, InfoSpan, BottomInfoLeft, BottomInfoRight, StoryWithImage, StoryImage, HudCornerEl, HudTopLine, HudBottomLine, HudLeftLine, HudRightLine, StatusTopLine, StatusBottomLine, StatusLeftLine, StatusRightLine, BackgroundVideoContainer, BackgroundVideo, BackgroundOverlay, HexagonHud, HexagonBackground, HexagonBorder, HexagonContent, HexagonValue, PageController, PageLoadingState, SectionRow, InventoryList, LoadBar, LoadProgress, ImplantGrid, ImplantMods, SkillGrid, AbilityDescription, AbilityPair, AbilityCard, CooldownBar, CooldownFill, ItemDescriptionPreview, ItemDescriptionLayout, ItemDetailsBody, ViewMoreButton, DetailAttributes, DetailAttribute, DetailTextPair, DetailText, ItemDescriptionImage } from './PersonagemPage.style';
 import { PersonagemRichText, FlexRow, MutedText, BoldLabel, ItemThumb, ItemPlaceholder, GalleryToggle, GalleryContent, MaskIcon, AuthorIcon, ItemRow, FlexFill } from './PersonagemPage.style';
+import { CharacterComparisonButton, CharacterComparisonModal } from '../../components/CharacterComparison';
 import glassHeart from '../../assets/svg/glass-heart.svg';
 import rollingEnergy from '../../assets/svg/rolling-energy.svg';
 import electric from '../../assets/svg/electric.svg';
@@ -402,6 +403,7 @@ const PersonagemPage: React.FC = () => {
   const [itemBaseItems, setItemBaseItems] = React.useState<Record<string, Item>>({});
   const [listModal, setListModal] = React.useState<'inventory' | 'implants' | 'abilities' | 'proficiencies' | null>(null);
   const [updatingSystem, setUpdatingSystem] = React.useState(false);
+  const [characterComparisonOpen, setCharacterComparisonOpen] = React.useState(false);
 
   const updatePlayerSystem = React.useCallback(async () => {
     if (characterSource !== 'player' || !id) return;
@@ -671,6 +673,12 @@ const PersonagemPage: React.FC = () => {
         <PageController>
         <ClipBox theme={theme} neon={neon} width="100%" height="auto" useClip={false} borderRadius="8px" zIndex={1}>
             <TopSection>
+                <CharacterComparisonButton
+                  absolute
+                  theme={theme}
+                  neon={neon}
+                  onClick={() => setCharacterComparisonOpen(true)}
+                />
                 <AvatarDivController>
                     <AvatarWrapper>
                         <AvatarIcon
@@ -817,6 +825,15 @@ const PersonagemPage: React.FC = () => {
                     </StatusController>
                 </SatusDivController>
             </TopSection>
+            <CharacterComparisonModal
+              open={characterComparisonOpen}
+              source={characterSource === 'player' ? 'Jogador' : 'Npc'}
+              sourceId={id ? Number(id) : undefined}
+              tableId={characterSource === 'player' ? Number(personagem?.idmesa) || null : null}
+              onClose={() => setCharacterComparisonOpen(false)}
+              theme={theme}
+              neon={neon}
+            />
             {(hasInformation || hasHistory) && (
             <BottomSection>
                 {hasInformation && <BottomInfoLeft>

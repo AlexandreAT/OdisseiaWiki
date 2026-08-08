@@ -319,6 +319,10 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, initialStep = 1
                   skillsColumns={skillsColumns}
                   magiasColumns={magiasColumns}
                   runtimeContext={runtimeContext}
+                  comparisonSource="Jogador"
+                  comparisonId={personagem.idpersonagemJogador}
+                  comparisonTableId={selectedMesa}
+                  comparisonTableName={personagem.mesaNome}
                 />
               )}
 

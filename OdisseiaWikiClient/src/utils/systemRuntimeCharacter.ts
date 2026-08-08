@@ -102,23 +102,64 @@ const formatUnknownKey = (key: string) => key
   .replace(/_/g, ' ')
   .replace(/^./, (character) => character.toUpperCase());
 
+type RuntimeKeyResolver = (code: string) => string;
+
+const normalizeNumericValues = (
+  values: Record<string, number> | null | undefined,
+  resolveKey: RuntimeKeyResolver,
+) => {
+  const entries = Object.entries(values ?? {});
+  const canonicalSources = new Set(
+    entries
+      .filter(([key]) => key === resolveKey(key))
+      .map(([key]) => resolveKey(key)),
+  );
+  const normalized: Record<string, number> = {};
+
+  entries.forEach(([sourceKey, rawValue]) => {
+    const key = resolveKey(sourceKey);
+    const sourceIsCanonical = sourceKey === key;
+    const hasCanonicalSource = canonicalSources.has(key);
+
+    if (hasCanonicalSource && !sourceIsCanonical) return;
+
+    const value = Number(rawValue);
+    normalized[key] = Number.isFinite(value) ? value : 0;
+  });
+
+  return normalized;
+};
+
+export const normalizeRuntimeAttributeValues = (
+  values: Record<string, number> | null | undefined,
+) => normalizeNumericValues(values, getRuntimeAttributeKey);
+
+export const normalizeRuntimeDefenseValues = (
+  values: Record<string, number> | null | undefined,
+) => normalizeNumericValues(values, getRuntimeDefenseKey);
+
 const appendUnknownFields = (
   configuredFields: RuntimeNumericField[],
   values: Record<string, number>,
   excludedKeys: Set<string> = new Set(),
+  resolveKey: RuntimeKeyResolver = (key) => key,
 ) => {
-  const configuredKeys = new Set(configuredFields.map((field) => field.key));
-  const unknownFields = Object.keys(values)
-    .filter((key) => !configuredKeys.has(key) && !excludedKeys.has(key))
-    .map<RuntimeNumericField>((key, index) => ({
-      key,
-      code: key,
-      label: formatUnknownKey(key),
-      order: configuredFields.length + index + 1,
-      configured: false,
-    }));
+  const uniqueConfiguredFields = configuredFields.filter((field, index, fields) => (
+    fields.findIndex((candidate) => resolveKey(candidate.key) === resolveKey(field.key)) === index
+  ));
+  const configuredKeys = new Set(uniqueConfiguredFields.map((field) => resolveKey(field.key)));
+  const excludedCanonicalKeys = new Set([...excludedKeys].map(resolveKey));
+  const unknownKeys = [...new Set(Object.keys(values).map(resolveKey))]
+    .filter((key) => !configuredKeys.has(key) && !excludedCanonicalKeys.has(key));
+  const unknownFields = unknownKeys.map<RuntimeNumericField>((key, index) => ({
+    key,
+    code: key,
+    label: formatUnknownKey(key),
+    order: uniqueConfiguredFields.length + index + 1,
+    configured: false,
+  }));
 
-  return [...configuredFields, ...unknownFields];
+  return [...uniqueConfiguredFields, ...unknownFields];
 };
 
 const legacyFields = (fields: ReadonlyArray<readonly [string, string]>): RuntimeNumericField[] => (
@@ -155,7 +196,7 @@ export const getRuntimeAttributeFields = (
     ? configured
     : legacyFields(group === 'Principal' ? LEGACY_PRIMARY_FIELDS : LEGACY_SECONDARY_FIELDS);
 
-  return appendUnknownFields(baseFields, values);
+  return appendUnknownFields(baseFields, values, new Set(), getRuntimeAttributeKey);
 };
 
 const mapDefense = (defense: SistemaTipoDefesa): RuntimeNumericField => ({
@@ -176,7 +217,7 @@ export const getRuntimeDefenseFields = (
     .sort((left, right) => left.ordem - right.ordem)
     .map(mapDefense);
   const baseFields = configured.length > 0 ? configured : legacyFields(LEGACY_DEFENSE_FIELDS);
-  return appendUnknownFields(baseFields, values);
+  return appendUnknownFields(baseFields, values, new Set(), getRuntimeDefenseKey);
 };
 
 export const getRuntimeResourceFields = (

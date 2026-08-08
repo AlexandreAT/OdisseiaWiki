@@ -1,3 +1,4 @@
+import React from 'react';
 import EditIcon from '@mui/icons-material/Edit';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import VisibilityIcon from '@mui/icons-material/Visibility';
@@ -20,6 +21,7 @@ import { resolveCharacterProgression } from '../../../../utils/characterProgress
 import { useSistemaRuntimeContexto } from '../../../../hooks/useSistemaRuntimeContexto';
 import { getRuntimeResourceLabel } from '../../../../utils/systemRuntimeCharacter';
 import { SystemRuntimeIndicator } from '../../../../components/Generic/SystemRuntimeIndicator';
+import { CharacterComparisonButton, CharacterComparisonModal } from '../../../../components/CharacterComparison';
 import {
   ActionButton,
   Actions,
@@ -93,6 +95,7 @@ export const CharacterSelectionCard = ({
   onToggleSelection,
 }: CharacterSelectionCardProps) => {
   const navigate = useNavigate();
+  const [comparisonOpen, setComparisonOpen] = React.useState(false);
   const embeddedRuntimeContext = personagem.sistemaRuntime;
   const {
     contexto: fetchedRuntimeContext,
@@ -164,6 +167,14 @@ export const CharacterSelectionCard = ({
         <SelectionMarker $selected={selected} aria-hidden="true">
           {selected ? <CheckBoxIcon /> : <CheckBoxOutlineBlankIcon />}
         </SelectionMarker>
+      )}
+      {!selectionMode && (
+        <CharacterComparisonButton
+          absolute
+          theme={theme}
+          neon={neon}
+          onClick={() => setComparisonOpen(true)}
+        />
       )}
       <CharacterHeader>
         <CharacterAvatar
@@ -251,6 +262,15 @@ export const CharacterSelectionCard = ({
         <ActionButton type="button" onClick={onSheet}><MenuBookIcon />Ficha</ActionButton>
         <ActionButton type="button" onClick={onEdit}><EditIcon />Editar</ActionButton>
       </Actions>
+      <CharacterComparisonModal
+        open={comparisonOpen}
+        source="Jogador"
+        sourceId={personagem.idpersonagemJogador}
+        tableId={personagem.idmesa}
+        onClose={() => setComparisonOpen(false)}
+        theme={theme}
+        neon={neon}
+      />
     </HudCard>
   );
 };

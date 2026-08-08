@@ -109,6 +109,61 @@ namespace OdisseiaWiki.Repositories
             return await DeleteManyAsync(new[] { id }) == 1;
         }
 
+        public async Task<int?> GetTableIdAsync(int id)
+            => await _context.PersonagemJogadores
+                .AsNoTracking()
+                .Where(personagem => personagem.IdpersonagemJogador == id)
+                .Select(personagem => (int?)personagem.Idmesa)
+                .FirstOrDefaultAsync();
+
+        public async Task<List<PersonagemComparacaoRegistro>> SearchTableForComparisonAsync(
+            int tableId,
+            string term,
+            int? excludedId,
+            int limit)
+        {
+            string pattern = $"%{term.Trim()}%";
+
+            return await _context.PersonagemJogadores
+                .AsNoTracking()
+                .Where(personagem => personagem.Idmesa == tableId)
+                .Where(personagem => !excludedId.HasValue || personagem.IdpersonagemJogador != excludedId.Value)
+                .Where(personagem => EF.Functions.Like(personagem.Nome, pattern))
+                .OrderBy(personagem => personagem.Nome)
+                .Take(limit)
+                .Select(personagem => new PersonagemComparacaoRegistro
+                {
+                    Id = personagem.IdpersonagemJogador,
+                    Jogador = true,
+                    Nome = personagem.Nome,
+                    Imagem = personagem.Imagem,
+                    IdRaca = personagem.Idraca,
+                    IdMesa = personagem.Idmesa,
+                    MesaNome = personagem.Mesa.Nome,
+                    StatusJson = personagem.StatusJson,
+                    SkillsJson = personagem.Skills,
+                })
+                .ToListAsync();
+        }
+
+        public async Task<PersonagemComparacaoRegistro?> GetForComparisonAsync(int id)
+            => await _context.PersonagemJogadores
+                .AsNoTracking()
+                .Where(personagem => personagem.IdpersonagemJogador == id)
+                .Select(personagem => new PersonagemComparacaoRegistro
+                {
+                    Id = personagem.IdpersonagemJogador,
+                    Jogador = true,
+                    Nome = personagem.Nome,
+                    Imagem = personagem.Imagem,
+                    IdRaca = personagem.Idraca,
+                    IdMesa = personagem.Idmesa,
+                    MesaNome = personagem.Mesa.Nome,
+                    StatusJson = personagem.StatusJson,
+                    SkillsJson = personagem.Skills,
+                })
+                .FirstOrDefaultAsync();
+
         public async Task<int> DeleteManyAsync(IEnumerable<int> ids)
         {
             int[] normalizedIds = ids.Distinct().ToArray();

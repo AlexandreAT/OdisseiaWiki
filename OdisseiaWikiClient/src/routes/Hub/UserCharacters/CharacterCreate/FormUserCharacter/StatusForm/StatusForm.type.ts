@@ -2,6 +2,7 @@ import { RacaPayload } from '../../../../../../services/racasService';
 import { Principais, Secundarios } from '../FormUserCharacter.type';
 import { Defesas, StatusBase } from '../../../../../../models/Characters';
 import { SistemaRuntimeContexto } from '../../../../../../models/SistemaRpg';
+import { CharacterComparisonSource } from '../../../../../../components/CharacterComparison';
 
 export interface StatusFormProps {
   theme: 'dark' | 'light';
@@ -25,4 +26,9 @@ export interface StatusFormProps {
   setAvatarUrl: (value: string) => void;
   raceImageUrl: string;
   runtimeContext?: SistemaRuntimeContexto | null;
+  comparisonSource?: CharacterComparisonSource;
+  comparisonId?: number;
+  comparisonTableId?: number | null;
+  comparisonTableName?: string | null;
+  comparisonSkillCount?: number;
 }

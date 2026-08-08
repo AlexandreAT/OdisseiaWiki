@@ -93,5 +93,49 @@ namespace OdisseiaWiki.Repositories
                 .Where(p => ids.Contains(p.Idpersonagem))
                 .ToListAsync();
         }
+
+        public async Task<List<PersonagemComparacaoRegistro>> SearchVisibleForComparisonAsync(
+            string term,
+            int? excludedId,
+            int limit)
+        {
+            string pattern = $"%{term.Trim()}%";
+
+            return await _context.Personagens
+                .AsNoTracking()
+                .Where(personagem => personagem.Visivel)
+                .Where(personagem => !excludedId.HasValue || personagem.Idpersonagem != excludedId.Value)
+                .Where(personagem => EF.Functions.Like(personagem.Nome, pattern))
+                .OrderBy(personagem => personagem.Nome)
+                .Take(limit)
+                .Select(personagem => new PersonagemComparacaoRegistro
+                {
+                    Id = personagem.Idpersonagem,
+                    Jogador = false,
+                    Nome = personagem.Nome,
+                    Imagem = personagem.Imagem,
+                    IdRaca = personagem.Idraca,
+                    StatusJson = personagem.StatusJson,
+                    SkillsJson = personagem.Skills,
+                })
+                .ToListAsync();
+        }
+
+        public async Task<PersonagemComparacaoRegistro?> GetForComparisonAsync(int id, bool requireVisible)
+            => await _context.Personagens
+                .AsNoTracking()
+                .Where(personagem => personagem.Idpersonagem == id)
+                .Where(personagem => !requireVisible || personagem.Visivel)
+                .Select(personagem => new PersonagemComparacaoRegistro
+                {
+                    Id = personagem.Idpersonagem,
+                    Jogador = false,
+                    Nome = personagem.Nome,
+                    Imagem = personagem.Imagem,
+                    IdRaca = personagem.Idraca,
+                    StatusJson = personagem.StatusJson,
+                    SkillsJson = personagem.Skills,
+                })
+                .FirstOrDefaultAsync();
     }
 }

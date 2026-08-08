@@ -28,6 +28,11 @@ import { getInventarioItems, getProtesesItems, getProtesesTableItems, isEmptyIte
 import { openItemPreview } from '../../../../../../utils/itemPreview';
 import { SystemEntityBinding } from '../../../../../../components/Generic/SystemEntityBinding';
 import { ItemComparisonModal } from '../../../../../../components/ItemComparison';
+import {
+  CharacterComparisonButton,
+  CharacterComparisonModal,
+  createCharacterComparisonData,
+} from '../../../../../../components/CharacterComparison';
 //import OrcBack from '../../../../../../assets/racas/orc/OrcBackground.jpeg';
 
 interface FormProps {
@@ -38,6 +43,7 @@ interface FormProps {
 
 export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
   const [comparisonItem, setComparisonItem] = React.useState<Item | null>(null);
+  const [characterComparisonOpen, setCharacterComparisonOpen] = React.useState(false);
   const {
     step, handleNext, handleSubmit,
     isSubmitting,
@@ -128,6 +134,34 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
   const updateProteses = (updatedItems: Item[]) => setItens(
     replaceItemSection(itens, 'proteses', updatedItems.map((item) => ({ ...item, tipo: 'implante' }))),
   );
+  const comparisonCharacter = React.useMemo(() => createCharacterComparisonData({
+    origem: 'Npc',
+    nome: userName,
+    imagem: avatarUrl,
+    quantidadeSkills: skills.filter((skill) => skill.nome?.trim()).length,
+    sistemaRuntime: sistema.contexto,
+    status: {
+      status: statusBasico,
+      atributos: {
+        principais: atributosPrincipais,
+        secundarios: atributosSecundarios,
+      },
+      nivel: level,
+      xp,
+      defesas,
+    },
+  }), [
+    atributosPrincipais,
+    atributosSecundarios,
+    avatarUrl,
+    defesas,
+    level,
+    sistema.contexto,
+    skills,
+    statusBasico,
+    userName,
+    xp,
+  ]);
   
                 console.log("🚀 ~ FormCharacter ~ allPersonagens:", allPersonagens)
   return (
@@ -498,6 +532,11 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
                   />
                 </>
               </LabelInfoBox>
+              <CharacterComparisonButton
+                theme={theme}
+                neon={neon}
+                onClick={() => setCharacterComparisonOpen(true)}
+              />
             </HeaderInfo>
             <SectionStatus theme={theme} neon={neon}>
               <StatusInput
@@ -677,6 +716,14 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
         neon={neon}
         runtimeContext={sistema.contexto}
         availableItems={listItens}
+      />
+      <CharacterComparisonModal
+        open={characterComparisonOpen}
+        current={comparisonCharacter}
+        source="Npc"
+        onClose={() => setCharacterComparisonOpen(false)}
+        theme={theme}
+        neon={neon}
       />
 
     </FormController>
