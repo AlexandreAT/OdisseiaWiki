@@ -102,6 +102,9 @@ export const useFormPage = ({
     } else if (slug.trim().length > 150) {
       setSlugError('O slug deve ter no máximo 150 caracteres');
       isValid = false;
+    } else if (['search', 'conexoes'].includes(slug.trim().toLowerCase())) {
+      setSlugError('Esse slug é reservado para uma funcionalidade da Wiki');
+      isValid = false;
     } else {
       setSlugError('');
     }

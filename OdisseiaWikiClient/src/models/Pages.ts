@@ -84,7 +84,7 @@ export interface InfoLoreBlockContent {
   imagem?: string;
 }
 
-export type EntityKind = 'Cidade' | 'Personagem' | 'Item' | 'Raca';
+export type EntityKind = 'Cidade' | 'Personagem' | 'Item' | 'Raca' | 'Page';
 
 export interface RelatedEntityReference {
   idEntidade: number | string;

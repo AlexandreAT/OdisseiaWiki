@@ -10,6 +10,12 @@ namespace OdisseiaWiki.Services
 {
     public class PageService : IPageService
     {
+        private static readonly HashSet<string> ReservedSlugs = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "search",
+            "conexoes"
+        };
+
         private readonly IPageRepository _repository;
         private readonly IAssetService _assetService;
         private readonly ICidadeRepository _cidadeRepository;
@@ -35,6 +41,7 @@ namespace OdisseiaWiki.Services
 
         public async Task<ResultPage> CreateAsync(CreatePageWithBlocksDto dto)
         {
+            ValidateReservedSlug(dto.Page.Slug);
             Page? slugExistente = await _repository.GetBySlugAsync(dto.Page.Slug);
 
             if (slugExistente != null)
@@ -120,6 +127,7 @@ namespace OdisseiaWiki.Services
 
         public async Task<PageDto> UpdateAsync(int id, CreatePageWithBlocksDto dto)
         {
+            ValidateReservedSlug(dto.Page.Slug);
             Page? page = await _repository.GetByIdAsync(id);
 
             if (page == null)
@@ -156,6 +164,12 @@ namespace OdisseiaWiki.Services
                 ExtractAssets(updated));
 
             return MapPageToDto(updated);
+        }
+
+        private static void ValidateReservedSlug(string slug)
+        {
+            if (ReservedSlugs.Contains(slug.Trim()))
+                throw new InvalidOperationException("Esse slug é reservado para uma funcionalidade da Wiki.");
         }
 
         public async Task<bool> DeleteAsync(int id)
@@ -254,6 +268,8 @@ namespace OdisseiaWiki.Services
                     "item" => (await _itemRepository.GetByIdAsync(referenceId))?.Visivel == true,
                     "personagem" when int.TryParse(referenceId, out int characterId)
                         => (await _personagemRepository.GetByIdAsync(characterId))?.Visivel == true,
+                    "page" or "pagina" or "página" when int.TryParse(referenceId, out int pageId)
+                        => await _repository.ExistsVisibleAsync(pageId),
                     _ => false
                 };
 

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { BiHome, BiSearch, BiChevronUp } from 'react-icons/bi';
+import { BiHome, BiSearch, BiChevronUp, BiNetworkChart } from 'react-icons/bi';
 import { WikiHeaderProps } from './types';
 import {
   WikiHeaderWrapper,
@@ -17,6 +17,8 @@ import {
   SuggestionGroupTitle,
   SuggestionButton,
   SuggestionStatus,
+  ConnectionsButton,
+  ConnectionsLabel,
 } from './WikiHeader.style';
 import { WIKI_SEARCH_GROUP_LABELS, WIKI_SEARCH_GROUP_ORDER, WikiSearchItem } from '../../types';
 import { WikiSearchLoading } from '../WikiSearchLoading';
@@ -38,6 +40,7 @@ export const WikiHeader: React.FC<WikiHeaderInternalProps> = ({
   isExpanded = true,
 }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { theme, neon } = useSelector((state: any) => state.themesReducer);
   const [searchValue, setSearchValue] = useState('');
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
@@ -178,6 +181,19 @@ export const WikiHeader: React.FC<WikiHeaderInternalProps> = ({
               </AutocompleteDropdown>
             )}
         </SearchForm>
+
+        <ConnectionsButton
+          type="button"
+          $active={location.pathname === '/wiki/conexoes'}
+          $neon={neon === 'on'}
+          onClick={() => navigate('/wiki/conexoes')}
+          title="Abrir a Teia de Conexões"
+          aria-label="Abrir a Teia de Conexões"
+          aria-current={location.pathname === '/wiki/conexoes' ? 'page' : undefined}
+        >
+          <BiNetworkChart aria-hidden="true" />
+          <ConnectionsLabel>Teia de conexões</ConnectionsLabel>
+        </ConnectionsButton>
         </WikiHeaderWrapper>
 
         <ToggleHeaderButton

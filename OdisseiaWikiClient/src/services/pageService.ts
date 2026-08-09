@@ -1,6 +1,7 @@
 import api from "../axios/api";
 import {
   CreatePageWithBlocksDto,
+  PageDto,
   ResultPage,
   ResultPageComplete,
   ResultPages
@@ -57,8 +58,25 @@ export const getPageById = async (
   return response.data;
 };
 
+export const getPagesByIds = async (
+  ids: Array<string | number>
+): Promise<PageDto[]> => {
+  const normalizedIds = new Set(
+    ids
+      .map((id) => Number(id))
+      .filter((id) => Number.isInteger(id) && id > 0)
+  );
+
+  if (normalizedIds.size === 0) return [];
+
+  const result = await getPages(true);
+  return (result.pages ?? []).filter(
+    (page) => page.idPage !== undefined && normalizedIds.has(page.idPage)
+  );
+};
+
 export const getPagesReferencingEntity = async (
-  entityType: 'Cidade' | 'Personagem' | 'Item' | 'Raca',
+  entityType: 'Cidade' | 'Personagem' | 'Item' | 'Raca' | 'Page',
   entityId: number | string,
   requestOptions: ServiceRequestOptions = {}
 ): Promise<ResultPages> => {

@@ -12,6 +12,7 @@ import { getCidades, getCidadesByIds } from '../../../../../../../services/cidad
 import { getRacas, getRacasByIds } from '../../../../../../../services/racasService';
 import { getItens, getItensByIds } from '../../../../../../../services/itensService';
 import { getPersonagens, getPersonagensByIds } from '../../../../../../../services/personagensService';
+import { getPages, getPagesByIds } from '../../../../../../../services/pageService';
 import {
   RelationContainer,
   EntityDisplay,
@@ -42,7 +43,15 @@ interface RelationBlockEditorProps {
   onUpdate: (content: RelatedEntityReference[]) => void;
 }
 
-const ENTITY_KINDS: EntityKind[] = ['Cidade', 'Personagem', 'Item', 'Raca'];
+const ENTITY_KINDS: EntityKind[] = ['Cidade', 'Personagem', 'Item', 'Raca', 'Page'];
+
+const ENTITY_KIND_LABELS: Record<EntityKind, string> = {
+  Cidade: 'Cidade',
+  Personagem: 'Personagem',
+  Item: 'Item',
+  Raca: 'Raça',
+  Page: 'Página',
+};
 
 const normalizeContent = (raw: any): RelatedEntityReference[] => {
   if (Array.isArray(raw)) return raw;
@@ -80,6 +89,10 @@ const extractEntityId = (entity: any, preferredType?: EntityKind): string => {
     return tryKeys(['IdItem', 'iditem', 'idItem', 'id', 'Id']) ?? '';
   }
 
+  if (preferredType === 'Page') {
+    return tryKeys(['IdPage', 'idPage', 'idpage', 'id', 'Id']) ?? '';
+  }
+
   // fallback (legacy fields)
   const id =
     entity?.Idcidade ??
@@ -90,6 +103,8 @@ const extractEntityId = (entity: any, preferredType?: EntityKind): string => {
     entity?.iditem ??
     entity?.Idpersonagem ??
     entity?.idpersonagem ??
+    entity?.IdPage ??
+    entity?.idPage ??
     entity?.id ??
     entity?.Id;
 
@@ -97,11 +112,11 @@ const extractEntityId = (entity: any, preferredType?: EntityKind): string => {
 };
 
 const extractEntityName = (entity: any): string => {
-  return entity?.Nome || entity?.nome || 'Sem nome';
+  return entity?.Nome || entity?.nome || entity?.Titulo || entity?.titulo || 'Sem nome';
 };
 
 const extractEntityImage = (entity: any): string | undefined => {
-  return entity?.Imagem || entity?.imagem || undefined;
+  return entity?.Imagem || entity?.imagem || entity?.CoverImage || entity?.coverImage || undefined;
 };
 
 const isEntityVisible = (entity: any): boolean => entity?.Visivel === true || entity?.visivel === true;
@@ -162,6 +177,11 @@ export const RelationBlockEditor: React.FC<RelationBlockEditorProps> = ({
           case 'Personagem': {
             const result = await getPersonagens();
             list = Array.isArray(result) ? result : [];
+            break;
+          }
+          case 'Page': {
+            const result = await getPages(true);
+            list = result.pages || [];
             break;
           }
         }
@@ -317,6 +337,14 @@ export const RelationBlockEditor: React.FC<RelationBlockEditorProps> = ({
               } catch { /* ignore */ }
             })());
             break;
+          case 'Page':
+            jobs.push((async () => {
+              try {
+                const list = await getPagesByIds(ids);
+                push('Page', list, ['idPage', 'IdPage', 'idpage', 'id']);
+              } catch { /* ignore */ }
+            })());
+            break;
           default:
             break;
         }
@@ -355,7 +383,7 @@ export const RelationBlockEditor: React.FC<RelationBlockEditorProps> = ({
             theme={theme}
             neon={neon}
             label="Tipo de Entidade"
-            options={ENTITY_KINDS.map(k => ({ value: k, label: k }))}
+            options={ENTITY_KINDS.map(k => ({ value: k, label: ENTITY_KIND_LABELS[k] }))}
             value={pickingType}
             onChange={(e) => setPickingType(e.target.value as EntityKind)}
             width="100%"
@@ -394,7 +422,7 @@ export const RelationBlockEditor: React.FC<RelationBlockEditorProps> = ({
 
       {!loadError && entityOptions.length === 0 && !loading && (
         <EmptyMessage $isDark={theme === 'dark'}>
-          Nenhuma {pickingType.toLowerCase()} disponível para adicionar.
+          Nenhuma {ENTITY_KIND_LABELS[pickingType].toLowerCase()} disponível para adicionar.
         </EmptyMessage>
       )}
 
@@ -410,7 +438,7 @@ export const RelationBlockEditor: React.FC<RelationBlockEditorProps> = ({
             />
             <EntityDetails>
               <EntityName>{extractEntityName(previewEntity)}</EntityName>
-              <EntityType>Tipo: {pickingType}</EntityType>
+              <EntityType>Tipo: {ENTITY_KIND_LABELS[pickingType]}</EntityType>
             </EntityDetails>
           </EntityContent>
         </EntityDisplay>
@@ -425,7 +453,7 @@ export const RelationBlockEditor: React.FC<RelationBlockEditorProps> = ({
         <ReferenceList>
           {grouped.map(([tipo, items]) => (
             <div key={tipo}>
-              <ReferenceTypeHeader>{tipo}s ({items.length})</ReferenceTypeHeader>
+              <ReferenceTypeHeader>{ENTITY_KIND_LABELS[tipo]}s ({items.length})</ReferenceTypeHeader>
               {items.map(({ ref, globalIndex }) => {
                 const key = `${ref.tipoEntidade}:${String(ref.idEntidade)}:${globalIndex}`;
                 return (
@@ -464,8 +492,12 @@ export const RelationBlockEditor: React.FC<RelationBlockEditorProps> = ({
                       <EntityContent>
                         {(() => {
                           const ent = entityMap[`${ref.tipoEntidade}:${ref.idEntidade}`];
-                          const name = ent ? (ent.Nome || ent.nome || ent.nome) : ref.nome;
-                          const img = ent ? (ent.Imagem || ent.imagem || ent.imagem) : (ref.imagem as string | undefined);
+                          const name = ent
+                            ? (ent.Nome || ent.nome || ent.Titulo || ent.titulo)
+                            : ref.nome;
+                          const img = ent
+                            ? (ent.Imagem || ent.imagem || ent.CoverImage || ent.coverImage)
+                            : (ref.imagem as string | undefined);
                           return (
                             <>
                               <EntityImage
@@ -475,7 +507,7 @@ export const RelationBlockEditor: React.FC<RelationBlockEditorProps> = ({
                               />
                               <EntityDetails>
                                 <EntityName>{name || 'Sem nome'}</EntityName>
-                                <EntityType>Tipo: {ref.tipoEntidade}</EntityType>
+                                <EntityType>Tipo: {ENTITY_KIND_LABELS[ref.tipoEntidade]}</EntityType>
                               </EntityDetails>
                             </>
                           );

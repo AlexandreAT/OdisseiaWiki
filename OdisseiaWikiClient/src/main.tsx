@@ -24,6 +24,7 @@ const PersonagemPage = lazy(() => import('./routes/Personagem/PersonagemPage'));
 const CidadePage = lazy(() => import('./routes/Cidade/CidadePage'));
 const RacaPage = lazy(() => import('./routes/Raca/RacaPage'));
 const ItemPage = lazy(() => import('./routes/Item/ItemPage'));
+const WikiGraphPage = lazy(() => import('./routes/WikiGraph/WikiGraphPage'));
 
 const withRouteLoading = (element: React.ReactNode) => (
   <Suspense fallback={<RouteLoading />}>{element}</Suspense>
@@ -50,6 +51,10 @@ const router = createBrowserRouter([{
         {
           path: 'login',
           element: withRouteLoading(<Login />)
+        },
+        {
+          path: 'wiki/conexoes',
+          element: withRouteLoading(<WikiGraphPage />)
         },
         {
           path: 'wiki',

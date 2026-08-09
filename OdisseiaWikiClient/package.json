@@ -21,6 +21,7 @@
     "@tiptap/react": "^3.19.0",
     "@tiptap/starter-kit": "^3.19.0",
     "axios": "^1.11.0",
+    "cytoscape": "^3.34.0",
     "framer-motion": "^12.34.0",
     "html2canvas": "^1.4.1",
     "jwt-decode": "^4.0.0",

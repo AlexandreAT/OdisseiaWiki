@@ -46,6 +46,11 @@ namespace OdisseiaWiki.Repositories
                 .Include(p => p.Blocks.OrderBy(b => b.Ordem))
                 .FirstOrDefaultAsync(p => p.IdPage == id);
 
+        public Task<bool> ExistsVisibleAsync(int id)
+            => _context.Pages
+                .AsNoTracking()
+                .AnyAsync(page => page.IdPage == id && page.Visivel);
+
         public async Task<Page?> GetBySlugAsync(string slug)
             => await _context.Pages
                 .Include(p => p.Blocks.OrderBy(b => b.Ordem))

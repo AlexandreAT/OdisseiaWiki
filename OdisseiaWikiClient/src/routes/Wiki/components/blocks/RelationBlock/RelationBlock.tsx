@@ -7,6 +7,7 @@ import {
   BiShapeSquare,
   BiChevronLeft,
   BiChevronRight,
+  BiBookOpen,
 } from 'react-icons/bi';
 import { RelationBlockProps } from './types';
 import { RelatedEntityReference } from '../../../../../models/Pages';
@@ -33,6 +34,7 @@ import { getPersonagensByIds } from '../../../../../services/personagensService'
 import { getCidadesByIds } from '../../../../../services/cidadesService';
 import { getRacasByIds } from '../../../../../services/racasService';
 import { getItensByIds } from '../../../../../services/itensService';
+import { getPagesByIds } from '../../../../../services/pageService';
 import TitleGlitch from '../../../../../components/Generic/TitleGlitch/TitleGlitch';
 
 const typeIcons: Record<string, React.ReactNode> = {
@@ -40,6 +42,15 @@ const typeIcons: Record<string, React.ReactNode> = {
   Personagem: <BiUserCircle />,
   Item: <BiGift />,
   Raca: <BiShapeSquare />,
+  Page: <BiBookOpen />,
+};
+
+const typeLabels: Record<string, string> = {
+  Cidade: 'Cidade',
+  Personagem: 'Personagem',
+  Item: 'Item',
+  Raca: 'Raça',
+  Page: 'Página',
 };
 
 type EntityRecord = Record<string, unknown>;
@@ -54,7 +65,20 @@ const normalizeEntityType = (value?: string) => value
   .trim()
   .toLowerCase();
 
-const getEntityRoute = (entityType: string | undefined, entityId: string | number | undefined) => {
+const getEntityRoute = (
+  entityType: string | undefined,
+  entityId: string | number | undefined,
+  entity?: unknown
+) => {
+  const normalizedType = normalizeEntityType(entityType);
+  if (normalizedType === 'page') {
+    const entityRecord = asEntityRecord(entity);
+    const slug = entityRecord?.slug ?? entityRecord?.Slug;
+    return typeof slug === 'string' && slug.trim() !== ''
+      ? `/wiki/${encodeURIComponent(slug)}`
+      : null;
+  }
+
   if (entityId === undefined || entityId === null || String(entityId).trim() === '') return null;
 
   const routeSegmentByType: Record<string, string> = {
@@ -196,6 +220,14 @@ const RelationTypeCarousel: React.FC<RelationTypeCarouselProps> = ({ tipo, items
               } catch { /* ignore */ }
             })());
             break;
+          case 'Page':
+            jobs.push((async () => {
+              try {
+                const list = await getPagesByIds(ids);
+                pushToMap('Page', list, ['idPage', 'IdPage', 'idpage', 'id']);
+              } catch { /* ignore */ }
+            })());
+            break;
           default:
             break;
         }
@@ -254,14 +286,14 @@ const RelationTypeCarousel: React.FC<RelationTypeCarouselProps> = ({ tipo, items
       const entityId = hasDirectEntityId
         ? relation.idEntidade
         : getResolvedEntityId(relation.tipoEntidade, ent);
-      const route = getEntityRoute(relation.tipoEntidade, entityId);
+      const route = getEntityRoute(relation.tipoEntidade, entityId, ent);
       if (!route) return;
 
       navigate(route);
     };
 
-    const resolvedName = ent?.Nome ?? ent?.nome;
-    const resolvedImage = ent?.Imagem ?? ent?.imagem;
+    const resolvedName = ent?.Nome ?? ent?.nome ?? ent?.Titulo ?? ent?.titulo;
+    const resolvedImage = ent?.Imagem ?? ent?.imagem ?? ent?.CoverImage ?? ent?.coverImage;
     const name = resolvedName ? String(resolvedName) : (relation.nome || 'Sem nome');
     const img = resolvedImage ? String(resolvedImage) : relation.imagem;
 
@@ -281,7 +313,9 @@ const RelationTypeCarousel: React.FC<RelationTypeCarouselProps> = ({ tipo, items
         )}
         <RelationCardContent>
           <RelationCardTitle>{name}</RelationCardTitle>
-          <RelationCardType>{relation.tipoEntidade}</RelationCardType>
+          <RelationCardType>
+            {typeLabels[relation.tipoEntidade] ?? relation.tipoEntidade}
+          </RelationCardType>
         </RelationCardContent>
       </RelationCard>
     );
@@ -377,7 +411,7 @@ export const RelationBlock: React.FC<RelationBlockProps> = ({ block, theme, neon
               {typeIcons[tipo] || <BiUserCircle />}
             </TypeIconWrapper>
             <TypeLabel>
-              {tipo}s ({items.length})
+              {typeLabels[tipo] ?? tipo}s ({items.length})
             </TypeLabel>
           </RelationTypeGroupHeader>
 
