@@ -332,6 +332,7 @@ export const FormPage: React.FC<FormPageProps> = ({
                   <li>{'Cada p\u00e1gina deve possuir um slug \u00fanico.'}</li>
                   <li><code>MainPage</code>{' identifica a p\u00e1gina principal da wiki.'}</li>
                   <li><code>search</code>{' \u00e9 reservado para a busca e n\u00e3o deve ser usado.'}</li>
+                  <li><code>conexoes</code>{' \u00e9 reservado para a Teia de Conex\u00f5es.'}</li>
                 </ul>
               </SlugInfoPopover>
             )}

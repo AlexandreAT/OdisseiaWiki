@@ -86,6 +86,57 @@ export const SearchForm = styled.form`
   max-width: 400px;
 `;
 
+export const ConnectionsButton = styled.button<{ $active: boolean; $neon: boolean }>`
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  margin-left: auto;
+  padding: 8px 13px;
+  border: 1px solid ${({ $active }) => $active ? 'var(--clearneonBlue)' : 'rgba(71, 219, 255, 0.38)'};
+  border-radius: 4px;
+  background: ${({ $active }) => $active ? 'rgba(0, 212, 255, 0.12)' : 'rgba(0, 5, 14, 0.62)'};
+  color: ${({ $active }) => $active ? 'var(--clearneonBlue)' : 'rgba(245, 245, 245, 0.82)'};
+  font-family: 'Orbitron', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.65px;
+  text-transform: uppercase;
+  text-shadow: ${({ $active, $neon }) => $active && $neon ? '0 0 7px var(--clearneonBlue)' : 'none'};
+  box-shadow: ${({ $active, $neon }) => $active && $neon ? '0 0 8px rgba(0, 212, 255, 0.2)' : 'none'};
+  transition: color 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+
+  svg {
+    flex: 0 0 auto;
+    color: var(--clearneonBlue);
+    font-size: 19px;
+  }
+
+  &:hover,
+  &:focus-visible {
+    outline: none;
+    border-color: var(--clearneonBlue);
+    background: rgba(0, 212, 255, 0.11);
+    color: var(--clearneonBlue);
+  }
+
+  @media (max-width: 768px) {
+    width: 40px;
+    min-height: 40px;
+    padding: 0;
+
+    svg { font-size: 20px; }
+  }
+`;
+
+export const ConnectionsLabel = styled.span`
+  @media (max-width: 768px) {
+    display: none;
+  }
+`;
+
 export const HomeButton = styled.button`
   display: flex;
   align-items: center;
