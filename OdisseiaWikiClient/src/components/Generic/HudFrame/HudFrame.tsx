@@ -1,7 +1,7 @@
 import { HTMLAttributes, PropsWithChildren } from 'react';
 import { AnimatedLine, Corner, Frame } from './HudFrame.style';
 
-interface HudFrameProps extends HTMLAttributes<HTMLElement> {
+export interface HudFrameProps extends HTMLAttributes<HTMLElement> {
   neon: boolean;
   color?: string;
 }

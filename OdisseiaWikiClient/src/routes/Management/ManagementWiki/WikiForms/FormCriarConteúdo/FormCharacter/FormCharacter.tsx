@@ -33,6 +33,12 @@ import {
   CharacterComparisonModal,
   createCharacterComparisonData,
 } from '../../../../../../components/CharacterComparison';
+import {
+  CharacterExplodedView,
+  CharacterExplodedViewLauncher,
+  ExplodedViewTab,
+} from '../../../../../../components/CharacterExplodedView';
+import { TableHeading } from '../../../../../../components/CharacterExplodedView/CharacterExplodedView.style';
 //import OrcBack from '../../../../../../assets/racas/orc/OrcBackground.jpeg';
 
 interface FormProps {
@@ -44,6 +50,7 @@ interface FormProps {
 export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
   const [comparisonItem, setComparisonItem] = React.useState<Item | null>(null);
   const [characterComparisonOpen, setCharacterComparisonOpen] = React.useState(false);
+  const [explodedTab, setExplodedTab] = React.useState<ExplodedViewTab | null>(null);
   const {
     step, handleNext, handleSubmit,
     isSubmitting,
@@ -416,7 +423,16 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
           </RelatedCharactersSection>
 
           <SectionTable>
-            <TableTitle>Inventário</TableTitle>
+            <TableHeading>
+              <TableTitle>Inventário</TableTitle>
+              <CharacterExplodedViewLauncher
+                tab="items"
+                label="itens"
+                onOpen={setExplodedTab}
+                theme={theme}
+                neon={neon}
+              />
+            </TableHeading>
             <DataTable<Item>
               data={inventario}
               onChange={updateInventario}
@@ -435,7 +451,16 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
           </SectionTable>
 
           <SectionTable>
-            <TableTitle>Próteses</TableTitle>
+            <TableHeading>
+              <TableTitle>Próteses</TableTitle>
+              <CharacterExplodedViewLauncher
+                tab="prostheses"
+                label="próteses"
+                onOpen={setExplodedTab}
+                theme={theme}
+                neon={neon}
+              />
+            </TableHeading>
             <DataTable<Item>
               data={getProtesesTableItems(itens)}
               onChange={updateProteses}
@@ -454,7 +479,16 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
           </SectionTable>
 
           <SectionTable>
-            <TableTitle>Magias</TableTitle>
+            <TableHeading>
+              <TableTitle>Magias</TableTitle>
+              <CharacterExplodedViewLauncher
+                tab="spells"
+                label="magias"
+                onOpen={setExplodedTab}
+                theme={theme}
+                neon={neon}
+              />
+            </TableHeading>
             <DataTable<Magia>
               data={magias}
               onChange={setMagias}
@@ -466,7 +500,16 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
           </SectionTable>
 
           <SectionTable>
-            <TableTitle>Skills</TableTitle>
+            <TableHeading>
+              <TableTitle>Skills</TableTitle>
+              <CharacterExplodedViewLauncher
+                tab="skills"
+                label="skills"
+                onOpen={setExplodedTab}
+                theme={theme}
+                neon={neon}
+              />
+            </TableHeading>
             <DataTable<Skills>
               data={skills}
               onChange={setSkills}
@@ -724,6 +767,28 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
         onClose={() => setCharacterComparisonOpen(false)}
         theme={theme}
         neon={neon}
+      />
+      <CharacterExplodedView
+        open={Boolean(explodedTab)}
+        initialTab={explodedTab ?? 'items'}
+        onClose={() => setExplodedTab(null)}
+        theme={theme}
+        neon={neon}
+        character={{
+          name: userName,
+          image: avatarUrl,
+          race: selectedRace?.nome,
+          system: sistema.contexto?.nomeSistema ?? sistema.contexto?.codigoSistema,
+          version: sistema.contexto?.numeroVersao,
+          loadCapacity: statusBasico.capacidadeCarga,
+        }}
+        items={itens}
+        setItems={setItens}
+        skills={skills}
+        setSkills={setSkills}
+        spells={magias}
+        setSpells={setMagias}
+        onOpenItem={(item) => openItemPreview(item, sistema.contexto)}
       />
 
     </FormController>

@@ -75,6 +75,19 @@ export interface Item {
   sistemaRuntime?: SistemaRuntimeContexto | null;
 }
 
+/**
+ * Metadados puramente visuais da ficha. Eles viajam dentro de `atributos`
+ * para participar do mesmo rascunho/salvamento do inventário, sem criar uma
+ * segunda fonte de verdade no backend.
+ */
+export interface CharacterExplodedViewMeta {
+  /** Stable local identity for draft rows that do not have a persisted id yet. */
+  clientKey?: string;
+  order?: number;
+  position?: { x: number; y: number; rotation?: number };
+  equippedSlot?: string;
+}
+
 // ---- Model de Atributos ----
 export type ItemAtributos =
   | ArmaAtributos

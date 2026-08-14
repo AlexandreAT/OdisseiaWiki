@@ -175,6 +175,7 @@ const CharacterCreateComponent = ({ theme, neon, userId, onSave }: UserCharacter
           skillsColumns={skillsColumns}
           magiasColumns={magiasColumns}
           runtimeContext={runtimeContext}
+          tableName={listMesas.find((mesa) => mesa.idmesa === selectedMesa)?.nome}
         />
       )}
 

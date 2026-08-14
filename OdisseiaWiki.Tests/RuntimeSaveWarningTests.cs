@@ -148,6 +148,86 @@ public sealed class RuntimeSaveWarningTests
             It.IsAny<SistemaEntidadeGlobalVinculoSnapshot>()), Times.Once);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SaveNpc_PreservaMetadadosVisuaisDosItens(bool atualizar)
+    {
+        Mock<IPersonagemRepository> repository = new();
+        Mock<ISistemaRpgResolver> resolver = NovoResolverComWarning(
+            SistemaEntidadeGlobalTipo.Npc,
+            _ => "entidade.statusJson.nivel");
+        Mock<ISistemaEntidadeVinculoService> vinculo = NovoVinculoValido();
+        Personagen? persistido = null;
+
+        repository.Setup(item => item.CreateAsync(It.IsAny<Personagen>()))
+            .ReturnsAsync((Personagen personagem) =>
+            {
+                personagem.Idpersonagem = 8;
+                persistido = personagem;
+                return personagem;
+            });
+        repository.Setup(item => item.UpdateAsync(It.IsAny<Personagen>()))
+            .ReturnsAsync((Personagen personagem) =>
+            {
+                persistido = personagem;
+                return personagem;
+            });
+
+        PersonagemService service = new(
+            repository.Object,
+            Mock.Of<IAssetService>(),
+            resolver.Object,
+            vinculo.Object);
+        PersonagemDto dto = NovoNpcDto(nivel: 1);
+        dto.InventarioJson = new List<OdisseiaWiki.Dtos.Item>
+        {
+            new()
+            {
+                id = "item-local-1",
+                idItemBase = "item-base-1",
+                nome = "Traje furtivo",
+                tipo = "traje",
+                quantidade = 1,
+                peso = 12,
+                discricao = 3,
+                descricao = "Equipamento silencioso.",
+                efeito = "Reduz ruído de movimento.",
+                imagem = "assets_dynamic/itens/traje-furtivo.png",
+                atributos = new { efeito = "Reduz ruído de movimento." },
+                tags = new List<string> { "Item", "Furtivo" },
+            },
+        };
+
+        if (atualizar)
+        {
+            Personagen existente = new()
+            {
+                Idpersonagem = 8,
+                Nome = "NPC",
+                Idraca = 1,
+                StatusJson = JsonSerializer.Serialize(NovoNpcDto(1).StatusJson),
+                InventarioJson = "[]",
+                AcompanharPublicacaoAtual = true,
+            };
+            repository.Setup(item => item.GetByIdAsync(8)).ReturnsAsync(existente);
+            await service.UpdateAsync(8, dto);
+        }
+        else
+        {
+            await service.CreateAsync(dto);
+        }
+
+        Assert.NotNull(persistido?.InventarioJson);
+        using JsonDocument inventario = JsonDocument.Parse(persistido!.InventarioJson!);
+        JsonElement itemPersistido = inventario.RootElement[0];
+        Assert.Equal(3, itemPersistido.GetProperty("discricao").GetInt32());
+        Assert.Equal("Reduz ruído de movimento.", itemPersistido.GetProperty("efeito").GetString());
+        Assert.Equal("assets_dynamic/itens/traje-furtivo.png", itemPersistido.GetProperty("imagem").GetString());
+        Assert.Equal(new[] { "Item", "Furtivo" },
+            itemPersistido.GetProperty("tags").EnumerateArray().Select(item => item.GetString()));
+    }
+
     private static Mock<ISistemaRpgResolver> NovoResolverComWarning(
         SistemaEntidadeGlobalTipo tipo,
         Func<SistemaEntidadeGlobalVinculoSnapshot, string> validarSnapshot)
