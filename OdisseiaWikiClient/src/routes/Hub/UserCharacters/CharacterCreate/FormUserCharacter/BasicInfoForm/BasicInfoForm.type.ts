@@ -46,6 +46,7 @@ export interface BasicInfoFormProps {
   statusBasico: StatusBase;
   setStatusBasico: React.Dispatch<React.SetStateAction<StatusBase>>;
   runtimeContext?: SistemaRuntimeContexto | null;
+  tableName?: string;
   errors: { name?: string; race?: string };
   userError: boolean;
   setUserError: (value: boolean) => void;

@@ -22,6 +22,12 @@ import { getInventarioItems, getProtesesItems, getProtesesTableItems, isEmptyIte
 import { openItemPreview } from '../../../../../../utils/itemPreview';
 import { getRuntimeResourceLabel } from '../../../../../../utils/systemRuntimeCharacter';
 import { ItemComparisonModal } from '../../../../../../components/ItemComparison';
+import {
+  CharacterExplodedView,
+  CharacterExplodedViewLauncher,
+  ExplodedViewTab,
+} from '../../../../../../components/CharacterExplodedView';
+import { TableHeading } from '../../../../../../components/CharacterExplodedView/CharacterExplodedView.style';
 
 export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
   theme,
@@ -82,8 +88,10 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
   skillsColumns,
   magiasColumns,
   runtimeContext,
+  tableName,
 }) => {
   const [comparisonItem, setComparisonItem] = React.useState<Item | null>(null);
+  const [explodedTab, setExplodedTab] = React.useState<ExplodedViewTab | null>(null);
   const inventario = getInventarioItems(itens);
   const updateInventario = (updatedItems: Item[]) => setItens(replaceItemSection(itens, 'inventario', updatedItems));
   const updateProteses = (updatedItems: Item[]) => setItens(
@@ -332,7 +340,16 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
       )}
 
       <SectionTable>
-        <TableTitle>Inventário</TableTitle>
+        <TableHeading>
+          <TableTitle>Inventário</TableTitle>
+          <CharacterExplodedViewLauncher
+            tab="items"
+            label="itens"
+            onOpen={setExplodedTab}
+            theme={theme}
+            neon={neon}
+          />
+        </TableHeading>
         <DataTable<Item>
           data={inventario}
           onChange={updateInventario}
@@ -351,7 +368,16 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
       </SectionTable>
 
       <SectionTable>
-        <TableTitle>Próteses</TableTitle>
+        <TableHeading>
+          <TableTitle>Próteses</TableTitle>
+          <CharacterExplodedViewLauncher
+            tab="prostheses"
+            label="próteses"
+            onOpen={setExplodedTab}
+            theme={theme}
+            neon={neon}
+          />
+        </TableHeading>
         <DataTable<Item>
           data={getProtesesTableItems(itens)}
           onChange={updateProteses}
@@ -370,9 +396,18 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
       </SectionTable>
 
       <SectionTable>
-        <TableTitle>
-          Magias{initialMagicLimit != null ? ` (${filledMagicCount}/${initialMagicLimit})` : ''}
-        </TableTitle>
+        <TableHeading>
+          <TableTitle>
+            Magias{initialMagicLimit != null ? ` (${filledMagicCount}/${initialMagicLimit})` : ''}
+          </TableTitle>
+          <CharacterExplodedViewLauncher
+            tab="spells"
+            label="magias"
+            onOpen={setExplodedTab}
+            theme={theme}
+            neon={neon}
+          />
+        </TableHeading>
         <DataTable<Magia>
           data={magias}
           onChange={setMagias}
@@ -384,9 +419,18 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
       </SectionTable>
 
       <SectionTable>
-        <TableTitle>
-          Skills{initialSkillLimit != null ? ` (${filledSkillCount}/${initialSkillLimit})` : ''}
-        </TableTitle>
+        <TableHeading>
+          <TableTitle>
+            Skills{initialSkillLimit != null ? ` (${filledSkillCount}/${initialSkillLimit})` : ''}
+          </TableTitle>
+          <CharacterExplodedViewLauncher
+            tab="skills"
+            label="skills"
+            onOpen={setExplodedTab}
+            theme={theme}
+            neon={neon}
+          />
+        </TableHeading>
         <DataTable<Skills>
           data={skills}
           onChange={setSkills}
@@ -404,6 +448,29 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
         neon={neon}
         runtimeContext={runtimeContext}
         availableItems={listItens}
+      />
+      <CharacterExplodedView
+        open={Boolean(explodedTab)}
+        initialTab={explodedTab ?? 'items'}
+        onClose={() => setExplodedTab(null)}
+        theme={theme}
+        neon={neon}
+        character={{
+          name: userName,
+          image: avatarUrl,
+          race: selectedRace?.nome,
+          system: runtimeContext?.nomeSistema ?? runtimeContext?.codigoSistema,
+          version: runtimeContext?.numeroVersao,
+          table: tableName,
+          loadCapacity: statusBasico.capacidadeCarga,
+        }}
+        items={itens}
+        setItems={setItens}
+        skills={skills}
+        setSkills={setSkills}
+        spells={magias}
+        setSpells={setMagias}
+        onOpenItem={(item) => openItemPreview(item, runtimeContext)}
       />
     </>
   );

@@ -57,7 +57,11 @@ export const replaceItemSection = (
   itens: Item[],
   section: 'inventario' | 'proteses',
   updatedItems: Item[],
+  preserveEmptyRows = false,
 ) => [
   ...itens.filter((item) => section === 'proteses' ? !isImplante(item) : isImplante(item)),
   ...updatedItems,
+  ...(preserveEmptyRows ? itens.filter((item) => (
+    (section === 'proteses' ? isImplante(item) : !isImplante(item)) && isEmptyItemRow(item)
+  )) : []),
 ];

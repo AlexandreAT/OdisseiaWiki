@@ -9,6 +9,8 @@ import { CharacterSystemFormProps } from './CharacterSystemForm.type';
 import { getInventarioItems, getProtesesItems, getProtesesTableItems, isEmptyItemRow, replaceItemSection } from '../../../../utils/itemInventorySections';
 import { openItemPreview } from '../../../../utils/itemPreview';
 import { ItemComparisonModal } from '../../../../components/ItemComparison';
+import { CharacterExplodedView, CharacterExplodedViewLauncher, ExplodedViewTab } from '../../../../components/CharacterExplodedView';
+import { TableHeading } from '../../../../components/CharacterExplodedView/CharacterExplodedView.style';
 
 export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
   theme,
@@ -48,6 +50,7 @@ export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
   comparisonTableName,
 }) => {
   const [comparisonItem, setComparisonItem] = React.useState<Item | null>(null);
+  const [explodedTab, setExplodedTab] = React.useState<ExplodedViewTab | null>(null);
   const inventario = getInventarioItems(itens);
   const updateInventario = (updatedItems: Item[]) => setItens(replaceItemSection(itens, 'inventario', updatedItems));
   const updateProteses = (updatedItems: Item[]) => setItens(
@@ -98,7 +101,10 @@ export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
 
       <BottomContentController>
         <SectionTable>
+          <TableHeading>
           <TableTitle>Inventário</TableTitle>
+            <CharacterExplodedViewLauncher tab="items" label="itens" onOpen={setExplodedTab} theme={theme} neon={neon} />
+          </TableHeading>
           <DataTable<Item>
             data={inventario}
             onChange={updateInventario}
@@ -117,7 +123,10 @@ export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
         </SectionTable>
 
         <SectionTable>
+          <TableHeading>
           <TableTitle>Próteses</TableTitle>
+            <CharacterExplodedViewLauncher tab="prostheses" label="próteses" onOpen={setExplodedTab} theme={theme} neon={neon} />
+          </TableHeading>
           <DataTable<Item>
             data={getProtesesTableItems(itens)}
             onChange={updateProteses}
@@ -136,9 +145,12 @@ export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
         </SectionTable>
 
         <SectionTable>
+          <TableHeading>
           <TableTitle>
             Magias{magicLimit != null ? ` (${filledMagicCount}/${magicLimit})` : ''}
           </TableTitle>
+            <CharacterExplodedViewLauncher tab="spells" label="magias" onOpen={setExplodedTab} theme={theme} neon={neon} />
+          </TableHeading>
           <DataTable<Magia>
             data={magias}
             onChange={setMagias}
@@ -150,9 +162,12 @@ export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
         </SectionTable>
 
         <SectionTable>
+          <TableHeading>
           <TableTitle>
             Skills{skillLimit != null ? ` (${filledSkillCount}/${skillLimit})` : ''}
           </TableTitle>
+            <CharacterExplodedViewLauncher tab="skills" label="skills" onOpen={setExplodedTab} theme={theme} neon={neon} />
+          </TableHeading>
           <DataTable<Skills>
             data={skills}
             onChange={setSkills}
@@ -171,6 +186,29 @@ export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
         neon={neon}
         runtimeContext={runtimeContext}
         availableItems={listItens}
+      />
+      <CharacterExplodedView
+        open={Boolean(explodedTab)}
+        initialTab={explodedTab ?? 'items'}
+        onClose={() => setExplodedTab(null)}
+        theme={theme}
+        neon={neon}
+        character={{
+          name: userName,
+          image: avatarUrl,
+          race: selectedRace?.nome,
+          system: runtimeContext?.nomeSistema ?? runtimeContext?.codigoSistema,
+          version: runtimeContext?.numeroVersao,
+          table: comparisonTableName ?? undefined,
+          loadCapacity: statusBasico.capacidadeCarga,
+        }}
+        items={itens}
+        setItems={setItens}
+        skills={skills}
+        setSkills={setSkills}
+        spells={magias}
+        setSpells={setMagias}
+        onOpenItem={(item) => openItemPreview(item, runtimeContext)}
       />
     </>
   );

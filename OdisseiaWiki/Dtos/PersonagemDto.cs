@@ -96,8 +96,12 @@ namespace OdisseiaWiki.Dtos
         public string tipo { get; set; } = null!;
         public int quantidade { get; set; }
         public int? peso { get; set; }
+        public int? discricao { get; set; }
         public string descricao { get; set; } = "";
+        public string? efeito { get; set; }
+        public string? imagem { get; set; }
         public object? atributos { get; set; }
+        public List<string>? tags { get; set; }
     }
 
     public class Skills
