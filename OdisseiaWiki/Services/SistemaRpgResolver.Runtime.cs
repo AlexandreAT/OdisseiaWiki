@@ -96,9 +96,7 @@ public sealed partial class SistemaRpgResolver
         contexto.IdMesa = personagem.Idmesa;
         SistemaVersao? versaoDisponivel = await ResolverVersaoAtualDaMesaAsync(personagem.Mesa);
         SistemaVersao? versaoFixada = personagem.IdSistemaVersao.HasValue
-            ? await _repository.GetVersionAsync(
-                personagem.IdSistemaVersao.Value,
-                includeConfiguration: true)
+            ? await GetRuntimeVersionAsync(personagem.IdSistemaVersao.Value)
             : null;
 
         if (versaoFixada is null || versaoFixada.Status == SistemaVersaoStatus.Rascunho)
@@ -148,9 +146,8 @@ public sealed partial class SistemaRpgResolver
                 SistemaRpgConfiguration.CodigoPadrao);
             if (sistemaPadrao is { Ativo: true, IdVersaoPublicada: not null })
             {
-                SistemaVersao? publicada = await _repository.GetVersionAsync(
-                    sistemaPadrao.IdVersaoPublicada.Value,
-                    includeConfiguration: true);
+                SistemaVersao? publicada = await GetRuntimeVersionAsync(
+                    sistemaPadrao.IdVersaoPublicada.Value);
                 if (publicada is { Status: SistemaVersaoStatus.Publicado })
                     return publicada;
             }
@@ -159,9 +156,7 @@ public sealed partial class SistemaRpgResolver
         if (!mesa.IdSistemaVersao.HasValue)
             return null;
 
-        SistemaVersao? versaoMesa = await _repository.GetVersionAsync(
-            mesa.IdSistemaVersao.Value,
-            includeConfiguration: true);
+        SistemaVersao? versaoMesa = await GetRuntimeVersionAsync(mesa.IdSistemaVersao.Value);
         return versaoMesa is { Status: not SistemaVersaoStatus.Rascunho }
             ? versaoMesa
             : null;
@@ -188,9 +183,8 @@ public sealed partial class SistemaRpgResolver
                 SistemaRpgConfiguration.CodigoPadrao);
             if (sistemaPadrao is { Ativo: true, IdVersaoPublicada: not null })
             {
-                SistemaVersao? publicacaoAtual = await _repository.GetVersionAsync(
-                    sistemaPadrao.IdVersaoPublicada.Value,
-                    includeConfiguration: true);
+                SistemaVersao? publicacaoAtual = await GetRuntimeVersionAsync(
+                    sistemaPadrao.IdVersaoPublicada.Value);
                 if (publicacaoAtual is { Status: SistemaVersaoStatus.Publicado })
                 {
                     contexto.Origem = SistemaRuntimeOrigem.Mesa;
@@ -210,9 +204,7 @@ public sealed partial class SistemaRpgResolver
         if (!mesa.IdSistemaVersao.HasValue)
             return null;
 
-        SistemaVersao? versao = await _repository.GetVersionAsync(
-            mesa.IdSistemaVersao.Value,
-            includeConfiguration: true);
+        SistemaVersao? versao = await GetRuntimeVersionAsync(mesa.IdSistemaVersao.Value);
         if (versao is null)
         {
             AdicionarWarning(
@@ -303,9 +295,8 @@ public sealed partial class SistemaRpgResolver
                 return null;
             }
 
-            SistemaVersao? publicada = await _repository.GetVersionAsync(
-                sistema.VersaoPublicada.IdSistemaVersao,
-                includeConfiguration: true);
+            SistemaVersao? publicada = await GetRuntimeVersionAsync(
+                sistema.VersaoPublicada.IdSistemaVersao);
             if (publicada is not { Status: SistemaVersaoStatus.Publicado })
             {
                 AdicionarWarning(
@@ -331,9 +322,7 @@ public sealed partial class SistemaRpgResolver
             return null;
         }
 
-        SistemaVersao? fixa = await _repository.GetVersionAsync(
-            vinculo.IdSistemaVersao.Value,
-            includeConfiguration: true);
+        SistemaVersao? fixa = await GetRuntimeVersionAsync(vinculo.IdSistemaVersao.Value);
         if (fixa is null || fixa.IdSistemaRpg != vinculo.IdSistemaRpg.Value)
         {
             AdicionarWarning(
@@ -375,16 +364,14 @@ public sealed partial class SistemaRpgResolver
                 sistema.IdSistemaRpg,
                 SistemaRpgConfiguration.VersaoPadrao);
             versao = baseLegada is { Status: not SistemaVersaoStatus.Rascunho }
-                ? await _repository.GetVersionAsync(baseLegada.IdSistemaVersao, includeConfiguration: true)
+                ? await GetRuntimeVersionAsync(baseLegada.IdSistemaVersao)
                 : null;
         }
         else
         {
             versao = sistema.VersaoPublicada is null
                 ? null
-                : await _repository.GetVersionAsync(
-                    sistema.VersaoPublicada.IdSistemaVersao,
-                    includeConfiguration: true);
+                : await GetRuntimeVersionAsync(sistema.VersaoPublicada.IdSistemaVersao);
         }
 
         if (versao is null || versao.Status == SistemaVersaoStatus.Rascunho)

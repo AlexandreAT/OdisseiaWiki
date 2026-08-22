@@ -1,4 +1,5 @@
 import type { SistemaRuntimeContexto } from './SistemaRpg';
+import type { PersonagemVisibilidade } from './PersonagemVisibilidade';
 
 export type JSONContent = {
   type?: string;
@@ -18,6 +19,7 @@ export interface PersonagemJogador {
   idusuario: number;
   idmesa: number;
   idSistemaVersao?: number | null;
+  visivel?: boolean;
   nome: string;
   idraca: number;
   idcidade?: number;
@@ -41,6 +43,7 @@ export interface PersonagemJogador {
   cidadeNome?: string;
   mesaNome?: string;
   autorNome?: string;
+  visibilidade?: PersonagemVisibilidade;
   proficiencias?: ProficienciaResumo[];
   sistemaRuntime?: SistemaRuntimeContexto | null;
 }

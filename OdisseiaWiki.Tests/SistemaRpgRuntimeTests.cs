@@ -93,6 +93,9 @@ public sealed class SistemaRpgRuntimeTests
         Assert.Equal("1.3", resultado.NumeroVersao);
         Assert.False(resultado.AtualizacaoDisponivel);
         Assert.Equal(SistemaRuntimeOrigem.VersaoFixadaPersonagemJogador, resultado.Origem);
+        repository.Verify(
+            item => item.GetVersionAsync(13, true, false),
+            Times.Once);
     }
 
     [Fact]

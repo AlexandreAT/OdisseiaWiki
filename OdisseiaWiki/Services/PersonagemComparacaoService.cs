@@ -3,6 +3,7 @@ using OdisseiaWiki.Dtos;
 using OdisseiaWiki.Enums;
 using OdisseiaWiki.Models;
 using OdisseiaWiki.Repositories.Interfaces;
+using OdisseiaWiki.Services.Helpers;
 using OdisseiaWiki.Services.Interfaces;
 
 namespace OdisseiaWiki.Services;
@@ -68,6 +69,14 @@ public sealed class PersonagemComparacaoService : IPersonagemComparacaoService
                 ResultLimit));
         }
 
+        registros = registros
+            .Where(registro =>
+                !registro.Jogador ||
+                registro.Visivel ||
+                administrador ||
+                (idUsuario.HasValue && registro.Idusuario == idUsuario.Value))
+            .ToList();
+
         List<PersonagemComparacaoRegistro> ordered = registros
             .OrderByDescending(registro => registro.Nome.StartsWith(normalizedTerm, StringComparison.OrdinalIgnoreCase))
             .ThenBy(registro => registro.Nome)
@@ -76,7 +85,7 @@ public sealed class PersonagemComparacaoService : IPersonagemComparacaoService
 
         return new PersonagemComparacaoPesquisaResultadoDto
         {
-            Personagens = await MapAsync(ordered),
+            Personagens = await MapAsync(ordered, idUsuario, administrador),
         };
     }
 
@@ -100,19 +109,32 @@ public sealed class PersonagemComparacaoService : IPersonagemComparacaoService
             if (registro?.IdMesa is int tableId
                 && !administrador
                 && !await _mesas.CanUseAsync(tableId, idUsuario.Value))
-                return Denied();
+            {
+                // Avoid confirming that a sheet exists to a user outside its Mesa.
+                registro = null;
+            }
+
+            if (registro is not null &&
+                !registro.Visivel &&
+                !administrador &&
+                registro.Idusuario != idUsuario.Value)
+            {
+                registro = null;
+            }
         }
 
         return new PersonagemComparacaoPesquisaResultadoDto
         {
             Personagens = registro is null
                 ? new List<PersonagemComparacaoDto>()
-                : await MapAsync(new[] { registro }),
+                : await MapAsync(new[] { registro }, idUsuario, administrador),
         };
     }
 
     private async Task<List<PersonagemComparacaoDto>> MapAsync(
-        IEnumerable<PersonagemComparacaoRegistro> registros)
+        IEnumerable<PersonagemComparacaoRegistro> registros,
+        int? idUsuario,
+        bool administrador)
     {
         var result = new List<PersonagemComparacaoDto>();
         foreach (PersonagemComparacaoRegistro registro in registros)
@@ -127,7 +149,10 @@ public sealed class PersonagemComparacaoService : IPersonagemComparacaoService
                         IdRaca = registro.IdRaca,
                     });
 
-            result.Add(new PersonagemComparacaoDto
+            PersonagemVisibilidadeDto visibilidade = PersonagemVisibilidadeDefaults.FromEntity(
+                registro.ConfiguracaoVisibilidade,
+                registro.Jogador);
+            PersonagemComparacaoDto dto = new()
             {
                 Id = registro.Id,
                 Origem = registro.Jogador
@@ -140,7 +165,15 @@ public sealed class PersonagemComparacaoService : IPersonagemComparacaoService
                 QuantidadeSkills = CountEntries(registro.SkillsJson),
                 Status = ParseStatus(registro.StatusJson),
                 SistemaRuntime = SummarizeRuntime(runtime),
-            });
+                Visibilidade = visibilidade,
+            };
+
+            bool podeVerDadosCompletos = administrador ||
+                (registro.Jogador && idUsuario.HasValue && registro.Idusuario == idUsuario.Value);
+            if (!podeVerDadosCompletos)
+                PersonagemVisibilidadeProjection.ApplyForExternalViewer(dto, visibilidade);
+
+            result.Add(dto);
         }
 
         return result;

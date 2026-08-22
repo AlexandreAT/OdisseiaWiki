@@ -13,6 +13,7 @@ namespace OdisseiaWiki.Dtos
         public int Idmesa { get; set; }
         public int Idusuario { get; set; }
         public int? IdSistemaVersao { get; set; }
+        public bool Visivel { get; set; } = true;
         public string? Alinhamento { get; set; }
         public JsonElement? Historia { get; set; }
         public string? Imagem { get; set; }
@@ -34,6 +35,7 @@ namespace OdisseiaWiki.Dtos
         public string? CidadeNome { get; set; }
         public string? MesaNome { get; set; }
         public string? AutorNome { get; set; }
+        public PersonagemVisibilidadeDto Visibilidade { get; set; } = PersonagemVisibilidadeDefaults.Jogador();
         public List<ProficienciaResumoDto> Proficiencias { get; set; } = new();
         public SistemaRuntimeContextoDto? SistemaRuntime { get; set; }
     }

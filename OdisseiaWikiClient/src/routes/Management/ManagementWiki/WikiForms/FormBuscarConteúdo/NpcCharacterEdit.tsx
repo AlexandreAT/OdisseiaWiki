@@ -21,6 +21,7 @@ import { getApiErrorMessage } from '../../../../../utils/apiError';
 import { normalizeGalleryImages } from '../../../../../models/GalleryImage';
 import { SystemEntityBinding } from '../../../../../components/Generic/SystemEntityBinding';
 import { LoadingIndicator } from '../../../../../components/Generic/LoadingIndicator';
+import { CharacterVisibilityModal } from '../../../../../components/CharacterVisibility';
 import {
   normalizeRuntimeAttributeValues,
   normalizeRuntimeDefenseValues,
@@ -118,6 +119,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
   const [lastSavedSnapshot, setLastSavedSnapshot] = React.useState('');
   const [nameError, setNameError] = React.useState(false);
   const [raceError, setRaceError] = React.useState(false);
+  const [isVisibilityConfigOpen, setIsVisibilityConfigOpen] = React.useState(false);
   const hasSnapshotInitializedRef = React.useRef(false);
   const saveInFlightRef = React.useRef(false);
 
@@ -190,6 +192,8 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
     sistema,
   } = useFormCharacter({ applyRaceDefaults: false, idEntidade: characterId });
   const hydrateSistemaVinculo = sistema.hydrateVinculo;
+  const npcId = Number(characterId);
+  const canConfigureVisibility = Number.isInteger(npcId) && npcId > 0;
 
   const [extraInformation, setExtraInformation] = React.useState('');
   const [galeriaUrls, setGaleriaUrls] = React.useState<string[]>([]);
@@ -896,6 +900,9 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
             setExtraInformation={setExtraInformation}
             visivel={visivel}
             setVisivel={setVisivel}
+            onConfigureVisibility={canConfigureVisibility
+              ? () => setIsVisibilityConfigOpen(true)
+              : undefined}
             destaque={destaque}
             setDestaque={setDestaque}
             listPersonagemRelacionado={listPersonagemRelacionado}
@@ -975,6 +982,17 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
           <SaveIcon className="icon" />
         </FloatingSaveButton>
       </FloatingActions>
+
+      <CharacterVisibilityModal
+        open={isVisibilityConfigOpen}
+        characterId={canConfigureVisibility ? npcId : null}
+        characterType="npc"
+        characterName={userName}
+        theme={theme}
+        neon={neon}
+        onClose={() => setIsVisibilityConfigOpen(false)}
+        onSaved={() => toast.success('Configuração de visibilidade atualizada.')}
+      />
     </FormController>
   );
 };

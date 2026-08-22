@@ -139,6 +139,10 @@ public sealed class PersonagemComparacaoServiceTests
              "nivel":6,"defesas":{"escudo":20,"protecao":30,"armadura":10,"outras":2}}
             """;
         record.SkillsJson = "[{\"nome\":\"A\"},{\"nome\":\"\"},{\"nome\":\"B\"}]";
+        record.ConfiguracaoVisibilidade = PersonagemVisibilidadeDefaults.CreateEntity(
+            idPersonagem: 8,
+            idPersonagemJogador: null,
+            dto: PersonagemVisibilidadeDefaults.Jogador());
         context.Npcs.Setup(repository => repository.GetForComparisonAsync(8, true)).ReturnsAsync(record);
         SetupRuntime(context);
 

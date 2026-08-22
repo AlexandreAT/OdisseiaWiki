@@ -27,6 +27,7 @@ import { SpanLink } from '../../components/Generic/SpanLink/SpanLink';
 import { getPersonagensByIds } from '../../services/personagensService';
 import CloseIcon from '@mui/icons-material/Close';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import AccountCircleOutlinedIcon from '@mui/icons-material/AccountCircleOutlined';
 import backgroundVideo from '../../assets/backgroundLinesScifiAnimation.mp4';
@@ -61,6 +62,13 @@ import { atualizarSistemaPersonagemJogador } from '../../services/personagemJoga
 import toast from 'react-hot-toast';
 import { ItemComparisonModal } from '../../components/ItemComparison';
 import { LoadingIndicator } from '../../components/Generic/LoadingIndicator';
+import {
+  CHARACTER_INFORMATION_BLOCKED,
+  characterNumberOrBlocked,
+  characterTextOrBlocked,
+  isProjectedCharacterFieldHidden,
+} from '../../utils/characterVisibility';
+import type { CampoPersonagemVisibilidade } from '../../models/PersonagemVisibilidade';
 
 const isObjectRecord = (value: unknown): value is Record<string, unknown> => (
   typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -534,7 +542,17 @@ const PersonagemPage: React.FC = () => {
   console.log("🚀 ~ PersonagemPage ~ personagem:", personagem)
   if (!personagem) return <div>Personagem não encontrado</div>;
 
-  const nome = getField(personagem, ['nome', 'Nome']) || 'Sem nome';
+  const camposOcultosProjetados = (personagem as any).camposOcultosProjetados ?? {};
+  const campoEstaOculto = (campo: CampoPersonagemVisibilidade) => (
+    isProjectedCharacterFieldHidden(camposOcultosProjetados, campo)
+  );
+  const perfilOculto = (personagem as any).visivel === false;
+  const nome = characterTextOrBlocked(
+    getField(personagem, ['nome', 'Nome']),
+    camposOcultosProjetados,
+    'nome',
+    'Sem nome',
+  );
   const {
     level: currentLevel,
     xp: currentXp,
@@ -550,6 +568,8 @@ const PersonagemPage: React.FC = () => {
   const autorNome = getField(personagem, ['autorNome', 'AutorNome']) as string | undefined;
   const historia = getField(personagem, ['historia', 'Historia']) as any | undefined;
   const hasHistory = hasRichTextValue(historia);
+  const historiaOculta = campoEstaOculto('historia');
+  const deveExibirHistoria = hasHistory || historiaOculta;
   const alinhamentoRaw = getField(personagem, ['alinhamento', 'Alinhamento', 'alignment']);
 
   const alinhamento = alinhamentoRaw
@@ -558,8 +578,20 @@ const PersonagemPage: React.FC = () => {
         .map(palavra => palavra.charAt(0).toUpperCase() + palavra.slice(1))
         .join(' e ')
     : null;
+  const alinhamentoExibido = characterTextOrBlocked(alinhamento, camposOcultosProjetados, 'alinhamento');
+  const racaExibida = characterTextOrBlocked(
+    racaNome ?? (personagem as any).racaNome ?? ((personagem as any).idraca ?? '—'),
+    camposOcultosProjetados,
+    'raca',
+  );
+  const cidadeExibida = characterTextOrBlocked(
+    cidadeNome ?? (personagem as any).cidadeNome ?? ((personagem as any).idcidade ?? '—'),
+    camposOcultosProjetados,
+    'cidade',
+  );
 
   const costumes = (personagem as any)?.costumes;
+  const personalidadeOculta = campoEstaOculto('tracosPersonalidade');
   const costumesList = Array.isArray(costumes) && costumes.length > 0 ? costumes : null;
 
   const tracos = (personagem as any)?.tracos;
@@ -569,11 +601,20 @@ const PersonagemPage: React.FC = () => {
   const hasInfoExtras = infoExtras && String(infoExtras).trim() !== '';
 
   const vinculados = (personagem as any)?.personagemsVinculados;
+  const relacionadosOcultos = campoEstaOculto('personagensRelacionados');
   const hasVinculados = Array.isArray(vinculados) && vinculados.length > 0;
 
   const tags = (personagem as any)?.tags;
   const tagsList = Array.isArray(tags) && tags.length > 0 ? tags : null;
-  const hasInformation = Boolean(tagsList || costumesList || hasVinculados || tracosList || hasInfoExtras);
+  const hasInformation = Boolean(
+    tagsList
+    || costumesList
+    || hasVinculados
+    || tracosList
+    || hasInfoExtras
+    || personalidadeOculta
+    || relacionadosOcultos,
+  );
 
   const rawItems = (personagem as any)?.inventarioJson;
   const allItems: Item[] = Array.isArray(rawItems)
@@ -581,15 +622,32 @@ const PersonagemPage: React.FC = () => {
         .map(normalizeCharacterItem)
         .map((item) => mergeItemWithBase(item, item.idItemBase ? itemBaseItems[item.idItemBase] : undefined))
     : [];
+  const inventarioOculto = campoEstaOculto('inventario');
+  const protesesOcultas = campoEstaOculto('proteses');
   const inventoryItems = getInventarioItems(allItems);
-  const implantItems = getProtesesItems(allItems);
+  const rawImplants = (personagem as any)?.implantes;
+  const implantItems = Array.isArray(rawImplants)
+    ? rawImplants
+        .map(normalizeCharacterItem)
+        .map((item) => mergeItemWithBase(item, item.idItemBase ? itemBaseItems[item.idItemBase] : undefined))
+    : getProtesesItems(allItems);
   const currentLoad = inventoryItems.reduce((total, item) => (
     total + (Number(item.peso) || 0) * (Number(item.quantidade) || 1)
   ), 0);
-  const loadCapacity = Number((personagem as any)?.statusJson?.status?.capacidadeCarga) || 150;
-  const loadPercentage = Math.round((currentLoad / loadCapacity) * 100);
-  const isOverloaded = currentLoad > loadCapacity;
+  const capacidadeCargaOculta = campoEstaOculto('capacidadeCarga');
+  const loadCapacity = capacidadeCargaOculta
+    ? 0
+    : Number((personagem as any)?.statusJson?.status?.capacidadeCarga) || 150;
+  const loadPercentage = inventarioOculto || capacidadeCargaOculta || loadCapacity <= 0
+    ? 0
+    : Math.round((currentLoad / loadCapacity) * 100);
+  const isOverloaded = !inventarioOculto && !capacidadeCargaOculta && currentLoad > loadCapacity;
 
+  const galeriaOculta = campoEstaOculto('galeria');
+  const skillsOcultas = campoEstaOculto('skills');
+  const magiasOcultas = campoEstaOculto('magias');
+  const passivaOculta = campoEstaOculto('passivas');
+  const ultimateOculta = campoEstaOculto('ultimate');
   const galleryImages = characterGalleryImages;
   const skills = Array.isArray((personagem as any)?.skills) ? (personagem as any).skills.filter(isMeaningfulAbility) : [];
   const magias = Array.isArray((personagem as any)?.magia) ? (personagem as any).magia.filter(isMeaningfulAbility) : [];
@@ -606,9 +664,9 @@ const PersonagemPage: React.FC = () => {
   const visibleProficiencias = proficiencias.slice(0, 6);
 
   const passiva = (personagem as any)?.passiva ?? (personagem as any)?.idpassiva;
-  const hasPassiva = typeof passiva === 'number'
+  const hasPassiva = passivaOculta || (typeof passiva === 'number'
     ? passiva > 0
-    : isMeaningfulAbility(passiva);
+    : isMeaningfulAbility(passiva));
   const passivaNome = typeof passiva === 'object'
     ? (passiva?.nome ?? passiva?.titulo ?? 'Passiva')
     : passiva ? `Passiva ${passiva}` : 'Nenhuma passiva registrada';
@@ -616,9 +674,9 @@ const PersonagemPage: React.FC = () => {
     ? (passiva?.descricao ?? passiva?.efeito ?? 'Sem descricao registrada.')
     : 'Sem descricao registrada.';
   const ultimate = (personagem as any)?.ultimate;
-  const hasUltimate = typeof ultimate === 'string'
+  const hasUltimate = ultimateOculta || (typeof ultimate === 'string'
     ? ultimate.trim().length > 0
-    : isMeaningfulAbility(ultimate);
+    : isMeaningfulAbility(ultimate));
   const ultimateNome = typeof ultimate === 'object'
     ? (ultimate?.nome ?? ultimate?.titulo ?? 'Ultimate')
     : ultimate || 'Nenhuma ultimate registrada';
@@ -626,6 +684,27 @@ const PersonagemPage: React.FC = () => {
     ? (ultimate?.descricao ?? ultimate?.efeito ?? 'Sem descricao registrada.')
     : 'Sem descricao registrada.';
   const cooldownValue = Number((personagem as any)?.cooldownUltimate ?? ultimate?.cooldown) || 0;
+  const statusAtual = (personagem as any)?.statusJson?.status ?? {};
+  const vidaAtual = Number(statusAtual.vida) || 0;
+  const vidaMaxima = Number(statusAtual.vidaMaxima ?? statusAtual.vida) || 0;
+  const manaAtual = Number(statusAtual.mana) || 0;
+  const manaMaxima = Number(statusAtual.manaMaxima ?? statusAtual.mana) || 0;
+  const estaminaAtual = Number(statusAtual.estamina) || 0;
+  const estaminaMaxima = Number(statusAtual.estaminaMaxima ?? statusAtual.estamina) || 0;
+  const vidaExibida = characterNumberOrBlocked(vidaAtual, camposOcultosProjetados, 'vida');
+  const vidaMaximaExibida = characterNumberOrBlocked(vidaMaxima, camposOcultosProjetados, 'vida');
+  const manaExibida = characterNumberOrBlocked(manaAtual, camposOcultosProjetados, 'mana');
+  const manaMaximaExibida = characterNumberOrBlocked(manaMaxima, camposOcultosProjetados, 'mana');
+  const estaminaExibida = characterNumberOrBlocked(estaminaAtual, camposOcultosProjetados, 'estamina');
+  const estaminaMaximaExibida = characterNumberOrBlocked(estaminaMaxima, camposOcultosProjetados, 'estamina');
+  const xpOculto = campoEstaOculto('xp');
+  const nivelOculto = campoEstaOculto('nivel');
+  const xpExibido = xpOculto
+    ? '0000 / 0000'
+    : isMaximumLevel
+      ? `Nível máximo · ${currentXp} XP`
+      : `${currentXp} / ${xpRequiredForNextLevel}`;
+  const nivelExibido = nivelOculto ? '0000' : currentLevel;
   const selectedInventoryItemImage = selectedInventoryItem
     ? getItemImage(selectedInventoryItem, selectedInventoryItem.idItemBase ? itemBaseItems[selectedInventoryItem.idItemBase] : undefined)
     : undefined;
@@ -684,9 +763,9 @@ const PersonagemPage: React.FC = () => {
                         <AvatarIcon
                           theme={theme}
                           neon={neon}
-                          initialImage={imagem ? normalizeImagePath(imagem) : ''}
+                          initialImage={!campoEstaOculto('imagem') && imagem ? normalizeImagePath(imagem) : ''}
                           size={250}
-                          clickable={Boolean(imagem)}
+                          clickable={!campoEstaOculto('imagem') && Boolean(imagem)}
                           onClick={() => setMainImageOpen(true)}
                         />
                     </AvatarWrapper>
@@ -711,20 +790,26 @@ const PersonagemPage: React.FC = () => {
                           onUpdate={characterSource === 'player' ? updatePlayerSystem : undefined}
                           updating={updatingSystem}
                         />
+                        {perfilOculto && (
+                          <InfoSpan title="Este personagem está oculto para outros usuários.">
+                            <VisibilityOffOutlinedIcon aria-hidden="true" style={{ fontSize: 15, marginRight: 4, verticalAlign: 'text-bottom' }} />
+                            Perfil oculto
+                          </InfoSpan>
+                        )}
                         <MetaRow>
                             <HeaderStatusController>
                                 <MetaContent as={FlexRow} gap={12} alignItems="flex-start">
                                   <FlexRow gap={8}>
                                     <MaskIcon src={dna1} color={'var(--neonBlue)'} size={20} />
-                                    <BoldLabel>Raça:</BoldLabel> {racaNome ?? (personagem as any).racaNome ?? ((personagem as any).idraca ?? '—')}
+                                    <BoldLabel>Raça:</BoldLabel> {racaExibida}
                                   </FlexRow>
                                   <FlexRow gap={8}>
                                     <MaskIcon src={village} color={'var(--neonBlue)'} size={20} />
-                                    <BoldLabel>Cidade:</BoldLabel> {cidadeNome ?? (personagem as any).cidadeNome ?? ((personagem as any).idcidade ?? '—')}
+                                    <BoldLabel>Cidade:</BoldLabel> {cidadeExibida}
                                   </FlexRow>
                                   <FlexRow gap={8}>
                                     <MaskIcon src={scales} color={'var(--neonBlue)'} size={20} />
-                                    <BoldLabel>Alinhamento:</BoldLabel> {alinhamento ?? '—'}
+                                    <BoldLabel>Alinhamento:</BoldLabel> {alinhamentoExibido}
                                   </FlexRow>
                                   {autorNome && (
                                     <FlexRow gap={8}>
@@ -755,9 +840,9 @@ const PersonagemPage: React.FC = () => {
                                   <MaskIcon src={glassHeart} color={'var(--neonRed)'} size={64} />
                                   <div>
                                     <BoldLabel>{getRuntimeResourceLabel(runtimeContext, 'vida', 'Vida')}</BoldLabel>
-                                    <MutedText>{(personagem as any)?.statusJson?.status?.vida ?? '—'} / {(personagem as any)?.statusJson?.status?.vidaMaxima ?? '—'}</MutedText>
+                                    <MutedText>{vidaExibida} / {vidaMaximaExibida}</MutedText>
                                     <StatusBarWrapper $color="var(--neonRed)">
-                                      <StatusBarFill $color={'var(--neonRed)'} $pct={Math.round(((Number((personagem as any)?.statusJson?.status?.vida) || 0) / (Number((personagem as any)?.statusJson?.status?.vidaMaxima) || 1)) * 100)} />
+                                      <StatusBarFill $color={'var(--neonRed)'} $pct={campoEstaOculto('vida') ? 0 : Math.round(((vidaAtual || 0) / (vidaMaxima || 1)) * 100)} />
                                     </StatusBarWrapper>
                                   </div>
                                 </StatusDiv>
@@ -771,9 +856,9 @@ const PersonagemPage: React.FC = () => {
                                   <MaskIcon src={rollingEnergy} color={neon === 'on' ? 'var(--clearneonBlue)' : 'var(--neonBlue)'} size={64} />
                                   <div>
                                     <BoldLabel>{getRuntimeResourceLabel(runtimeContext, 'mana', 'Mana')}</BoldLabel>
-                                    <MutedText>{(personagem as any)?.statusJson?.status?.mana ?? '—'} / {(personagem as any)?.statusJson?.status?.manaMaxima ?? '—'}</MutedText>
+                                    <MutedText>{manaExibida} / {manaMaximaExibida}</MutedText>
                                     <StatusBarWrapper $color="var(--neonBlue)">
-                                      <StatusBarFill $color={'var(--neonBlue)'} $pct={Math.round(((Number((personagem as any)?.statusJson?.status?.mana) || 0) / (Number((personagem as any)?.statusJson?.status?.manaMaxima) || 1)) * 100)} />
+                                      <StatusBarFill $color={'var(--neonBlue)'} $pct={campoEstaOculto('mana') ? 0 : Math.round(((manaAtual || 0) / (manaMaxima || 1)) * 100)} />
                                     </StatusBarWrapper>
                                   </div>
                                 </StatusDiv>
@@ -790,9 +875,9 @@ const PersonagemPage: React.FC = () => {
                                   <MaskIcon src={electric} color={'var(--neonGreen)'} size={64} />
                                   <div>
                                     <BoldLabel>{getRuntimeResourceLabel(runtimeContext, 'estamina', 'Estamina')}</BoldLabel>
-                                    <MutedText>{(personagem as any)?.statusJson?.status?.estamina ?? '—'} / {(personagem as any)?.statusJson?.status?.estaminaMaxima ?? '—'}</MutedText>
+                                    <MutedText>{estaminaExibida} / {estaminaMaximaExibida}</MutedText>
                                     <StatusBarWrapper $color="var(--neonGreen)">
-                                      <StatusBarFill $color={'var(--neonGreen)'} $pct={Math.round(((Number((personagem as any)?.statusJson?.status?.estamina) || 0) / (Number((personagem as any)?.statusJson?.status?.estaminaMaxima) || 1)) * 100)} />
+                                      <StatusBarFill $color={'var(--neonGreen)'} $pct={campoEstaOculto('estamina') ? 0 : Math.round(((estaminaAtual || 0) / (estaminaMaxima || 1)) * 100)} />
                                     </StatusBarWrapper>
                                   </div>
                                 </StatusDiv>
@@ -806,9 +891,9 @@ const PersonagemPage: React.FC = () => {
                                   <MaskIcon src={upgrade} color={'var(--neonYellow)'} size={64} />
                                   <div>
                                     <BoldLabel>Xp</BoldLabel>
-                                    <MutedText>{isMaximumLevel ? `Nível máximo · ${currentXp} XP` : `${currentXp} / ${xpRequiredForNextLevel}`}</MutedText>
+                                    <MutedText>{xpExibido}</MutedText>
                                     <StatusBarWrapper $color="var(--neonYellow)">
-                                      <StatusBarFill $color={'var(--neonYellow)'} $pct={xpPercentage} />
+                                      <StatusBarFill $color={'var(--neonYellow)'} $pct={xpOculto ? 0 : xpPercentage} />
                                     </StatusBarWrapper>
                                   </div>
                                 </StatusDiv>
@@ -818,7 +903,7 @@ const PersonagemPage: React.FC = () => {
                           <HexagonBackground />
                           <HexagonContent>
                             <BoldLabel>Nível</BoldLabel>
-                            <HexagonValue>{currentLevel}</HexagonValue>
+                            <HexagonValue>{nivelExibido}</HexagonValue>
                           </HexagonContent>
                           <HexagonBorder $neon={neon === 'on'} />
                         </HexagonHud>
@@ -834,7 +919,7 @@ const PersonagemPage: React.FC = () => {
               theme={theme}
               neon={neon}
             />
-            {(hasInformation || hasHistory) && (
+            {(hasInformation || deveExibirHistoria) && (
             <BottomSection>
                 {hasInformation && <BottomInfoLeft>
                   <CardContent gap={5} neon={neon}>
@@ -864,12 +949,12 @@ const PersonagemPage: React.FC = () => {
                         </HeaderStatusController>
                       )}
 
-                      {costumesList && (
+                      {(costumesList || personalidadeOculta) && (
                         <HeaderStatusController>
                             <InfoList>
                                 <InfoItem>
                                   <BoldLabel>Costumes:</BoldLabel>{' '}
-                                  {costumesList.map((c: string, idx: number) => (
+                                  {personalidadeOculta ? CHARACTER_INFORMATION_BLOCKED : costumesList?.map((c: string, idx: number) => (
                                     <React.Fragment key={idx}>
                                       {idx > 0 && <span> | </span>}
                                       {c}
@@ -880,12 +965,12 @@ const PersonagemPage: React.FC = () => {
                         </HeaderStatusController>
                       )}
 
-                      {hasVinculados && (
+                      {(hasVinculados || relacionadosOcultos) && (
                         <HeaderStatusController>
                             <InfoList>
                                 <InfoItem>
                                   <BoldLabel>Personagens Relacionados:</BoldLabel>{' '}
-                                  {personagensVinculadosNomes.length > 0 ? (
+                                  {relacionadosOcultos ? CHARACTER_INFORMATION_BLOCKED : personagensVinculadosNomes.length > 0 ? (
                                     personagensVinculadosNomes.map((p, idx) => (
                                       <React.Fragment key={p.id}>
                                         {idx > 0 && <span> | </span>}
@@ -911,27 +996,27 @@ const PersonagemPage: React.FC = () => {
                         </HeaderStatusController>
                       )}
 
-                      {tracosList && (
+                      {(tracosList || personalidadeOculta) && (
                         <HeaderStatusController>
                             <TagList>
                               <BoldLabel>Traços de Personalidade:</BoldLabel>
-                              {tracosList.map((traco: string, idx: number) => (
+                              {personalidadeOculta ? <TagItem>{CHARACTER_INFORMATION_BLOCKED}</TagItem> : tracosList?.map((traco: string, idx: number) => (
                                 <TagItem key={idx}>{traco}</TagItem>
                               ))}
                             </TagList>
                         </HeaderStatusController>
                       )}
 
-                      {hasInfoExtras && (
+                      {(hasInfoExtras || personalidadeOculta) && (
                         <HeaderStatusController>
                             <InfoList>
-                                <InfoItem><BoldLabel>Informações Extras:</BoldLabel> {infoExtras}</InfoItem>
+                                <InfoItem><BoldLabel>Informações Extras:</BoldLabel> {personalidadeOculta ? CHARACTER_INFORMATION_BLOCKED : infoExtras}</InfoItem>
                             </InfoList>
                         </HeaderStatusController>
                       )}
                   </CardContent>
                 </BottomInfoLeft>}
-                {hasHistory && <BottomInfoRight>
+                {deveExibirHistoria && <BottomInfoRight>
                   <CardContent neon={neon}>
                     <HudCornerEl $position="top-left" $neon={neon === 'on'} />
                     <HudCornerEl $position="top-right" $neon={neon === 'on'} />
@@ -943,10 +1028,10 @@ const PersonagemPage: React.FC = () => {
                     <HudRightLine $isActive={neon === 'on'} $neon={neon === 'on'} />
                     <TitleGlitch theme={theme} neon={neon} text={"Historia"} fontSize="20px" />
                       <StoryWithImage cityImage={cidadeImagem}>
-                        <HistoryWrapper onClick={() => setHistoryModalOpen(true)}>
+                        <HistoryWrapper onClick={() => !historiaOculta && setHistoryModalOpen(true)}>
                           <PersonagemRichText>
                           <div className="ProseMirror">
-                              <RichTextDisplay content={historia} />
+                              {historiaOculta ? CHARACTER_INFORMATION_BLOCKED : <RichTextDisplay content={historia} />}
                           </div>
                           </PersonagemRichText>
                         </HistoryWrapper>
@@ -1123,7 +1208,7 @@ const PersonagemPage: React.FC = () => {
         )}
 
       <Sections>
-        {galleryImages.length > 0 && <ScrollRevealBlock variant="personagemCard" threshold={0.4}>
+        {(galleryImages.length > 0 || galeriaOculta) && <ScrollRevealBlock variant="personagemCard" threshold={0.4}>
           <SectionSpacer>
             <HudContentSection title="GALERIA" theme={theme} neon={neon} color="var(--neonBlue)" clearColor="var(--clearneonBlue)">
               <GalleryToggle
@@ -1138,14 +1223,14 @@ const PersonagemPage: React.FC = () => {
               </GalleryToggle>
               {galleryOpen && (
                 <GalleryContent>
-                  <GalleryBlock
+                  {galeriaOculta ? <MutedText>{CHARACTER_INFORMATION_BLOCKED}</MutedText> : <GalleryBlock
                       block={{ tipo: PageBlockType.GALLERY, conteudo: { imagens: galleryImages }, ordem: 0 }}
                       blockIndex={0}
                       theme={theme}
                       neon={neon}
                       alwaysShowModalButton
                       modalTitle={`GALERIA — ${nome}`}
-                  />
+                  />}
                 </GalleryContent>
               )}
             </HudContentSection>
@@ -1157,10 +1242,10 @@ const PersonagemPage: React.FC = () => {
             <SectionSpacer>
               <HudContentSection title="INVENTARIO" theme={theme} neon={neon} color="var(--neonBlue)" clearColor="var(--clearneonBlue)">
                 <FlexRow gap={12} alignItems="center">
-                  <BoldLabel>{`${currentLoad} / ${loadCapacity} kg`}</BoldLabel>
+                  <BoldLabel>{inventarioOculto || capacidadeCargaOculta ? '0000 / 0000 kg' : `${currentLoad} / ${loadCapacity} kg`}</BoldLabel>
                   <LoadBar><LoadProgress $pct={loadPercentage} $color={isOverloaded ? 'var(--neonRed)' : 'var(--neonBlue)'} /></LoadBar>
                 </FlexRow>
-                {inventoryItems.length > 0 ? <>
+                {inventarioOculto ? <MutedText>{CHARACTER_INFORMATION_BLOCKED}</MutedText> : inventoryItems.length > 0 ? <>
                   <InventoryList>
                     {visibleInventoryItems.map((item, index) => (
                       <InventarioItem key={item.id ?? `${item.nome}-${index}`} item={item} itemBaseImage={item.idItemBase ? itemBaseItems[item.idItemBase]?.imagem : undefined} onOpenDescription={setSelectedInventoryItem} />
@@ -1176,10 +1261,10 @@ const PersonagemPage: React.FC = () => {
             </SectionSpacer>
           </ScrollRevealBlock>
 
-          {implantItems.length > 0 && <ScrollRevealBlock variant="personagemCard" threshold={0.4}>
+          {(implantItems.length > 0 || protesesOcultas) && <ScrollRevealBlock variant="personagemCard" threshold={0.4}>
             <SectionSpacer>
               <HudContentSection title="PROTESES / IMPLANTES" theme={theme} neon={neon} color="var(--neonPurple)" clearColor="var(--clearneonPurple)">
-                {implantItems.length > 0 ? <>
+                {protesesOcultas ? <MutedText>{CHARACTER_INFORMATION_BLOCKED}</MutedText> : implantItems.length > 0 ? <>
                 <ImplantGrid>
                   {visibleImplantItems.map((item, index) => {
                     return <ImplantItem key={item.id ?? `${item.nome}-${index}`} item={item} itemBaseImage={item.idItemBase ? itemBaseItems[item.idItemBase]?.imagem : undefined} onOpenDescription={setSelectedInventoryItem} />;
@@ -1207,10 +1292,10 @@ const PersonagemPage: React.FC = () => {
         </SectionRow>
 
         <SectionRow>
-        {skills.length > 0 && <ScrollRevealBlock variant="personagemCard" threshold={0.4}>
+        {(skills.length > 0 || skillsOcultas) && <ScrollRevealBlock variant="personagemCard" threshold={0.4}>
           <SectionSpacer>
             <HudContentSection title="SKILLS" theme={theme} neon={neon} color="var(--neonCyan)" clearColor="var(--clearneonCyan)">
-              {skills.length > 0 ? <>
+              {skillsOcultas ? <MutedText>{CHARACTER_INFORMATION_BLOCKED}</MutedText> : skills.length > 0 ? <>
               <SkillGrid>
                 {visibleSkills.map((ability: any, index: number) => {
                   return <AbilityItem key={ability.id ?? `${ability.nome}-${index}`} ability={ability} index={index} type="skills" color="var(--neonCyan)" onOpenDescription={setSelectedInventoryItem} />;
@@ -1236,10 +1321,10 @@ const PersonagemPage: React.FC = () => {
           </SectionSpacer>
         </ScrollRevealBlock>}
 
-        {magias.length > 0 && <ScrollRevealBlock variant="personagemCard" threshold={0.4}>
+        {(magias.length > 0 || magiasOcultas) && <ScrollRevealBlock variant="personagemCard" threshold={0.4}>
           <SectionSpacer>
             <HudContentSection title="MAGIAS" theme={theme} neon={neon} color="var(--neonPurple)" clearColor="var(--clearneonPurple)">
-              {magias.length > 0 ? <>
+              {magiasOcultas ? <MutedText>{CHARACTER_INFORMATION_BLOCKED}</MutedText> : magias.length > 0 ? <>
                 <SkillGrid>
                   {visibleMagias.map((magia: any, index: number) => <AbilityItem key={magia.id ?? `${magia.nome}-${index}`} ability={magia} index={index} type="magias" color="var(--neonPurple)" onOpenDescription={setSelectedInventoryItem} />)}
                 </SkillGrid>
@@ -1288,8 +1373,8 @@ const PersonagemPage: React.FC = () => {
             <SectionSpacer>
               <HudContentSection title="PASSIVA" theme={theme} neon={neon} color="var(--neonGreen)" clearColor="var(--clearneonGreen)">
                 <AbilityCard>
-                  <BoldLabel>{passivaNome}</BoldLabel>
-                  <AbilityDescription>{typeof passivaDescricao === 'string' ? passivaDescricao : 'Sem descricao registrada.'}</AbilityDescription>
+                  <BoldLabel>{passivaOculta ? CHARACTER_INFORMATION_BLOCKED : passivaNome}</BoldLabel>
+                  <AbilityDescription>{passivaOculta ? CHARACTER_INFORMATION_BLOCKED : typeof passivaDescricao === 'string' ? passivaDescricao : 'Sem descricao registrada.'}</AbilityDescription>
                 </AbilityCard>
               </HudContentSection>
             </SectionSpacer>
@@ -1299,8 +1384,8 @@ const PersonagemPage: React.FC = () => {
             <SectionSpacer>
               <HudContentSection title="ULTIMATE" theme={theme} neon={neon} color="var(--neonOrange)" clearColor="var(--clearneonOrange)">
                 <AbilityCard>
-                  <BoldLabel>{ultimateNome}</BoldLabel>
-                  <AbilityDescription>{typeof ultimateDescricao === 'string' ? ultimateDescricao : 'Sem descricao registrada.'}</AbilityDescription>
+                  <BoldLabel>{ultimateOculta ? CHARACTER_INFORMATION_BLOCKED : ultimateNome}</BoldLabel>
+                  <AbilityDescription>{ultimateOculta ? CHARACTER_INFORMATION_BLOCKED : typeof ultimateDescricao === 'string' ? ultimateDescricao : 'Sem descricao registrada.'}</AbilityDescription>
                   <CooldownBar><CooldownFill $pct={cooldownValue} /></CooldownBar>
                 </AbilityCard>
               </HudContentSection>
@@ -1312,7 +1397,7 @@ const PersonagemPage: React.FC = () => {
 
         <Lightbox
           isOpen={mainImageOpen}
-          images={imagem ? [{
+          images={!campoEstaOculto('imagem') && imagem ? [{
             url: normalizeImagePath(imagem),
             caption: nome,
             backgroundUrl: mainImageBackground || normalizeImagePath(imagem),

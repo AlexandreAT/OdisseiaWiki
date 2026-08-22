@@ -29,6 +29,13 @@ public partial class Personagen : PersonagemBase
     [JsonIgnore]
     public virtual SistemaVersao? SistemaVersao { get; set; }
 
+    [JsonIgnore]
+    public virtual PersonagemVisibilidade? ConfiguracaoVisibilidade { get; set; }
+
+    [NotMapped]
+    [JsonPropertyName("visibilidade")]
+    public PersonagemVisibilidadeDto Visibilidade { get; set; } = PersonagemVisibilidadeDefaults.Npc();
+
     [NotMapped]
     [JsonPropertyName("proficiencias")]
     public List<ProficienciaResumoView> ProficienciasResumo { get; set; } = new();

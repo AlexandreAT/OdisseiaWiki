@@ -23,8 +23,8 @@ public sealed class WikiGraphService : IWikiGraphService
         CancellationToken cancellationToken = default)
     {
         WikiGraphSnapshot snapshot = await _repository.GetSnapshotAsync(cancellationToken);
-        Dictionary<NodeKey, GraphEntity> entities = BuildEntities(snapshot);
-        HashSet<GraphLink> links = BuildLinks(snapshot, entities);
+        Dictionary<NodeKey, GraphEntity> entities = BuildEntities(snapshot, includeHiddenMetadata);
+        HashSet<GraphLink> links = BuildLinks(snapshot, entities, includeHiddenMetadata);
         (entities, links) = ConsolidateDuplicateEntities(entities, links);
         RemoveOrphanCharacters(entities, links);
         NodeKey? centralKey = FindCentralNode(entities, links);
@@ -65,7 +65,9 @@ public sealed class WikiGraphService : IWikiGraphService
         };
     }
 
-    private static Dictionary<NodeKey, GraphEntity> BuildEntities(WikiGraphSnapshot snapshot)
+    private static Dictionary<NodeKey, GraphEntity> BuildEntities(
+        WikiGraphSnapshot snapshot,
+        bool includeHiddenMetadata)
     {
         Dictionary<NodeKey, GraphEntity> entities = new();
 
@@ -93,12 +95,14 @@ public sealed class WikiGraphService : IWikiGraphService
 
         foreach (WikiGraphCharacterRecord character in snapshot.Characters)
         {
+            bool exibirNome = includeHiddenMetadata || character.NomeVisivel;
+            bool exibirImagem = includeHiddenMetadata || character.ImagemVisivel;
             entities[new NodeKey(GraphEntityType.Character, character.Id)] = new GraphEntity(
-                character.Name,
-                character.Image,
+                exibirNome ? character.Name : null,
+                exibirImagem ? character.Image : null,
                 character.Visible,
                 $"/personagem/{character.Id}",
-                NormalizeIdentity(character.Name));
+                NormalizeIdentity(exibirNome ? character.Name : null));
         }
 
         foreach (WikiGraphRaceRecord race in snapshot.Races)
@@ -116,16 +120,18 @@ public sealed class WikiGraphService : IWikiGraphService
 
     private static HashSet<GraphLink> BuildLinks(
         WikiGraphSnapshot snapshot,
-        IReadOnlyDictionary<NodeKey, GraphEntity> entities)
+        IReadOnlyDictionary<NodeKey, GraphEntity> entities,
+        bool includeHiddenMetadata)
     {
         HashSet<GraphLink> links = new();
 
         foreach (WikiGraphCharacterRecord character in snapshot.Characters)
         {
             NodeKey characterKey = new(GraphEntityType.Character, character.Id);
-            AddLink(links, entities, characterKey, new NodeKey(GraphEntityType.Race, character.RaceId));
+            if (includeHiddenMetadata || character.RacaVisivel)
+                AddLink(links, entities, characterKey, new NodeKey(GraphEntityType.Race, character.RaceId));
 
-            if (character.CityId.HasValue)
+            if ((includeHiddenMetadata || character.CidadeVisivel) && character.CityId.HasValue)
             {
                 AddLink(
                     links,
@@ -133,6 +139,9 @@ public sealed class WikiGraphService : IWikiGraphService
                     characterKey,
                     new NodeKey(GraphEntityType.City, character.CityId.Value));
             }
+
+            if (!includeHiddenMetadata && !character.PersonagensRelacionadosVisivel)
+                continue;
 
             foreach (int linkedCharacterId in ParseLinkedCharacterIds(character.LinkedCharactersJson))
             {
@@ -149,10 +158,27 @@ public sealed class WikiGraphService : IWikiGraphService
             NodeKey pageKey = new(GraphEntityType.Page, relationBlock.PageId);
 
             foreach (NodeKey target in ParsePageReferences(relationBlock.Content))
+            {
+                if (!includeHiddenMetadata &&
+                    target.Type == GraphEntityType.Character &&
+                    !CanExposeCharacterRelations(snapshot.Characters, target.Id))
+                {
+                    continue;
+                }
+
                 AddLink(links, entities, pageKey, target);
+            }
         }
 
         return links;
+    }
+
+    private static bool CanExposeCharacterRelations(
+        IReadOnlyList<WikiGraphCharacterRecord> characters,
+        int id)
+    {
+        WikiGraphCharacterRecord? character = characters.FirstOrDefault(item => item.Id == id);
+        return character?.PersonagensRelacionadosVisivel ?? true;
     }
 
     private static (Dictionary<NodeKey, GraphEntity> Entities, HashSet<GraphLink> Links)

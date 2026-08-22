@@ -10,6 +10,7 @@ export interface PersonagemJogadorPayload {
   idcidade?: number;
   idusuario: number;
   idmesa: number;
+  visivel?: boolean;
   historia?: JSONContent | string;
   imagem?: string;
   galeriaImagem?: string[];
@@ -66,6 +67,7 @@ export interface PersonagemJogadorResumo {
   idcidade?: number;
   nome: string;
   imagem?: string;
+  visivel?: boolean;
   dataCriacao: string;
 }
 

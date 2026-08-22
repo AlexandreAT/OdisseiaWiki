@@ -118,7 +118,9 @@ namespace OdisseiaWiki.Services
             return deleted;
         }
 
-        public async Task<GlobalSearchResultDto> SearchGlobalAsync(string termo)
+        public async Task<GlobalSearchResultDto> SearchGlobalAsync(
+            string termo,
+            bool aplicarVisibilidadeDePersonagem = false)
         {
             if (string.IsNullOrWhiteSpace(termo))
                 return new GlobalSearchResultDto();
@@ -156,15 +158,26 @@ namespace OdisseiaWiki.Services
                 var personagens = ContentCategoryHelper.MatchesCategorySearch(termo, ContentCategoryHelper.Personagem)
                     ? await _personagemRepo.GetAllAsync()
                     : await _personagemRepo.SearchAsync(termo);
-                result.Personagens = personagens.Select(p => new SearchItemDto
+                result.Personagens = personagens.Select(p =>
                 {
-                    Id = p.Idpersonagem,
-                    Nome = p.Nome,
-                    Imagem = p.Imagem,
-                    Tags = JsonSafeHelper.DeserializeTags(p.Tags),
-                    Visivel = p.Visivel,
-                    Destaque = p.Destaque,
-                    TipoEntidade = "Personagem"
+                    PersonagemVisibilidadeDto visibilidade = PersonagemVisibilidadeDefaults.FromEntity(
+                        p.ConfiguracaoVisibilidade,
+                        personagemJogador: false);
+
+                    return new SearchItemDto
+                    {
+                        Id = p.Idpersonagem,
+                        Nome = aplicarVisibilidadeDePersonagem && !visibilidade.Nome
+                            ? string.Empty
+                            : p.Nome,
+                        Imagem = aplicarVisibilidadeDePersonagem && !visibilidade.Imagem
+                            ? null
+                            : p.Imagem,
+                        Tags = JsonSafeHelper.DeserializeTags(p.Tags),
+                        Visivel = p.Visivel,
+                        Destaque = p.Destaque,
+                        TipoEntidade = "Personagem"
+                    };
                 }).ToList();
             }
             catch (Exception exception)

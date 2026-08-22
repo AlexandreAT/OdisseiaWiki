@@ -215,7 +215,11 @@ public sealed class SistemasRpgController : ControllerBase
             if (personagem is null)
                 return NotFound("Personagem de jogador não encontrado.");
             if (!User.IsAdmin() && personagem.Idusuario != userId.Value)
-                return Forbid();
+            {
+                return personagem.Visivel
+                    ? Forbid()
+                    : NotFound("Personagem de jogador nÃ£o encontrado.");
+            }
         }
 
         if (consulta.IdMesa.HasValue)

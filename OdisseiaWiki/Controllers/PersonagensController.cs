@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using OdisseiaWiki.Dtos;
 using OdisseiaWiki.Models;
 using OdisseiaWiki.Security;
+using OdisseiaWiki.Services.Helpers;
 using OdisseiaWiki.Services.Interfaces;
 
 namespace OdisseiaWiki.Controllers
@@ -37,6 +38,11 @@ namespace OdisseiaWiki.Controllers
                 visivel = true;
 
             List<Personagen> personagens = await _service.GetAllAsync(visivel);
+            if (!User.IsAdmin())
+            {
+                foreach (Personagen personagem in personagens)
+                    PersonagemVisibilidadeProjection.ApplyForExternalViewer(personagem);
+            }
             return Ok(personagens);
         }
 
@@ -46,6 +52,9 @@ namespace OdisseiaWiki.Controllers
             Personagen? personagem = await _service.GetByIdAsync(id);
             if (personagem == null || (!personagem.Visivel && !User.IsAdmin()))
                 return NotFound($"Personagem com id {id} não encontrado.");
+
+            if (!User.IsAdmin())
+                PersonagemVisibilidadeProjection.ApplyForExternalViewer(personagem);
 
             return Ok(personagem);
         }
@@ -59,6 +68,16 @@ namespace OdisseiaWiki.Controllers
                 return BadRequest(resultado.MensagemErro);
 
             return Ok(resultado);
+        }
+
+        [HttpPatch("{id:int}/visivel")]
+        [Authorize(Policy = AuthorizationPolicies.Admin)]
+        public async Task<IActionResult> AtualizarVisivel(int id, [FromBody] AtualizarVisivelDto dto)
+        {
+            bool? visivel = await _service.AtualizarVisivelAsync(id, dto.Visivel);
+            return visivel.HasValue
+                ? Ok(new { Visivel = visivel.Value })
+                : NotFound($"Personagem com id {id} não encontrado.");
         }
 
         [HttpDelete("{id:int}")]
@@ -82,7 +101,11 @@ namespace OdisseiaWiki.Controllers
                 await _service.GetBatchAsync(dto.Ids);
 
             if (!User.IsAdmin())
+            {
                 personagens = personagens.Where(personagem => personagem.Visivel).ToList();
+                foreach (Personagen personagem in personagens)
+                    PersonagemVisibilidadeProjection.ApplyForExternalViewer(personagem);
+            }
 
             return Ok(personagens);
         }

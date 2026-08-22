@@ -83,12 +83,19 @@ namespace OdisseiaWiki.Services
             };
 
             var criado = await _repository.CreateAsync(personagem);
+            AplicarVisibilidade(criado);
             criado.SistemaRuntime = await ResolverRuntimeAsync(criado);
             return ResultPersonagem.Ok(criado);
         }
 
         public async Task<List<Personagen>> GetAllAsync(bool? visivel = null)
-            => await _repository.GetAllAsync(visivel);
+        {
+            List<Personagen> personagens = await _repository.GetAllAsync(visivel);
+            foreach (Personagen personagem in personagens)
+                AplicarVisibilidade(personagem);
+
+            return personagens;
+        }
 
         public async Task<Personagen?> GetByIdAsync(int id)
         {
@@ -96,9 +103,21 @@ namespace OdisseiaWiki.Services
             if (personagem is null)
                 return null;
 
+            AplicarVisibilidade(personagem);
             personagem.ProficienciasResumo = await _repository.GetProficienciasByPersonagemIdAsync(id);
             personagem.SistemaRuntime = await ResolverRuntimeAsync(personagem);
             return personagem;
+        }
+
+        public async Task<bool?> AtualizarVisivelAsync(int id, bool visivel)
+        {
+            Personagen? personagem = await _repository.GetByIdAsync(id);
+            if (personagem is null)
+                return null;
+
+            personagem.Visivel = visivel;
+            Personagen atualizado = await _repository.UpdateAsync(personagem);
+            return atualizado.Visivel;
         }
 
         public async Task<ResultPersonagem> UpdateAsync(int id, PersonagemDto dto)
@@ -162,13 +181,18 @@ namespace OdisseiaWiki.Services
                 _assetService,
                 oldAssets,
                 ExtractAssets(atualizado));
+            AplicarVisibilidade(atualizado);
             atualizado.SistemaRuntime = await ResolverRuntimeAsync(atualizado);
             return ResultPersonagem.Ok(atualizado);
         }
 
         public async Task<List<Personagen>> GetBatchAsync(List<int> ids)
         {
-            return await _repository.GetBatchAsync(ids);
+            List<Personagen> personagens = await _repository.GetBatchAsync(ids);
+            foreach (Personagen personagem in personagens)
+                AplicarVisibilidade(personagem);
+
+            return personagens;
         }
 
         public async Task<bool> DeleteAsync(int id)
@@ -194,6 +218,11 @@ namespace OdisseiaWiki.Services
                 personagem.Historia,
                 personagem.Implantes,
                 personagem.Ultimate);
+
+        private static void AplicarVisibilidade(Personagen personagem) => personagem.Visibilidade =
+            PersonagemVisibilidadeDefaults.FromEntity(
+                personagem.ConfiguracaoVisibilidade,
+                personagemJogador: false);
 
         private Task<SistemaRuntimeContextoDto> ResolverRuntimeAsync(Personagen personagem) =>
             _sistemaResolver.ResolverContextoAsync(

@@ -123,6 +123,17 @@ namespace OdisseiaWiki.Services
                 contexto);
         }
 
+        public async Task<bool?> AtualizarVisivelAsync(int id, bool visivel)
+        {
+            PersonagemJogador? personagem = await _repository.GetByIdAsync(id);
+            if (personagem is null)
+                return null;
+
+            personagem.Visivel = visivel;
+            PersonagemJogador atualizado = await _repository.UpdateAsync(personagem);
+            return atualizado.Visivel;
+        }
+
         public async Task<bool> DeleteAsync(int id)
         {
             PersonagemJogador? personagem = await _repository.GetByIdAsync(id);
@@ -223,6 +234,7 @@ namespace OdisseiaWiki.Services
             personagem.Idcidade = personagemDto.Idcidade;
             personagem.Idmesa = personagemDto.Idmesa;
             personagem.Idusuario = personagemDto.Idusuario;
+            personagem.Visivel = personagemDto.Visivel;
 
             personagem.Alinhamento = personagemDto.Alinhamento ?? personagem.Alinhamento;
             personagem.Historia = personagemDto.Historia.HasValue 
@@ -262,6 +274,7 @@ namespace OdisseiaWiki.Services
                 Idmesa = personagem.Idmesa,
                 Idraca = personagem.Idraca,
                 Idcidade = personagem.Idcidade,
+                Visivel = personagem.Visivel,
                 Nome = personagem.Nome,
                 Imagem = personagem.Imagem,
                 DataCriacao = personagem.DataCriacao,
@@ -297,6 +310,7 @@ namespace OdisseiaWiki.Services
             Idusuario = personagem.Idusuario,
             Idmesa = personagem.Idmesa,
             IdSistemaVersao = personagem.IdSistemaVersao,
+            Visivel = personagem.Visivel,
             Idraca = personagem.Idraca,
             Idcidade = personagem.Idcidade,
             Nome = personagem.Nome,
@@ -321,6 +335,9 @@ namespace OdisseiaWiki.Services
             CidadeNome = personagem.IdcidadeNavigation?.Nome,
             MesaNome = personagem.Mesa?.Nome,
             AutorNome = personagem.Usuario?.Nome ?? personagem.Usuario?.Nickname,
+            Visibilidade = PersonagemVisibilidadeDefaults.FromEntity(
+                personagem.ConfiguracaoVisibilidade,
+                personagemJogador: true),
             SistemaRuntime = sistemaRuntime,
             Proficiencias = proficiencias?
                 .Select(proficiencia => new ProficienciaResumoDto

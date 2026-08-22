@@ -471,6 +471,7 @@ public class Program
         services.AddScoped<IUsuarioRepository, UsuarioRepository>();
         services.AddScoped<IPersonagemRepository, PersonagemRepository>();
         services.AddScoped<IPersonagemJogadorRepository, PersonagemJogadorRepository>();
+        services.AddScoped<IPersonagemVisibilidadeRepository, PersonagemVisibilidadeRepository>();
         services.AddScoped<IRacaRepository, RacaRepository>();
         services.AddScoped<ICidadeRepository, CidadeRepository>();
         services.AddScoped<IItemRepository, ItemRepository>();
@@ -485,6 +486,7 @@ public class Program
         services.AddScoped<IUsuarioService, UsuarioService>();
         services.AddScoped<IPersonagemService, PersonagemService>();
         services.AddScoped<IPersonagemJogadorService, PersonagemJogadorService>();
+        services.AddScoped<IPersonagemVisibilidadeService, PersonagemVisibilidadeService>();
         services.AddScoped<IPersonagemComparacaoService, PersonagemComparacaoService>();
         services.AddScoped<IRacaService, RacaService>();
         services.AddScoped<ICidadeService, CidadeService>();

@@ -44,7 +44,13 @@ public sealed class WikiGraphRepository : IWikiGraphRepository
                 character.Visivel,
                 character.Idraca,
                 character.Idcidade,
-                character.PersonagemsVinculados))
+                character.PersonagemsVinculados,
+                character.ConfiguracaoVisibilidade == null || character.ConfiguracaoVisibilidade.Nome,
+                character.ConfiguracaoVisibilidade == null || character.ConfiguracaoVisibilidade.Imagem,
+                character.ConfiguracaoVisibilidade == null || character.ConfiguracaoVisibilidade.Raca,
+                character.ConfiguracaoVisibilidade == null || character.ConfiguracaoVisibilidade.Cidade,
+                character.ConfiguracaoVisibilidade == null ||
+                    character.ConfiguracaoVisibilidade.PersonagensRelacionados))
             .ToListAsync(cancellationToken);
 
         List<WikiGraphRaceRecord> races = await _context.Racas

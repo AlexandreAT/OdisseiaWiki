@@ -43,6 +43,7 @@ export interface CharacterRoleplayFormProps {
   setExtraInformation: (value: string) => void;
   visivel?: boolean;
   setVisivel?: (value: boolean) => void;
+  onConfigureVisibility?: () => void;
   destaque?: boolean;
   setDestaque?: (value: boolean) => void;
   listPersonagemRelacionado: { id: number; nome: string }[];

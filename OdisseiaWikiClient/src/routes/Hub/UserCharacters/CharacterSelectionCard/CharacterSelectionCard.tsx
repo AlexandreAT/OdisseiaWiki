@@ -2,6 +2,7 @@ import React from 'react';
 import EditIcon from '@mui/icons-material/Edit';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
 import CheckBoxIcon from '@mui/icons-material/CheckBox';
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
 import { useNavigate } from 'react-router-dom';
@@ -49,6 +50,7 @@ import {
   StatusColumn,
   StatusItem,
   StatusLabel,
+  VisibilityState,
   XpSection,
 } from './CharacterSelectionCard.style';
 
@@ -186,6 +188,12 @@ export const CharacterSelectionCard = ({
 
         <StatusColumn>
           <CharacterName>{personagem.nome || 'Personagem sem nome'}</CharacterName>
+          {personagem.visivel === false && (
+            <VisibilityState title="Apenas você e administradores podem ver esta ficha">
+              <VisibilityOffOutlinedIcon aria-hidden="true" />
+              Oculto para outros usuários
+            </VisibilityState>
+          )}
           <StatusItem>
             <StatusLabel>{getRuntimeResourceLabel(runtimeContext, 'vida', 'Vida')}</StatusLabel>
             <StatusBar theme={theme} neon={neon} type="vida" value={status.vida} maxValue={status.vidaMaxima || undefined} height="18px" />
