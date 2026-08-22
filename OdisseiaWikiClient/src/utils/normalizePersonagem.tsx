@@ -1,6 +1,8 @@
 import { PersonagemStatus } from "../models/Characters";
 import { GalleryImage, normalizeGalleryImages } from '../models/GalleryImage';
 import type { SistemaRuntimeContexto } from '../models/SistemaRpg';
+import type { CamposOcultosProjetados } from './characterVisibility';
+import type { PersonagemVisibilidade } from '../models/PersonagemVisibilidade';
 
 // ----- tipos auxiliares (adequa se já tiver algo parecido no teu projeto) -----
 export type Skill = {
@@ -59,6 +61,10 @@ export interface RawPersonagemApi {
   passiva?: any;
   ultimate?: string | any;
   sistemaRuntime?: SistemaRuntimeContexto | null;
+  implantes?: string | any[];
+  visivel?: boolean;
+  visibilidade?: PersonagemVisibilidade;
+  camposOcultosProjetados?: CamposOcultosProjetados;
 }
 
 // ----- default status para fallback -----
@@ -147,5 +153,9 @@ export function normalizePersonagem(raw: RawPersonagemApi) {
     passiva: raw.passiva,
     ultimate: parseJsonOr<any>(raw.ultimate, raw.ultimate ?? null),
     sistemaRuntime: raw.sistemaRuntime ?? null,
+    implantes: parseJsonOr<any[]>(raw.implantes, []),
+    visivel: raw.visivel ?? true,
+    visibilidade: raw.visibilidade,
+    camposOcultosProjetados: raw.camposOcultosProjetados ?? {},
   } as const; // retorna um objeto normalizado
 }

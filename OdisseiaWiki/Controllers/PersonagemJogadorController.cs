@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authorization;
 using OdisseiaWiki.Dtos;
 using OdisseiaWiki.Security;
+using OdisseiaWiki.Services.Helpers;
 using OdisseiaWiki.Services.Interfaces;
 
 namespace OdisseiaWiki.Controllers
@@ -49,7 +50,9 @@ namespace OdisseiaWiki.Controllers
                 return NotFound($"PersonagemJogador com id {id} não encontrado.");
 
             if (!User.IsAdmin() && personagem.Idusuario != userId.Value)
-                return Forbid();
+                return personagem.Visivel
+                    ? Forbid()
+                    : NotFound($"PersonagemJogador com id {id} não encontrado.");
 
             dto.Idusuario = personagem.Idusuario;
             ResultPersonagemJogador resultado = await _service.UpdateAsync(id, dto);
@@ -69,16 +72,22 @@ namespace OdisseiaWiki.Controllers
         }
 
         [HttpGet("{id:int}")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetById(int id)
         {
             int? userId = User.GetUserId();
-            if (!userId.HasValue)
-                return Unauthorized();
 
             PersonagemJogadorDto? personagem = await _service.GetByIdAsync(id);
 
-            if (personagem is not null && !User.IsAdmin() && personagem.Idusuario != userId.Value)
-                return Forbid();
+            bool podeVerDadosCompletos = personagem is not null &&
+                (User.IsAdmin() || (userId.HasValue && personagem.Idusuario == userId.Value));
+            if (personagem is not null && !podeVerDadosCompletos)
+            {
+                if (!personagem.Visivel)
+                    return NotFound($"PersonagemJogador com id {id} não encontrado.");
+
+                PersonagemVisibilidadeProjection.ApplyForExternalViewer(personagem);
+            }
 
             return personagem is null
                 ? NotFound($"PersonagemJogador com id {id} não encontrado.")
@@ -92,15 +101,42 @@ namespace OdisseiaWiki.Controllers
             if (!authenticatedUserId.HasValue)
                 return Unauthorized();
 
-            if (!User.IsAdmin() && authenticatedUserId.Value != usuarioId)
-                return Forbid();
-
             List<PersonagemJogadorDto> personagens = await _service.GetByUsuarioIdAsync(usuarioId);
+
+            if (!User.IsAdmin() && authenticatedUserId.Value != usuarioId)
+            {
+                personagens = personagens.Where(personagem => personagem.Visivel).ToList();
+                foreach (PersonagemJogadorDto personagem in personagens)
+                    PersonagemVisibilidadeProjection.ApplyForExternalViewer(personagem);
+            }
 
             if (personagens == null || !personagens.Any())
                 return NotFound($"Nenhum personagem encontrado.");
 
             return Ok(personagens);
+        }
+
+        [HttpPatch("{id:int}/visivel")]
+        public async Task<IActionResult> AtualizarVisivel(int id, [FromBody] AtualizarVisivelDto dto)
+        {
+            int? userId = User.GetUserId();
+            if (!userId.HasValue)
+                return Unauthorized();
+
+            PersonagemJogadorDto? personagem = await _service.GetByIdAsync(id);
+            if (personagem is null)
+                return NotFound($"PersonagemJogador com id {id} não encontrado.");
+            if (!User.IsAdmin() && personagem.Idusuario != userId.Value)
+            {
+                return personagem.Visivel
+                    ? Forbid()
+                    : NotFound($"PersonagemJogador com id {id} não encontrado.");
+            }
+
+            bool? visivel = await _service.AtualizarVisivelAsync(id, dto.Visivel);
+            return visivel.HasValue
+                ? Ok(new { Visivel = visivel.Value })
+                : NotFound($"PersonagemJogador com id {id} não encontrado.");
         }
 
         [HttpDelete("{id:int}")]
@@ -115,7 +151,9 @@ namespace OdisseiaWiki.Controllers
                 return NotFound($"PersonagemJogador com id {id} não encontrado.");
 
             if (!User.IsAdmin() && personagem.Idusuario != userId.Value)
-                return Forbid();
+                return personagem.Visivel
+                    ? Forbid()
+                    : NotFound($"PersonagemJogador com id {id} não encontrado.");
 
             bool sucesso = await _service.DeleteAsync(id);
 
@@ -135,7 +173,9 @@ namespace OdisseiaWiki.Controllers
             if (personagem is null)
                 return NotFound($"PersonagemJogador com id {id} não encontrado.");
             if (!User.IsAdmin() && personagem.Idusuario != userId.Value)
-                return Forbid();
+                return personagem.Visivel
+                    ? Forbid()
+                    : NotFound($"PersonagemJogador com id {id} não encontrado.");
 
             ResultPersonagemJogador resultado = await _service.AtualizarSistemaAsync(id);
             return resultado.Sucesso ? Ok(resultado) : BadRequest(resultado);

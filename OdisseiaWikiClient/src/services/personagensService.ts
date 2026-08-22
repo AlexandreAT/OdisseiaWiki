@@ -2,6 +2,7 @@ import { Principais, Secundarios, JSONContent } from './../models/Characters';
 import api from "../axios/api";
 import { ServiceRequestOptions } from './serviceRequestOptions';
 import { GalleryImage } from '../models/GalleryImage';
+import type { PersonagemVisibilidade } from '../models/PersonagemVisibilidade';
 import type { SistemaRuntimeContexto, SistemaRuntimeWarning } from '../models/SistemaRpg';
 
 export interface PersonagemPayload {
@@ -30,6 +31,7 @@ export interface PersonagemPayload {
   idSistemaVersao?: number | null;
   acompanharPublicacaoAtual?: boolean;
   sistemaRuntime?: SistemaRuntimeContexto | null;
+  visibilidade?: PersonagemVisibilidade;
   statusJson: {
     status: {
       vida: number;

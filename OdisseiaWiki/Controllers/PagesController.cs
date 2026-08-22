@@ -54,7 +54,9 @@ namespace OdisseiaWiki.Controllers
         [HttpGet("{slug}")]
         public async Task<IActionResult> GetBySlug(string slug)
         {
-            var page = await _service.GetBySlugAsync(slug);
+            var page = await _service.GetBySlugAsync(
+                slug,
+                aplicarVisibilidadeDePersonagem: !User.IsAdmin());
 
             if (page == null || (!page.Visivel && !User.IsAdmin()))
                 return NotFound(ResultPage.Fail("Página não encontrada."));
@@ -65,7 +67,9 @@ namespace OdisseiaWiki.Controllers
         [HttpGet("id/{id:int}")]
         public async Task<IActionResult> GetById(int id)
         {
-            var page = await _service.GetByIdAsync(id);
+            var page = await _service.GetByIdAsync(
+                id,
+                aplicarVisibilidadeDePersonagem: !User.IsAdmin());
 
             if (page == null || (!page.Visivel && !User.IsAdmin()))
                 return NotFound(ResultPage.Fail("Página não encontrada."));
@@ -93,7 +97,11 @@ namespace OdisseiaWiki.Controllers
             if (!User.IsAdmin())
                 visivel = true;
 
-            List<PageDto> pages = await _service.GetReferencingAsync(entityType, entityId, visivel);
+            List<PageDto> pages = await _service.GetReferencingAsync(
+                entityType,
+                entityId,
+                visivel,
+                aplicarVisibilidadeDePersonagem: !User.IsAdmin());
             return Ok(ResultPage.Ok(pages));
         }
 

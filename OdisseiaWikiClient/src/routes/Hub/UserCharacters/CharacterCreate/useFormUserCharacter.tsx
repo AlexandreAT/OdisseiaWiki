@@ -98,6 +98,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
   const [traits, setTraits] = useState<string[]>([]);
   const [idpassiva, setIdpassiva] = useState<number | undefined>(undefined);
   const [ultimate, setUltimate] = useState('');
+  const [visivel, setVisivel] = useState(true);
   const [xp, setXp] = useState(0);
   const [level, setLevel] = useState(1);
   const [statusExtras, setStatusExtras] = useState<CharacterStatusExtras>(DEFAULT_CHARACTER_STATUS_EXTRAS);
@@ -570,6 +571,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     setTraits(tracos);
     setIdpassiva(personagem.idpassiva ?? undefined);
     setUltimate(personagem.ultimate || '');
+    setVisivel(personagem.visivel !== false);
     setCostumes(Array.isArray(costumes) ? costumes[0] || '' : String(costumes || ''));
 
     setStatusBasico({
@@ -753,6 +755,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
         idcidade: city!,
         idusuario: userId,
         idmesa: selectedMesa!,
+        visivel,
         historia: prepareForAPI(history),
         imagem: avatarPath,
         galeriaImagem: galeriaFinal,
@@ -806,7 +809,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     } finally {
       setIsSubmitting(false);
     }
-  }, [avatarUrl, avatarFile, galeriaUrls, galeriaPreviewFileMap, userName, statusBasico, itens, magias, skills, race, city, userId, selectedMesa, history, costumes, extraInformation, nanites, alignment, traits, idpassiva, ultimate, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, statusExtras, defesas, personagem, onSave, validateStepOne, buildStatusForPayload]);
+  }, [avatarUrl, avatarFile, galeriaUrls, galeriaPreviewFileMap, userName, statusBasico, itens, magias, skills, race, city, userId, selectedMesa, history, costumes, extraInformation, nanites, alignment, traits, idpassiva, ultimate, visivel, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, statusExtras, defesas, personagem, onSave, validateStepOne, buildStatusForPayload]);
 
   // --- submit ---
   const handleSubmit = useCallback(async (e?: React.FormEvent) => {
@@ -864,6 +867,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
         idcidade: city!,
         idusuario: userId,
         idmesa: selectedMesa!,
+        visivel,
         historia: prepareForAPI(history),
         imagem: avatarPath,
         galeriaImagem: galeriaFinal,
@@ -907,7 +911,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     } finally {
       setIsSubmitting(false);
     }
-  }, [avatarUrl, avatarFile, galeriaUrls, galeriaShapes, galeriaPreviewFileMap, userName, itens, magias, skills, race, city, userId, selectedMesa, history, costumes, extraInformation, nanites, alignment, traits, idpassiva, ultimate, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, statusExtras, defesas, buildStatusForPayload, onSave, validateStepOne]);
+  }, [avatarUrl, avatarFile, galeriaUrls, galeriaShapes, galeriaPreviewFileMap, userName, itens, magias, skills, race, city, userId, selectedMesa, history, costumes, extraInformation, nanites, alignment, traits, idpassiva, ultimate, visivel, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, statusExtras, defesas, buildStatusForPayload, onSave, validateStepOne]);
 
   return {
     step,
@@ -945,6 +949,8 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     setIdpassiva,
     ultimate,
     setUltimate,
+    visivel,
+    setVisivel,
     itens,
     setItens,
     skills,

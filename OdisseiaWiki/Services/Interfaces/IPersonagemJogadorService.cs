@@ -9,6 +9,7 @@ namespace OdisseiaWiki.Services.Interfaces
         Task<List<PersonagemJogadorDto>> GetByIdsAsync(IReadOnlyCollection<int> ids);
         Task<List<PersonagemJogadorDto>> GetByUsuarioIdAsync(int id);
         Task<PersonagemJogadorDto?> GetByIdAsync(int id);
+        Task<bool?> AtualizarVisivelAsync(int id, bool visivel);
         Task<ResultPersonagemJogador> UpdateAsync(int id, PersonagemJogadorDto dto);
         Task<ResultPersonagemJogador> AtualizarSistemaAsync(int id);
         Task<bool> DeleteAsync(int id);

@@ -31,6 +31,8 @@ public partial class OdisseiaContext : DbContext
 
     public virtual DbSet<Personagen> Personagens { get; set; }
 
+    public virtual DbSet<PersonagemVisibilidade> PersonagensVisibilidade { get; set; }
+
     public virtual DbSet<PersonagemJogador> PersonagemJogadores { get; set; }
 
     public virtual DbSet<Raca> Racas { get; set; }
@@ -240,6 +242,71 @@ public partial class OdisseiaContext : DbContext
                 .HasConstraintName("ID racas");
         });
 
+        modelBuilder.Entity<PersonagemVisibilidade>(entity =>
+        {
+            entity.HasKey(e => e.IdpersonagemVisibilidade).HasName("PRIMARY");
+
+            entity.ToTable("personagensvisibilidade", table => table.HasCheckConstraint(
+                "CK_PersonagemVisibilidade_Alvo",
+                "(`IDPersonagem` IS NOT NULL AND `IDPersonagemJogador` IS NULL) OR " +
+                "(`IDPersonagem` IS NULL AND `IDPersonagemJogador` IS NOT NULL)"));
+
+            entity.HasIndex(e => e.Idpersonagem)
+                .IsUnique()
+                .HasDatabaseName("UX_PersonagemVisibilidade_Personagem");
+            entity.HasIndex(e => e.IdpersonagemJogador)
+                .IsUnique()
+                .HasDatabaseName("UX_PersonagemVisibilidade_PersonagemJogador");
+
+            entity.Property(e => e.IdpersonagemVisibilidade)
+                .HasColumnType("int(11)")
+                .HasColumnName("IDPersonagemVisibilidade");
+            entity.Property(e => e.Idpersonagem)
+                .HasColumnType("int(11)")
+                .HasColumnName("IDPersonagem");
+            entity.Property(e => e.IdpersonagemJogador)
+                .HasColumnType("int(11)")
+                .HasColumnName("IDPersonagemJogador");
+            entity.Property(e => e.Vida).HasColumnType("tinyint(1)");
+            entity.Property(e => e.Estamina).HasColumnType("tinyint(1)");
+            entity.Property(e => e.Mana).HasColumnType("tinyint(1)");
+            entity.Property(e => e.CapacidadeCarga).HasColumnType("tinyint(1)");
+            entity.Property(e => e.AtributosPrincipais).HasColumnType("tinyint(1)");
+            entity.Property(e => e.AtributosSecundarios).HasColumnType("tinyint(1)");
+            entity.Property(e => e.Defesas).HasColumnType("tinyint(1)");
+            entity.Property(e => e.Imagem).HasColumnType("tinyint(1)");
+            entity.Property(e => e.Historia).HasColumnType("tinyint(1)");
+            entity.Property(e => e.Raca).HasColumnType("tinyint(1)");
+            entity.Property(e => e.Cidade).HasColumnType("tinyint(1)");
+            entity.Property(e => e.Nome).HasColumnType("tinyint(1)");
+            entity.Property(e => e.Alinhamento).HasColumnType("tinyint(1)");
+            entity.Property(e => e.TracosPersonalidade).HasColumnType("tinyint(1)");
+            entity.Property(e => e.PersonagensRelacionados).HasColumnType("tinyint(1)");
+            entity.Property(e => e.Inventario).HasColumnType("tinyint(1)");
+            entity.Property(e => e.Proteses).HasColumnType("tinyint(1)");
+            entity.Property(e => e.Passivas).HasColumnType("tinyint(1)");
+            entity.Property(e => e.Ultimate).HasColumnType("tinyint(1)");
+            entity.Property(e => e.Skills).HasColumnType("tinyint(1)");
+            entity.Property(e => e.Magias).HasColumnType("tinyint(1)");
+            entity.Property(e => e.Galeria).HasColumnType("tinyint(1)");
+            entity.Property(e => e.Xp).HasColumnType("tinyint(1)");
+            entity.Property(e => e.Nivel).HasColumnType("tinyint(1)");
+            entity.Property(e => e.DataCriacao).HasColumnType("datetime");
+            entity.Property(e => e.DataAtualizacao).HasColumnType("datetime");
+
+            entity.HasOne(e => e.Personagem)
+                .WithOne(e => e.ConfiguracaoVisibilidade)
+                .HasForeignKey<PersonagemVisibilidade>(e => e.Idpersonagem)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_PersonagemVisibilidade_Personagem");
+
+            entity.HasOne(e => e.PersonagemJogador)
+                .WithOne(e => e.ConfiguracaoVisibilidade)
+                .HasForeignKey<PersonagemVisibilidade>(e => e.IdpersonagemJogador)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_PersonagemVisibilidade_PersonagemJogador");
+        });
+
         modelBuilder.Entity<Raca>(entity =>
         {
             entity.HasKey(e => e.Idraca).HasName("PRIMARY");
@@ -346,6 +413,7 @@ public partial class OdisseiaContext : DbContext
             entity.Property(e => e.InventarioJson).HasColumnType("json");
             entity.Property(e => e.StatusJson).HasColumnType("json");
             entity.Property(e => e.InfoSecundariasJson).HasColumnType("text");
+            entity.Property(e => e.Visivel).HasColumnType("tinyint(1)").HasDefaultValue(true);
 
             entity.Property(e => e.DataCriacao);
               

@@ -5,6 +5,7 @@ using OdisseiaWiki.Services.Interfaces;
 using OdisseiaWiki.Services.Helpers;
 using OdisseiaWiki.Enums;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace OdisseiaWiki.Services
 {
@@ -67,22 +68,26 @@ namespace OdisseiaWiki.Services
             return ResultPage.Ok(MapPageToDto(created));
         }
 
-        public async Task<PageDto?> GetByIdAsync(int id)
+        public async Task<PageDto?> GetByIdAsync(
+            int id,
+            bool aplicarVisibilidadeDePersonagem = false)
         {
             Page? page = await _repository.GetByIdAsync(id);
 
-            return page != null
-                ? MapPageToDto(page)
-                : null;
+            return page is null
+                ? null
+                : await MapPageParaLeituraAsync(page, aplicarVisibilidadeDePersonagem);
         }
 
-        public async Task<PageDto?> GetBySlugAsync(string slug)
+        public async Task<PageDto?> GetBySlugAsync(
+            string slug,
+            bool aplicarVisibilidadeDePersonagem = false)
         {
             Page? page = await _repository.GetBySlugAsync(slug);
 
-            return page != null
-                ? MapPageToDto(page)
-                : null;
+            return page is null
+                ? null
+                : await MapPageParaLeituraAsync(page, aplicarVisibilidadeDePersonagem);
         }
 
         public async Task<List<SearchItemDto>> SearchAsync(string termo)
@@ -114,8 +119,17 @@ namespace OdisseiaWiki.Services
         public async Task<List<PageDto>> GetReferencingAsync(
             string entityType,
             string entityId,
-            bool? visivel = null)
+            bool? visivel = null,
+            bool aplicarVisibilidadeDePersonagem = false)
         {
+            if (aplicarVisibilidadeDePersonagem &&
+                IsCharacterReference(entityType) &&
+                (!int.TryParse(entityId, out int idPersonagem) ||
+                 !await PodeExibirRelacionamentoPublicoAsync(idPersonagem)))
+            {
+                return new List<PageDto>();
+            }
+
             List<Page> pages = await _repository.GetWithRelationBlocksAsync(visivel);
 
             return pages
@@ -221,9 +235,169 @@ namespace OdisseiaWiki.Services
                         Conteudo = JsonSerializer.Deserialize<object>(b.Conteudo)!,
                         Ordem = b.Ordem
                     })
-                    .ToList()
+                .ToList()
             };
         }
+
+        private async Task<PageDto> MapPageParaLeituraAsync(
+            Page page,
+            bool aplicarVisibilidadeDePersonagem)
+        {
+            PageDto dto = MapPageToDto(page);
+            if (!aplicarVisibilidadeDePersonagem)
+                return dto;
+
+            Dictionary<int, bool> relacoesPublicas = new();
+            List<PageBlockDto> blocks = new();
+            foreach (PageBlockDto block in dto.Blocks)
+            {
+                if (block.Tipo != PageBlockType.Relation)
+                {
+                    blocks.Add(block);
+                    continue;
+                }
+
+                object? conteudo = await SanitizarRelacaoPublicaAsync(
+                    block.Conteudo,
+                    relacoesPublicas);
+                if (conteudo is null)
+                    continue;
+
+                blocks.Add(new PageBlockDto
+                {
+                    Tipo = block.Tipo,
+                    Conteudo = conteudo,
+                    Ordem = block.Ordem,
+                });
+            }
+
+            dto.Blocks = blocks;
+            return dto;
+        }
+
+        private async Task<object?> SanitizarRelacaoPublicaAsync(
+            object conteudo,
+            IDictionary<int, bool> relacoesPublicas)
+        {
+            JsonNode? raiz;
+            try
+            {
+                raiz = JsonSerializer.SerializeToNode(conteudo);
+            }
+            catch (Exception exception) when (exception is JsonException or NotSupportedException)
+            {
+                return conteudo;
+            }
+
+            if (raiz is null)
+                return null;
+
+            if (raiz is JsonArray array)
+            {
+                JsonArray resultado = new();
+                foreach (JsonNode? entrada in array)
+                {
+                    JsonNode? sanitizada = await SanitizarEntradaDeRelacaoPublicaAsync(
+                        entrada,
+                        relacoesPublicas);
+                    if (sanitizada is not null)
+                        resultado.Add(sanitizada);
+                }
+
+                return resultado.Count == 0
+                    ? null
+                    : JsonSerializer.Deserialize<object>(resultado.ToJsonString());
+            }
+
+            JsonNode? entradaUnica = await SanitizarEntradaDeRelacaoPublicaAsync(
+                raiz,
+                relacoesPublicas);
+            return entradaUnica is null
+                ? null
+                : JsonSerializer.Deserialize<object>(entradaUnica.ToJsonString());
+        }
+
+        private async Task<JsonNode?> SanitizarEntradaDeRelacaoPublicaAsync(
+            JsonNode? entrada,
+            IDictionary<int, bool> relacoesPublicas)
+        {
+            if (entrada is not JsonObject objeto)
+                return entrada?.DeepClone();
+
+            JsonNode? tipoNode = GetProperty(objeto, "tipoEntidade");
+            if (tipoNode is not JsonValue tipoValue ||
+                !tipoValue.TryGetValue(out string? tipo) ||
+                !IsCharacterReference(tipo))
+            {
+                return objeto.DeepClone();
+            }
+
+            JsonNode? idNode = GetProperty(objeto, "idEntidade");
+            if (!TryGetInteger(idNode, out int idPersonagem))
+                return null;
+
+            if (!relacoesPublicas.TryGetValue(idPersonagem, out bool podeExibir))
+            {
+                podeExibir = await PodeExibirRelacionamentoPublicoAsync(idPersonagem);
+                relacoesPublicas[idPersonagem] = podeExibir;
+            }
+
+            if (!podeExibir)
+                return null;
+
+            return new JsonObject
+            {
+                ["tipoEntidade"] = tipoNode.DeepClone(),
+                ["idEntidade"] = idNode!.DeepClone(),
+            };
+        }
+
+        private async Task<bool> PodeExibirRelacionamentoPublicoAsync(int idPersonagem)
+        {
+            Personagen? personagem = await _personagemRepository.GetByIdAsync(idPersonagem);
+            if (personagem?.Visivel != true)
+                return false;
+
+            return PersonagemVisibilidadeDefaults.FromEntity(
+                personagem.ConfiguracaoVisibilidade,
+                personagemJogador: false).PersonagensRelacionados;
+        }
+
+        private static JsonNode? GetProperty(JsonObject objeto, string propertyName)
+        {
+            foreach (KeyValuePair<string, JsonNode?> property in objeto)
+            {
+                if (string.Equals(property.Key, propertyName, StringComparison.OrdinalIgnoreCase))
+                    return property.Value;
+            }
+
+            return null;
+        }
+
+        private static bool TryGetInteger(JsonNode? value, out int number)
+        {
+            if (value is JsonValue jsonValue)
+            {
+                if (jsonValue.TryGetValue(out int integer))
+                {
+                    number = integer;
+                    return true;
+                }
+
+                if (jsonValue.TryGetValue(out string? text) && int.TryParse(text, out integer))
+                {
+                    number = integer;
+                    return true;
+                }
+            }
+
+            number = 0;
+            return false;
+        }
+
+        private static bool IsCharacterReference(string? entityType) =>
+            string.Equals(entityType?.Trim(), "personagem", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(entityType?.Trim(), "character", StringComparison.OrdinalIgnoreCase);
 
         private async Task ValidateReferencesAsync(IEnumerable<PageBlockDto> blocks)
         {

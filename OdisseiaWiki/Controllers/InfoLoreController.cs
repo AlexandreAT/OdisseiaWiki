@@ -83,7 +83,9 @@ namespace OdisseiaWiki.Controllers
             if (string.IsNullOrWhiteSpace(termo))
                 return BadRequest("O termo de busca é obrigatório.");
 
-            var resultado = await _service.SearchGlobalAsync(termo);
+            var resultado = await _service.SearchGlobalAsync(
+                termo,
+                aplicarVisibilidadeDePersonagem: !User.IsAdmin());
 
             if (!User.IsAdmin())
             {

@@ -10,8 +10,21 @@ namespace OdisseiaWiki.Services;
 public sealed partial class SistemaRpgResolver : ISistemaRpgResolver
 {
     private readonly ISistemaRpgRepository _repository;
+    private readonly Dictionary<int, Task<SistemaVersao?>> _runtimeVersionCache = new();
 
     public SistemaRpgResolver(ISistemaRpgRepository repository) => _repository = repository;
+
+    private Task<SistemaVersao?> GetRuntimeVersionAsync(int idSistemaVersao)
+    {
+        if (_runtimeVersionCache.TryGetValue(idSistemaVersao, out Task<SistemaVersao?>? cached))
+            return cached;
+
+        Task<SistemaVersao?> loading = _repository.GetVersionAsync(
+            idSistemaVersao,
+            includeConfiguration: true);
+        _runtimeVersionCache[idSistemaVersao] = loading;
+        return loading;
+    }
 
     public async Task<SistemaResolvidoDto> ResolverAsync(int? idMesa = null)
     {

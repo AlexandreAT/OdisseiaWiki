@@ -17,9 +17,12 @@ namespace OdisseiaWiki.Models
 
         public string? InfoSecundariasJson { get; set; }
 
+        public bool Visivel { get; set; } = true;
+
         public virtual Mesa Mesa { get; set; } = null!;
         public virtual Usuario Usuario { get; set; } = null!;
 
         public virtual SistemaVersao? SistemaVersao { get; set; }
+        public virtual PersonagemVisibilidade? ConfiguracaoVisibilidade { get; set; }
     }
 }

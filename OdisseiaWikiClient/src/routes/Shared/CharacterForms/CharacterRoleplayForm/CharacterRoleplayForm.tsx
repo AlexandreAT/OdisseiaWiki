@@ -10,7 +10,9 @@ import { RichTextEditor } from '../../../../components/Generic/RichTextEditor/Ri
 import { Search } from '../../../../components/Generic/Search/Search';
 import { Select } from '../../../../components/Generic/Select/Select';
 import { VisibilityToggle } from '../../../../components/Generic/VisibilityToggle';
+import { VisibilityButton, VisibilityLabel } from '../../../../components/Generic/VisibilityToggle/VisibilityToggle.style';
 import { FeaturedToggle } from '../../../../components/Generic/FeaturedToggle';
+import TuneIcon from '@mui/icons-material/Tune';
 import { ALIGNMENT_OPTIONS, TRAITS_OPTIONS } from '../../../Hub/UserCharacters/CharacterCreate/constants';
 import {
   FormHeader,
@@ -69,6 +71,7 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
   searchPersonagens,
   visivel,
   setVisivel,
+  onConfigureVisibility,
   destaque,
   setDestaque,
   raceChangeMode = 'default',
@@ -297,6 +300,17 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
             visible={visivel ?? false}
             onChange={setVisivel}
           />
+          {onConfigureVisibility && (
+            <VisibilityButton
+              type="button"
+              $visible
+              onClick={onConfigureVisibility}
+              title="Configurar dados visíveis"
+            >
+              <TuneIcon />
+              <VisibilityLabel $visible>Dados visíveis</VisibilityLabel>
+            </VisibilityButton>
+          )}
           <FeaturedToggle featured={destaque ?? false} onChange={setDestaque} />
         </HistoryHeader>
       )}

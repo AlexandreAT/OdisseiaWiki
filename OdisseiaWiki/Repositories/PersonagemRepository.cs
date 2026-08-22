@@ -20,7 +20,9 @@ namespace OdisseiaWiki.Repositories
 
         public async Task<List<Personagen>> GetAllAsync(bool? visivel = null)
         {
-            var query = _context.Personagens.AsNoTracking();
+            IQueryable<Personagen> query = _context.Personagens
+                .AsNoTracking()
+                .Include(personagem => personagem.ConfiguracaoVisibilidade);
 
             if (visivel.HasValue)
                 query = query.Where(p => p.Visivel == visivel.Value);
@@ -29,7 +31,9 @@ namespace OdisseiaWiki.Repositories
         }
 
         public async Task<Personagen?> GetByIdAsync(int id)
-            => await _context.Personagens.FindAsync(id);
+            => await _context.Personagens
+                .Include(personagem => personagem.ConfiguracaoVisibilidade)
+                .FirstOrDefaultAsync(personagem => personagem.Idpersonagem == id);
 
         public async Task<List<ProficienciaResumoView>> GetProficienciasByPersonagemIdAsync(int id)
             => await _context.PersonagemProficiencias
@@ -77,6 +81,7 @@ namespace OdisseiaWiki.Repositories
 
             var personagens = await _context.Personagens
                 .AsNoTracking()
+                .Include(personagem => personagem.ConfiguracaoVisibilidade)
                 .ToListAsync();
 
             return personagens.Where(i =>
@@ -90,6 +95,7 @@ namespace OdisseiaWiki.Repositories
         {
             return await _context.Personagens
                 .AsNoTracking()
+                .Include(personagem => personagem.ConfiguracaoVisibilidade)
                 .Where(p => ids.Contains(p.Idpersonagem))
                 .ToListAsync();
         }
@@ -112,11 +118,13 @@ namespace OdisseiaWiki.Repositories
                 {
                     Id = personagem.Idpersonagem,
                     Jogador = false,
+                    Visivel = personagem.Visivel,
                     Nome = personagem.Nome,
                     Imagem = personagem.Imagem,
                     IdRaca = personagem.Idraca,
                     StatusJson = personagem.StatusJson,
                     SkillsJson = personagem.Skills,
+                    ConfiguracaoVisibilidade = personagem.ConfiguracaoVisibilidade,
                 })
                 .ToListAsync();
         }
@@ -130,11 +138,13 @@ namespace OdisseiaWiki.Repositories
                 {
                     Id = personagem.Idpersonagem,
                     Jogador = false,
+                    Visivel = personagem.Visivel,
                     Nome = personagem.Nome,
                     Imagem = personagem.Imagem,
                     IdRaca = personagem.Idraca,
                     StatusJson = personagem.StatusJson,
                     SkillsJson = personagem.Skills,
+                    ConfiguracaoVisibilidade = personagem.ConfiguracaoVisibilidade,
                 })
                 .FirstOrDefaultAsync();
     }

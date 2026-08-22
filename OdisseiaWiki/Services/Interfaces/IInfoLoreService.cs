@@ -10,6 +10,8 @@ namespace OdisseiaWiki.Services.Interfaces
         Task<ResultInfoLore> CreateAsync(InfoLoreDto dto);
         Task<ResultInfoLore> UpdateAsync(int id, InfoLoreDto dto);
         Task<bool> DeleteAsync(int id);
-        Task<GlobalSearchResultDto> SearchGlobalAsync(string termo);
+        Task<GlobalSearchResultDto> SearchGlobalAsync(
+            string termo,
+            bool aplicarVisibilidadeDePersonagem = false);
     }
 }

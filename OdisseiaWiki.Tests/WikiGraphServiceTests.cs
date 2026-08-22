@@ -343,6 +343,66 @@ public sealed class WikiGraphServiceTests
         Assert.Contains(result.Edges, edge => edge.Source == hidden.GraphId || edge.Target == hidden.GraphId);
     }
 
+    [Fact]
+    public async Task GetAsync_OcultaMetadadosELigacoesDoPersonagemConformeVisibilidadeGranular()
+    {
+        WikiGraphSnapshot snapshot = new()
+        {
+            Cities = new[]
+            {
+                new WikiGraphCityRecord(1, "Cidade privada", "cidade.png", true)
+            },
+            Pages = new[]
+            {
+                new WikiGraphPageRecord(2, "Página pública", "pagina-publica", null, true)
+            },
+            Characters = new[]
+            {
+                new WikiGraphCharacterRecord(
+                    3,
+                    "NOME-PRIVADO",
+                    "IMAGEM-PRIVADA.png",
+                    true,
+                    4,
+                    1,
+                    "[5]",
+                    NomeVisivel: false,
+                    ImagemVisivel: false,
+                    RacaVisivel: false,
+                    CidadeVisivel: false,
+                    PersonagensRelacionadosVisivel: true),
+                new WikiGraphCharacterRecord(5, "Outro personagem", null, true, 0, null, null)
+            },
+            Races = new[]
+            {
+                new WikiGraphRaceRecord(4, "Raça privada", null, true)
+            },
+            PageRelations = new[]
+            {
+                new WikiGraphPageRelationRecord(
+                    2,
+                    """{ "tipoEntidade": "Personagem", "idEntidade": 3 }""")
+            }
+        };
+
+        (WikiGraphService service, _) = CreateService(snapshot);
+
+        WikiGraphDto result = await service.GetAsync(includeHiddenMetadata: false);
+
+        WikiGraphNodeDto personagem = Assert.Single(result.Nodes, node => node.Route == "/personagem/3");
+        Assert.False(personagem.Hidden);
+        Assert.Equal("Conteúdo sem título", personagem.Title);
+        Assert.Null(personagem.Image);
+
+        string json = JsonSerializer.Serialize(result);
+        Assert.DoesNotContain("NOME-PRIVADO", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("IMAGEM-PRIVADA", json, StringComparison.Ordinal);
+
+        Assert.Single(result.Edges, edge =>
+            edge.Source == personagem.GraphId || edge.Target == personagem.GraphId);
+        Assert.DoesNotContain(result.Nodes, node => node.Route == "/personagem/5");
+    }
+
     private static (WikiGraphService Service, Mock<IWikiGraphRepository> Repository) CreateService(
         WikiGraphSnapshot snapshot)
     {

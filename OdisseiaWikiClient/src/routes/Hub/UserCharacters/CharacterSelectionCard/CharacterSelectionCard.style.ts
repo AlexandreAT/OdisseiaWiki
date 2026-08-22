@@ -159,6 +159,24 @@ export const CharacterName = styled.h3`
   text-shadow: 0 0 5px rgba(0, 210, 255, 0.55);
 `;
 
+export const VisibilityState = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
+  margin: -2px 0 2px;
+  color: var(--clearneonYellow);
+  font-size: 0.61rem;
+  font-weight: 700;
+  letter-spacing: 0.35px;
+  text-transform: uppercase;
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+`;
+
 export const StatusItem = styled.div`
   display: grid;
   grid-template-columns: 55px minmax(0, 1fr);

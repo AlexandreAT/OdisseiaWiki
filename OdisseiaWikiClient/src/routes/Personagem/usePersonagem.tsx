@@ -4,6 +4,7 @@ import { getPersonagemJogadorById } from '../../services/personagemJogadorServic
 import { normalizePersonagem } from '../../utils/normalizePersonagem';
 import { PageDto } from '../../models/Pages';
 import { getPagesReferencingEntity } from '../../services/pageService';
+import { getProjectedHiddenCharacterFields } from '../../utils/characterVisibility';
 
 export type NormalizedPersonagem = ReturnType<typeof normalizePersonagem> | {
   // fallback shape for personagensService payloads (minimal)
@@ -12,6 +13,7 @@ export type NormalizedPersonagem = ReturnType<typeof normalizePersonagem> | {
   nome?: string;
   imagem?: string;
   historia?: any;
+  visivel?: boolean;
 };
 
 export const usePersonagem = (idParam?: string | undefined, source: 'public' | 'player' = 'public') => {
@@ -34,6 +36,7 @@ export const usePersonagem = (idParam?: string | undefined, source: 'public' | '
         // API may return payload or wrapper
         const payload = (res as any)?.personagem ?? res;
         if (payload) {
+          const visibilidade = (payload as any).visibilidade ?? (payload as any).Visibilidade;
           // Build a raw object compatible with normalizePersonagem
           const raw = {
             idpersonagemJogador: (payload as any).idpersonagemJogador ?? (payload as any).idpersonagem ?? idParam,
@@ -70,7 +73,10 @@ export const usePersonagem = (idParam?: string | undefined, source: 'public' | '
             passiva: (payload as any).passiva ?? (payload as any).Passiva ?? undefined,
             ultimate: (payload as any).ultimate ?? (payload as any).Ultimate ?? undefined,
             sistemaRuntime: (payload as any).sistemaRuntime ?? (payload as any).SistemaRuntime ?? null,
-            visivel: (payload as any).visivel ?? true,
+            visivel: (payload as any).visivel ?? (payload as any).Visivel ?? true,
+            visibilidade,
+            camposOcultosProjetados: getProjectedHiddenCharacterFields(payload, visibilidade),
+            implantes: (payload as any).implantes ?? (payload as any).Implantes ?? undefined,
           } as any;
 
           const normalized = normalizePersonagem(raw as any);

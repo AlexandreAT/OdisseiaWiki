@@ -5,6 +5,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import TuneIcon from '@mui/icons-material/Tune';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
 import toast from 'react-hot-toast';
 import { ConfirmDialog } from '../../../../components/Generic/ConfirmDialog/ConfirmDialog';
 import { PersonagemJogador } from '../../../../models/PersonagemJogador';
@@ -25,6 +26,8 @@ import {
   SyncIconBadge,
 } from './CharacterEdit.style';
 import { SystemRuntimeIndicator } from '../../../../components/Generic/SystemRuntimeIndicator';
+import { CharacterVisibilityModal } from '../../../../components/CharacterVisibility';
+import { atualizarVisibilidadeGeralPersonagem } from '../../../../services/personagemVisibilidadeService';
 
 interface UserCharactersProps {
   theme: 'dark' | 'light';
@@ -43,6 +46,8 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, initialStep = 1
   const [raceError, setRaceError] = React.useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
+  const [visibilityModalOpen, setVisibilityModalOpen] = React.useState(false);
+  const [isUpdatingGlobalVisibility, setIsUpdatingGlobalVisibility] = React.useState(false);
   const hasSnapshotInitializedRef = React.useRef(false);
   const saveInFlightRef = React.useRef(false);
 
@@ -102,6 +107,8 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, initialStep = 1
         listItens, handleSelectItem,
         selectedMesa,
         runtimeContext, runtimeLoading, runtimeError,
+        visivel,
+        setVisivel,
     } = useFormUserCharacter(userId, onSave, personagem);
 
     // Debug logs and temporary race-filter removed
@@ -240,6 +247,34 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, initialStep = 1
       }
     }, [onBack, onSave, personagem.idpersonagemJogador]);
 
+    const handleGlobalVisibilityToggle = React.useCallback(async () => {
+      if (isUpdatingGlobalVisibility) return;
+
+      const nextVisibility = !visivel;
+      setIsUpdatingGlobalVisibility(true);
+
+      try {
+        const savedVisibility = await atualizarVisibilidadeGeralPersonagem(
+          'jogador',
+          personagem.idpersonagemJogador,
+          nextVisibility,
+        );
+        setVisivel(savedVisibility);
+        toast.success(
+          savedVisibility
+            ? 'Personagem visível para outros usuários.'
+            : 'Personagem oculto para outros usuários.',
+        );
+      } catch (requestError: unknown) {
+        toast.error(getApiErrorMessage(
+          requestError,
+          'Não foi possível atualizar a visibilidade do personagem.',
+        ));
+      } finally {
+        setIsUpdatingGlobalVisibility(false);
+      }
+    }, [isUpdatingGlobalVisibility, personagem.idpersonagemJogador, setVisivel, visivel]);
+
     return (
         <FormController marginTop="0px" onSubmit={(e) => e.preventDefault()}>
             <CharacterEditActions aria-label="Opções do personagem">
@@ -254,19 +289,22 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, initialStep = 1
               </CharacterOptionButton>
               <CharacterOptionButton
                 type="button"
-                disabled
-                title="Configuração de visibilidade disponível em breve"
+                onClick={() => setVisibilityModalOpen(true)}
+                disabled={isSubmitting || isUpdatingGlobalVisibility}
+                title="Configurar os dados visíveis da ficha"
               >
                 <TuneIcon />
                 <span>Dados visíveis</span>
               </CharacterOptionButton>
               <CharacterOptionButton
                 type="button"
-                disabled
-                title="Configuração de visibilidade disponível em breve"
+                onClick={() => void handleGlobalVisibilityToggle()}
+                disabled={isSubmitting || isUpdatingGlobalVisibility}
+                aria-pressed={visivel}
+                title={visivel ? 'Ocultar personagem para outros usuários' : 'Exibir personagem para outros usuários'}
               >
-                <VisibilityOutlinedIcon />
-                <span>Personagem visível</span>
+                {visivel ? <VisibilityOutlinedIcon /> : <VisibilityOffOutlinedIcon />}
+                <span>{visivel ? 'Personagem visível' : 'Personagem oculto'}</span>
               </CharacterOptionButton>
             </CharacterEditActions>
 
@@ -451,6 +489,15 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, initialStep = 1
               onConfirm={handleDelete}
               onCancel={() => setDeleteDialogOpen(false)}
               isLoading={isDeleting}
+            />
+            <CharacterVisibilityModal
+              open={visibilityModalOpen}
+              characterId={personagem.idpersonagemJogador}
+              characterType="jogador"
+              characterName={userName || personagem.nome}
+              theme={theme}
+              neon={neon}
+              onClose={() => setVisibilityModalOpen(false)}
             />
         </FormController>
     )

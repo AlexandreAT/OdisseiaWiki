@@ -24,7 +24,12 @@ public sealed record WikiGraphCharacterRecord(
     bool Visible,
     int RaceId,
     int? CityId,
-    string? LinkedCharactersJson);
+    string? LinkedCharactersJson,
+    bool NomeVisivel = true,
+    bool ImagemVisivel = true,
+    bool RacaVisivel = true,
+    bool CidadeVisivel = true,
+    bool PersonagensRelacionadosVisivel = true);
 
 public sealed record WikiGraphRaceRecord(int Id, string? Name, string? Image, bool Visible);
 

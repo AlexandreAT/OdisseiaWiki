@@ -27,13 +27,14 @@ public sealed class PersonagemComparacaoDto
 {
     public int Id { get; set; }
     public PersonagemComparacaoOrigem Origem { get; set; }
-    public string Nome { get; set; } = null!;
+    public string? Nome { get; set; }
     public string? Imagem { get; set; }
     public int? IdMesa { get; set; }
     public string? MesaNome { get; set; }
     public int QuantidadeSkills { get; set; }
     public PersonagemComparacaoStatusDto Status { get; set; } = new();
     public PersonagemComparacaoSistemaDto? SistemaRuntime { get; set; }
+    public PersonagemVisibilidadeDto Visibilidade { get; set; } = PersonagemVisibilidadeDefaults.Npc();
 }
 
 public sealed class PersonagemComparacaoSistemaDto
