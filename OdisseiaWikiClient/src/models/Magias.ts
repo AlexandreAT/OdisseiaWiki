@@ -11,6 +11,9 @@ export interface Magia {
   tipo: MagiaTipoString;
   elemento?: MagiaElemento[];
   custo?: string;
+  imagem?: string;
+  /** Arquivo temporário de uma imagem personalizada da ficha. Nunca é enviado no JSON. */
+  imagemArquivo?: File;
   atributos?: Record<string, any>;
 }
 

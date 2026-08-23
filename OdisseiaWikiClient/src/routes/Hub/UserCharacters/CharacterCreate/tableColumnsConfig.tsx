@@ -10,8 +10,58 @@ import { atributosFormMap, atributosMagiaFormMap, atributosSkillFormMap } from '
 import { ItemTableGeneralAttributes } from '../../../Management/ManagementWiki/WikiForms/FormCriarConteúdo/FormCharacter/FormCharacter.style';
 import { getTextPreview } from '../../../../utils/richTextHelpers';
 import { InputText } from '../../../../components/Generic/InputText/InputText';
+import { ImageUploader } from '../../../../components/Generic/ImageUploader/ImageUploader';
+import { CropPreset } from '../../../../components/Generic/ImageUploader/types';
 import { SistemaRuntimeContexto } from '../../../../models/SistemaRpg';
 import { getRuntimeMagicTypeOptions } from '../../../../utils/systemRuntimeCharacter';
+
+const characterEntryImageCropPreset: CropPreset = {
+  mode: 'single',
+  aspectRatio: 1,
+  shape: 'square',
+  displayShape: 'square',
+  label: 'Quadrado (1:1)',
+};
+
+type CharacterEntryWithImage = {
+  imagem?: string;
+  imagemArquivo?: File;
+};
+
+const CharacterEntryImageUploader = <T extends CharacterEntryWithImage,>({
+  row,
+  onRowChange,
+  theme,
+  neon,
+}: {
+  row: T;
+  onRowChange: (row: T) => void;
+  theme: 'dark' | 'light';
+  neon: 'on' | 'off';
+}) => (
+  <ItemTableGeneralAttributes theme={theme} neon={neon}>
+    <div style={{ width: 'min(100%, 260px)', margin: '0 auto' }}>
+      <ImageUploader
+        theme={theme}
+        neon={neon}
+        cropPreset={characterEntryImageCropPreset}
+        initialImage={row.imagem}
+        label="Imagem personalizada"
+        mobileSize="compact"
+        onImageCropped={({ file, preview }) => onRowChange({
+          ...row,
+          imagem: preview,
+          imagemArquivo: file,
+        })}
+        onRemove={() => onRowChange({
+          ...row,
+          imagem: undefined,
+          imagemArquivo: undefined,
+        })}
+      />
+    </div>
+  </ItemTableGeneralAttributes>
+);
 
 const RichTextCellEditor = memo(({ 
   value, 
@@ -165,6 +215,7 @@ const ItemAtributosEditor = memo(({
               width="100%"
             />
           </ItemTableGeneralAttributes>
+          <CharacterEntryImageUploader row={row} onRowChange={onRowChange} theme={theme} neon={neon} />
           <FormComponent value={attributesWithEffect} onChange={onChange} theme={theme} neon={neon} />
         </Modal>
       )}
@@ -176,19 +227,23 @@ const ItemAtributosEditor = memo(({
          prevProps.row.tipo === nextProps.row.tipo &&
          prevProps.row.nome === nextProps.row.nome &&
          prevProps.row.efeito === nextProps.row.efeito &&
-         prevProps.row.discricao === nextProps.row.discricao;
+         prevProps.row.discricao === nextProps.row.discricao &&
+         prevProps.row.imagem === nextProps.row.imagem &&
+         prevProps.row.imagemArquivo === nextProps.row.imagemArquivo;
 });
 
 const SkillAtributosEditor = memo(({ 
   row, 
   value, 
   onChange, 
+  onRowChange,
   theme, 
   neon 
 }: { 
   row: Skills; 
   value: any; 
   onChange: (v: any) => void; 
+  onRowChange: (row: Skills) => void;
   theme: 'dark' | 'light'; 
   neon: 'on' | 'off';
 }) => {
@@ -211,6 +266,7 @@ const SkillAtributosEditor = memo(({
           neon={neon}
           mobileInset
         >
+          <CharacterEntryImageUploader row={row} onRowChange={onRowChange} theme={theme} neon={neon} />
           <FormComponent value={value} onChange={onChange} theme={theme} neon={neon} />
         </Modal>
       )}
@@ -219,19 +275,23 @@ const SkillAtributosEditor = memo(({
 }, (prevProps, nextProps) => {
   return prevProps.value === nextProps.value && 
          prevProps.row.tipo === nextProps.row.tipo &&
-         prevProps.row.nome === nextProps.row.nome;
+         prevProps.row.nome === nextProps.row.nome &&
+         prevProps.row.imagem === nextProps.row.imagem &&
+         prevProps.row.imagemArquivo === nextProps.row.imagemArquivo;
 });
 
 const MagiaAtributosEditor = memo(({ 
   row, 
   value, 
   onChange, 
+  onRowChange,
   theme, 
   neon 
 }: { 
   row: Magia; 
   value: any; 
   onChange: (v: any) => void; 
+  onRowChange: (row: Magia) => void;
   theme: 'dark' | 'light'; 
   neon: 'on' | 'off';
 }) => {
@@ -254,6 +314,7 @@ const MagiaAtributosEditor = memo(({
           neon={neon}
           mobileInset
         >
+          <CharacterEntryImageUploader row={row} onRowChange={onRowChange} theme={theme} neon={neon} />
           <FormComponent value={value} onChange={onChange} theme={theme} neon={neon} />
         </Modal>
       )}
@@ -262,7 +323,9 @@ const MagiaAtributosEditor = memo(({
 }, (prevProps, nextProps) => {
   return prevProps.value === nextProps.value && 
          prevProps.row.tipo === nextProps.row.tipo &&
-         prevProps.row.nome === nextProps.row.nome;
+         prevProps.row.nome === nextProps.row.nome &&
+         prevProps.row.imagem === nextProps.row.imagem &&
+         prevProps.row.imagemArquivo === nextProps.row.imagemArquivo;
 });
 
 const baseItemColumns = [
@@ -418,8 +481,8 @@ export const createSkillsColumns = (
   {
     key: "atributos",
     label: "Atributos",
-    customRender: (value: any, row: Skills, onChange: (v: any) => void) => (
-      <SkillAtributosEditor row={row} value={value} onChange={onChange} theme={theme} neon={neon} />
+    customRender: (value: any, row: Skills, onChange: (v: any) => void, onRowChange: (row: Skills) => void) => (
+      <SkillAtributosEditor row={row} value={value} onChange={onChange} onRowChange={onRowChange} theme={theme} neon={neon} />
     )
   } as any,
 ];
@@ -455,8 +518,8 @@ export const createMagiasColumns = (
   {
     key: "atributos",
     label: "Atributos",
-    customRender: (value: any, row: Magia, onChange: (v: any) => void) => (
-      <MagiaAtributosEditor row={row} value={value} onChange={onChange} theme={theme} neon={neon} />
+    customRender: (value: any, row: Magia, onChange: (v: any) => void, onRowChange: (row: Magia) => void) => (
+      <MagiaAtributosEditor row={row} value={value} onChange={onChange} onRowChange={onRowChange} theme={theme} neon={neon} />
     )
   } as any,
 ];

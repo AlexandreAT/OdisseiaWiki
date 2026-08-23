@@ -21,7 +21,11 @@ export const ModalOverlay = styled.div<Props>`
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  /*
+   * O recorte também é aberto dentro de modais de atributos (z-index: 10000).
+   * Ele precisa ficar acima deles para que a confirmação do crop seja possível.
+   */
+  z-index: 11000;
   overscroll-behavior: contain;
 
   @media (max-width: 768px) {

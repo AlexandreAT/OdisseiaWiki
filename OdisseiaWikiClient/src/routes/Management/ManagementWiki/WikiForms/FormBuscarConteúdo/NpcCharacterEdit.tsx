@@ -12,6 +12,7 @@ import { generateId } from '../../../../Hub/UserCharacters/CharacterCreate/helpe
 import { FloatingActions, FloatingSaveButton, SyncIconBadge } from '../../../../Hub/UserCharacters/CharacterEdit/CharacterEdit.style';
 import { FormController, FormEditController, NavegationButtons } from '../../../../Hub/UserCharacters/CharacterCreate/FormUserCharacter/FormUserCharacter.style';
 import { saveAsset } from '../../../../../services/assetsService';
+import { persistCharacterEntryImages } from '../../../../../services/characterEntryImageService';
 import { atualizarPersonagem, getPersonagemById, getPersonagens, PersonagemPayload, PersonagemUpdatePayload } from '../../../../../services/personagensService';
 import { normalizeToJSONContent, prepareForAPI } from '../../../../../utils/richTextHelpers';
 import { normalizeCharacterStatusExtras } from '../../../../../utils/characterStatus';
@@ -595,7 +596,23 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
 
 
 
-      const inventarioMapped = itens.map((item) => ({
+      const itensComImagens = await persistCharacterEntryImages(itens, {
+        assetType: 'personagens',
+        entityName: userName,
+        resolveFolderName: (item) => item.tipo === 'implante' ? 'proteses' : 'inventario',
+      });
+      const skillsComImagens = await persistCharacterEntryImages(skills, {
+        assetType: 'personagens',
+        entityName: userName,
+        resolveFolderName: () => 'skills',
+      });
+      const magiasComImagens = await persistCharacterEntryImages(magias, {
+        assetType: 'personagens',
+        entityName: userName,
+        resolveFolderName: () => 'magias',
+      });
+
+      const inventarioMapped = itensComImagens.map(({ imagemArquivo: _imagemArquivo, ...item }) => ({
         id: item.id ?? generateId(),
         idItemBase: item.idItemBase ?? undefined,
         nome: item.nome ?? 'Item',
@@ -611,7 +628,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
         atributos: item.atributos ?? {},
       }));
 
-      const skillsMapped = skills.filter((skill) => Boolean(skill.nome?.trim())).map((skill) => {
+      const skillsMapped = skillsComImagens.filter((skill) => Boolean(skill.nome?.trim())).map(({ imagemArquivo: _imagemArquivo, ...skill }) => {
         const serializedEffect = serializeRichText((skill as any).efeito);
 
         return {
@@ -622,6 +639,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
           elemento: Array.isArray(skill.elemento) ? skill.elemento : ['normal'],
           custo: skill.custo ?? '',
           nivel: Number(skill.nivel) || 1,
+          imagem: skill.imagem ?? undefined,
           atributos: {
             ...(skill.atributos ?? {}),
             __efeitoRichText: serializedEffect,
@@ -629,7 +647,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
         };
       });
 
-      const magiasMapped = magias.filter((magia) => Boolean(magia.nome?.trim())).map((magia) => {
+      const magiasMapped = magiasComImagens.filter((magia) => Boolean(magia.nome?.trim())).map(({ imagemArquivo: _imagemArquivo, ...magia }) => {
         const serializedEffect = serializeRichText((magia as any).efeito);
 
         return {
@@ -639,6 +657,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
           tipo: magia.tipo ?? 'suporte',
           elemento: Array.isArray(magia.elemento) ? magia.elemento : ['normal'],
           custo: magia.custo ?? '',
+          imagem: magia.imagem ?? undefined,
           atributos: {
             ...(magia.atributos ?? {}),
             __efeitoRichText: serializedEffect,

@@ -2,6 +2,7 @@ import { mapToItem } from './../../../../utils/mapItem';
 import { getRacas, normalizeRacaStatus, resolveRacaCharacterStatus, RacaPayload, RacaStatus } from './../../../../services/racasService';
 import { CidadePayload, getCidades } from './../../../../services/cidadesService';
 import { saveAsset } from './../../../../services/assetsService';
+import { persistCharacterEntryImages } from '../../../../services/characterEntryImageService';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { personagensMock } from '../../../../Mock/characters.mock';
 import { CharacterFormData, CharacterFormErrors } from './FormUserCharacter/FormUserCharacter.type';
@@ -745,9 +746,25 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
 
       const statusForPayload = buildStatusForPayload();
 
-      const inventarioMapped = mapInventoryForPayload(itens);
-      const magiaMapped = mapMagiasForPayload(magias);
-      const skillMapped = mapSkillsForPayload(skills);
+      const inventarioComImagens = await persistCharacterEntryImages(itens, {
+        assetType: 'personagemjogador',
+        entityName: userName,
+        resolveFolderName: (item) => item.tipo === 'implante' ? 'proteses' : 'inventario',
+      });
+      const magiasComImagens = await persistCharacterEntryImages(magias, {
+        assetType: 'personagemjogador',
+        entityName: userName,
+        resolveFolderName: () => 'magias',
+      });
+      const skillsComImagens = await persistCharacterEntryImages(skills, {
+        assetType: 'personagemjogador',
+        entityName: userName,
+        resolveFolderName: () => 'skills',
+      });
+
+      const inventarioMapped = mapInventoryForPayload(inventarioComImagens);
+      const magiaMapped = mapMagiasForPayload(magiasComImagens);
+      const skillMapped = mapSkillsForPayload(skillsComImagens);
 
       const payload: PersonagemJogadorPayload = {
         nome: userName,
@@ -857,9 +874,25 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
 
       const statusForPayload = buildStatusForPayload();
 
-      const inventarioMapped = mapInventoryForPayload(itens);
-      const magiaMapped = mapMagiasForPayload(magias);
-      const skillMapped = mapSkillsForPayload(skills);
+      const inventarioComImagens = await persistCharacterEntryImages(itens, {
+        assetType: 'personagemjogador',
+        entityName: userName,
+        resolveFolderName: (item) => item.tipo === 'implante' ? 'proteses' : 'inventario',
+      });
+      const magiasComImagens = await persistCharacterEntryImages(magias, {
+        assetType: 'personagemjogador',
+        entityName: userName,
+        resolveFolderName: () => 'magias',
+      });
+      const skillsComImagens = await persistCharacterEntryImages(skills, {
+        assetType: 'personagemjogador',
+        entityName: userName,
+        resolveFolderName: () => 'skills',
+      });
+
+      const inventarioMapped = mapInventoryForPayload(inventarioComImagens);
+      const magiaMapped = mapMagiasForPayload(magiasComImagens);
+      const skillMapped = mapSkillsForPayload(skillsComImagens);
 
       const payload: PersonagemJogadorPayload = {
         nome: userName,
