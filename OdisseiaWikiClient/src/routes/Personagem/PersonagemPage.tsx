@@ -281,6 +281,9 @@ const getAbilityEffect = (ability: any) => (
 
 const AbilityItem: React.FC<AbilityItemProps> = ({ ability, index, type, color, onOpenDescription }) => {
   const effect = getAbilityEffect(ability);
+  const image = typeof ability?.imagem === 'string' && ability.imagem.trim()
+    ? ability.imagem.trim()
+    : undefined;
   const clearColor = type === 'skills'
     ? 'var(--clearneonCyan)'
     : type === 'proficiencias'
@@ -290,6 +293,7 @@ const AbilityItem: React.FC<AbilityItemProps> = ({ ability, index, type, color, 
 
   return (
     <ItemRow $clickable={Boolean(onOpenDescription)} $color={color} $clearColor={clearColor} onClick={() => onOpenDescription?.({ ...ability, __detailType: type === 'proficiencias' ? 'proficiency' : 'ability', descricao: type === 'proficiencias' ? ability.descricao : '', tipo: 'outro', quantidade: 1 } as Item)}>
+      {image && <ItemThumb $color={color} $clearColor={clearColor} src={normalizeImagePath(image)} alt={ability.nome ?? fallbackName} />}
       <FlexFill>
       <BoldLabel $color={color}>{ability.nome ?? ability.titulo ?? `${fallbackName} ${index + 1}`}</BoldLabel>
       {effect ? <ItemDescriptionPreview><RichTextDisplay content={effect} /></ItemDescriptionPreview> : <ItemDescriptionPreview>Sem efeito registrado.</ItemDescriptionPreview>}
@@ -1112,8 +1116,8 @@ const PersonagemPage: React.FC = () => {
                 </HistoryModalActions>
               </HistoryModalHeader>
               <HistoryModalContent theme={theme} neon={neon}>
-                <ItemDescriptionLayout $withoutMedia={isSelectedAbility || !selectedInventoryItemImage}>
-                  {!isSelectedAbility && selectedInventoryItemImage && (
+                <ItemDescriptionLayout $withoutMedia={!selectedInventoryItemImage}>
+                  {selectedInventoryItemImage && (
                     <ItemDescriptionImage src={normalizeImagePath(selectedInventoryItemImage)} alt={selectedInventoryItem.nome} />
                   )}
                   <ItemDetailsBody>

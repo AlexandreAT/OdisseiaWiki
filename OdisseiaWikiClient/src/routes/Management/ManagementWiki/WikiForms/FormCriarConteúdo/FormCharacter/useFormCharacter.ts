@@ -4,6 +4,7 @@ import { RacaPayload } from './../../../../../../services/racasService';
 import { CidadePayload, getCidades } from './../../../../../../services/cidadesService';
 import { PersonagemCreatePayload, getPersonagens } from './../../../../../../services/personagensService';
 import { saveAsset } from './../../../../../../services/assetsService';
+import { persistCharacterEntryImages } from './../../../../../../services/characterEntryImageService';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { CharacterFormData, CharacterFormErrors } from './FormCharacter.type';
 import toast from 'react-hot-toast';
@@ -482,7 +483,23 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType, idEnti
         capacidadeCarga: statusBasico.capacidadeCarga,
       };
 
-      const inventarioMapped: Item[] = itens.map((it) => ({
+      const itensComImagens = await persistCharacterEntryImages(itens, {
+        assetType: 'personagens',
+        entityName: userName,
+        resolveFolderName: (item) => item.tipo === 'implante' ? 'proteses' : 'inventario',
+      });
+      const magiasComImagens = await persistCharacterEntryImages(magias, {
+        assetType: 'personagens',
+        entityName: userName,
+        resolveFolderName: () => 'magias',
+      });
+      const skillsComImagens = await persistCharacterEntryImages(skills, {
+        assetType: 'personagens',
+        entityName: userName,
+        resolveFolderName: () => 'skills',
+      });
+
+      const inventarioMapped: Item[] = itensComImagens.map(({ imagemArquivo: _imagemArquivo, ...it }) => ({
         id: it.id ?? generateId(),
         idItemBase: it.idItemBase ?? undefined,
         nome: it.nome ?? "Item",
@@ -499,7 +516,7 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType, idEnti
       }));
       console.log("🚀 ~ handleSubmit ~ inventarioMapped:", inventarioMapped)
 
-      const magiaMapped: Magia[] = magias.filter((magia) => Boolean(magia.nome?.trim())).map((magia) => {
+      const magiaMapped: Magia[] = magiasComImagens.filter((magia) => Boolean(magia.nome?.trim())).map(({ imagemArquivo: _imagemArquivo, ...magia }) => {
         const serializedEffect = serializeRichText((magia as any).efeito);
 
         return {
@@ -509,6 +526,7 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType, idEnti
         tipo: (magia.tipo as MagiaTipoString) ?? "suporte",
         elemento: (magia.elemento as MagiaElemento[]) ?? ["normal"],
         custo: magia.custo ?? "",
+        imagem: magia.imagem ?? undefined,
         atributos: {
           ...(magia.atributos ?? {}),
           __efeitoRichText: serializedEffect,
@@ -516,7 +534,7 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType, idEnti
       };
       });
 
-      const skillMapped: Skills[] = skills.filter((skill) => Boolean(skill.nome?.trim())).map((skill) => {
+      const skillMapped: Skills[] = skillsComImagens.filter((skill) => Boolean(skill.nome?.trim())).map(({ imagemArquivo: _imagemArquivo, ...skill }) => {
         const serializedEffect = serializeRichText((skill as any).efeito);
 
         return {
@@ -527,6 +545,7 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType, idEnti
         elemento: (skill.elemento as SkillElemento[]) ?? ["normal"],
         custo: skill.custo ?? "",
         nivel: skill.nivel ?? 1,
+        imagem: skill.imagem ?? undefined,
         atributos: {
           ...(skill.atributos ?? {}),
           __efeitoRichText: serializedEffect,

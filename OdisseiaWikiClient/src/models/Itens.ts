@@ -63,6 +63,8 @@ export interface Item {
   /** @deprecated O valor canônico agora fica em atributos.efeito. */
   efeito?: string;
   imagem?: string;
+  /** Arquivo temporário de uma imagem personalizada da ficha. Nunca é enviado no JSON. */
+  imagemArquivo?: File;
   atributos?: ItemAtributos | Record<string, any>;
   tags?: string[];
   visivel?: boolean;

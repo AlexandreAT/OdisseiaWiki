@@ -8,7 +8,7 @@ export const generateId = () =>
     : Math.random().toString(36).slice(2, 10);
 
 export const mapInventoryForPayload = (itens: Item[]): Item[] => {
-  return itens.map((it) => ({
+  return itens.map(({ imagemArquivo: _imagemArquivo, ...it }) => ({
     ...it,
     id: it.id ?? generateId(),
     idItemBase: it.idItemBase ?? undefined,
@@ -25,7 +25,7 @@ export const mapInventoryForPayload = (itens: Item[]): Item[] => {
 };
 
 export const mapMagiasForPayload = (magias: Magia[]): Magia[] => {
-  return magias.map((magia) => ({
+  return magias.map(({ imagemArquivo: _imagemArquivo, ...magia }) => ({
     ...magia,
     id: magia.id ?? generateId(),
     nome: magia.nome ?? "Magia",
@@ -33,12 +33,13 @@ export const mapMagiasForPayload = (magias: Magia[]): Magia[] => {
     tipo: (magia.tipo as MagiaTipoString) ?? "suporte",
     elemento: (magia.elemento as MagiaElemento[]) ?? ["normal"],
     custo: magia.custo ?? "",
+    imagem: magia.imagem ?? undefined,
     atributos: magia.atributos ?? {},
   }));
 };
 
 export const mapSkillsForPayload = (skills: Skills[]): Skills[] => {
-  return skills.map((skill) => ({
+  return skills.map(({ imagemArquivo: _imagemArquivo, ...skill }) => ({
     ...skill,
     id: skill.id ?? generateId(),
     nome: skill.nome ?? "Skill",
@@ -47,6 +48,7 @@ export const mapSkillsForPayload = (skills: Skills[]): Skills[] => {
     elemento: (skill.elemento as SkillElemento[]) ?? ["normal"],
     custo: skill.custo ?? "",
     nivel: skill.nivel ?? 1,
+    imagem: skill.imagem ?? undefined,
     atributos: skill.atributos ?? {},
   }));
 };

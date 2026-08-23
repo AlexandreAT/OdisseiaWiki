@@ -12,6 +12,9 @@ export interface Skills {
   elemento?: SkillElemento[];
   custo?: string;
   nivel?: number;
+  imagem?: string;
+  /** Arquivo temporário de uma imagem personalizada da ficha. Nunca é enviado no JSON. */
+  imagemArquivo?: File;
   atributos?: Record<string, any>;
 }
 
