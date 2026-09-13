@@ -85,6 +85,7 @@ export const CharacterExplodedView = ({
   neon,
   character,
   items,
+  itemCatalog = [],
   setItems,
   skills,
   setSkills,
@@ -176,13 +177,14 @@ export const CharacterExplodedView = ({
       eyebrow: entry.tipo,
       equipped: Boolean(getExplodedMeta(entry).equippedSlot),
       position: getExplodedMeta(entry).position,
+      gridPosition: getExplodedMeta(entry).gridPosition,
       source: entry,
     };
   });
   }, [tabEntries, tabEntryKeys]);
   // A capacidade da ficha mede a mochila. Próteses instaladas têm sua própria
   // seção e não entram na mesma soma usada pela PersonagemPage.
-  const weight = getInventoryWeight(inventoryItems);
+  const weight = getInventoryWeight(inventoryItems, itemCatalog);
   const capacity = Math.max(0, Number(character.loadCapacity) || 0);
   const percentage = capacity > 0 ? Math.min(100, (weight / capacity) * 100) : 0;
 
@@ -220,6 +222,17 @@ export const CharacterExplodedView = ({
     }));
   }, [tab, tabEntries, tabEntryKeys, updateTabEntries]);
 
+  const handleGridPositionsChange = useCallback((updatedEntries: ExplodedViewEntry[]) => {
+    updateTabEntries(updatedEntries.map((entry) => {
+      const existingMeta = getExplodedMeta(entry.source);
+      const transientKey = entry.id.replace(`${tab}:`, '');
+      return withExplodedMeta(entry.source, {
+        gridPosition: entry.gridPosition,
+        clientKey: existingMeta.clientKey ?? transientKey,
+      });
+    }));
+  }, [tab, updateTabEntries]);
+
   const openEntry = useCallback((entry: ExplodedViewEntry) => {
     if (tab !== 'items' && tab !== 'prostheses') return;
     onOpenItem?.(entry.source as Item);
@@ -234,9 +247,8 @@ export const CharacterExplodedView = ({
 
   const equipCandidates = useMemo(() => {
     if (!selectedSlot) return [];
-    const source = selectedSlot.startsWith('implant-') ? prostheses : inventoryItems;
     const normalizedSearch = search.trim().toLocaleLowerCase('pt-BR');
-    return source.filter((item) => (
+    return [...inventoryItems, ...prostheses].filter((item) => (
       !normalizedSearch || item.nome.toLocaleLowerCase('pt-BR').includes(normalizedSearch)
     ));
   }, [inventoryItems, prostheses, search, selectedSlot]);
@@ -371,7 +383,7 @@ export const CharacterExplodedView = ({
                   <OrganizedInventoryGrid
                     entries={viewEntries}
                     emptyMessage="Nenhum registro preenchido nesta categoria."
-                    onReorder={(updated) => updateTabEntries(updated.map(({ source }) => source))}
+                    onPositionsChange={handleGridPositionsChange}
                     onEntryClick={openEntry}
                   />
                 )}

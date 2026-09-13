@@ -9,6 +9,7 @@ namespace OdisseiaWiki.Repositories.Interfaces
         Task<PersonagemJogador?> GetByIdAsync(int id);
         Task<PersonagemJogador?> GetByIdWithDetailsAsync(int id);
         Task<List<PersonagemJogador>> GetByUsuarioIdAsync(int usuarioId);
+        Task<List<PersonagemJogador>> GetByMesaIdAsync(int mesaId);
         Task<Dictionary<int, List<Proficiencia>>> GetProficienciasByPersonagemIdsAsync(IEnumerable<int> personagemIds);
         Task<PersonagemJogador> CreateAsync(PersonagemJogador personagem);
         Task<PersonagemJogador> UpdateAsync(PersonagemJogador personagem);

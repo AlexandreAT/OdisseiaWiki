@@ -26,6 +26,10 @@ namespace OdisseiaWiki.Repositories
         public async Task<Mesa?> GetByIdAsync(int id)
             => await _context.Mesas.FindAsync(id);
 
+        public Task<Mesa?> GetDetailedByIdAsync(int id)
+            => DetailedQuery()
+                .FirstOrDefaultAsync(mesa => mesa.Idmesa == id);
+
         public Task<Mesa?> GetByCodigoSistemaAsync(string codigoSistema)
             => _context.Mesas.FirstOrDefaultAsync(mesa => mesa.CodigoSistema == codigoSistema);
 
@@ -204,6 +208,14 @@ namespace OdisseiaWiki.Repositories
                  _context.Mesausuarios.Any(vinculo =>
                     vinculo.Idmesa == idMesa && vinculo.Idusuario == idUsuario)));
 
+        public Task<bool> UsuarioPodeAcessarMesaSocialAsync(int idMesa, int idUsuario)
+            => _context.Mesas.AnyAsync(mesa =>
+                mesa.Idmesa == idMesa &&
+                !mesa.PadraoSistema &&
+                (mesa.IdusuarioCriacao == idUsuario ||
+                 _context.Mesausuarios.Any(vinculo =>
+                    vinculo.Idmesa == idMesa && vinculo.Idusuario == idUsuario)));
+
         public Task<List<Mesa>> GetAccessibleByUsuarioIdAsync(int usuarioId)
             => _context.Mesas
                 .AsNoTracking()
@@ -221,6 +233,309 @@ namespace OdisseiaWiki.Repositories
                 .Where(m => m.IdusuarioCriacao == usuarioId)
                 .ToListAsync();
         }
+
+        public async Task<(List<Mesa> Itens, int Total)> GetOwnedPageAsync(
+            int usuarioId,
+            int pagina,
+            int tamanhoPagina)
+        {
+            IQueryable<Mesa> query = DetailedQuery()
+                .Where(mesa =>
+                    !mesa.PadraoSistema &&
+                    mesa.IdusuarioCriacao == usuarioId);
+
+            int total = await query.CountAsync();
+            List<Mesa> itens = await query
+                .OrderByDescending(mesa => mesa.DataAtualizacao)
+                .ThenBy(mesa => mesa.Nome)
+                .Skip((pagina - 1) * tamanhoPagina)
+                .Take(tamanhoPagina)
+                .ToListAsync();
+            return (itens, total);
+        }
+
+        public async Task<(List<Mesa> Itens, int Total)> GetParticipatingPageAsync(
+            int usuarioId,
+            int pagina,
+            int tamanhoPagina)
+        {
+            IQueryable<Mesa> query = DetailedQuery()
+                .Where(mesa =>
+                    !mesa.PadraoSistema &&
+                    mesa.IdusuarioCriacao != usuarioId &&
+                    mesa.Mesausuarios.Any(vinculo => vinculo.Idusuario == usuarioId));
+
+            int total = await query.CountAsync();
+            List<Mesa> itens = await query
+                .OrderByDescending(mesa => mesa.DataAtualizacao)
+                .ThenBy(mesa => mesa.Nome)
+                .Skip((pagina - 1) * tamanhoPagina)
+                .Take(tamanhoPagina)
+                .ToListAsync();
+            return (itens, total);
+        }
+
+        public async Task<(List<Mesa> Itens, int Total)> SearchPageAsync(
+            string? termo,
+            int? idSistemaRpg,
+            bool somenteComVagas,
+            int pagina,
+            int tamanhoPagina)
+        {
+            IQueryable<Mesa> query = DetailedQuery()
+                .Where(mesa =>
+                    !mesa.PadraoSistema &&
+                    mesa.IdusuarioCriacao.HasValue &&
+                    mesa.IdSistemaVersao.HasValue &&
+                    mesa.SistemaVersao != null &&
+                    mesa.SistemaVersao.SistemaRpg.Ativo);
+
+            if (!string.IsNullOrWhiteSpace(termo))
+            {
+                string pattern = $"%{termo.Trim()}%";
+                query = query.Where(mesa =>
+                    EF.Functions.Like(mesa.Nome, pattern) ||
+                    (mesa.Descricao != null && EF.Functions.Like(mesa.Descricao, pattern)) ||
+                    (mesa.Tags != null && EF.Functions.Like(mesa.Tags, pattern)) ||
+                    (mesa.IdusuarioCriacaoNavigation != null &&
+                     (EF.Functions.Like(mesa.IdusuarioCriacaoNavigation.Nome, pattern) ||
+                      EF.Functions.Like(mesa.IdusuarioCriacaoNavigation.Nickname, pattern))));
+            }
+
+            if (idSistemaRpg.HasValue)
+                query = query.Where(mesa => mesa.SistemaVersao!.IdSistemaRpg == idSistemaRpg.Value);
+
+            if (somenteComVagas)
+                query = query.Where(mesa => mesa.Mesausuarios.Count < mesa.LimiteJogadores);
+
+            int total = await query.CountAsync();
+            List<Mesa> itens = await query
+                .OrderByDescending(mesa => mesa.DataAtualizacao)
+                .ThenBy(mesa => mesa.Nome)
+                .Skip((pagina - 1) * tamanhoPagina)
+                .Take(tamanhoPagina)
+                .ToListAsync();
+            return (itens, total);
+        }
+
+        public Task<SistemaVersao?> GetSelectableVersionAsync(int idSistemaVersao)
+            => _context.SistemaVersoes
+                .AsNoTracking()
+                .Include(versao => versao.SistemaRpg)
+                .FirstOrDefaultAsync(versao =>
+                    versao.IdSistemaVersao == idSistemaVersao &&
+                    versao.Status == SistemaVersaoStatus.Publicado &&
+                    versao.SistemaRpg.Ativo);
+
+        public Task<int> CountMembersAsync(int idMesa)
+            => _context.Mesausuarios.CountAsync(vinculo => vinculo.Idmesa == idMesa);
+
+        public Task<List<Mesausuario>> GetMembersAsync(int idMesa)
+            => _context.Mesausuarios
+                .AsNoTracking()
+                .Include(vinculo => vinculo.IdusuarioNavigation)
+                .Where(vinculo => vinculo.Idmesa == idMesa)
+                .OrderBy(vinculo => vinculo.IdusuarioNavigation!.Nome)
+                .ToListAsync();
+
+        public async Task<IReadOnlyDictionary<int, int>> GetMemberCharacterCountsAsync(int idMesa)
+            => await _context.PersonagemJogadores
+                .AsNoTracking()
+                .Where(personagem => personagem.Idmesa == idMesa)
+                .GroupBy(personagem => personagem.Idusuario)
+                .Select(grupo => new { IdUsuario = grupo.Key, Quantidade = grupo.Count() })
+                .ToDictionaryAsync(item => item.IdUsuario, item => item.Quantidade);
+
+        public async Task<HashSet<int>> GetParticipantUserIdsAsync(int idMesa)
+        {
+            Mesa? mesa = await _context.Mesas
+                .AsNoTracking()
+                .FirstOrDefaultAsync(item => item.Idmesa == idMesa);
+            HashSet<int> ids = (await _context.Mesausuarios
+                    .AsNoTracking()
+                    .Where(vinculo => vinculo.Idmesa == idMesa && vinculo.Idusuario.HasValue)
+                    .Select(vinculo => vinculo.Idusuario!.Value)
+                    .ToListAsync())
+                .ToHashSet();
+            if (mesa?.IdusuarioCriacao is int idMestre)
+                ids.Add(idMestre);
+            return ids;
+        }
+
+        public Task<List<MesaSolicitacaoEntrada>> GetRequestsAsync(int idMesa)
+            => _context.MesaSolicitacoesEntrada
+                .AsNoTracking()
+                .Include(solicitacao => solicitacao.Usuario)
+                .Where(solicitacao => solicitacao.Idmesa == idMesa)
+                .OrderBy(solicitacao => solicitacao.DataSolicitacao)
+                .ToListAsync();
+
+        public Task<MesaSolicitacaoEntrada?> GetUserRequestAsync(int idMesa, int idUsuario)
+            => _context.MesaSolicitacoesEntrada
+                .AsNoTracking()
+                .FirstOrDefaultAsync(solicitacao =>
+                    solicitacao.Idmesa == idMesa &&
+                    solicitacao.Idusuario == idUsuario);
+
+        public async Task<MesaParticipacaoPersistenciaResultado> CreateRequestAsync(
+            int idMesa,
+            int idUsuario,
+            string? mensagem)
+        {
+            var strategy = _context.Database.CreateExecutionStrategy();
+            return await strategy.ExecuteAsync(async () =>
+            {
+                await using var transaction = await _context.Database.BeginTransactionAsync(
+                    IsolationLevel.Serializable);
+                Mesa? mesa = await _context.Mesas
+                    .FirstOrDefaultAsync(item => item.Idmesa == idMesa && !item.PadraoSistema);
+                if (mesa is null)
+                    return MesaParticipacaoPersistenciaResultado.MesaNaoEncontrada;
+                if (mesa.IdusuarioCriacao == idUsuario)
+                    return MesaParticipacaoPersistenciaResultado.MestreNaoPodeSolicitarOuSerExpulso;
+                if (await _context.Mesausuarios.AnyAsync(vinculo =>
+                        vinculo.Idmesa == idMesa && vinculo.Idusuario == idUsuario))
+                    return MesaParticipacaoPersistenciaResultado.UsuarioJaParticipa;
+                if (await _context.MesaSolicitacoesEntrada.AnyAsync(solicitacao =>
+                        solicitacao.Idmesa == idMesa && solicitacao.Idusuario == idUsuario))
+                    return MesaParticipacaoPersistenciaResultado.SolicitacaoDuplicada;
+                if (await _context.Mesausuarios.CountAsync(vinculo => vinculo.Idmesa == idMesa) >= mesa.LimiteJogadores)
+                    return MesaParticipacaoPersistenciaResultado.MesaLotada;
+
+                _context.MesaSolicitacoesEntrada.Add(new MesaSolicitacaoEntrada
+                {
+                    Idmesa = idMesa,
+                    Idusuario = idUsuario,
+                    Mensagem = mensagem,
+                    DataSolicitacao = DateTime.UtcNow,
+                });
+                try
+                {
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+                    return MesaParticipacaoPersistenciaResultado.Sucesso;
+                }
+                catch (DbUpdateException)
+                {
+                    await transaction.RollbackAsync();
+                    _context.ChangeTracker.Clear();
+                    return MesaParticipacaoPersistenciaResultado.Conflito;
+                }
+            });
+        }
+
+        public async Task<MesaParticipacaoPersistenciaResultado> AcceptRequestAsync(
+            int idMesa,
+            int idSolicitacao,
+            int idMestre)
+        {
+            var strategy = _context.Database.CreateExecutionStrategy();
+            return await strategy.ExecuteAsync(async () =>
+            {
+                await using var transaction = await _context.Database.BeginTransactionAsync(
+                    IsolationLevel.Serializable);
+                Mesa? mesa = await _context.Mesas.FirstOrDefaultAsync(item => item.Idmesa == idMesa);
+                if (mesa is null)
+                    return MesaParticipacaoPersistenciaResultado.MesaNaoEncontrada;
+                if (mesa.IdusuarioCriacao != idMestre)
+                    return MesaParticipacaoPersistenciaResultado.MestreNaoAutorizado;
+
+                MesaSolicitacaoEntrada? solicitacao = await _context.MesaSolicitacoesEntrada
+                    .FirstOrDefaultAsync(item =>
+                        item.IdMesaSolicitacaoEntrada == idSolicitacao &&
+                        item.Idmesa == idMesa);
+                if (solicitacao is null)
+                    return MesaParticipacaoPersistenciaResultado.SolicitacaoNaoEncontrada;
+                if (await _context.Mesausuarios.AnyAsync(vinculo =>
+                        vinculo.Idmesa == idMesa && vinculo.Idusuario == solicitacao.Idusuario))
+                    return MesaParticipacaoPersistenciaResultado.UsuarioJaParticipa;
+                if (await _context.Mesausuarios.CountAsync(vinculo => vinculo.Idmesa == idMesa) >= mesa.LimiteJogadores)
+                    return MesaParticipacaoPersistenciaResultado.MesaLotada;
+
+                _context.Mesausuarios.Add(new Mesausuario
+                {
+                    Idmesa = idMesa,
+                    Idusuario = solicitacao.Idusuario,
+                    DataEntrada = DateTime.UtcNow,
+                });
+                _context.MesaSolicitacoesEntrada.Remove(solicitacao);
+                try
+                {
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+                    return MesaParticipacaoPersistenciaResultado.Sucesso;
+                }
+                catch (DbUpdateException)
+                {
+                    await transaction.RollbackAsync();
+                    _context.ChangeTracker.Clear();
+                    return MesaParticipacaoPersistenciaResultado.Conflito;
+                }
+            });
+        }
+
+        public async Task<MesaParticipacaoPersistenciaResultado> RefuseRequestAsync(
+            int idMesa,
+            int idSolicitacao,
+            int idMestre)
+        {
+            Mesa? mesa = await _context.Mesas.FindAsync(idMesa);
+            if (mesa is null)
+                return MesaParticipacaoPersistenciaResultado.MesaNaoEncontrada;
+            if (mesa.IdusuarioCriacao != idMestre)
+                return MesaParticipacaoPersistenciaResultado.MestreNaoAutorizado;
+            MesaSolicitacaoEntrada? solicitacao = await _context.MesaSolicitacoesEntrada
+                .FirstOrDefaultAsync(item =>
+                    item.IdMesaSolicitacaoEntrada == idSolicitacao &&
+                    item.Idmesa == idMesa);
+            if (solicitacao is null)
+                return MesaParticipacaoPersistenciaResultado.SolicitacaoNaoEncontrada;
+            _context.MesaSolicitacoesEntrada.Remove(solicitacao);
+            await _context.SaveChangesAsync();
+            return MesaParticipacaoPersistenciaResultado.Sucesso;
+        }
+
+        public async Task<MesaParticipacaoPersistenciaResultado> ExpelMemberAsync(
+            int idMesa,
+            int idUsuario,
+            int idMestre,
+            string motivo)
+        {
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            Mesa? mesa = await _context.Mesas.FindAsync(idMesa);
+            if (mesa is null)
+                return MesaParticipacaoPersistenciaResultado.MesaNaoEncontrada;
+            if (mesa.IdusuarioCriacao != idMestre)
+                return MesaParticipacaoPersistenciaResultado.MestreNaoAutorizado;
+            if (idUsuario == idMestre)
+                return MesaParticipacaoPersistenciaResultado.MestreNaoPodeSolicitarOuSerExpulso;
+            Mesausuario? vinculo = await _context.Mesausuarios.FirstOrDefaultAsync(item =>
+                item.Idmesa == idMesa && item.Idusuario == idUsuario);
+            if (vinculo is null)
+                return MesaParticipacaoPersistenciaResultado.UsuarioNaoParticipa;
+
+            _context.Mesausuarios.Remove(vinculo);
+            _context.MesaExpulsoesRegistro.Add(new MesaExpulsaoRegistro
+            {
+                Idmesa = idMesa,
+                Idusuario = idUsuario,
+                IdusuarioMestre = idMestre,
+                NomeMesa = mesa.Nome,
+                Motivo = motivo,
+                DataExpulsao = DateTime.UtcNow,
+            });
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+            return MesaParticipacaoPersistenciaResultado.Sucesso;
+        }
+
+        public Task<List<MesaExpulsaoRegistro>> GetExpulsionRecordsAsync(int idUsuario)
+            => _context.MesaExpulsoesRegistro
+                .AsNoTracking()
+                .Include(registro => registro.Mestre)
+                .Where(registro => registro.Idusuario == idUsuario)
+                .OrderByDescending(registro => registro.DataExpulsao)
+                .ToListAsync();
 
         public async Task<Mesa> CreateAsync(Mesa mesa)
         {
@@ -262,5 +577,14 @@ namespace OdisseiaWiki.Repositories
                 return overrideJson;
             }
         }
+
+        private IQueryable<Mesa> DetailedQuery()
+            => _context.Mesas
+                .AsNoTracking()
+                .Include(mesa => mesa.IdusuarioCriacaoNavigation)
+                .Include(mesa => mesa.SistemaVersao)
+                    .ThenInclude(versao => versao!.SistemaRpg)
+                .Include(mesa => mesa.Mesausuarios)
+                .Include(mesa => mesa.SolicitacoesEntrada);
     }
 }

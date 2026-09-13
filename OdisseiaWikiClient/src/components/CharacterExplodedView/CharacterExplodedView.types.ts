@@ -23,6 +23,8 @@ export interface CharacterExplodedViewProps {
   neon: 'on' | 'off';
   character: ExplodedCharacterSummary;
   items: Item[];
+  /** Catálogo usado para recuperar o peso de entradas antigas que só guardam o idItemBase. */
+  itemCatalog?: Item[];
   setItems: (items: Item[]) => void;
   skills: Skills[];
   setSkills: (skills: Skills[]) => void;

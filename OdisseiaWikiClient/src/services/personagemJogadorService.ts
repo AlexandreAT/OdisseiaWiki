@@ -71,6 +71,13 @@ export interface PersonagemJogadorResumo {
   dataCriacao: string;
 }
 
+export interface AtualizarRecursosPersonagemPayload {
+  vida?: number;
+  mana?: number;
+  estamina?: number;
+  xp?: number;
+}
+
 export const getPersonagensPorUsuario = async (
   idUsuario: number
 ): Promise<PersonagemJogador[]> => {
@@ -97,6 +104,14 @@ export const atualizarPersonagemJogador = async (
   payload: PersonagemJogadorPayload
 ): Promise<ResultPersonagemJogador> => {
   const response = await api.put(`/PersonagemJogador/${id}`, payload);
+  return response.data;
+};
+
+export const atualizarRecursosPersonagemJogador = async (
+  id: number,
+  payload: AtualizarRecursosPersonagemPayload,
+): Promise<ResultPersonagemJogador> => {
+  const response = await api.patch(`/PersonagemJogador/${id}/recursos`, payload);
   return response.data;
 };
 

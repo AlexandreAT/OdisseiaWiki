@@ -211,12 +211,24 @@ namespace OdisseiaWiki.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Idmesa"));
 
+                    b.Property<bool>("AoVivo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(false);
+
                     b.Property<string>("CodigoSistema")
                         .HasMaxLength(50)
                         .HasColumnType("varchar(50)");
 
+                    b.Property<DateTime>("DataAtualizacao")
+                        .HasColumnType("datetime");
+
                     b.Property<DateTime>("DataCriacao")
                         .HasColumnType("datetime");
+
+                    b.Property<string>("Descricao")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
 
                     b.Property<int?>("IdSistemaVersao")
                         .HasColumnType("int")
@@ -230,6 +242,11 @@ namespace OdisseiaWiki.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("varchar(255)");
 
+                    b.Property<int>("LimiteJogadores")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(4);
+
                     b.Property<string>("Nome")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -237,6 +254,9 @@ namespace OdisseiaWiki.Migrations
 
                     b.Property<bool>("PadraoSistema")
                         .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Tags")
+                        .HasColumnType("longtext");
 
                     b.HasKey("Idmesa")
                         .HasName("PRIMARY");
@@ -296,6 +316,89 @@ namespace OdisseiaWiki.Migrations
                     b.ToTable("mesaentidadeconfig", (string)null);
                 });
 
+            modelBuilder.Entity("OdisseiaWiki.Models.MesaExpulsaoRegistro", b =>
+                {
+                    b.Property<int>("IdMesaExpulsaoRegistro")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasColumnName("IDMesaExpulsaoRegistro");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("IdMesaExpulsaoRegistro"));
+
+                    b.Property<DateTime>("DataExpulsao")
+                        .HasColumnType("datetime");
+
+                    b.Property<DateTime?>("DataLeitura")
+                        .HasColumnType("datetime");
+
+                    b.Property<int?>("Idmesa")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("IDMesa");
+
+                    b.Property<int>("Idusuario")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("IDUsuario");
+
+                    b.Property<int>("IdusuarioMestre")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("IDUsuarioMestre");
+
+                    b.Property<string>("Motivo")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<string>("NomeMesa")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.HasKey("IdMesaExpulsaoRegistro");
+
+                    b.HasIndex("Idmesa");
+
+                    b.HasIndex("IdusuarioMestre");
+
+                    b.HasIndex("Idusuario", "DataLeitura");
+
+                    b.ToTable("mesaexpulsoesregistro", (string)null);
+                });
+
+            modelBuilder.Entity("OdisseiaWiki.Models.MesaSolicitacaoEntrada", b =>
+                {
+                    b.Property<int>("IdMesaSolicitacaoEntrada")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasColumnName("IDMesaSolicitacaoEntrada");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("IdMesaSolicitacaoEntrada"));
+
+                    b.Property<DateTime>("DataSolicitacao")
+                        .HasColumnType("datetime");
+
+                    b.Property<int>("Idmesa")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("IDMesa");
+
+                    b.Property<int>("Idusuario")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("IDUsuario");
+
+                    b.Property<string>("Mensagem")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.HasKey("IdMesaSolicitacaoEntrada");
+
+                    b.HasIndex("Idusuario");
+
+                    b.HasIndex("Idmesa", "Idusuario")
+                        .IsUnique()
+                        .HasDatabaseName("UX_MesaSolicitacao_Mesa_Usuario");
+
+                    b.ToTable("mesasolicitacoesentrada", (string)null);
+                });
+
             modelBuilder.Entity("OdisseiaWiki.Models.Mesausuario", b =>
                 {
                     b.Property<int>("IdmesaUsuario")
@@ -304,6 +407,9 @@ namespace OdisseiaWiki.Migrations
                         .HasColumnName("IDMesaUsuario");
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("IdmesaUsuario"));
+
+                    b.Property<DateTime>("DataEntrada")
+                        .HasColumnType("datetime");
 
                     b.Property<int?>("Idmesa")
                         .HasColumnType("int(11)")
@@ -315,6 +421,10 @@ namespace OdisseiaWiki.Migrations
 
                     b.HasKey("IdmesaUsuario")
                         .HasName("PRIMARY");
+
+                    b.HasIndex("Idmesa", "Idusuario")
+                        .IsUnique()
+                        .HasDatabaseName("UX_MesaUsuario_Mesa_Usuario");
 
                     b.HasIndex(new[] { "Idmesa" }, "ID mesa");
 
@@ -2504,6 +2614,51 @@ namespace OdisseiaWiki.Migrations
                     b.Navigation("IdmesaNavigation");
                 });
 
+            modelBuilder.Entity("OdisseiaWiki.Models.MesaExpulsaoRegistro", b =>
+                {
+                    b.HasOne("OdisseiaWiki.Models.Mesa", "Mesa")
+                        .WithMany("Expulsoes")
+                        .HasForeignKey("Idmesa")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("OdisseiaWiki.Models.Usuario", "Usuario")
+                        .WithMany("MesaExpulsoesRecebidas")
+                        .HasForeignKey("Idusuario")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("OdisseiaWiki.Models.Usuario", "Mestre")
+                        .WithMany("MesaExpulsoesAplicadas")
+                        .HasForeignKey("IdusuarioMestre")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Mesa");
+
+                    b.Navigation("Mestre");
+
+                    b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("OdisseiaWiki.Models.MesaSolicitacaoEntrada", b =>
+                {
+                    b.HasOne("OdisseiaWiki.Models.Mesa", "Mesa")
+                        .WithMany("SolicitacoesEntrada")
+                        .HasForeignKey("Idmesa")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("OdisseiaWiki.Models.Usuario", "Usuario")
+                        .WithMany("MesaSolicitacoesEntrada")
+                        .HasForeignKey("Idusuario")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Mesa");
+
+                    b.Navigation("Usuario");
+                });
+
             modelBuilder.Entity("OdisseiaWiki.Models.Mesausuario", b =>
                 {
                     b.HasOne("OdisseiaWiki.Models.Mesa", "IdmesaNavigation")
@@ -3045,11 +3200,15 @@ namespace OdisseiaWiki.Migrations
 
             modelBuilder.Entity("OdisseiaWiki.Models.Mesa", b =>
                 {
+                    b.Navigation("Expulsoes");
+
                     b.Navigation("MesaEntidadeConfigs");
 
                     b.Navigation("Mesausuarios");
 
                     b.Navigation("PersonagensJogadores");
+
+                    b.Navigation("SolicitacoesEntrada");
                 });
 
             modelBuilder.Entity("OdisseiaWiki.Models.Page", b =>
@@ -3164,6 +3323,12 @@ namespace OdisseiaWiki.Migrations
 
             modelBuilder.Entity("OdisseiaWiki.Models.Usuario", b =>
                 {
+                    b.Navigation("MesaExpulsoesAplicadas");
+
+                    b.Navigation("MesaExpulsoesRecebidas");
+
+                    b.Navigation("MesaSolicitacoesEntrada");
+
                     b.Navigation("Mesas");
 
                     b.Navigation("Mesausuarios");

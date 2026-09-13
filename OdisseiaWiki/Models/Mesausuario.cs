@@ -13,6 +13,8 @@ public partial class Mesausuario
 
     public int? Idusuario { get; set; }
 
+    public DateTime DataEntrada { get; set; } = DateTime.UtcNow;
+
     public virtual Mesa? IdmesaNavigation { get; set; }
 
     public virtual Usuario? IdusuarioNavigation { get; set; }

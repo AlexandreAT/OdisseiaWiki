@@ -66,6 +66,19 @@ namespace OdisseiaWiki.Repositories
                 .ToListAsync();
         }
 
+        public Task<List<PersonagemJogador>> GetByMesaIdAsync(int mesaId)
+            => _context.PersonagemJogadores
+                .AsNoTracking()
+                .Include(p => p.IdracaNavigation)
+                .Include(p => p.IdcidadeNavigation)
+                .Include(p => p.Mesa)
+                    .ThenInclude(mesa => mesa.SistemaVersao)
+                .Include(p => p.Usuario)
+                .Include(p => p.ConfiguracaoVisibilidade)
+                .Where(p => p.Idmesa == mesaId)
+                .OrderBy(p => p.Nome)
+                .ToListAsync();
+
         public async Task<Dictionary<int, List<Proficiencia>>> GetProficienciasByPersonagemIdsAsync(IEnumerable<int> personagemIds)
         {
             int[] ids = personagemIds.Distinct().ToArray();

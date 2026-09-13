@@ -8,8 +8,18 @@ namespace OdisseiaWiki.Services;
 public class PersonagemVisibilidadeService : IPersonagemVisibilidadeService
 {
     private readonly IPersonagemVisibilidadeRepository _repository;
+    private readonly IPersonagemJogadorRepository? _personagemJogadorRepository;
+    private readonly IMesaRealtimeNotifier _mesaRealtimeNotifier;
 
-    public PersonagemVisibilidadeService(IPersonagemVisibilidadeRepository repository) => _repository = repository;
+    public PersonagemVisibilidadeService(
+        IPersonagemVisibilidadeRepository repository,
+        IPersonagemJogadorRepository? personagemJogadorRepository = null,
+        IMesaRealtimeNotifier? mesaRealtimeNotifier = null)
+    {
+        _repository = repository;
+        _personagemJogadorRepository = personagemJogadorRepository;
+        _mesaRealtimeNotifier = mesaRealtimeNotifier ?? new NullMesaRealtimeNotifier();
+    }
 
     public async Task<ResultPersonagemVisibilidade> GetNpcAsync(int idPersonagem)
     {
@@ -96,6 +106,18 @@ public class PersonagemVisibilidadeService : IPersonagemVisibilidadeService
             PersonagemVisibilidadeDefaults.ApplyToEntity(configuracao, visibilidade);
             configuracao.DataAtualizacao = DateTime.UtcNow;
             await _repository.UpdateAsync(configuracao);
+        }
+
+        if (_personagemJogadorRepository is not null)
+        {
+            PersonagemJogador? personagem = await _personagemJogadorRepository
+                .GetByIdAsync(idPersonagemJogador);
+            if (personagem is not null)
+            {
+                await _mesaRealtimeNotifier.NotificarPersonagemAlteradoAsync(
+                    personagem.Idmesa,
+                    personagem.IdpersonagemJogador);
+            }
         }
 
         return ResultPersonagemVisibilidade.Ok(

@@ -172,7 +172,8 @@ public sealed class PersonagemVisibilidadeProjectionTests
             Nome = "Perfil privado",
             Visivel = false,
         });
-        PersonagemJogadorController controller = new(service.Object)
+        Mock<IMesaService> mesas = new();
+        PersonagemJogadorController controller = new(service.Object, mesas.Object)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() },
         };

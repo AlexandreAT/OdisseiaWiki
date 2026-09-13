@@ -17,19 +17,22 @@ namespace OdisseiaWiki.Services
         private readonly IMesaService _mesaService;
         private readonly IAssetService _assetService;
         private readonly ISistemaRpgResolver _sistemaResolver;
+        private readonly IMesaRealtimeNotifier _mesaRealtimeNotifier;
 
         public PersonagemJogadorService(
             IPersonagemJogadorRepository repository,
             IMesaRepository mesaRepository,
             IMesaService mesaService,
             IAssetService assetService,
-            ISistemaRpgResolver sistemaResolver)
+            ISistemaRpgResolver sistemaResolver,
+            IMesaRealtimeNotifier? mesaRealtimeNotifier = null)
         {
             _repository = repository;
             _mesaRepository = mesaRepository;
             _mesaService = mesaService;
             _assetService = assetService;
             _sistemaResolver = sistemaResolver;
+            _mesaRealtimeNotifier = mesaRealtimeNotifier ?? new NullMesaRealtimeNotifier();
         }
 
         public async Task<ResultPersonagemJogador> CreateAsync(PersonagemJogadorDto personagemDto)
@@ -51,6 +54,9 @@ namespace OdisseiaWiki.Services
             personagem.IdSistemaVersao = contexto.IdSistemaVersao;
 
             PersonagemJogador criado = await _repository.CreateAsync(personagem);
+            await _mesaRealtimeNotifier.NotificarPersonagemAlteradoAsync(
+                criado.Idmesa,
+                criado.IdpersonagemJogador);
             return ResultOk(criado, "Personagem criado com sucesso.");
         }
 
@@ -59,6 +65,8 @@ namespace OdisseiaWiki.Services
             PersonagemJogador? personagem = await _repository.GetByIdAsync(id);
             if (personagem == null)
                 return ResultFail($"PersonagemJogador com id {id} não encontrado.");
+
+            int idMesaAnterior = personagem.Idmesa;
 
             var idUsuario = personagemDto.Idusuario > 0 ? personagemDto.Idusuario : personagem.Idusuario;
             var validacaoMesa = await ValidarMesaAsync(personagemDto.Idmesa, idUsuario);
@@ -85,6 +93,11 @@ namespace OdisseiaWiki.Services
                 _assetService,
                 oldAssets,
                 ExtractAssets(atualizado));
+            await _mesaRealtimeNotifier.NotificarPersonagemAlteradoAsync(
+                atualizado.Idmesa,
+                atualizado.IdpersonagemJogador);
+            if (idMesaAnterior != atualizado.Idmesa)
+                await _mesaRealtimeNotifier.NotificarMesaAlteradaAsync(idMesaAnterior);
             return ResultOk(atualizado, "Personagem atualizado com sucesso.");
         }
 
@@ -103,6 +116,12 @@ namespace OdisseiaWiki.Services
         public async Task<List<PersonagemJogadorDto>> GetByUsuarioIdAsync(int usuarioId)
         {
             List<PersonagemJogador> personagens = await _repository.GetByUsuarioIdAsync(usuarioId);
+            return await MapListToDtoAsync(personagens);
+        }
+
+        public async Task<List<PersonagemJogadorDto>> GetByMesaIdAsync(int idMesa)
+        {
+            List<PersonagemJogador> personagens = await _repository.GetByMesaIdAsync(idMesa);
             return await MapListToDtoAsync(personagens);
         }
 
@@ -131,7 +150,44 @@ namespace OdisseiaWiki.Services
 
             personagem.Visivel = visivel;
             PersonagemJogador atualizado = await _repository.UpdateAsync(personagem);
+            await _mesaRealtimeNotifier.NotificarPersonagemAlteradoAsync(
+                atualizado.Idmesa,
+                atualizado.IdpersonagemJogador);
             return atualizado.Visivel;
+        }
+
+        public async Task<ResultPersonagemJogador> AtualizarRecursosAsync(
+            int id,
+            AtualizarRecursosPersonagemDto dto)
+        {
+            PersonagemJogador? personagem = await _repository.GetByIdAsync(id);
+            if (personagem is null)
+                return ResultFail($"PersonagemJogador com id {id} não encontrado.");
+
+            JsonObject root;
+            try
+            {
+                root = JsonNode.Parse(personagem.StatusJson) as JsonObject ?? new JsonObject();
+            }
+            catch (JsonException)
+            {
+                return ResultFail("A ficha possui dados de status invÃ¡lidos para atualização rápida.");
+            }
+
+            JsonObject status = GetOrCreateObject(root, "status");
+            UpdateBoundedResource(status, "vida", "vidaMaxima", dto.Vida);
+            UpdateBoundedResource(status, "mana", "manaMaxima", dto.Mana);
+            UpdateBoundedResource(status, "estamina", "estaminaMaxima", dto.Estamina);
+
+            if (dto.Xp.HasValue)
+                SetNodeValue(root, "xp", dto.Xp.Value);
+
+            personagem.StatusJson = root.ToJsonString();
+            PersonagemJogador atualizado = await _repository.UpdateAsync(personagem);
+            await _mesaRealtimeNotifier.NotificarPersonagemAlteradoAsync(
+                atualizado.Idmesa,
+                atualizado.IdpersonagemJogador);
+            return ResultOk(atualizado, "Status atualizados na Mesa em jogo.");
         }
 
         public async Task<bool> DeleteAsync(int id)
@@ -143,7 +199,12 @@ namespace OdisseiaWiki.Services
             HashSet<string> assets = ExtractAssets(personagem);
             bool deleted = await _repository.DeleteAsync(id);
             if (deleted)
+            {
                 await AssetReferenceHelper.DeleteAllAsync(_assetService, assets);
+                await _mesaRealtimeNotifier.NotificarPersonagemAlteradoAsync(
+                    personagem.Idmesa,
+                    personagem.IdpersonagemJogador);
+            }
             return deleted;
         }
 
@@ -166,6 +227,9 @@ namespace OdisseiaWiki.Services
 
             personagem.IdSistemaVersao = contextoMesa.IdSistemaVersao;
             PersonagemJogador atualizado = await _repository.UpdateAsync(personagem);
+            await _mesaRealtimeNotifier.NotificarPersonagemAlteradoAsync(
+                atualizado.Idmesa,
+                atualizado.IdpersonagemJogador);
             return ResultOk(
                 atualizado,
                 $"Sistema do personagem atualizado manualmente para a versão {contextoMesa.NumeroVersao}. Os valores salvos da ficha foram preservados.");
@@ -184,7 +248,11 @@ namespace OdisseiaWiki.Services
 
             int deleted = await _repository.DeleteManyAsync(normalizedIds);
             if (deleted > 0)
+            {
                 await AssetReferenceHelper.DeleteAllAsync(_assetService, assets);
+                foreach (int idMesa in personagens.Select(item => item.Idmesa).Distinct())
+                    await _mesaRealtimeNotifier.NotificarMesaAlteradaAsync(idMesa);
+            }
 
             return deleted;
         }
@@ -263,6 +331,43 @@ namespace OdisseiaWiki.Services
 
         private static ResultPersonagemJogador ResultFail(string mensagem) => new() { Sucesso = false, MensagemErro = mensagem };
 
+        private static void UpdateBoundedResource(
+            JsonObject status,
+            string resourceProperty,
+            string maxProperty,
+            int? requestedValue)
+        {
+            if (!requestedValue.HasValue)
+                return;
+
+            int value = Math.Max(0, requestedValue.Value);
+            if (TryGetNodeInt(status, maxProperty, out int maximum) && maximum > 0)
+                value = Math.Min(value, maximum);
+            SetNodeValue(status, resourceProperty, value);
+        }
+
+        private static void SetNodeValue(JsonObject source, string property, int value)
+        {
+            KeyValuePair<string, JsonNode?> existing = source.FirstOrDefault(item =>
+                item.Key.Equals(property, StringComparison.OrdinalIgnoreCase));
+            string key = string.IsNullOrWhiteSpace(existing.Key) ? property : existing.Key;
+            source[key] = value;
+        }
+
+        private static bool TryGetNodeInt(JsonObject source, string property, out int value)
+        {
+            value = 0;
+            JsonNode? node = source.FirstOrDefault(item => item.Key.Equals(property, StringComparison.OrdinalIgnoreCase)).Value;
+            if (node is not JsonValue jsonValue)
+                return false;
+            if (jsonValue.TryGetValue(out int number))
+            {
+                value = number;
+                return true;
+            }
+            return jsonValue.TryGetValue(out string? text) && int.TryParse(text, out value);
+        }
+
         private static ResultPersonagemJogador ResultOk(PersonagemJogador personagem, string mensagem) => new()
         {
             Sucesso = true,
@@ -335,6 +440,7 @@ namespace OdisseiaWiki.Services
             CidadeNome = personagem.IdcidadeNavigation?.Nome,
             MesaNome = personagem.Mesa?.Nome,
             AutorNome = personagem.Usuario?.Nome ?? personagem.Usuario?.Nickname,
+            AutorImagem = personagem.Usuario?.ImagemUrl,
             Visibilidade = PersonagemVisibilidadeDefaults.FromEntity(
                 personagem.ConfiguracaoVisibilidade,
                 personagemJogador: true),
@@ -562,8 +668,10 @@ namespace OdisseiaWiki.Services
 
         private static JsonObject GetOrCreateObject(JsonObject parent, string propertyName)
         {
-            if (parent[propertyName] is JsonObject existing)
-                return existing;
+            KeyValuePair<string, JsonNode?> existing = parent.FirstOrDefault(item =>
+                item.Key.Equals(propertyName, StringComparison.OrdinalIgnoreCase));
+            if (existing.Value is JsonObject value)
+                return value;
 
             JsonObject created = new();
             parent[propertyName] = created;

@@ -13,10 +13,14 @@ namespace OdisseiaWiki.Controllers
     public class PersonagemJogadorController : ControllerBase
     {
         private readonly IPersonagemJogadorService _service;
+        private readonly IMesaService _mesaService;
 
-        public PersonagemJogadorController(IPersonagemJogadorService service)
+        public PersonagemJogadorController(
+            IPersonagemJogadorService service,
+            IMesaService mesaService)
         {
             _service = service;
+            _mesaService = mesaService;
         }
 
         [HttpPost]
@@ -79,8 +83,13 @@ namespace OdisseiaWiki.Controllers
 
             PersonagemJogadorDto? personagem = await _service.GetByIdAsync(id);
 
+            bool mestreDaMesa = personagem is not null &&
+                userId.HasValue &&
+                await _mesaService.IsOwnerAsync(personagem.Idmesa, userId.Value);
             bool podeVerDadosCompletos = personagem is not null &&
-                (User.IsAdmin() || (userId.HasValue && personagem.Idusuario == userId.Value));
+                (User.IsAdmin() ||
+                 mestreDaMesa ||
+                 (userId.HasValue && personagem.Idusuario == userId.Value));
             if (personagem is not null && !podeVerDadosCompletos)
             {
                 if (!personagem.Visivel)
@@ -137,6 +146,29 @@ namespace OdisseiaWiki.Controllers
             return visivel.HasValue
                 ? Ok(new { Visivel = visivel.Value })
                 : NotFound($"PersonagemJogador com id {id} não encontrado.");
+        }
+
+        [HttpPatch("{id:int}/recursos")]
+        public async Task<IActionResult> AtualizarRecursos(int id, [FromBody] AtualizarRecursosPersonagemDto dto)
+        {
+            int? userId = User.GetUserId();
+            if (!userId.HasValue)
+                return Unauthorized();
+
+            PersonagemJogadorDto? personagem = await _service.GetByIdAsync(id);
+            if (personagem is null)
+                return NotFound($"PersonagemJogador com id {id} não encontrado.");
+
+            if (!User.IsAdmin() && personagem.Idusuario != userId.Value)
+                return personagem.Visivel
+                    ? Forbid()
+                    : NotFound($"PersonagemJogador com id {id} não encontrado.");
+
+            if (!dto.PossuiAlteracao)
+                return BadRequest("Informe ao menos um recurso para atualizar.");
+
+            ResultPersonagemJogador resultado = await _service.AtualizarRecursosAsync(id, dto);
+            return resultado.Sucesso ? Ok(resultado) : BadRequest(resultado);
         }
 
         [HttpDelete("{id:int}")]
