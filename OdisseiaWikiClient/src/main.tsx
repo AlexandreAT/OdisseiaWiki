@@ -10,6 +10,8 @@ import ErrorPage from './routes/Error/ErrorPage.tsx';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { RouteLoading } from './components/Generic/RouteLoading/RouteLoading.tsx';
 import { ManagementAccessGuard } from './routes/Management/ManagementAccessGuard.tsx';
+import { MesaAccessGuard } from './routes/Mesas/MesaAccessGuard.tsx';
+import MesaSearch from './routes/Mesas/MesaSearch/MesaSearch.tsx';
 
 const Home = lazy(() => import('./routes/Home/Home.tsx'));
 const Login = lazy(() => import('./routes/Login/Login.tsx'));
@@ -25,6 +27,10 @@ const CidadePage = lazy(() => import('./routes/Cidade/CidadePage'));
 const RacaPage = lazy(() => import('./routes/Raca/RacaPage'));
 const ItemPage = lazy(() => import('./routes/Item/ItemPage'));
 const WikiGraphPage = lazy(() => import('./routes/WikiGraph/WikiGraphPage'));
+const MesaPublic = lazy(() => import('./routes/Mesas/MesaPublic/MesaPublic'));
+const MesaCreate = lazy(() => import('./routes/Mesas/MesaCreate/MesaCreate'));
+const MesaManagement = lazy(() => import('./routes/Mesas/MesaManagement/MesaManagement'));
+const MesaGame = lazy(() => import('./routes/Mesas/MesaGame/MesaGame'));
 
 const withRouteLoading = (element: React.ReactNode) => (
   <Suspense fallback={<RouteLoading />}>{element}</Suspense>
@@ -77,6 +83,26 @@ const router = createBrowserRouter([{
         {
           path: 'hub',
           element: withRouteLoading(<Hub />)
+        },
+        {
+          path: 'mesas/pesquisar',
+          element: <MesaSearch />
+        },
+        {
+          path: 'mesas/nova',
+          element: <MesaAccessGuard>{withRouteLoading(<MesaCreate />)}</MesaAccessGuard>
+        },
+        {
+          path: 'mesa/:id',
+          element: withRouteLoading(<MesaPublic />)
+        },
+        {
+          path: 'mesa/:id/gerenciar',
+          element: <MesaAccessGuard>{withRouteLoading(<MesaManagement />)}</MesaAccessGuard>
+        },
+        {
+          path: 'mesa/:id/jogo',
+          element: <MesaAccessGuard>{withRouteLoading(<MesaGame />)}</MesaAccessGuard>
         },
         {
           path: 'personagem/:id',

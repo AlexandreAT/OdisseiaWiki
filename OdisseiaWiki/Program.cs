@@ -19,6 +19,7 @@ using Microsoft.IdentityModel.Tokens;
 using MySqlConnector;
 using OdisseiaWiki.Data;
 using OdisseiaWiki.Health;
+using OdisseiaWiki.Hubs;
 using OdisseiaWiki.Middleware;
 using OdisseiaWiki.Repositories;
 using OdisseiaWiki.Repositories.Interfaces;
@@ -189,6 +190,21 @@ public class Program
                 };
                 options.Events = new JwtBearerEvents
                 {
+                    OnMessageReceived = context =>
+                    {
+                        // WebSockets não permitem definir o Authorization header em todos
+                        // os navegadores. Aceitamos o token em query string exclusivamente
+                        // no endpoint SignalR autenticado; nenhuma outra rota herda isso.
+                        string accessToken = context.Request.Query["access_token"].ToString();
+                        PathString requestPath = context.HttpContext.Request.Path;
+                        if (!string.IsNullOrWhiteSpace(accessToken) &&
+                            requestPath.StartsWithSegments("/hubs/mesas"))
+                        {
+                            context.Token = accessToken;
+                        }
+
+                        return Task.CompletedTask;
+                    },
                     OnChallenge = async context =>
                     {
                         context.HandleResponse();
@@ -251,6 +267,15 @@ public class Program
         ConfigureCors(builder);
         ConfigureForwardedHeaders(builder);
         RegisterApplicationServices(builder.Services, builder.Configuration);
+        builder.Services.AddSignalR(options =>
+        {
+            options.ClientTimeoutInterval = TimeSpan.FromSeconds(45);
+            options.HandshakeTimeout = TimeSpan.FromSeconds(15);
+            options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+            options.MaximumParallelInvocationsPerClient = 1;
+            options.MaximumReceiveMessageSize = 32 * 1024;
+            options.EnableDetailedErrors = builder.Environment.IsDevelopment();
+        });
 
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
@@ -332,6 +357,7 @@ public class Program
         app.UseRateLimiter();
         app.UseAuthorization();
         app.MapControllers();
+        app.MapHub<MesaEmJogoHub>("/hubs/mesas").RequireAuthorization();
         app.MapHealthChecks("/health", new HealthCheckOptions
         {
             Predicate = _ => false,
@@ -459,7 +485,8 @@ public class Program
             {
                 policy.WithOrigins(allowedOrigins.ToArray())
                     .AllowAnyHeader()
-                    .AllowAnyMethod();
+                    .AllowAnyMethod()
+                    .AllowCredentials();
             });
         });
     }
@@ -492,6 +519,9 @@ public class Program
         services.AddScoped<ICidadeService, CidadeService>();
         services.AddScoped<IItemService, ItemService>();
         services.AddScoped<IMesaService, MesaService>();
+        services.AddScoped<IMesaPersonagemService, MesaPersonagemService>();
+        services.AddSingleton<IMesaPresenceTracker, MesaPresenceTracker>();
+        services.AddSingleton<IMesaRealtimeNotifier, SignalRMesaRealtimeNotifier>();
         services.AddScoped<IMesaEntidadeConfigService, MesaEntidadeConfigService>();
         services.AddScoped<IInfoLoreService, InfoLoreService>();
         services.AddScoped<IPageService, PageService>();

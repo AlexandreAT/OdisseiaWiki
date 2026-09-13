@@ -1,4 +1,5 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { type CSSProperties, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   closestCenter,
   DndContext,
@@ -7,22 +8,14 @@ import {
   KeyboardSensor,
   PointerSensor,
   TouchSensor,
+  useDraggable,
+  useDroppable,
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
-import {
-  arrayMove,
-  rectSortingStrategy,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import styled from 'styled-components';
-import {
-  InventoryCard,
-  OrganizedGridRoot,
-} from './CharacterExplodedView.style';
+import { InventoryCard, OrganizedGridRoot } from './CharacterExplodedView.style';
 
 export interface OrganizedInventoryEntry {
   id: string;
@@ -30,26 +23,36 @@ export interface OrganizedInventoryEntry {
   image?: string;
   equipped?: boolean;
   accent?: string;
+  gridPosition?: number;
 }
 
 export interface OrganizedInventoryGridProps<TEntry extends OrganizedInventoryEntry> {
   entries: TEntry[];
-  onReorder: (entries: TEntry[]) => void;
+  onPositionsChange: (entries: TEntry[]) => void;
   onEntryClick?: (entry: TEntry) => void;
   ariaLabel?: string;
   emptyMessage?: string;
 }
 
-interface SortableEntryProps<TEntry extends OrganizedInventoryEntry> {
+interface GridPlacement<TEntry extends OrganizedInventoryEntry> {
+  entry?: TEntry;
+  index: number;
+}
+
+interface DraggableEntryProps<TEntry extends OrganizedInventoryEntry> {
   entry: TEntry;
+  slotIndex: number;
   onEntryClick?: (entry: TEntry) => void;
 }
 
-const SortableCardContainer = styled.div<{ $dragging: boolean }>`
+const DraggableCardContainer = styled.div<{ $dragging: boolean }>`
   min-width: 0;
-  opacity: ${({ $dragging }) => ($dragging ? 0.28 : 1)};
+  min-height: 0;
+  height: 100%;
+  opacity: ${({ $dragging }) => ($dragging ? .18 : 1)};
   position: relative;
   z-index: ${({ $dragging }) => ($dragging ? 2 : 1)};
+  transition: opacity 150ms ease;
 
   > button {
     width: 100%;
@@ -69,11 +72,40 @@ const OrganizedCard = styled(InventoryCard)`
     aspect-ratio: 1;
     display: grid;
     place-items: center;
-    background: rgba(0, 0, 0, 0.48);
+    background: rgba(0, 0, 0, .48);
     color: var(--exploded-accent);
     font: 700 22px 'Michroma', sans-serif;
     text-transform: uppercase;
   }
+`;
+
+const OrganizedGridSlot = styled.div<{ $isOver: boolean; $occupied: boolean }>`
+  min-width: 0;
+  min-height: 0;
+  height: 104px;
+  position: relative;
+  border: 1px solid ${({ $isOver }) => $isOver
+    ? 'color-mix(in srgb, var(--exploded-accent) 92%, white)'
+    : 'color-mix(in srgb, var(--exploded-accent) 24%, transparent)'};
+  background:
+    linear-gradient(135deg, ${({ $isOver }) => $isOver
+      ? 'color-mix(in srgb, var(--exploded-accent) 20%, transparent)'
+      : 'color-mix(in srgb, var(--exploded-accent) 4%, transparent)'}, transparent 55%),
+    rgba(0, 4, 12, .38);
+  box-shadow: ${({ $isOver, $occupied }) => $isOver
+    ? 'inset 0 0 18px color-mix(in srgb, var(--exploded-accent) 42%, transparent), 0 0 14px color-mix(in srgb, var(--exploded-accent) 22%, transparent)'
+    : $occupied
+      ? 'inset 0 0 12px rgba(0, 0, 0, .28)'
+      : 'inset 0 0 8px rgba(0, 0, 0, .2)'};
+  transform: ${({ $isOver }) => ($isOver ? 'scale(1.025)' : 'scale(1)')};
+  transition: border-color 130ms ease, background 130ms ease, box-shadow 130ms ease, transform 130ms ease;
+`;
+
+const DragOverlayCard = styled(OrganizedCard)`
+  pointer-events: none;
+  cursor: grabbing;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, .55), 0 0 16px color-mix(in srgb, var(--exploded-accent) 42%, transparent);
+  transform: rotate(1.5deg) scale(1.03);
 `;
 
 const EmptyOrganizedGrid = styled.div`
@@ -93,16 +125,6 @@ const EmptyOrganizedGrid = styled.div`
   transform: translate(-50%, -50%);
 `;
 
-const EmptyGridCell = styled.div`
-  min-width: 0;
-  min-height: 0;
-  border: 1px solid color-mix(in srgb, var(--exploded-accent) 24%, transparent);
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--exploded-accent) 4%, transparent), transparent 55%),
-    rgba(0, 4, 12, .38);
-  box-shadow: inset 0 0 12px rgba(0, 0, 0, .28);
-`;
-
 const renderEntryContent = (entry: OrganizedInventoryEntry) => {
   const { name, image } = entry;
   return (
@@ -119,29 +141,26 @@ const renderEntryContent = (entry: OrganizedInventoryEntry) => {
   );
 };
 
-function SortableEntry<TEntry extends OrganizedInventoryEntry>({
+function DraggableEntry<TEntry extends OrganizedInventoryEntry>({
   entry,
+  slotIndex,
   onEntryClick,
-}: SortableEntryProps<TEntry>) {
+}: DraggableEntryProps<TEntry>) {
   const {
     attributes,
     listeners,
     setNodeRef,
-    transform,
-    transition,
     isDragging,
-  } = useSortable({ id: entry.id });
+  } = useDraggable({
+    id: entry.id,
+    data: { slotIndex },
+  });
 
   const { name, equipped } = entry;
-
   return (
-    <SortableCardContainer
+    <DraggableCardContainer
       ref={setNodeRef}
       $dragging={isDragging}
-      style={{
-        transform: CSS.Transform.toString(transform),
-        transition,
-      }}
     >
       <OrganizedCard
         type="button"
@@ -156,20 +175,78 @@ function SortableEntry<TEntry extends OrganizedInventoryEntry>({
       >
         {renderEntryContent(entry)}
       </OrganizedCard>
-    </SortableCardContainer>
+    </DraggableCardContainer>
   );
 }
 
+function GridSlot<TEntry extends OrganizedInventoryEntry>({
+  placement,
+  onEntryClick,
+}: {
+  placement: GridPlacement<TEntry>;
+  onEntryClick?: (entry: TEntry) => void;
+}) {
+  const { entry, index } = placement;
+  const { setNodeRef, isOver } = useDroppable({
+    id: `slot:${index}`,
+    data: { slotIndex: index },
+  });
+
+  return (
+    <OrganizedGridSlot
+      ref={setNodeRef}
+      $isOver={isOver}
+      $occupied={Boolean(entry)}
+      role="listitem"
+      aria-label={entry ? `Posição ${index + 1}: ${entry.name}` : `Posição ${index + 1} vazia`}
+    >
+      {entry && (
+        <DraggableEntry
+          entry={entry}
+          slotIndex={index}
+          onEntryClick={onEntryClick}
+        />
+      )}
+    </OrganizedGridSlot>
+  );
+}
+
+const resolvePlacements = <TEntry extends OrganizedInventoryEntry>(
+  entries: TEntry[],
+  minimumSlots: number,
+): GridPlacement<TEntry>[] => {
+  const occupied = new Map<number, TEntry>();
+  let nextAvailable = 0;
+
+  entries.forEach((entry) => {
+    const requestedPosition = Number.isInteger(entry.gridPosition) && (entry.gridPosition ?? -1) >= 0
+      ? Number(entry.gridPosition)
+      : nextAvailable;
+    let position = requestedPosition;
+    while (occupied.has(position)) position += 1;
+    occupied.set(position, entry);
+    nextAvailable = Math.max(nextAvailable, position + 1);
+  });
+
+  const totalSlots = Math.max(minimumSlots, entries.length, nextAvailable);
+  return Array.from({ length: totalSlots }, (_, index) => ({
+    index,
+    entry: occupied.get(index),
+  }));
+};
+
 export function OrganizedInventoryGrid<TEntry extends OrganizedInventoryEntry>({
   entries,
-  onReorder,
+  onPositionsChange,
   onEntryClick,
-  ariaLabel = 'Inventário organizado. Arraste os itens para alterar a ordem.',
+  ariaLabel = 'Inventário organizado. Arraste os itens para alterar a posição na grade.',
   emptyMessage = 'Nenhum registro disponível nesta categoria.',
 }: OrganizedInventoryGridProps<TEntry>) {
   const dndContextId = useId();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [visibleSlots, setVisibleSlots] = useState(15);
+  const [overlaySize, setOverlaySize] = useState<{ width: number; height: number } | undefined>();
+  const [overlayTheme, setOverlayTheme] = useState<CSSProperties>();
   const gridRef = useRef<HTMLDivElement | null>(null);
   const suppressClickUntilRef = useRef(0);
   const sensors = useSensors(
@@ -179,13 +256,11 @@ export function OrganizedInventoryGrid<TEntry extends OrganizedInventoryEntry>({
     }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
-  const entryIds = useMemo(() => entries.map(({ id }) => id), [entries]);
+  const placements = useMemo(() => resolvePlacements(entries, visibleSlots), [entries, visibleSlots]);
   const activeEntry = useMemo(
     () => entries.find(({ id }) => id === activeId),
     [activeId, entries],
   );
-  const totalSlots = Math.max(visibleSlots, entries.length);
-  const emptySlotCount = Math.max(0, totalSlots - entries.length);
 
   useEffect(() => {
     const grid = gridRef.current;
@@ -216,13 +291,27 @@ export function OrganizedInventoryGrid<TEntry extends OrganizedInventoryEntry>({
   const handleDragEnd = ({ active, over }: DragEndEvent) => {
     suppressClickUntilRef.current = performance.now() + 250;
     setActiveId(null);
-    if (!over || active.id === over.id) return;
+    setOverlaySize(undefined);
+    setOverlayTheme(undefined);
+    if (!over) return;
 
-    const previousIndex = entries.findIndex(({ id }) => id === active.id);
-    const nextIndex = entries.findIndex(({ id }) => id === over.id);
-    if (previousIndex < 0 || nextIndex < 0) return;
+    const activeEntryIndex = entries.findIndex(({ id }) => id === active.id);
+    const sourceSlot = Number(active.data.current?.slotIndex);
+    const targetSlot = Number(over.data.current?.slotIndex);
+    if (activeEntryIndex < 0 || !Number.isInteger(sourceSlot) || !Number.isInteger(targetSlot) || sourceSlot === targetSlot) return;
 
-    onReorder(arrayMove(entries, previousIndex, nextIndex));
+    const targetEntry = placements.find(({ index }) => index === targetSlot)?.entry;
+    const currentPositions = new Map(
+      placements.flatMap(({ entry, index }) => entry ? [[entry.id, index] as const] : []),
+    );
+    const nextEntries = entries.map((entry) => {
+      if (entry.id === active.id) return { ...entry, gridPosition: targetSlot };
+      if (targetEntry?.id === entry.id) return { ...entry, gridPosition: sourceSlot };
+      // Persist the remaining legacy entries too, otherwise a new manual
+      // position would make entries without metadata jump after reopening.
+      return { ...entry, gridPosition: currentPositions.get(entry.id) ?? entry.gridPosition };
+    });
+    onPositionsChange(nextEntries);
   };
 
   const handleEntryClick = (entry: TEntry) => {
@@ -237,10 +326,21 @@ export function OrganizedInventoryGrid<TEntry extends OrganizedInventoryEntry>({
       collisionDetection={closestCenter}
       onDragStart={({ active }) => {
         suppressClickUntilRef.current = Number.POSITIVE_INFINITY;
+        const rect = active.rect.current.initial;
+        const gridStyles = gridRef.current ? getComputedStyle(gridRef.current) : undefined;
+        setOverlaySize(rect ? { width: rect.width, height: rect.height } : undefined);
+        // The overlay is portalled to the document body, so explicitly carry
+        // the theme variables that it would otherwise inherit from the view.
+        setOverlayTheme({
+          '--exploded-accent': gridStyles?.getPropertyValue('--exploded-accent').trim() || 'var(--clearneonBlue, #4deeea)',
+          '--exploded-clear': gridStyles?.getPropertyValue('--exploded-clear').trim() || 'var(--clearneonBlue, #4deeea)',
+        } as CSSProperties);
         setActiveId(String(active.id));
       }}
       onDragCancel={() => {
         suppressClickUntilRef.current = performance.now() + 250;
+        setOverlaySize(undefined);
+        setOverlayTheme(undefined);
         setActiveId(null);
       }}
       onDragEnd={handleDragEnd}
@@ -251,33 +351,38 @@ export function OrganizedInventoryGrid<TEntry extends OrganizedInventoryEntry>({
         },
       }}
     >
-      <SortableContext items={entryIds} strategy={rectSortingStrategy}>
-        <OrganizedGridRoot ref={gridRef} role="list" aria-label={ariaLabel}>
-          {entries.map((entry) => (
-            <div role="listitem" key={entry.id}>
-              <SortableEntry entry={entry} onEntryClick={handleEntryClick} />
-            </div>
-          ))}
-          {Array.from({ length: emptySlotCount }, (_, index) => (
-            <EmptyGridCell key={`empty-slot-${index}`} aria-hidden="true" />
-          ))}
-          {entries.length === 0 && <EmptyOrganizedGrid>{emptyMessage}</EmptyOrganizedGrid>}
-        </OrganizedGridRoot>
-      </SortableContext>
+      <OrganizedGridRoot ref={gridRef} role="list" aria-label={ariaLabel}>
+        {placements.map((placement) => (
+          <GridSlot
+            key={`slot-${placement.index}`}
+            placement={placement}
+            onEntryClick={handleEntryClick}
+          />
+        ))}
+        {entries.length === 0 && <EmptyOrganizedGrid>{emptyMessage}</EmptyOrganizedGrid>}
+      </OrganizedGridRoot>
 
-      <DragOverlay dropAnimation={{ duration: 180, easing: 'ease' }}>
-        {activeEntry ? (
-          <OrganizedCard
-            type="button"
-            tabIndex={-1}
-            $equipped={activeEntry.equipped}
-            $accent={activeEntry.accent}
-            aria-hidden="true"
-          >
-            {renderEntryContent(activeEntry)}
-          </OrganizedCard>
-        ) : null}
-      </DragOverlay>
+      {createPortal(
+        <DragOverlay
+          dropAnimation={{ duration: 210, easing: 'cubic-bezier(.22, 1, .36, 1)' }}
+          style={overlayTheme}
+          zIndex={13001}
+        >
+          {activeEntry ? (
+            <DragOverlayCard
+              type="button"
+              tabIndex={-1}
+              $equipped={activeEntry.equipped}
+              $accent={activeEntry.accent}
+              aria-hidden="true"
+              style={overlaySize}
+            >
+              {renderEntryContent(activeEntry)}
+            </DragOverlayCard>
+          ) : null}
+        </DragOverlay>,
+        document.body,
+      )}
     </DndContext>
   );
 }

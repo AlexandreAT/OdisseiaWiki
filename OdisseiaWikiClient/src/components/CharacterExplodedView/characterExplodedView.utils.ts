@@ -31,10 +31,62 @@ export const getEntryKey = (entry: { id?: string; nome?: string }, index: number
 
 export const isFilledEntry = (entry: { nome?: string }) => Boolean(entry.nome?.trim());
 
-export const getInventoryWeight = (items: Item[]) => items.reduce(
-  (sum, item) => sum + (Number(item.peso) || 0) * Math.max(1, Number(item.quantidade) || 1),
-  0,
-);
+const toWeightNumber = (value: unknown): number | undefined => {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
+  if (typeof value !== 'string' || !value.trim()) return undefined;
+
+  const numericValue = value.trim().replace(/[^\d,.-]/g, '');
+  const lastComma = numericValue.lastIndexOf(',');
+  const lastPeriod = numericValue.lastIndexOf('.');
+  const normalizedValue = lastComma > lastPeriod
+    ? numericValue.replace(/\./g, '').replace(',', '.')
+    : numericValue.replace(/,/g, '');
+  const parsed = Number(normalizedValue);
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+/**
+ * Itens antigos e fichas personalizadas podem trazer o espaço ocupado dentro
+ * dos atributos. A ficha sempre prioriza o campo canônico `peso`, mas mantém
+ * essa leitura para que o inventário não ignore equipamentos já salvos.
+ */
+const getItemWeight = (item: Item): number | undefined => {
+  const directWeight = toWeightNumber(item.peso);
+  if (directWeight !== undefined) return directWeight;
+
+  const attributes = (item.atributos ?? {}) as Record<string, unknown>;
+  return toWeightNumber(
+    attributes.peso
+    ?? attributes.Peso
+    ?? attributes.espaco
+    ?? attributes.Espaco
+    ?? attributes.espacoOcupado
+    ?? attributes.EspacoOcupado,
+  );
+};
+
+/**
+ * O peso acompanha o inventário inteiro. A exceção é o traje já equipado:
+ * ele deixa de consumir o espaço da mochila, mas continua disponível na ficha.
+ * Entradas antigas podem não armazenar o peso, apenas `idItemBase`; nesses
+ * casos, o dado correspondente do catálogo resolve o espaço ocupado.
+ */
+export const getInventoryWeight = (items: Item[], itemCatalog: Item[] = []) => {
+  const itemsById = new Map(
+    itemCatalog.flatMap((item) => item.id ? [[item.id, item] as const] : []),
+  );
+
+  return items.reduce((sum, item) => {
+    if (item.tipo === 'traje' && getExplodedMeta(item).equippedSlot) return sum;
+
+    const catalogItem = item.idItemBase ? itemsById.get(item.idItemBase) : undefined;
+    const unitWeight = getItemWeight(item) ?? (catalogItem ? getItemWeight(catalogItem) : undefined);
+    if (unitWeight === undefined || unitWeight <= 0) return sum;
+
+    const quantity = Math.max(1, toWeightNumber(item.quantidade) ?? 1);
+    return sum + unitWeight * quantity;
+  }, 0);
+};
 
 export const seededPosition = (index: number) => ({
   x: 5 + ((index * 19) % 72),

@@ -163,6 +163,38 @@ public sealed class PersonagemComparacaoServiceTests
     }
 
     [Fact]
+    public async Task GetAsync_JogadorMantemOsAtributosDaFichaSelecionada()
+    {
+        TestContext context = CreateContext();
+        PersonagemComparacaoRegistro record = Player(23, 7, "Gunthar");
+        record.Idusuario = 22;
+        record.StatusJson = """
+            {"status":{"vida":1000,"vidaMaxima":1000,"estamina":75,"estaminaMaxima":75,"mana":75,"manaMaxima":75},
+             "atributos":{"principais":{"resistencia":0,"agilidade":0,"sabedoria":1,"precisao":0,"forca":0}},
+             "nivel":1,"defesas":{"escudo":0,"protecao":0,"armadura":0,"outras":0}}
+            """;
+        context.Players.Setup(repository => repository.GetForComparisonAsync(23)).ReturnsAsync(record);
+        context.Tables.Setup(service => service.CanUseAsync(7, 22)).ReturnsAsync(true);
+        SetupRuntime(context);
+
+        PersonagemComparacaoPesquisaResultadoDto result = await context.Service.GetAsync(
+            PersonagemComparacaoOrigem.Jogador,
+            23,
+            22,
+            administrador: false);
+
+        PersonagemComparacaoStatusDto status = Assert.Single(result.Personagens).Status;
+        Assert.Equal(1000, status.Vida);
+        Assert.Equal(75, status.Mana);
+        Assert.Equal(75, status.Estamina);
+        Assert.Equal(0, status.Resistencia);
+        Assert.Equal(0, status.Agilidade);
+        Assert.Equal(1, status.Sabedoria);
+        Assert.Equal(0, status.Precisao);
+        Assert.Equal(0, status.Forca);
+    }
+
+    [Fact]
     public async Task GetAsync_ResumeSomenteAsEscalasDoRadarDoSistemaEfetivo()
     {
         TestContext context = CreateContext();

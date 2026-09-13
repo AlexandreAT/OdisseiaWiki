@@ -494,7 +494,7 @@ export const MannequinStage = styled.div`
     width: 100%;
     height: 100%;
     overflow: visible;
-    pointer-events: none;
+    pointer-events: auto;
   }
 
   .equipment-line {
@@ -509,7 +509,7 @@ export const MannequinStage = styled.div`
 
   .equipment-line-hit {
     stroke: transparent;
-    stroke-width: 9px;
+    stroke-width: 12px;
     vector-effect: non-scaling-stroke;
     pointer-events: stroke;
     cursor: pointer;
@@ -517,8 +517,8 @@ export const MannequinStage = styled.div`
 
   .equipment-line[data-highlighted='true'] {
     opacity: .96;
-    stroke-width: 2px;
-    filter: drop-shadow(0 0 3px var(--exploded-accent));
+    stroke-width: 2.4px;
+    filter: drop-shadow(0 0 5px var(--exploded-accent));
   }
 
   @media (max-width: 1180px) { min-height: 560px; }

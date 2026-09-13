@@ -24,9 +24,9 @@ export const LoadingIndicator = ({
     <LoadingText $compact={compact}>
       {label}
       <AnimatedDots aria-hidden="true">
-        <span />
-        <span />
-        <span />
+        <i />
+        <i />
+        <i />
       </AnimatedDots>
     </LoadingText>
   </LoadingWrapper>

@@ -84,6 +84,10 @@ const equippedTrace = keyframes`
   to { stroke-dashoffset: -100; }
 `;
 
+const equippedGlow = keyframes`
+  50% { box-shadow: 0 0 1rem color-mix(in srgb, var(--exploded-accent) 58%, transparent); }
+`;
+
 const Viewport = styled.section<{ $theme: 'dark' | 'light' }>`
   position: relative;
   width: 100%;
@@ -174,6 +178,7 @@ const Card = styled.button<{
 
   ${({ $equipped }) => $equipped && css`
     border-color: transparent;
+    animation: ${equippedGlow} 2.5s ease-in-out infinite;
   `}
 
   &:active {
@@ -554,10 +559,25 @@ export const FreeInventoryCanvas = <TEntry extends FreeInventoryEntry>({
     }
   }, []);
 
+  useEffect(() => {
+    const finishDrag = (event: PointerEvent) => finishActiveCardDrag(event.pointerId);
+    const finishOnWindowBlur = () => finishActiveCardDrag();
+
+    window.addEventListener('pointerup', finishDrag, true);
+    window.addEventListener('pointercancel', finishDrag, true);
+    window.addEventListener('blur', finishOnWindowBlur);
+    return () => {
+      window.removeEventListener('pointerup', finishDrag, true);
+      window.removeEventListener('pointercancel', finishDrag, true);
+      window.removeEventListener('blur', finishOnWindowBlur);
+    };
+  }, [finishActiveCardDrag]);
+
   const handlePointerDown = (event: React.PointerEvent<HTMLButtonElement>, key: string) => {
     if (!event.isPrimary || event.button !== 0) return;
     const body = bodiesByKeyRef.current.get(key);
     if (!body) return;
+    finishActiveCardDrag();
     event.currentTarget.setPointerCapture(event.pointerId);
     draggedRef.current = {
       key,
@@ -702,6 +722,7 @@ export const FreeInventoryCanvas = <TEntry extends FreeInventoryEntry>({
             onPointerMove={(event) => handlePointerMove(event, key)}
             onPointerUp={(event) => finishPointerDrag(event, key)}
             onPointerCancel={(event) => finishPointerDrag(event, key)}
+            onLostPointerCapture={(event) => finishActiveCardDrag(event.pointerId)}
             onClick={() => handleCardClick(key, entry)}
           >
             {equipped && (

@@ -465,6 +465,7 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
           loadCapacity: statusBasico.capacidadeCarga,
         }}
         items={itens}
+        itemCatalog={listItens}
         setItems={setItens}
         skills={skills}
         setSkills={setSkills}

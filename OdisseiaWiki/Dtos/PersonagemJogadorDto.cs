@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 
 namespace OdisseiaWiki.Dtos
@@ -35,6 +36,7 @@ namespace OdisseiaWiki.Dtos
         public string? CidadeNome { get; set; }
         public string? MesaNome { get; set; }
         public string? AutorNome { get; set; }
+        public string? AutorImagem { get; set; }
         public PersonagemVisibilidadeDto Visibilidade { get; set; } = PersonagemVisibilidadeDefaults.Jogador();
         public List<ProficienciaResumoDto> Proficiencias { get; set; } = new();
         public SistemaRuntimeContextoDto? SistemaRuntime { get; set; }
@@ -45,5 +47,27 @@ namespace OdisseiaWiki.Dtos
         public int Idproficiencia { get; set; }
         public string Nome { get; set; } = null!;
         public string? Descricao { get; set; }
+    }
+
+    /// <summary>
+    /// Atualização pequena usada pela Mesa em jogo. Mantém a ficha completa
+    /// intacta e altera somente os recursos que o próprio jogador controla
+    /// durante a sessão.
+    /// </summary>
+    public sealed class AtualizarRecursosPersonagemDto
+    {
+        [Range(0, int.MaxValue)]
+        public int? Vida { get; set; }
+
+        [Range(0, int.MaxValue)]
+        public int? Mana { get; set; }
+
+        [Range(0, int.MaxValue)]
+        public int? Estamina { get; set; }
+
+        [Range(0, int.MaxValue)]
+        public int? Xp { get; set; }
+
+        public bool PossuiAlteracao => Vida.HasValue || Mana.HasValue || Estamina.HasValue || Xp.HasValue;
     }
 }

@@ -203,6 +203,7 @@ export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
           loadCapacity: statusBasico.capacidadeCarga,
         }}
         items={itens}
+        itemCatalog={listItens}
         setItems={setItens}
         skills={skills}
         setSkills={setSkills}

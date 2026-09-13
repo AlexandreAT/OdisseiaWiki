@@ -27,6 +27,10 @@ public partial class OdisseiaContext : DbContext
 
     public virtual DbSet<Mesausuario> Mesausuarios { get; set; }
 
+    public virtual DbSet<MesaSolicitacaoEntrada> MesaSolicitacoesEntrada { get; set; }
+
+    public virtual DbSet<MesaExpulsaoRegistro> MesaExpulsoesRegistro { get; set; }
+
     public virtual DbSet<Personageminfolore> Personageminfolores { get; set; }
 
     public virtual DbSet<Personagen> Personagens { get; set; }
@@ -116,13 +120,18 @@ public partial class OdisseiaContext : DbContext
                 .HasColumnType("int(11)")
                 .HasColumnName("IDMesa");
             entity.Property(e => e.DataCriacao).HasColumnType("datetime");
+            entity.Property(e => e.DataAtualizacao).HasColumnType("datetime");
             entity.Property(e => e.CodigoSistema).HasMaxLength(50);
             entity.Property(e => e.IdusuarioCriacao)
                 .HasColumnType("int(11)")
                 .HasColumnName("IDUsuarioCriacao");
             entity.Property(e => e.Imagem).HasMaxLength(255);
             entity.Property(e => e.Nome).HasMaxLength(100);
+            entity.Property(e => e.Descricao).HasMaxLength(500);
+            entity.Property(e => e.Tags).HasColumnType("longtext");
+            entity.Property(e => e.LimiteJogadores).HasDefaultValue(4);
             entity.Property(e => e.PadraoSistema).HasColumnType("tinyint(1)");
+            entity.Property(e => e.AoVivo).HasColumnType("tinyint(1)").HasDefaultValue(false);
 
             entity.HasOne(d => d.IdusuarioCriacaoNavigation).WithMany(p => p.Mesas)
                 .HasForeignKey(d => d.IdusuarioCriacao)
@@ -167,6 +176,10 @@ public partial class OdisseiaContext : DbContext
 
             entity.HasIndex(e => e.Idusuario, "ID usuario");
 
+            entity.HasIndex(e => new { e.Idmesa, e.Idusuario })
+                .IsUnique()
+                .HasDatabaseName("UX_MesaUsuario_Mesa_Usuario");
+
             entity.Property(e => e.IdmesaUsuario)
                 .HasColumnType("int(11)")
                 .HasColumnName("IDMesaUsuario");
@@ -176,6 +189,7 @@ public partial class OdisseiaContext : DbContext
             entity.Property(e => e.Idusuario)
                 .HasColumnType("int(11)")
                 .HasColumnName("IDUsuario");
+            entity.Property(e => e.DataEntrada).HasColumnType("datetime");
 
             entity.HasOne(d => d.IdmesaNavigation).WithMany(p => p.Mesausuarios)
                 .HasForeignKey(d => d.Idmesa)
@@ -184,6 +198,69 @@ public partial class OdisseiaContext : DbContext
             entity.HasOne(d => d.IdusuarioNavigation).WithMany(p => p.Mesausuarios)
                 .HasForeignKey(d => d.Idusuario)
                 .HasConstraintName("ID usuario");
+        });
+
+        modelBuilder.Entity<MesaSolicitacaoEntrada>(entity =>
+        {
+            entity.ToTable("mesasolicitacoesentrada");
+            entity.HasKey(e => e.IdMesaSolicitacaoEntrada);
+            entity.HasIndex(e => new { e.Idmesa, e.Idusuario })
+                .IsUnique()
+                .HasDatabaseName("UX_MesaSolicitacao_Mesa_Usuario");
+            entity.Property(e => e.IdMesaSolicitacaoEntrada)
+                .HasColumnType("int(11)")
+                .HasColumnName("IDMesaSolicitacaoEntrada");
+            entity.Property(e => e.Idmesa)
+                .HasColumnType("int(11)")
+                .HasColumnName("IDMesa");
+            entity.Property(e => e.Idusuario)
+                .HasColumnType("int(11)")
+                .HasColumnName("IDUsuario");
+            entity.Property(e => e.Mensagem).HasMaxLength(200);
+            entity.Property(e => e.DataSolicitacao).HasColumnType("datetime");
+            entity.HasOne(e => e.Mesa)
+                .WithMany(e => e.SolicitacoesEntrada)
+                .HasForeignKey(e => e.Idmesa)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Usuario)
+                .WithMany(e => e.MesaSolicitacoesEntrada)
+                .HasForeignKey(e => e.Idusuario)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<MesaExpulsaoRegistro>(entity =>
+        {
+            entity.ToTable("mesaexpulsoesregistro");
+            entity.HasKey(e => e.IdMesaExpulsaoRegistro);
+            entity.Property(e => e.IdMesaExpulsaoRegistro)
+                .HasColumnType("int(11)")
+                .HasColumnName("IDMesaExpulsaoRegistro");
+            entity.Property(e => e.Idmesa)
+                .HasColumnType("int(11)")
+                .HasColumnName("IDMesa");
+            entity.Property(e => e.Idusuario)
+                .HasColumnType("int(11)")
+                .HasColumnName("IDUsuario");
+            entity.Property(e => e.IdusuarioMestre)
+                .HasColumnType("int(11)")
+                .HasColumnName("IDUsuarioMestre");
+            entity.Property(e => e.NomeMesa).HasMaxLength(100);
+            entity.Property(e => e.Motivo).HasMaxLength(500);
+            entity.Property(e => e.DataExpulsao).HasColumnType("datetime");
+            entity.Property(e => e.DataLeitura).HasColumnType("datetime");
+            entity.HasIndex(e => new { e.Idusuario, e.DataLeitura });
+            entity.HasOne(e => e.Mesa)
+                .WithMany(e => e.Expulsoes)
+                .HasForeignKey(e => e.Idmesa)
+                .OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(e => e.Usuario)
+                .WithMany(e => e.MesaExpulsoesRecebidas)
+                .HasForeignKey(e => e.Idusuario)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.Mestre)
+                .WithMany(e => e.MesaExpulsoesAplicadas)
+                .HasForeignKey(e => e.IdusuarioMestre)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<Personageminfolore>(entity =>

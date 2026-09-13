@@ -171,6 +171,7 @@ export const CharacterComparisonModal = ({
     query,
     results,
     loadingCurrent,
+    loadingCandidate,
     searching,
     error,
     setQuery,
@@ -256,6 +257,7 @@ export const CharacterComparisonModal = ({
 
         {error && <ErrorState>{error}</ErrorState>}
         {loadingCurrent && <SearchFeedback><LoadingIndicator label="Carregando personagem" /></SearchFeedback>}
+        {loadingCandidate && <SearchFeedback><LoadingIndicator compact label="Carregando personagem selecionado" /></SearchFeedback>}
 
         {!loadingCurrent && currentCharacter && (
           <ComparisonGrid>

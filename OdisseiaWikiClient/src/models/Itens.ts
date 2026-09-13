@@ -87,6 +87,8 @@ export interface CharacterExplodedViewMeta {
   clientKey?: string;
   order?: number;
   position?: { x: number; y: number; rotation?: number };
+  /** Posição da célula no modo de grade da vista explodida. */
+  gridPosition?: number;
   equippedSlot?: string;
 }
 

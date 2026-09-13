@@ -9,11 +9,13 @@ import BannerPersonagens from '../../assets/Banner Personagens.jpeg';
 import TitleGlitch from '../../components/Generic/TitleGlitch/TitleGlitch';
 import { UserCharacters, ViewMode } from './UserCharacters/UserCharacters';
 import { AnimatedBackground, BackgroundType } from '../../components/Generic/AnimatedBackground/AnimatedBackground';
+import { UserTables } from './UserTables/UserTables';
 
 export const Hub = () => {
     const { theme, neon } = useSelector((state: any) => state.themesReducer);
     const [searchParams, setSearchParams] = useSearchParams();
-    const initialSection = searchParams.get('section') === 'personagens' ? 'personagens' : '';
+    const sectionParam = searchParams.get('section');
+    const initialSection = sectionParam === 'personagens' || sectionParam === 'mesas' ? sectionParam : '';
     const [selected, setSelected] = useState<'mesas' | 'personagens' | ''>(initialSection);
     const [isCollapsed, setIsCollapsed] = useState(initialSection !== '');
     const [characterViewMode, setCharacterViewMode] = useState<ViewMode>('list');
@@ -33,7 +35,7 @@ export const Hub = () => {
 
     useEffect(() => {
         const section = searchParams.get('section');
-        const routeSelection = section === 'personagens' ? 'personagens' : '';
+        const routeSelection = section === 'personagens' || section === 'mesas' ? section : '';
         setSelected(routeSelection);
         setIsCollapsed(routeSelection !== '');
     }, [searchParams]);
@@ -79,7 +81,10 @@ export const Hub = () => {
     };
 
     const renderContent = () => {
-        switch (selected) {
+        if (selected === 'mesas') {
+            return <UserTables theme={theme} neon={neon} />;
+        }
+        switch (selected as 'mesas' | 'personagens' | '') {
             case 'mesas':
                 return <p>Conteúdo das Mesas</p>;
             case 'personagens':
@@ -107,6 +112,9 @@ export const Hub = () => {
                     onIntroComplete={() => setHasPlayedIntro(true)}
                 />
             )}
+            {selected === 'mesas' ? (
+                <UserTables theme={theme} neon={neon} />
+            ) : (
             <ClipBox
                 backgroundColor='rgba(0, 0, 15, 0.4)'
                 useClip={false}
@@ -128,7 +136,6 @@ export const Hub = () => {
                                 collapsed={isCollapsed}
                                 active={selected === btn.label.toLowerCase()}
                                 index={i}
-                                disabled={btn.label === 'Mesas'}
                                 onClick={() => handleClick(btn.label.toLowerCase() as 'mesas' | 'personagens')}
                             >
                                <ButtonSpan theme={theme} neon={neon}>{btn.label}</ButtonSpan>
@@ -144,7 +151,7 @@ export const Hub = () => {
                                     <ArrowBack />
                                 </MobileCollapsedBackButton>
                             )}
-                            {btn.label === 'Mesas' && !isCollapsed && (
+                            {false && btn.label === 'Mesas' && !isCollapsed && (
                                 <DisabledFeatureOverlay
                                     role="status"
                                     aria-label="Mesas: funcionalidade em produção"
@@ -160,6 +167,7 @@ export const Hub = () => {
                 {renderContent()}
 
             </ClipBox>
+            )}
         </MainContainer>
     )
 }

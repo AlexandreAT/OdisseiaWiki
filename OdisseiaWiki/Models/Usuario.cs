@@ -28,4 +28,10 @@ public partial class Usuario
     public virtual ICollection<Mesa> Mesas { get; set; } = new List<Mesa>();
 
     public virtual ICollection<Mesausuario> Mesausuarios { get; set; } = new List<Mesausuario>();
+
+    public virtual ICollection<MesaSolicitacaoEntrada> MesaSolicitacoesEntrada { get; set; } = new List<MesaSolicitacaoEntrada>();
+
+    public virtual ICollection<MesaExpulsaoRegistro> MesaExpulsoesRecebidas { get; set; } = new List<MesaExpulsaoRegistro>();
+
+    public virtual ICollection<MesaExpulsaoRegistro> MesaExpulsoesAplicadas { get; set; } = new List<MesaExpulsaoRegistro>();
 }

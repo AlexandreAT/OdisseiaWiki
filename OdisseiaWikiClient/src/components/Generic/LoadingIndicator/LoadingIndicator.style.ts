@@ -10,14 +10,19 @@ const pulseGlow = keyframes`
 `;
 
 const bounceDot = keyframes`
-  0%, 60%, 100% {
+  0%, 20%, 100% {
     opacity: 0;
-    transform: translateY(0) scale(0.72);
+    transform: translateY(0.12em) scale(0.72);
   }
 
-  30% {
+  38%, 58% {
     opacity: 1;
     transform: translateY(-0.38em) scale(1);
+  }
+
+  78% {
+    opacity: 0;
+    transform: translateY(0) scale(0.76);
   }
 `;
 
@@ -84,7 +89,7 @@ export const AnimatedDots = styled.span`
   color: inherit !important;
   vertical-align: baseline;
 
-  > span {
+  > i {
     width: 0.24em;
     height: 0.24em;
     flex: 0 0 auto;
@@ -92,22 +97,14 @@ export const AnimatedDots = styled.span`
     background: currentColor;
     box-shadow: 0 0 0.38em currentColor;
     opacity: 0;
-    animation: ${bounceDot} 1.2s ease-in-out infinite;
+    animation: ${bounceDot} 1.35s ease-in-out infinite;
   }
 
-  > span:nth-child(2) {
-    animation-delay: 0.14s;
+  > i:nth-child(2) {
+    animation-delay: 0.16s;
   }
 
-  > span:nth-child(3) {
-    animation-delay: 0.28s;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    > span {
-      opacity: 0.8;
-      transform: none;
-      animation: none;
-    }
+  > i:nth-child(3) {
+    animation-delay: 0.32s;
   }
 `;

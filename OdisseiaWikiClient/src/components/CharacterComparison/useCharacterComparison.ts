@@ -3,19 +3,29 @@ import {
   getCharacterForComparison,
   searchCharactersForComparison,
 } from '../../services/personagemComparacaoService';
-import { CharacterComparisonModalProps } from './CharacterComparison.types';
+import {
+  CharacterComparisonData,
+  CharacterComparisonModalProps,
+} from './CharacterComparison.types';
 
 type HookArgs = Pick<CharacterComparisonModalProps, 'open' | 'current' | 'source' | 'sourceId' | 'tableId'>;
 
 export const useCharacterComparison = ({ open, current, source, sourceId, tableId }: HookArgs) => {
+  const currentIdentity = current
+    ? `${current.origem}:${current.id ?? current.nome}`
+    : `${source}:${sourceId ?? ''}`;
   const [currentCharacter, setCurrentCharacter] = React.useState(current ?? null);
-  const [candidate, setCandidate] = React.useState<typeof currentCharacter>(null);
+  const [candidate, setCandidate] = React.useState<CharacterComparisonData | null>(null);
   const [query, setQuery] = React.useState('');
-  const [results, setResults] = React.useState<NonNullable<typeof currentCharacter>[]>([]);
+  const [results, setResults] = React.useState<CharacterComparisonData[]>([]);
   const [loadingCurrent, setLoadingCurrent] = React.useState(false);
+  const [loadingCandidate, setLoadingCandidate] = React.useState(false);
+  const [selectedCandidateName, setSelectedCandidateName] = React.useState('');
   const [searching, setSearching] = React.useState(false);
   const [error, setError] = React.useState('');
   const searchRequestRef = React.useRef(0);
+  const candidateRequestRef = React.useRef(0);
+  const currentRef = React.useRef(current);
 
   React.useEffect(() => {
     if (!open) return;
@@ -27,13 +37,22 @@ export const useCharacterComparison = ({ open, current, source, sourceId, tableI
   }, [open]);
 
   React.useEffect(() => {
+    currentRef.current = current;
     if (!open) return;
-    setCurrentCharacter(current ?? null);
+    if (current) setCurrentCharacter(current);
+  }, [current, open]);
+
+  React.useEffect(() => {
+    if (!open) return;
+    candidateRequestRef.current += 1;
+    setCurrentCharacter(currentRef.current ?? null);
     setCandidate(null);
     setQuery('');
     setResults([]);
+    setSelectedCandidateName('');
+    setLoadingCandidate(false);
     setError('');
-  }, [current, open]);
+  }, [currentIdentity, open]);
 
   React.useEffect(() => {
     if (!open || current || !sourceId) return;
@@ -52,8 +71,8 @@ export const useCharacterComparison = ({ open, current, source, sourceId, tableI
 
   React.useEffect(() => {
     const term = query.trim();
-    const selectedCandidateName = candidate?.nome.trim().toLocaleLowerCase('pt-BR');
-    if (!open || term.length < 2 || term.toLocaleLowerCase('pt-BR') === selectedCandidateName) {
+    const selectedName = selectedCandidateName.trim().toLocaleLowerCase('pt-BR');
+    if (!open || term.length < 2 || term.toLocaleLowerCase('pt-BR') === selectedName) {
       setResults([]);
       setSearching(false);
       return;
@@ -84,12 +103,38 @@ export const useCharacterComparison = ({ open, current, source, sourceId, tableI
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [candidate, open, query, source, sourceId, tableId]);
+  }, [open, query, selectedCandidateName, source, sourceId, tableId]);
 
-  const selectCandidate = React.useCallback((selected: NonNullable<typeof currentCharacter>) => {
-    setCandidate(selected);
+  const selectCandidate = React.useCallback(async (selected: CharacterComparisonData) => {
+    if (!selected.id || !Number.isFinite(Number(selected.id))) {
+      setError('O personagem selecionado nÃ£o possui uma ficha vÃ¡lida para comparaÃ§Ã£o.');
+      return;
+    }
+
+    const requestId = candidateRequestRef.current + 1;
+    candidateRequestRef.current = requestId;
+
+    setCandidate(null);
+    setSelectedCandidateName(selected.nome);
     setQuery(selected.nome);
     setResults([]);
+    setError('');
+    setLoadingCandidate(true);
+
+    try {
+      // A busca Ã© apenas um Ã­ndice. Carregar a ficha individualmente impede que
+      // uma projeÃ§Ã£o resumida da lista alimente os atributos do radar.
+      const detailed = await getCharacterForComparison(selected.origem, Number(selected.id));
+      if (candidateRequestRef.current === requestId) setCandidate(detailed);
+    } catch (requestError: unknown) {
+      const canceled = requestError instanceof Error && requestError.name === 'CanceledError';
+      if (!canceled && candidateRequestRef.current === requestId) {
+        setSelectedCandidateName('');
+        setError('NÃ£o foi possÃ­vel carregar o personagem selecionado.');
+      }
+    } finally {
+      if (candidateRequestRef.current === requestId) setLoadingCandidate(false);
+    }
   }, []);
 
   return {
@@ -98,6 +143,7 @@ export const useCharacterComparison = ({ open, current, source, sourceId, tableI
     query,
     results,
     loadingCurrent,
+    loadingCandidate,
     searching,
     error,
     setQuery,

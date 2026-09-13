@@ -32,7 +32,9 @@ namespace OdisseiaWiki.Controllers
                 return BadRequest("Tipo e entidade são obrigatórios.");
 
             string normalizedType = type.Trim().ToLowerInvariant();
-            if (!User.IsAdmin() && normalizedType is not ("player" or "perfil" or "personagemjogador"))
+            // O próprio mestre pode enviar o banner da Mesa que está criando/editando.
+            // A associação do arquivo à Mesa continua protegida nos endpoints de Mesa.
+            if (!User.IsAdmin() && normalizedType is not ("player" or "perfil" or "personagemjogador" or "mesa" or "mesas"))
                 return Forbid();
 
             ResultSaveImage result = await _assetService.SaveImageAsync(file, type, entityName, folderName);

@@ -12,6 +12,7 @@ import { ValueText } from '../../../../components/Generic/StatusBar/StatusBar.st
 interface ThemeProps {
   $themeMode: 'dark' | 'light';
   $neon: 'on' | 'off';
+  $mesaGame?: boolean;
 }
 
 export const HudCard = styled.article<ThemeProps>`
@@ -29,6 +30,11 @@ export const HudCard = styled.article<ThemeProps>`
   color: ${({ $themeMode }) => $themeMode === 'dark' ? 'var(--whitesmoke)' : 'var(--black)'};
   background: transparent;
   transition: transform 180ms ease, filter 180ms ease;
+
+  ${({ $mesaGame }) => $mesaGame && css`
+    min-height: 472px;
+    padding: 24px 22px 26px;
+  `}
 
   &::before {
     content: '';
@@ -124,6 +130,15 @@ export const CharacterHeader = styled.div`
   }
 `;
 
+export const MesaGameCharacterHeader = styled(CharacterHeader)`
+  grid-template-columns: 96px minmax(0, 1fr);
+  align-items: start;
+
+  @media (max-width: 390px) {
+    grid-template-columns: 78px minmax(0, 1fr);
+  }
+`;
+
 export const CharacterAvatar = styled(FallbackImage)<ThemeProps>`
   width: 100%;
   aspect-ratio: 1 / 1;
@@ -147,6 +162,20 @@ export const StatusColumn = styled.div`
   }
 `;
 
+export const MesaGameStatusColumn = styled(StatusColumn)`
+  width: min(100%, 300px);
+  gap: 5px;
+
+  ${ValueText} {
+    right: 6px;
+    font-size: 0.61rem;
+  }
+
+  @media (max-width: 600px) {
+    width: 100%;
+  }
+`;
+
 export const CharacterName = styled.h3`
   margin: 0 0 3px;
   color: var(--clearneonBlue);
@@ -157,6 +186,32 @@ export const CharacterName = styled.h3`
   line-height: 1.2;
   overflow-wrap: anywhere;
   text-shadow: 0 0 5px rgba(0, 210, 255, 0.55);
+`;
+
+export const MesaContextMeta = styled.span`
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px 8px;
+  margin: -1px 0 2px;
+  color: var(--lightGrey);
+  font-size: 0.66rem;
+  line-height: 1.3;
+
+  strong {
+    color: var(--clearneonBlue);
+    font-weight: 700;
+  }
+`;
+
+export const PresenceDot = styled.span<{ $online: boolean }>`
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 50%;
+  background: ${({ $online }) => $online ? 'var(--clearneonGreen)' : 'var(--grey)'};
+  box-shadow: ${({ $online }) => $online ? '0 0 7px var(--clearneonGreen)' : 'none'};
 `;
 
 export const VisibilityState = styled.span`
@@ -194,6 +249,49 @@ export const StatusItem = styled.div`
     grid-template-columns: 48px minmax(0, 1fr);
     gap: 5px;
   }
+`;
+
+export const MesaGameStatusItem = styled(StatusItem)`
+  grid-template-columns: 66px minmax(0, 1fr);
+  gap: 6px;
+
+  > :last-child {
+    min-height: 15px;
+  }
+
+  @media (max-width: 390px) {
+    grid-template-columns: 58px minmax(0, 1fr);
+  }
+`;
+
+export const QuickResourceButton = styled.button`
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: text;
+
+  &:focus-visible {
+    outline: 1px solid var(--clearneonBlue);
+    outline-offset: 2px;
+  }
+`;
+
+export const QuickResourceInput = styled.input`
+  width: 100%;
+  min-height: 17px;
+  padding: 1px 5px;
+  border: 1px solid var(--clearneonBlue);
+  border-radius: 4px;
+  outline: none;
+  background: rgba(0, 7, 18, 0.92);
+  color: var(--whitesmoke);
+  font: inherit;
+  font-size: 0.67rem;
+  text-align: right;
+  box-shadow: 0 0 6px rgba(0, 210, 255, 0.28);
 `;
 
 export const StatusLabel = styled.span`
@@ -384,6 +482,41 @@ export const ProgressHeader = styled.div`
   font-size: 0.76rem;
 
   span { min-width: 0; text-align: center; overflow-wrap: anywhere; }
+
+  button + span,
+  input + span {
+    display: none;
+  }
+`;
+
+export const QuickXpButton = styled.button`
+  width: 100%;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  cursor: text;
+
+  &:focus-visible {
+    outline: 1px solid var(--clearneonYellow);
+    outline-offset: 2px;
+  }
+`;
+
+export const QuickXpInput = styled.input`
+  width: min(100%, 116px);
+  align-self: center;
+  padding: 2px 6px;
+  border: 1px solid var(--clearneonYellow);
+  border-radius: 4px;
+  outline: none;
+  background: rgba(0, 7, 18, 0.92);
+  color: var(--clearneonYellow);
+  font: inherit;
+  font-size: 0.7rem;
+  text-align: center;
+  box-shadow: 0 0 6px rgba(255, 235, 0, 0.22);
 `;
 
 export const ProgressTrack = styled.div`
@@ -466,7 +599,8 @@ export const Actions = styled.div`
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 
-  > button:last-child {
+  > button:only-child,
+  > button:nth-child(3) {
     grid-column: 1 / -1;
   }
 `;
