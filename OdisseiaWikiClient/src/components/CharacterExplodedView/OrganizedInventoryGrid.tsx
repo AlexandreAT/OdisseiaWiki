@@ -6,7 +6,7 @@ import {
   DragEndEvent,
   DragOverlay,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
   TouchSensor,
   useDraggable,
   useDroppable,
@@ -250,10 +250,10 @@ export function OrganizedInventoryGrid<TEntry extends OrganizedInventoryEntry>({
   const gridRef = useRef<HTMLDivElement | null>(null);
   const suppressClickUntilRef = useRef(0);
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 7 } }),
-    useSensor(TouchSensor, {
-      activationConstraint: { delay: 180, tolerance: 8 },
-    }),
+    // Waiting for a short hold keeps an ordinary vertical swipe available to
+    // the sheet, but restores direct reorganization on touch devices.
+    useSensor(MouseSensor, { activationConstraint: { distance: 7 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 260, tolerance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
   const placements = useMemo(() => resolvePlacements(entries, visibleSlots), [entries, visibleSlots]);

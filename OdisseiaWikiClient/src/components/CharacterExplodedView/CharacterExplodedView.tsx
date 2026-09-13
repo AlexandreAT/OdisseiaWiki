@@ -91,6 +91,8 @@ export const CharacterExplodedView = ({
   setSkills,
   spells,
   setSpells,
+  skillLimit,
+  magicLimit,
   onOpenItem,
 }: CharacterExplodedViewProps) => {
   const [tab, setTab] = useState<ExplodedViewTab>(initialTab);
@@ -187,6 +189,15 @@ export const CharacterExplodedView = ({
   const weight = getInventoryWeight(inventoryItems, itemCatalog);
   const capacity = Math.max(0, Number(character.loadCapacity) || 0);
   const percentage = capacity > 0 ? Math.min(100, (weight / capacity) * 100) : 0;
+  const supportsEquipment = tab === 'items' || tab === 'prostheses';
+  const powerLabel = tab === 'skills' ? 'Skills' : 'Magias';
+  const powerCount = tab === 'skills' ? filledSkills.length : filledSpells.length;
+  const configuredPowerLimit = tab === 'skills' ? skillLimit : magicLimit;
+  const powerLimit = typeof configuredPowerLimit === 'number' && Number.isFinite(configuredPowerLimit) && configuredPowerLimit > 0
+    ? configuredPowerLimit
+    : undefined;
+  const powerPercentage = powerLimit ? Math.min(100, (powerCount / powerLimit) * 100) : 0;
+  const organizationLabel = supportsEquipment ? 'inventário' : powerLabel.toLocaleLowerCase('pt-BR');
 
   const updateTabEntries = useCallback((updated: ExplodedDomainEntry[]) => {
     if (tab === 'items' || tab === 'prostheses') {
@@ -272,7 +283,6 @@ export const CharacterExplodedView = ({
       : item));
   };
 
-  const supportsEquipment = tab === 'items' || tab === 'prostheses';
   const tabTheme = TAB_THEME[tab];
   const frameColor = neon === 'on' ? tabTheme.clearColor : tabTheme.color;
   // This full-page workspace must sit above the form's floating save actions,
@@ -334,7 +344,7 @@ export const CharacterExplodedView = ({
                 $active={layout === 'organized'}
                 onClick={() => setLayout((current) => current === 'free' ? 'organized' : 'free')}
               >
-                <MdAutoFixHigh /> {layout === 'free' ? 'Organizar inventário' : 'Voltar ao modo livre'}
+                <MdAutoFixHigh /> {layout === 'free' ? `Organizar ${organizationLabel}` : 'Voltar ao modo livre'}
               </OrganizeButton>
               <CloseButton type="button" onClick={onClose} aria-label="Fechar vista explodida"><CloseIcon /></CloseButton>
             </Header>
@@ -343,13 +353,22 @@ export const CharacterExplodedView = ({
               <Summary neon={neon === 'on'} color={frameColor}>
                 <h2>Vista explodida</h2>
                 <Capacity>
-                  <strong>{weight.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} / {capacity || '—'} kg</strong>
-                  <span>{Math.round(percentage)}%</span>
-                  <div className="track"><div className="fill" style={{ width: `${percentage}%` }} /></div>
+                  {supportsEquipment ? <>
+                    <strong>{weight.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} / {capacity || '—'} kg</strong>
+                    <span>{Math.round(percentage)}%</span>
+                    <div className="track"><div className="fill" style={{ width: `${percentage}%` }} /></div>
+                  </> : <>
+                    <strong>{powerCount} / {powerLimit ?? '—'} {powerLabel.toLocaleLowerCase('pt-BR')}</strong>
+                    <span>{powerLimit ? `${Math.round(powerPercentage)}%` : 'Livre'}</span>
+                    <div className="track"><div className="fill" style={{ width: `${powerPercentage}%` }} /></div>
+                  </>}
                 </Capacity>
                 <SummaryMetric>
-                  <MdOutlineBackpack />
-                  <div><span>Itens totais</span><strong>{inventoryItems.length + prostheses.length}</strong></div>
+                  {supportsEquipment ? <MdOutlineBackpack /> : TAB_ICONS[tab]}
+                  <div>
+                    <span>{supportsEquipment ? 'Itens totais' : `${powerLabel} utilizadas`}</span>
+                    <strong>{supportsEquipment ? inventoryItems.length + prostheses.length : powerCount}</strong>
+                  </div>
                 </SummaryMetric>
                 <CharacterIdentity>
                   {character.image ? <img src={normalizeImagePath(character.image)} alt={character.name} /> : <div className="placeholder" />}
@@ -362,9 +381,14 @@ export const CharacterExplodedView = ({
                 </CharacterIdentity>
               </Summary>
 
-              <InventoryArea neon={neon === 'on'} color={frameColor} aria-label={`${TAB_LABELS[tab]} do personagem`}>
+              <InventoryArea
+                neon={neon === 'on'}
+                color={frameColor}
+                data-layout={layout}
+                aria-label={`${TAB_LABELS[tab]} do personagem`}
+              >
                 <InventoryAreaHeader>
-                  <h2>Organização do inventário</h2>
+                  <h2>{supportsEquipment ? 'Organização do inventário' : `Organização de ${powerLabel}`}</h2>
                   <span>{layout === 'free' ? 'Mapa livre' : 'Grade organizada'}</span>
                 </InventoryAreaHeader>
                 <InventoryAreaBody>
@@ -375,6 +399,9 @@ export const CharacterExplodedView = ({
                     neon={neon}
                     accent={tabTheme.color}
                     clearAccent={tabTheme.clearColor}
+                    ariaLabel={`${TAB_LABELS[tab]} em disposição livre`}
+                    mapControlsLabel={`Controles do mapa de ${TAB_LABELS[tab]}`}
+                    centerMapLabel={`Centralizar ${TAB_LABELS[tab]}`}
                     emptyMessage="Nenhum registro preenchido nesta categoria."
                     onPositionsChange={handlePositionsChange}
                     onEntryClick={openEntry}
@@ -382,6 +409,7 @@ export const CharacterExplodedView = ({
                 ) : (
                   <OrganizedInventoryGrid
                     entries={viewEntries}
+                    ariaLabel={`${TAB_LABELS[tab]} em grade organizada. Arraste os registros para alterar a posição.`}
                     emptyMessage="Nenhum registro preenchido nesta categoria."
                     onPositionsChange={handleGridPositionsChange}
                     onEntryClick={openEntry}

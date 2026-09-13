@@ -1,3 +1,4 @@
+import { describeModifiers, getAccessoryCompatibilityLabel, getAttachedAccessories, getEffectiveItemAttributes, WEAPON_MODIFIER_FIELDS } from '../../utils/weaponModifiers';
 import {
   ARMA_DAMAGE_DISPLAY_CONFIG,
   ARMA_DAMAGE_FALLBACK_CONFIG,
@@ -222,7 +223,7 @@ export const buildItemComparisonModel = (
   item: Item,
   context?: SistemaRuntimeContexto | null,
 ): ItemComparisonModel => {
-  const attributes = item.atributos ?? {};
+  const attributes = getEffectiveItemAttributes(item);
   const ranges = context?.referenciaItem?.faixas ?? [];
   const typeLabel = optionLabel(item.tipo, ITEM_TIPO_OPTIONS) ?? 'Item';
   const commonDetails = clean<ItemComparisonDetail>([
@@ -271,6 +272,9 @@ export const buildItemComparisonModel = (
       detail('municao', 'Munição', ammunition, { numericValue: ammunition, higherIsBetter: true }),
       detail('estamina', 'Estamina por ação', number(weapon.gastoEstaminaPorAtaque), { numericValue: number(weapon.gastoEstaminaPorAtaque), higherIsBetter: false }),
       detail('duracao', 'Duração', weapon.duracaoEfeito),
+      ...WEAPON_MODIFIER_FIELDS.map(({ key, label }) => detail(`modificador.${key}`, label, weapon.modificadores?.[key], { numericValue: weapon.modificadores?.[key], higherIsBetter: key !== 'estamina' })),
+      detail('efeitosModificadores', 'Efeitos dos modificadores', weapon.modificadores?.efeitos?.join(' • ')),
+      detail('acessorios', 'Acessórios', getAttachedAccessories(weapon).map((entry) => entry.nome).join(' • ')),
       ...commonDetails,
     ]);
     special = text(weapon.especial);
@@ -342,6 +346,8 @@ export const buildItemComparisonModel = (
       detail('duracao', 'Duração', accessory.duracao),
       ...commonDetails,
       detail('bonus', 'Bônus', accessory.bonus?.filter(Boolean).join(' • ')),
+      detail('modificadores', 'Modificadores', describeModifiers(accessory.modificadores).join(' • ')),
+      detail('compatibilidade', 'Compatibilidade', getAccessoryCompatibilityLabel(accessory)),
     ]);
   } else {
     const other = attributes as OutrosAtributos;

@@ -7,7 +7,7 @@ import {
   type IBodyDefinition,
 } from 'matter-js';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { MdAdd, MdCenterFocusStrong, MdRemove } from 'react-icons/md';
+import { MdAdd, MdCenterFocusStrong, MdPanTool, MdRemove } from 'react-icons/md';
 import styled, { css, keyframes } from 'styled-components';
 import { normalizeImagePath } from '../../routes/Wiki/utils/imagePathHelper';
 import { getEntryKey, getExplodedMeta } from './characterExplodedView.utils';
@@ -43,6 +43,9 @@ export interface FreeInventoryCanvasProps<TEntry extends FreeInventoryEntry> {
   className?: string;
   accent?: string;
   clearAccent?: string;
+  ariaLabel?: string;
+  mapControlsLabel?: string;
+  centerMapLabel?: string;
   onEntryClick?: (entry: TEntry) => void;
   onPositionChange?: (key: string, position: FreeInventoryPosition) => void;
   onPositionsChange?: (positions: Record<string, FreeInventoryPosition>) => void;
@@ -88,7 +91,7 @@ const equippedGlow = keyframes`
   50% { box-shadow: 0 0 1rem color-mix(in srgb, var(--exploded-accent) 58%, transparent); }
 `;
 
-const Viewport = styled.section<{ $theme: 'dark' | 'light' }>`
+const Viewport = styled.section<{ $theme: 'dark' | 'light'; $touchMapMode: boolean }>`
   position: relative;
   width: 100%;
   height: 100%;
@@ -103,7 +106,17 @@ const Viewport = styled.section<{ $theme: 'dark' | 'light' }>`
   user-select: none;
 
   @media (max-width: 720px) {
-    min-height: 31rem;
+    min-height: 26rem;
+  }
+
+  @media (max-width: 520px) {
+    min-height: 24rem;
+  }
+
+  @media (max-width: 980px) {
+    /* The explicit map control prevents a vertical scroll from becoming a
+       pan, while still making map navigation and item placement available. */
+    touch-action: ${({ $touchMapMode }) => $touchMapMode ? 'none' : 'pan-y'};
   }
 `;
 
@@ -147,6 +160,20 @@ const MapControls = styled.div`
     transition: .18s ease;
 
     &:hover { box-shadow: 0 0 8px var(--exploded-clear); }
+    &[aria-pressed='true'] {
+      color: var(--whitesmoke);
+      background: color-mix(in srgb, var(--exploded-accent) 24%, rgba(0, 5, 14, .94));
+      box-shadow: 0 0 9px var(--exploded-clear);
+    }
+
+    &.map-mode-toggle {
+      width: auto;
+      padding-inline: 8px;
+      grid-auto-flow: column;
+      gap: 5px;
+      font: 700 9px 'Michroma', sans-serif;
+      white-space: nowrap;
+    }
   }
 `;
 
@@ -155,6 +182,7 @@ const Card = styled.button<{
   $equipped: boolean;
   $neon: 'on' | 'off';
   $theme: 'dark' | 'light';
+  $touchMapMode: boolean;
 }>`
   position: absolute;
   top: 0;
@@ -193,6 +221,10 @@ const Card = styled.button<{
   @media (max-width: 720px) {
     width: 4.75rem;
     height: 6rem;
+  }
+
+  @media (max-width: 980px) {
+    touch-action: ${({ $touchMapMode }) => $touchMapMode ? 'none' : 'pan-y'};
   }
 `;
 
@@ -302,6 +334,9 @@ export const FreeInventoryCanvas = <TEntry extends FreeInventoryEntry>({
   className,
   accent = 'var(--neonBlue)',
   clearAccent = 'var(--clearneonBlue)',
+  ariaLabel = 'Inventário em disposição livre',
+  mapControlsLabel = 'Controles do mapa do inventário',
+  centerMapLabel = 'Centralizar inventário',
   onEntryClick,
   onPositionChange,
   onPositionsChange,
@@ -324,7 +359,20 @@ export const FreeInventoryCanvas = <TEntry extends FreeInventoryEntry>({
   } | null>(null);
   const panRef = useRef<{ pointerId: number; startX: number; startY: number; viewX: number; viewY: number } | null>(null);
   const [view, setView] = useState({ x: 0, y: 0, zoom: 1 });
+  const [isCompactViewport, setIsCompactViewport] = useState(false);
+  const [touchMapMode, setTouchMapMode] = useState(false);
   const viewRef = useRef(view);
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 980px)');
+    const updateViewport = () => {
+      setIsCompactViewport(media.matches);
+      if (!media.matches) setTouchMapMode(false);
+    };
+    updateViewport();
+    media.addEventListener('change', updateViewport);
+    return () => media.removeEventListener('change', updateViewport);
+  }, []);
 
   callbacksRef.current = { onEntryClick, onPositionChange, onPositionsChange };
   viewRef.current = view;
@@ -575,6 +623,7 @@ export const FreeInventoryCanvas = <TEntry extends FreeInventoryEntry>({
 
   const handlePointerDown = (event: React.PointerEvent<HTMLButtonElement>, key: string) => {
     if (!event.isPrimary || event.button !== 0) return;
+    if (event.pointerType === 'touch' && !touchMapMode) return;
     const body = bodiesByKeyRef.current.get(key);
     if (!body) return;
     finishActiveCardDrag();
@@ -640,6 +689,7 @@ export const FreeInventoryCanvas = <TEntry extends FreeInventoryEntry>({
 
   const startPan = (event: React.PointerEvent<HTMLElement>) => {
     if (!event.isPrimary || event.button !== 0 || (event.target as HTMLElement).closest('button')) return;
+    if (event.pointerType === 'touch' && !touchMapMode) return;
     event.currentTarget.setPointerCapture(event.pointerId);
     panRef.current = {
       pointerId: event.pointerId,
@@ -672,8 +722,9 @@ export const FreeInventoryCanvas = <TEntry extends FreeInventoryEntry>({
       ref={viewportRef}
       className={className}
       $theme={theme}
+      $touchMapMode={touchMapMode}
       style={{ '--exploded-accent': accent, '--exploded-clear': clearAccent } as React.CSSProperties}
-      aria-label="Inventário em disposição livre"
+      aria-label={ariaLabel}
       onPointerDown={startPan}
       onPointerMove={movePan}
       onPointerUp={finishPan}
@@ -683,6 +734,7 @@ export const FreeInventoryCanvas = <TEntry extends FreeInventoryEntry>({
         if (panRef.current?.pointerId === event.pointerId) finishPan(event);
       }}
       onWheel={(event) => {
+        if (isCompactViewport && !touchMapMode) return;
         event.preventDefault();
         changeZoom(viewRef.current.zoom + (event.deltaY < 0 ? .12 : -.12), { x: event.clientX, y: event.clientY });
       }}
@@ -716,6 +768,7 @@ export const FreeInventoryCanvas = <TEntry extends FreeInventoryEntry>({
             $equipped={equipped}
             $neon={neon}
             $theme={theme}
+            $touchMapMode={touchMapMode}
             aria-label={`${name}${equipped ? ', equipado' : ''}`}
             title={name}
             onPointerDown={(event) => handlePointerDown(event, key)}
@@ -749,10 +802,27 @@ export const FreeInventoryCanvas = <TEntry extends FreeInventoryEntry>({
         );
       })}
       </World>
-      <MapControls aria-label="Controles do mapa do inventário">
+      <MapControls aria-label={mapControlsLabel}>
+        {isCompactViewport && (
+          <button
+            type="button"
+            className="map-mode-toggle"
+            aria-pressed={touchMapMode}
+            aria-label={touchMapMode
+              ? 'Desativar movimentação do mapa para rolar a tela'
+              : 'Ativar movimentação do mapa e dos itens'}
+            title={touchMapMode
+              ? 'Desativar movimentação do mapa para rolar a tela'
+              : 'Ativar movimentação do mapa e dos itens'}
+            onClick={() => setTouchMapMode((enabled) => !enabled)}
+          >
+            <MdPanTool />
+            <span>{touchMapMode ? 'Mover ativo' : 'Mover itens'}</span>
+          </button>
+        )}
         <button type="button" onClick={() => changeZoom(view.zoom + .12)} aria-label="Aumentar zoom"><MdAdd /></button>
         <button type="button" onClick={() => changeZoom(view.zoom - .12)} aria-label="Diminuir zoom"><MdRemove /></button>
-        <button type="button" onClick={centerMap} aria-label="Centralizar inventário"><MdCenterFocusStrong /></button>
+        <button type="button" onClick={centerMap} aria-label={centerMapLabel}><MdCenterFocusStrong /></button>
       </MapControls>
     </Viewport>
   );

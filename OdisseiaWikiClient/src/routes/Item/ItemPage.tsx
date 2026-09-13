@@ -1,6 +1,7 @@
 import { createPortal } from 'react-dom';
 import CloseIcon from '@mui/icons-material/Close';
 import { ReactNode } from 'react';
+import { describeAccessory, describeModifiers, getAccessoryCompatibilityLabel, getAttachedAccessories, getEffectiveItemAttributes, isAccessoryCompatible } from '../../utils/weaponModifiers';
 import {
   BiBarChartAlt2,
   BiBody,
@@ -436,7 +437,7 @@ const ItemPage = () => {
   }
 
   const typeLabel = ITEM_TIPO_OPTIONS.find((option) => option.value === item.tipo)?.label ?? 'Item';
-  const attributes = item.atributos ?? {};
+  const attributes = getEffectiveItemAttributes(item);
   const outfitType = item.tipo === 'traje'
     ? normalizeTrajeTipo((attributes as TrajeAtributos).tipoTraje)
     : undefined;
@@ -757,6 +758,9 @@ const ItemPage = () => {
         descriptionPanel,
         renderTextPanel('Especial', <BiStar aria-hidden="true" />, textList(weapon.especial), 'gold'),
         renderTextPanel('Bônus', <BiBoltCircle aria-hidden="true" />, textList(weapon.bonus), 'purple'),
+        renderTextPanel('Modificadores', <BiTargetLock aria-hidden="true" />, describeModifiers(weapon.modificadores), 'purple'),
+        renderTextPanel('Acessórios', <BiWrench aria-hidden="true" />, getAttachedAccessories(weapon).map((accessory) =>
+          `${accessory.nome}: ${describeAccessory(accessory.atributos).join(' • ') || 'Sem modificadores'}${isAccessoryCompatible(weapon, accessory.atributos) ? '' : ' (incompatível; não aplicado)'}`)),
       ].filter(Boolean);
       return sections.length > 0 ? <ContentGrid $columns={Math.min(3, sections.length)}>{sections}</ContentGrid> : null;
     }
@@ -786,6 +790,8 @@ const ItemPage = () => {
       const sections = [
         descriptionPanel,
         renderTextPanel('Bônus', <BiBoltCircle aria-hidden="true" />, textList(accessory.bonus), 'purple'),
+        renderTextPanel('Modificadores', <BiTargetLock aria-hidden="true" />, describeModifiers(accessory.modificadores), 'purple'),
+        renderTextPanel('Compatibilidade', <BiWrench aria-hidden="true" />, [getAccessoryCompatibilityLabel(accessory)]),
       ].filter(Boolean);
       return sections.length > 0 ? <ContentGrid $columns={sections.length}>{sections}</ContentGrid> : null;
     }

@@ -1009,6 +1009,21 @@ ImplanteAtributosForm
 
 A estrutura principal do item permanece a mesma. O campo `atributos` varia conforme o tipo.
 
+## 29.1. Modificadores de armas e acessórios
+
+O tipo `acessorio` já faz parte do contrato de itens. Armas e acessórios usam os campos opcionais tipados em `src/models/Itens.ts`, persistidos pelo contrato existente de atributos JSON, inclusive nas cópias do inventário. Não há nova tabela ou migração.
+
+- `modificadores`: números assinados para `curta`, `media`, `longa`, `ataque`, `revidar`, `dano` e `estamina`; `efeitos` é uma lista de descrições especiais, sem executar regras narrativas automaticamente.
+- Armas: `modoModificadores` determina `distancia` ou `corpo_a_corpo`. Ausente ou `null` usa o tipo de arma normalizado; arquétipos personalizados podem definir o modo explicitamente. `null` permite restaurar o modo automático em uma cópia do inventário.
+- Acessórios: `compatibilidade` aceita `todas`, `distancia` ou `corpo_a_corpo`. Ausente mantém compatibilidade universal dos registros antigos.
+- Armas: `acessorios` contém snapshots `{ idItemBase, nome, atributos }`. Alterações posteriores no catálogo não modificam silenciosamente anexos existentes; remover e anexar novamente obtém a versão atual. Um mesmo acessório do catálogo pode ser anexado uma vez por arma. Não há consumo automático de itens do inventário nem restrição por slot.
+- Somar apenas condições do modo de combate da arma. Um acessório incompatível permanece listado, mas não contribui com nenhum modificador. Dano e estamina são modificadores gerais; custo negativo reduz estamina. Danos e custos resultantes têm piso zero e só alteram campos base preenchidos.
+- A fonte persistida é sempre o valor **base**, junto dos anexos, nunca o total calculado. `src/utils/weaponModifiers.ts` centraliza a projeção de leitura usada pelo editor, página de item, detalhes do inventário e comparação. Não passar uma projeção já calculada novamente ao resolvedor.
+- `WeaponModifiers` e `WeaponAccessories` são compartilhados pelos formulários de criação, edição administrativa e inventário. A busca usa o catálogo permitido ao usuário; anexar ou remover só altera o rascunho da arma até o salvamento existente.
+- Preservar `bonus`, `efeito`, propriedades legadas e metadados da vista explodida. Bônus textuais antigos não são interpretados como números. Ao completar um item do inventário com seu catálogo base, `modificadores` é uma substituição integral, para não ressuscitar bônus removidos pelo usuário.
+
+Verificação: `npm run test:items` no client cobre somas, penalidades, compatibilidade, remoção, snapshots, reabertura, legado e comparação. `ItemWeaponAccessoriesTests` no backend cobre o contrato de persistência de itens e serialização do inventário.
+
 ---
 
 # 30. Padrão de JSONs
