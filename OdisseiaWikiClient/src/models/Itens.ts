@@ -102,6 +102,10 @@ export type ItemAtributos =
   | OutrosAtributos;
 
 export interface ArmaAtributos {
+  modificadores?: ModificadoresArma;
+  /** Override para arquétipos personalizados; ausente usa a classificação existente. */
+  modoModificadores?: ModoModificadoresArma | null;
+  acessorios?: AcessorioAnexado[];
   efeito?: string;
   tipoArma?: ArmaTipo;
   tipoDano?: ArmaTipoDano;
@@ -153,10 +157,33 @@ export interface ConsumiveisAtributos {
 }
 
 export interface AcessorioAtributos {
+  modificadores?: ModificadoresArma;
+  compatibilidade?: 'todas' | ModoModificadoresArma;
   efeito?: string;
   bonus?: string[];
   slot?: string;
   duracao?: string;
+}
+
+export type ModoModificadoresArma = 'distancia' | 'corpo_a_corpo';
+
+/** Deltas definidos pelo mestre, independentes dos valores base do item. */
+export interface ModificadoresArma {
+  curta?: number;
+  media?: number;
+  longa?: number;
+  ataque?: number;
+  revidar?: number;
+  dano?: number;
+  estamina?: number;
+  efeitos?: string[];
+}
+
+/** Snapshot da instalação: alterações futuras do catálogo não reescrevem a ficha. */
+export interface AcessorioAnexado {
+  idItemBase: string;
+  nome: string;
+  atributos: AcessorioAtributos;
 }
 
 export interface OutrosAtributos {

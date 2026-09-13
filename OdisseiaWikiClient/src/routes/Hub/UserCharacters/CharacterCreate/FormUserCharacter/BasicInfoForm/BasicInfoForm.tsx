@@ -471,6 +471,8 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
         setSkills={setSkills}
         spells={magias}
         setSpells={setMagias}
+        skillLimit={initialSkillLimit}
+        magicLimit={initialMagicLimit}
         onOpenItem={(item) => openItemPreview(item, runtimeContext)}
       />
     </>

@@ -209,6 +209,8 @@ export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
         setSkills={setSkills}
         spells={magias}
         setSpells={setMagias}
+        skillLimit={skillLimit}
+        magicLimit={magicLimit}
         onOpenItem={(item) => openItemPreview(item, runtimeContext)}
       />
     </>

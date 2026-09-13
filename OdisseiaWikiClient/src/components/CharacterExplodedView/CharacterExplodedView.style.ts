@@ -56,7 +56,10 @@ export const LauncherButton = styled.button<ThemeProps & { $opening: boolean }>`
 
 export const Overlay = styled(motion.div)`
   position: fixed;
-  top: var(--main-header-height, 85px);
+  /* This view is portalled to body and therefore cannot inherit the Page
+     component's --main-header-height custom property. Keep this offset in
+     sync with the fixed navbar breakpoints so there is no mobile gap. */
+  top: 85px;
   right: 0;
   bottom: 0;
   left: 0;
@@ -65,6 +68,21 @@ export const Overlay = styled(motion.div)`
   backdrop-filter: blur(6px);
   padding: clamp(10px, 1.4vh, 18px) clamp(12px, 2vw, 32px) 18px;
   box-sizing: border-box;
+
+  @media (max-width: 1100px) {
+    top: 67px;
+  }
+
+  @media (max-width: 980px) {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  @media (max-width: 768px) {
+    top: 54px;
+    padding: 0;
+  }
 `;
 
 export const Shell = styled(motion.section)<ThemeProps & AccentProps>`
@@ -91,7 +109,11 @@ export const Shell = styled(motion.section)<ThemeProps & AccentProps>`
   box-shadow: ${({ $neon }) => $neon === 'on' ? '0 0 16px var(--exploded-glow)' : 'none'};
 
   @media (max-width: 980px) {
-    overflow-y: auto;
+    height: auto;
+    min-height: 100%;
+    grid-template-rows: auto auto;
+    align-content: start;
+    overflow: visible;
   }
 `;
 
@@ -140,7 +162,12 @@ export const Header = styled.header`
   gap: 14px;
 
   @media (max-width: 980px) {
+    position: sticky;
+    top: 0;
+    z-index: 12;
     grid-template-columns: minmax(0, 1fr) auto;
+    background: rgba(0, 7, 16, .95);
+    backdrop-filter: blur(10px);
   }
 `;
 
@@ -239,9 +266,15 @@ export const Content = styled.div<{ $simple?: boolean }>`
   }
 
   @media (max-width: 980px) {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
     grid-template-columns: 1fr;
+    min-height: unset;
     overflow: visible;
     padding: 9px;
+
+    > * { flex: 0 0 auto; }
   }
 `;
 
@@ -326,8 +359,17 @@ export const InventoryArea = styled(HudFrame)`
     rgba(0, 5, 14, .62);
   background-size: 32px 32px;
 
-  @media (max-width: 980px) { min-height: 520px; }
-  @media (max-width: 520px) { min-height: 470px; }
+  @media (max-width: 980px) { min-height: 470px; }
+  @media (max-width: 520px) { min-height: 420px; }
+
+  @media (max-width: 980px) {
+    &[data-layout='organized'] {
+      min-height: 0;
+      grid-template-rows: auto auto;
+
+      > div { min-height: 0; }
+    }
+  }
 `;
 
 export const InventoryAreaHeader = styled.header`
@@ -443,6 +485,13 @@ export const OrganizedGridRoot = styled.div`
   align-content: start;
   gap: 8px;
   scrollbar-color: var(--exploded-accent) transparent;
+  touch-action: pan-y;
+
+  @media (max-width: 980px) {
+    height: auto;
+    min-height: 352px;
+    overflow: visible;
+  }
 `;
 
 export const EquipmentColumn = styled(HudFrame)`
@@ -463,7 +512,7 @@ export const EquipmentColumn = styled(HudFrame)`
   }
 
   @media (max-width: 980px) {
-    min-height: 690px;
+    min-height: 0;
     overflow: visible;
   }
 `;
@@ -522,8 +571,17 @@ export const MannequinStage = styled.div`
   }
 
   @media (max-width: 1180px) { min-height: 560px; }
-  @media (max-width: 980px) { min-height: 660px; }
-  @media (max-width: 520px) { min-height: 590px; }
+  @media (max-width: 980px) {
+    min-height: clamp(500px, 135vw, 600px);
+
+    .mannequin-silhouette {
+      top: 50%;
+      width: min(54%, 230px);
+      height: 86%;
+    }
+  }
+
+  @media (max-width: 520px) { min-height: clamp(480px, 135vw, 540px); }
 `;
 
 export const EquipmentSlotButton = styled.button<{
@@ -554,6 +612,11 @@ export const EquipmentSlotButton = styled.button<{
     color: var(--exploded-accent);
   `}
   &:hover { transform: translate(-50%, -50%) scale(1.07); border-color: var(--exploded-accent); color: var(--exploded-accent); }
+
+  @media (max-width: 520px) {
+    width: clamp(32px, 9vw, 40px);
+    &[data-region='torso'] { width: clamp(30px, 8vw, 36px); }
+  }
 `;
 
 export const EquipmentSearchPanel = styled(motion.aside)`

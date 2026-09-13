@@ -33,7 +33,8 @@ import AccountCircleOutlinedIcon from '@mui/icons-material/AccountCircleOutlined
 import backgroundVideo from '../../assets/backgroundLinesScifiAnimation.mp4';
 import { ScrollRevealBlock } from '../../components/Generic/ScrollRevealBlock';
 import { getInventarioItems, getProtesesItems } from '../../utils/itemInventorySections';
-import { Item } from '../../models/Itens';
+import { Item, ArmaAtributos, AcessorioAtributos } from '../../models/Itens';
+import { describeAccessory, describeModifiers, getAccessoryCompatibilityLabel, getAttachedAccessories, getEffectiveItemAttributes, isAccessoryCompatible } from '../../utils/weaponModifiers';
 import { getItensByIds } from '../../services/itensService';
 import { getItemImage } from '../../utils/getItemImage';
 import { ColorScheme, getColorVars } from '../../utils/getColorVars';
@@ -79,7 +80,7 @@ const mergeItemRecords = (
   custom: Record<string, unknown>,
 ): Record<string, unknown> => Object.entries(custom).reduce<Record<string, unknown>>((result, [key, value]) => {
   const baseValue = result[key];
-  result[key] = isObjectRecord(baseValue) && isObjectRecord(value)
+  result[key] = key !== 'modificadores' && isObjectRecord(baseValue) && isObjectRecord(value)
     ? mergeItemRecords(baseValue, value)
     : value;
   return result;
@@ -201,6 +202,7 @@ const getAttributeEntries = (attributes: Record<string, any> | undefined, prefix
   if (!attributes) return [];
 
   return Object.entries(attributes).flatMap(([key, value]) => {
+    if (['modificadores', 'modoModificadores', 'acessorios', 'compatibilidade'].includes(key)) return [];
     if (key === 'ataquesPorTurno' && attributes.cadencia !== undefined) return [];
     if (key === 'municao' && attributes.capacidadeMunicao !== undefined) return [];
     if (key.startsWith('__') || key.toLowerCase().includes('efeitorichtext') || ['atual', 'ataquesPorTurno', 'efeito', 'especial', 'especiais'].includes(key) || value === undefined || value === null || value === '' || value === false || value === 0 || (Array.isArray(value) && value.length === 0)) return [];
@@ -723,9 +725,20 @@ const PersonagemPage: React.FC = () => {
   const selectedItemTypeLabel = isSelectedInventoryItem
     ? ITEM_TIPO_OPTIONS.find((option) => option.value === selectedInventoryItem?.tipo)?.label
     : undefined;
+  const selectedAttributes = selectedInventoryItem ? getEffectiveItemAttributes(selectedInventoryItem) : undefined;
+  const selectedModifierDescriptions = describeModifiers((selectedAttributes as ArmaAtributos | undefined)?.modificadores);
   const selectedAttributeEntries = [
     ...(selectedItemTypeLabel ? [{ label: 'Tipo de Item', value: selectedItemTypeLabel }] : []),
-    ...getAttributeEntries(selectedInventoryItem?.atributos as Record<string, any> | undefined),
+    ...getAttributeEntries(selectedAttributes),
+    ...(selectedModifierDescriptions.length ? [{ label: 'Modificadores', value: selectedModifierDescriptions.join('; ') }] : []),
+    ...(selectedInventoryItem?.tipo === 'arma' ? getAttachedAccessories(selectedInventoryItem.atributos as ArmaAtributos).map((accessory) => ({
+      label: `Acessório: ${accessory.nome}`,
+      value: [
+        ...describeAccessory(accessory.atributos),
+        ...(!isAccessoryCompatible(selectedInventoryItem.atributos as ArmaAtributos, accessory.atributos) ? ['Incompatível: modificadores não aplicados'] : []),
+      ].join('; ') || 'Sem modificadores',
+    })) : []),
+    ...(selectedInventoryItem?.tipo === 'acessorio' ? [{ label: 'Compatibilidade', value: getAccessoryCompatibilityLabel(selectedAttributes as AcessorioAtributos) }] : []),
   ];
   const selectedAbilityEntries = isSelectedAbility ? [
     Array.isArray((selectedInventoryItem as any)?.elemento) && (selectedInventoryItem as any).elemento.length > 0

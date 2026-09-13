@@ -788,6 +788,9 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
         setSkills={setSkills}
         spells={magias}
         setSpells={setMagias}
+        skillLimit={sistema.contexto?.poderes?.skillConfig?.maximoSkills}
+        magicLimit={sistema.contexto?.poderes?.skillConfig?.maximoMagias
+          ?? sistema.contexto?.poderes?.limiteMagias}
         onOpenItem={(item) => openItemPreview(item, sistema.contexto)}
       />
 

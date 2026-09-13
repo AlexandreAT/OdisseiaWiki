@@ -30,6 +30,9 @@ export interface CharacterExplodedViewProps {
   setSkills: (skills: Skills[]) => void;
   spells: Magia[];
   setSpells: (spells: Magia[]) => void;
+  /** Limites efetivos do sistema para a ficha atual; zero ou ausente significa sem limite configurado. */
+  skillLimit?: number | null;
+  magicLimit?: number | null;
   onOpenItem?: (item: Item) => void;
   tableName?: string;
 }

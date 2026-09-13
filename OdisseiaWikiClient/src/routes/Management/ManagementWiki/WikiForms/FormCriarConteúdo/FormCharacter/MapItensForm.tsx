@@ -8,6 +8,10 @@ import { ArmaAtributos, ArmaTipo, ArmaTipoDano, ImplanteAtributos, TrajeAtributo
 import { ACERTO_DADO_OPTIONS, ARMA_TIPO_DANO_OPTIONS, ARMA_TIPO_OPTIONS, getPrimeiroAtaqueComGastoEstamina, normalizeDadoAcerto, TRAJE_TIPO_OPTIONS } from '../../../../../../constants';
 import { DadoAcerto } from '../../../../../../models/Dados';
 import { catalogReferenceOptions, SistemaItemFormCatalog } from '../../../../../../utils/systemItemFormCatalog';
+import { WeaponModifiers } from '../../../../../../components/WeaponModifiers/WeaponModifiers';
+import { WeaponAccessories } from '../../../../../../components/WeaponAccessories/WeaponAccessories';
+import { getWeaponModifierMode } from '../../../../../../utils/weaponModifiers';
+import type { AcessorioAtributos } from '../../../../../../models/Itens';
 
 interface BaseProps {
   theme: 'dark' | 'light';
@@ -67,7 +71,7 @@ const withNormalizedAcerto = (value: any, defaults: Record<string, unknown>) => 
 
 export const ArmaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon, managementLayout = false, sistemaItemCatalogo }) => {
   const initialValue = (value ?? {}) as ArmaAtributos;
-  const [local, setLocal] = React.useState<ArmaAtributos>({
+  const local: ArmaAtributos = {
     ...initialValue,
     danoPorAlcance: initialValue.danoPorAlcance ?? {},
     cadencia: initialValue.cadencia ?? initialValue.ataquesPorTurno ?? 1,
@@ -78,7 +82,7 @@ export const ArmaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme,
     especial: initialValue.especial ?? '',
     acerto: normalizeDadoAcerto(initialValue.acerto) || undefined,
     duracaoEfeito: initialValue.duracaoEfeito ?? '',
-  });
+  };
 
   const handleChange = <Key extends keyof ArmaAtributos>(key: Key, val: ArmaAtributos[Key]) => {
     const updated: ArmaAtributos = { ...local, [key]: val };
@@ -98,7 +102,6 @@ export const ArmaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme,
       (updated as ArmaAtributos & { codigoArquetipo?: string }).codigoArquetipo = String(val ?? '').toUpperCase();
     }
 
-    setLocal(updated);
     onChange(updated);
   };
 
@@ -136,6 +139,14 @@ export const ArmaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme,
         </AttributeRow>
       </ManagementAttributeGroup>
 
+      <Select label="Modificadores de combate" theme={theme} neon={neon} width="100%"
+        allowEmptyOption={false}
+        value={local.modoModificadores ?? ''}
+        options={[{ value: '', label: 'Automático pelo tipo de arma' }, { value: 'distancia', label: 'À distância' }, { value: 'corpo_a_corpo', label: 'Corpo a corpo' }]}
+        onChange={(event) => handleChange('modoModificadores', (event.target.value || null) as ArmaAtributos['modoModificadores'])} />
+      {!getWeaponModifierMode(local) && <p>Selecione o tipo de arma ou o modo de combate para aplicar os modificadores de distância, ataque e revide.</p>}
+      <WeaponModifiers value={local.modificadores} onChange={(modifiers) => handleChange('modificadores', modifiers)} mode={getWeaponModifierMode(local)} theme={theme} neon={neon} />
+
       <ManagementAttributeGroup enabled={managementLayout} title="Efeitos e propriedades" theme={theme} neon={neon}>
         <AttributeRow>
           <InputText label="Duração do efeito" theme={theme} neon={neon} value={local.duracaoEfeito || ""} onChange={e => handleChange('duracaoEfeito', e.target.value)} />
@@ -147,6 +158,7 @@ export const ArmaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme,
           <InputText label="Efeito" theme={theme} neon={neon} value={local.efeito || ""} onChange={e => handleChange('efeito', e.target.value)} />
         </AttributeRow>
       </ManagementAttributeGroup>
+      <WeaponAccessories value={local} onChange={onChange} theme={theme} neon={neon} />
     </FormItemAtributos>
   );
 };
@@ -322,6 +334,12 @@ export const ConsumiveisAtributosForm: React.FC<BaseProps> = ({ value, onChange,
 
 export const AcessorioAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon }) => (
   <FormItemAtributos>
+    <Select label="Compatibilidade com armas" theme={theme} neon={neon} width="100%" value={value?.compatibilidade ?? 'todas'}
+      allowEmptyOption={false}
+      options={[{ value: 'todas', label: 'Todas as armas' }, { value: 'distancia', label: 'Armas à distância' }, { value: 'corpo_a_corpo', label: 'Armas corpo a corpo' }]}
+      onChange={(event) => onChange({ ...value, compatibilidade: event.target.value })} />
+    <WeaponModifiers value={(value as AcessorioAtributos)?.modificadores} mode={value?.compatibilidade ?? 'todas'}
+      onChange={(modifiers) => onChange({ ...value, modificadores: modifiers })} theme={theme} neon={neon} />
     <AttributeRow $columns={2}>
       <InputText label="Slot" theme={theme} neon={neon} value={value?.slot || ""} onChange={e => onChange({ ...value, slot: e.target.value })} />
       <InputText label="Duração" theme={theme} neon={neon} value={value?.duracao || ""} onChange={e => onChange({ ...value, duracao: e.target.value })} />
