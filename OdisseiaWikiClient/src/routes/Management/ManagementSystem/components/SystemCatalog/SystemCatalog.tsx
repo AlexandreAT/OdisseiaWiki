@@ -142,7 +142,7 @@ export const SystemCatalog = ({
       {loading && (
         <StatePanel theme={theme} neon={neon} role="status">
           <SettingsSuggestOutlinedIcon />
-          <LoadingIndicator label="Carregando sistemas configuráveis" />
+          <LoadingIndicator label="Carregando sistemas" />
         </StatePanel>
       )}
 

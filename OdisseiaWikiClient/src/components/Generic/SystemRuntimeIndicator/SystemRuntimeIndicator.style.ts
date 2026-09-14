@@ -48,19 +48,6 @@ export const RuntimeMeta = styled.span`
   }
 `;
 
-export const RuntimeWarningGroup = styled.div`
-  position: relative;
-  min-width: 0;
-
-  &:hover > [role='tooltip'],
-  &:focus-within > [role='tooltip'] {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
-    pointer-events: auto;
-  }
-`;
-
 export const RuntimeWarning = styled.button<{ $outdated?: boolean }>`
   display: inline-flex;
   align-items: center;
@@ -72,11 +59,15 @@ export const RuntimeWarning = styled.button<{ $outdated?: boolean }>`
   background: transparent;
   font-size: 0.68rem;
   font-family: inherit;
-  cursor: help;
+  cursor: pointer;
 
   svg {
     width: 16px;
     height: 16px;
+  }
+
+  &:disabled {
+    cursor: default;
   }
 
   @media (max-width: 600px) {
@@ -88,12 +79,9 @@ export const RuntimeWarning = styled.button<{ $outdated?: boolean }>`
 `;
 
 export const RuntimeMessagePanel = styled.div`
-  position: absolute;
-  z-index: 1200;
-  top: calc(100% + 7px);
-  right: 0;
-  width: min(430px, calc(100vw - 32px));
+  width: 100%;
   max-height: min(230px, 42vh);
+  margin-top: 7px;
   padding: 10px 12px;
   overflow-x: hidden;
   overflow-y: auto;
@@ -103,18 +91,10 @@ export const RuntimeMessagePanel = styled.div`
   color: var(--white);
   background: rgba(8, 9, 15, 0.98);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.48);
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(-4px);
-  pointer-events: none;
-  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease;
   scrollbar-width: thin;
   scrollbar-color: var(--clearneonYellow) rgba(255, 255, 255, 0.06);
 
   @media (max-width: 600px) {
-    right: auto;
-    left: 0;
-    width: min(390px, calc(100vw - 32px));
     max-height: min(210px, 38vh);
     padding: 12px 13px;
   }
@@ -142,11 +122,24 @@ export const RuntimeMessageList = styled.ul`
 `;
 
 export const RuntimeActions = styled.div`
-  display: inline-flex;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-end;
+  width: min(430px, 100%);
+  min-width: 0;
+`;
+
+export const RuntimeActionControls = styled.div`
+  display: flex;
   align-items: center;
   justify-content: flex-end;
   flex-wrap: wrap;
   gap: 8px;
+
+  @media (max-width: 600px) {
+    justify-content: flex-start;
+  }
 `;
 
 export const RuntimeUpdateButton = styled.button`

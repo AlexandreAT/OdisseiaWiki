@@ -314,7 +314,7 @@ export const CharacterExplodedView = ({
             aria-label="Vista explodida do personagem"
           >
             <ModalBackground aria-hidden="true">
-              <video src={characterBackgroundVideo} autoPlay loop muted playsInline />
+              <video src={characterBackgroundVideo} autoPlay loop muted playsInline preload="auto" />
             </ModalBackground>
             <ShellHudFrame neon={neon === 'on'} color={frameColor} aria-hidden="true" />
             <Header>

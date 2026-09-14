@@ -2,6 +2,7 @@ import { BiLoaderAlt } from 'react-icons/bi';
 import {
   AnimatedDots,
   LoadingIcon,
+  LoadingLabel,
   LoadingText,
   LoadingWrapper,
 } from './LoadingIndicator.style';
@@ -22,7 +23,7 @@ export const LoadingIndicator = ({
       </LoadingIcon>
     )}
     <LoadingText $compact={compact}>
-      {label}
+      <LoadingLabel title={label}>{label}</LoadingLabel>
       <AnimatedDots aria-hidden="true">
         <i />
         <i />

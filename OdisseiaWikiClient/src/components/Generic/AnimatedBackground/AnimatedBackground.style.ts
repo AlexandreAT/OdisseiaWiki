@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 
 interface BackgroundContainerProps {
   $backgroundImage: string;
-  $applyBlur: boolean;
 }
 
 export const BackgroundContainer = styled(motion.div)<BackgroundContainerProps>`
@@ -12,12 +11,11 @@ export const BackgroundContainer = styled(motion.div)<BackgroundContainerProps>`
   left: 0;
   width: 100vw;
   height: 100vh;
+  background-color: #010815;
   background-image: url("${props => props.$backgroundImage}");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  filter: ${props => props.$applyBlur ? 'blur(2.5px)' : 'none'};
-  transition: filter 0.5s ease;
   pointer-events: none;
 `;
 

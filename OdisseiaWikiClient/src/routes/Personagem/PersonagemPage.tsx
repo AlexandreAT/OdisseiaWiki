@@ -543,7 +543,17 @@ const PersonagemPage: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [historyModalOpen, selectedInventoryItem]);
 
-  if (loading) return <PageLoadingState><LoadingIndicator label="Carregando personagem" /></PageLoadingState>;
+  if (loading) {
+    return (
+      <PageContainer>
+        <BackgroundVideoContainer>
+          <BackgroundVideo src={backgroundVideo} autoPlay loop muted playsInline preload="auto" />
+          <BackgroundOverlay />
+        </BackgroundVideoContainer>
+        <PageLoadingState><LoadingIndicator label="Carregando personagem" /></PageLoadingState>
+      </PageContainer>
+    );
+  }
   if (error) return <div>Erro: {error}</div>;
   console.log("🚀 ~ PersonagemPage ~ personagem:", personagem)
   if (!personagem) return <div>Personagem não encontrado</div>;
@@ -763,6 +773,7 @@ const PersonagemPage: React.FC = () => {
             loop
             muted
             playsInline
+            preload="auto"
           />
           <BackgroundOverlay />
         </BackgroundVideoContainer>

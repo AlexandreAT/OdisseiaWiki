@@ -59,7 +59,7 @@ export const ModuleEditor = ({
       <ModuleContent>
         <StatePanel theme={theme} neon={neon} role="status">
           <SettingsSuggestOutlinedIcon />
-          <LoadingIndicator compact label="Carregando configuração do módulo" />
+          <LoadingIndicator compact label="Carregando módulo" />
         </StatePanel>
       </ModuleContent>
     );

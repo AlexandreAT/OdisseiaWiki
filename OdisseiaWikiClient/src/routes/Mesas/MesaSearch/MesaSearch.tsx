@@ -5,6 +5,7 @@ import { AnimatedBackground } from '../../../components/Generic/AnimatedBackgrou
 import { LoadingIndicator } from '../../../components/Generic/LoadingIndicator';
 import { Search } from '../../../components/Generic/Search/Search';
 import { Select } from '../../../components/Generic/Select/Select';
+import { MesaHudDecor } from '../components/MesaHudDecor/MesaHudDecor';
 import { MesaCard } from '../components/MesaCard/MesaCard';
 import { MesaPagination } from '../components/MesaPagination/MesaPagination';
 import { CardGrid, CheckFilter, EmptyState, MesaPage, PageHeader, SearchToolbar } from '../Mesas.style';
@@ -21,7 +22,10 @@ const MesaSearch = () => {
     <>
       <AnimatedBackground type="distant" skipIntro />
       <MesaPage $neon={isNeonActive}>
-        <PageHeader $neon={isNeonActive}><div><h1>Pesquisa de Mesa</h1><p>Encontre uma campanha e solicite sua participação.</p></div></PageHeader>
+        <PageHeader $neon={isNeonActive}>
+          <MesaHudDecor neon={isNeonActive} />
+          <div><h1>Pesquisa de Mesa</h1><p>Encontre uma campanha e solicite sua participação.</p></div>
+        </PageHeader>
         <SearchToolbar>
           <Search
             theme={theme}

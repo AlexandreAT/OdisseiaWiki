@@ -31,7 +31,9 @@ export const LoadingWrapper = styled.span<{ $compact: boolean }>`
   align-items: center;
   justify-content: center;
   gap: ${({ $compact }) => ($compact ? '0' : '18px')};
+  max-width: 100%;
   min-width: 0;
+  white-space: nowrap;
   color: var(--clearneonBlue) !important;
 
   @media (max-width: 768px) {
@@ -65,18 +67,31 @@ export const LoadingIcon = styled.span`
 `;
 
 export const LoadingText = styled.span<{ $compact: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  flex: 1 1 auto;
+  max-width: 100%;
   min-width: 0;
   color: inherit !important;
   font-family: 'DO Futuristic', sans-serif;
   font-size: ${({ $compact }) => ($compact ? '0.82rem' : 'clamp(19px, 1.8vw, 26px)')};
   font-weight: 100;
   letter-spacing: ${({ $compact }) => ($compact ? '0.7px' : '1.2px')};
-  overflow-wrap: anywhere;
   text-shadow: 0 0 8px currentColor;
 
   @media (max-width: 768px) {
     font-size: ${({ $compact }) => ($compact ? '0.82rem' : '0.95rem')};
   }
+`;
+
+export const LoadingLabel = styled.span`
+  display: block;
+  flex: 1 1 auto;
+  min-width: 3.5em;
+  overflow: hidden;
+  color: inherit !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `;
 
 export const AnimatedDots = styled.span`
@@ -86,6 +101,7 @@ export const AnimatedDots = styled.span`
   width: 1.45em;
   height: 0.8em;
   margin-left: 0.28em;
+  flex: 0 0 auto;
   color: inherit !important;
   vertical-align: baseline;
 

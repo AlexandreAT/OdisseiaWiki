@@ -64,33 +64,8 @@ export const MesaPage = styled.main<{ $neon?: boolean }>`
     justify-content: space-between;
     gap: 22px;
     margin-bottom: 28px;
-    padding: 0 0 18px 20px;
-    background: linear-gradient(90deg, rgba(0, 18, 39, .72), transparent 72%);
-
-    &::before,
-    &::after {
-      content: '';
-      position: absolute;
-      pointer-events: none;
-    }
-
-    &::before {
-      top: 0;
-      bottom: 0;
-      left: 0;
-      width: 2px;
-      background: var(--clearneonBlue);
-      box-shadow: ${({ $neon }) => $neon ? '0 0 7px rgba(0, 204, 255, .72)' : 'none'};
-    }
-
-    &::after {
-      right: 0;
-      bottom: 0;
-      left: 0;
-      height: 1px;
-      background: rgba(77, 238, 234, .42);
-      box-shadow: ${({ $neon }) => $neon ? '0 0 7px rgba(0, 204, 255, .45)' : 'none'};
-    }
+    padding: 20px clamp(18px, 3vw, 28px);
+    ${mesaHudFrame}
   }
 
   .mesa-hub-kicker {
@@ -108,16 +83,23 @@ export const MesaPage = styled.main<{ $neon?: boolean }>`
     line-height: 1.05;
   }
 
-  .mesa-hub-header > div:first-child > p:last-child {
+  .mesa-hub-copy {
+    position: relative;
+    z-index: 5;
+  }
+
+  .mesa-hub-header > .mesa-hub-copy > p:last-child {
     margin: 8px 0 0;
     color: var(--lightGrey);
   }
 
-  .mesa-hub-header > div:last-child {
+  .mesa-hub-actions {
+    position: relative;
+    z-index: 5;
     flex: 0 0 auto;
   }
 
-  .mesa-hub-header > div:last-child button {
+  .mesa-hub-actions button {
     min-width: 220px;
   }
 
@@ -125,15 +107,15 @@ export const MesaPage = styled.main<{ $neon?: boolean }>`
     .mesa-hub-header {
       align-items: stretch;
       flex-direction: column;
-      padding-left: 14px;
+      padding: 16px;
     }
 
-    .mesa-hub-header > div:last-child {
+    .mesa-hub-actions {
       display: grid;
       grid-template-columns: 1fr;
     }
 
-    .mesa-hub-header > div:last-child button { min-width: 0; }
+    .mesa-hub-actions button { min-width: 0; }
   }
 `;
 
@@ -157,32 +139,12 @@ export const PageHeader = styled.header<{ $neon?: boolean }>`
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 22px;
-  padding: 0 0 14px 18px;
-  background: linear-gradient(90deg, rgba(0, 18, 39, .58), transparent 72%);
+  padding: 18px clamp(16px, 2.5vw, 26px);
+  ${mesaHudFrame}
 
-  &::before,
-  &::after {
-    content: '';
-    position: absolute;
-    pointer-events: none;
-  }
-
-  &::before {
-    top: 0;
-    bottom: 0;
-    left: 0;
-    width: 2px;
-    background: var(--clearneonBlue);
-    box-shadow: ${({ $neon }) => $neon ? '0 0 7px rgba(0, 204, 255, .72)' : 'none'};
-  }
-
-  &::after {
-    right: 0;
-    bottom: 0;
-    left: 0;
-    height: 1px;
-    background: rgba(77, 238, 234, .42);
-    box-shadow: ${({ $neon }) => $neon ? '0 0 7px rgba(0, 204, 255, .45)' : 'none'};
+  > div {
+    position: relative;
+    z-index: 5;
   }
 
   h1 {
@@ -192,7 +154,7 @@ export const PageHeader = styled.header<{ $neon?: boolean }>`
     line-height: 1.1;
   }
 
-  p { color: var(--lightGrey); margin-top: 6px; }
+  p { color: var(--lightGrey); margin: 6px 0 0; }
 
   @media (max-width: 720px) {
     align-items: flex-start;
@@ -246,35 +208,12 @@ export const SectionTitle = styled.div<{ $neon?: boolean }>`
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 12px;
-  padding: 2px 0 9px 13px;
-  background: linear-gradient(90deg, rgba(0, 18, 39, .44), transparent 68%);
-
-  &::before,
-  &::after {
-    content: '';
-    position: absolute;
-    pointer-events: none;
-  }
-
-  &::before {
-    top: 0;
-    bottom: 0;
-    left: 0;
-    width: 1px;
-    background: var(--clearneonBlue);
-    box-shadow: ${({ $neon }) => $neon ? '0 0 6px rgba(0, 204, 255, .65)' : 'none'};
-  }
-
-  &::after {
-    right: 0;
-    bottom: 0;
-    left: 0;
-    height: 1px;
-    background: rgba(77, 238, 234, .36);
-    box-shadow: ${({ $neon }) => $neon ? '0 0 6px rgba(0, 204, 255, .42)' : 'none'};
-  }
+  padding: 14px 18px;
+  ${mesaHudFrame}
 
   h2 {
+    position: relative;
+    z-index: 5;
     margin: 0;
     ${mesaFuturisticTitle}
     font-size: clamp(.96rem, 1.6vw, 1.25rem);

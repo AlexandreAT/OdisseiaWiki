@@ -19,7 +19,10 @@ const MesaCreate = () => {
     <>
       <AnimatedBackground type="distant" skipIntro />
       <MesaPage $neon={isNeonActive}>
-        <PageHeader $neon={isNeonActive}><div><h1>Criar nova Mesa</h1><p>Prepare sua campanha e escolha o Sistema que regerá os personagens.</p></div></PageHeader>
+        <PageHeader $neon={isNeonActive}>
+          <MesaHudDecor neon={isNeonActive} />
+          <div><h1>Criar nova Mesa</h1><p>Prepare sua campanha e escolha o Sistema que regerá os personagens.</p></div>
+        </PageHeader>
         <FormFrame $neon={isNeonActive}>
           <MesaHudDecor neon={isNeonActive} />
           <FormGrid onSubmit={(event) => { event.preventDefault(); void state.submit(); }}>

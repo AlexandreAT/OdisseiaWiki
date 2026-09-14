@@ -9,6 +9,7 @@ export const BackgroundVideoContainer = styled.div`
   position: fixed;
   inset: 0;
   overflow: hidden;
+  background: #010815;
   pointer-events: none;
   z-index: 0;
 `;
@@ -47,6 +48,7 @@ export const PageLoadingState = styled.div`
 `;
 
 export const BackgroundVideo = styled.video`
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;

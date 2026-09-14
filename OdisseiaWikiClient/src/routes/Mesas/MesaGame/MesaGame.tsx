@@ -126,7 +126,14 @@ const MesaGame = () => {
     removalTimers.current.clear();
   }, []);
 
-  if (loading) return <MesaPageLoading><LoadingIndicator label="Carregando Mesa em jogo" /></MesaPageLoading>;
+  if (loading) {
+    return (
+      <>
+        <AnimatedBackground type="distant" skipIntro />
+        <MesaPageLoading><LoadingIndicator label="Carregando mesa" /></MesaPageLoading>
+      </>
+    );
+  }
   if (!snapshot) return null;
 
   const mesaAoVivo = snapshot.mesa.aoVivo;
@@ -157,6 +164,7 @@ const MesaGame = () => {
       <AnimatedBackground type="distant" skipIntro />
       <MesaPage $neon={isNeonActive}>
         <PageHeader $neon={isNeonActive}>
+          <MesaHudDecor neon={isNeonActive} />
           <div>
             <h1>Mesa em jogo — {snapshot.mesa.nome}</h1>
             <p>Status compartilhados dos personagens da Mesa.</p>
