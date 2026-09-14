@@ -409,7 +409,7 @@ const ItemPage = () => {
   const isNeonActive = neon === 'on';
   const renderBackground = () => (
     <BackgroundVideoContainer>
-      <BackgroundVideo src={backgroundVideo} autoPlay loop muted playsInline />
+      <BackgroundVideo src={backgroundVideo} autoPlay loop muted playsInline preload="auto" />
       <BackgroundOverlay />
     </BackgroundVideoContainer>
   );

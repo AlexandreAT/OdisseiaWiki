@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import { AnimatePresence } from 'framer-motion';
 import { BackgroundContainer, Overlay, BlockerOverlay } from './AnimatedBackground.style';
 import { TypedText } from './TypedText';
 import CityBackgroundDistantCharacter from '../../../assets/CityBackgroundDistantCharacter.jpeg';
@@ -48,7 +47,6 @@ const markIntroAsSeenThisSession = () => {
 export const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ type, introText, skipIntro = false, onIntroComplete }) => {
   const shouldSkipIntro = skipIntro || hasSeenIntroThisSession();
   const [animationPhase, setAnimationPhase] = useState<'initial' | 'typing' | 'complete'>(shouldSkipIntro ? 'complete' : 'initial');
-  const [showBlur, setShowBlur] = useState(shouldSkipIntro);
   const [showOverlay, setShowOverlay] = useState(shouldSkipIntro);
   const isFirstRender = useRef(!shouldSkipIntro);
   const previousType = useRef(type);
@@ -56,14 +54,12 @@ export const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ type, in
   useEffect(() => {
     if (isFirstRender.current) {
       setAnimationPhase('initial');
-      setShowBlur(false);
       setShowOverlay(false);
     } else if (previousType.current !== type) {
       setAnimationPhase('complete');
-      setShowBlur(true);
       setShowOverlay(true);
     }
-    
+
     previousType.current = type;
   }, [type]);
 
@@ -76,12 +72,11 @@ export const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ type, in
   const handleTypingComplete = () => {
     if (isFirstRender.current) {
       setTimeout(() => {
-        setShowBlur(true);
-      setShowOverlay(true);
-      setAnimationPhase('complete');
-      isFirstRender.current = false;
-      markIntroAsSeenThisSession();
-      onIntroComplete?.();
+        setShowOverlay(true);
+        setAnimationPhase('complete');
+        isFirstRender.current = false;
+        markIntroAsSeenThisSession();
+        onIntroComplete?.();
       }, 800);
     }
   };
@@ -89,6 +84,7 @@ export const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ type, in
   const displayText = introText || INTRO_TEXTS[type];
   const shouldShowText = isFirstRender.current && (animationPhase === 'typing' || animationPhase === 'initial');
   const isAnimating = animationPhase !== 'complete';
+  const shouldAnimateEntry = !shouldSkipIntro && isFirstRender.current;
 
   return (
     <>
@@ -100,39 +96,35 @@ export const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ type, in
         />
       )}
       
-      <AnimatePresence mode="sync">
-        <BackgroundContainer
-          key={type}
-          $backgroundImage={BACKGROUND_IMAGES[type]}
-          $applyBlur={showBlur}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ 
-            duration: isFirstRender.current ? 1.5 : 0.6, 
-            ease: 'easeInOut' 
-          }}
-          onAnimationComplete={handleInitialAnimationComplete}
-          style={{
-            zIndex: animationPhase === 'complete' ? 0 : 9999
-          }}
-        >
-          {shouldShowText && animationPhase === 'typing' && (
-            <TypedText 
-              text={displayText} 
-              typingSpeed={60}
-              onComplete={handleTypingComplete}
-            />
-          )}
-          
-          {showOverlay && (
-            <Overlay
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5 }}
-            />
-          )}
-        </BackgroundContainer>
-      </AnimatePresence>
+      <BackgroundContainer
+        key={type}
+        $backgroundImage={BACKGROUND_IMAGES[type]}
+        initial={shouldAnimateEntry ? { opacity: 0 } : false}
+        animate={{ opacity: 1 }}
+        transition={shouldAnimateEntry
+          ? { duration: 1.5, ease: 'easeInOut' }
+          : { duration: 0 }}
+        onAnimationComplete={handleInitialAnimationComplete}
+        style={{
+          zIndex: animationPhase === 'complete' ? 0 : 9999
+        }}
+      >
+        {shouldShowText && animationPhase === 'typing' && (
+          <TypedText
+            text={displayText}
+            typingSpeed={60}
+            onComplete={handleTypingComplete}
+          />
+        )}
+
+        {showOverlay && (
+          <Overlay
+            initial={false}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0 }}
+          />
+        )}
+      </BackgroundContainer>
     </>
   );
 };

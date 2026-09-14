@@ -31,7 +31,7 @@ interface UserTablesProps {
   neon: 'on' | 'off';
 }
 
-export const UserTables = ({ theme: _theme, neon }: UserTablesProps) => {
+export const UserTables = ({ neon }: UserTablesProps) => {
   const navigate = useNavigate();
   const {
     data,
@@ -86,23 +86,30 @@ export const UserTables = ({ theme: _theme, neon }: UserTablesProps) => {
   return (
     <MesaPage $neon={neon === 'on'} aria-label="Gerenciamento de Mesas">
       <header className="mesa-hub-header">
-        <div>
+        <MesaHudDecor neon={neon === 'on'} />
+        <div className="mesa-hub-copy">
           <p className="mesa-hub-kicker">RPG ONLINE</p>
           <h1>Gerenciamento de Mesas</h1>
           <p>Crie campanhas, acompanhe seus jogadores e entre nas Mesas das quais participa.</p>
         </div>
-        <HeaderActions>
+        <HeaderActions className="mesa-hub-actions">
           <ActionButton type="button" onClick={() => navigate('/mesas/pesquisar')}><ManageSearchIcon /> Pesquisar Mesa</ActionButton>
           <ActionButton type="button" $accent="pink" onClick={() => navigate('/mesas/nova')}><AddIcon /> Criar nova Mesa</ActionButton>
         </HeaderActions>
       </header>
       <Section>
-        <SectionTitle $neon={neon === 'on'}><h2>Minhas Mesas criadas</h2></SectionTitle>
+        <SectionTitle $neon={neon === 'on'}>
+          <MesaHudDecor neon={neon === 'on'} />
+          <h2>Minhas Mesas criadas</h2>
+        </SectionTitle>
         {renderList(data.criadas.itens, true)}
         <MesaPagination page={createdPage} totalPages={data.criadas.totalPaginas} onChange={setCreatedPage} />
       </Section>
       <Section>
-        <SectionTitle $neon={neon === 'on'}><h2>Mesas que participo</h2></SectionTitle>
+        <SectionTitle $neon={neon === 'on'}>
+          <MesaHudDecor neon={neon === 'on'} />
+          <h2>Mesas que participo</h2>
+        </SectionTitle>
         {renderList(data.participando.itens, false)}
         <MesaPagination page={participatingPage} totalPages={data.participando.totalPaginas} onChange={setParticipatingPage} />
       </Section>

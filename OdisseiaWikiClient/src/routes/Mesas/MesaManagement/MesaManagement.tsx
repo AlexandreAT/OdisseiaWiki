@@ -74,7 +74,14 @@ const MesaManagement = () => {
   const [expelUser, setExpelUser] = useState<{ id: number; name: string } | null>(null);
   const [expelReason, setExpelReason] = useState('');
 
-  if (state.loading) return <MesaPageLoading><LoadingIndicator label="Carregando gerenciamento da Mesa" /></MesaPageLoading>;
+  if (state.loading) {
+    return (
+      <>
+        <AnimatedBackground type="management" skipIntro />
+        <MesaPageLoading><LoadingIndicator label="Carregando mesa" /></MesaPageLoading>
+      </>
+    );
+  }
   if (!state.mesa || !state.form) return null;
 
   const selectTab = (key: MesaManagementTab) => setParams(key === 'geral' ? {} : { aba: key });
@@ -84,6 +91,7 @@ const MesaManagement = () => {
       <AnimatedBackground type="management" skipIntro />
       <MesaPage $neon={isNeonActive}>
         <PageHeader $neon={isNeonActive}>
+          <MesaHudDecor neon={isNeonActive} />
           <div><h1>Gerenciamento da Mesa</h1><p>{state.mesa.nome}</p></div>
           <ActionButton onClick={() => navigate(`/mesa/${idMesa}`)}><VisibilityOutlinedIcon /> Visualizar página</ActionButton>
         </PageHeader>
@@ -123,7 +131,10 @@ const MesaManagement = () => {
             )}
             {tab === 'pedidos' && (
               <>
-                <PageHeader $neon={isNeonActive}><div><h1>Pedidos de entrada</h1><p>Gerencie quem deseja participar desta Mesa.</p></div></PageHeader>
+                <PageHeader $neon={isNeonActive}>
+                  <MesaHudDecor neon={isNeonActive} />
+                  <div><h1>Pedidos de entrada</h1><p>Gerencie quem deseja participar desta Mesa.</p></div>
+                </PageHeader>
                 <div>
                   {state.requests.length === 0 && <EmptyState>Nenhum pedido pendente.</EmptyState>}
                   {state.requests.map((request) => (
@@ -139,7 +150,10 @@ const MesaManagement = () => {
             )}
             {tab === 'jogadores' && (
               <>
-                <PageHeader $neon={isNeonActive}><div><h1>Jogadores</h1><p>Participantes atualmente vinculados à Mesa.</p></div></PageHeader>
+                <PageHeader $neon={isNeonActive}>
+                  <MesaHudDecor neon={isNeonActive} />
+                  <div><h1>Jogadores</h1><p>Participantes atualmente vinculados à Mesa.</p></div>
+                </PageHeader>
                 {state.players.length === 0 && <EmptyState>Nenhum jogador participante.</EmptyState>}
                 {state.players.map((player) => (
                   <RequestCard $neon={isNeonActive} key={player.idUsuario}>
@@ -153,7 +167,10 @@ const MesaManagement = () => {
             )}
             {tab === 'personagens' && (
               <>
-                <PageHeader $neon={isNeonActive}><div><h1>Personagens da Mesa</h1><p>Leitura administrativa, incluindo fichas invisíveis e personagens mortos.</p></div></PageHeader>
+                <PageHeader $neon={isNeonActive}>
+                  <MesaHudDecor neon={isNeonActive} />
+                  <div><h1>Personagens da Mesa</h1><p>Leitura administrativa, incluindo fichas invisíveis e personagens mortos.</p></div>
+                </PageHeader>
                 {state.characters.length === 0 ? <EmptyState>Nenhum personagem vinculado.</EmptyState> : (
                   <CharacterGrid>{state.characters.map((entry) => {
                     const parsed = parseCharacterStatus(entry.personagem.statusJson);

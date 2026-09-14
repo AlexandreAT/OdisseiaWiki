@@ -21,9 +21,11 @@ export const GraphBackground = styled.div`
   inset: 0;
   z-index: -2;
   overflow: hidden;
+  background: #010815;
   pointer-events: none;
 
   video {
+    display: block;
     width: 100%;
     height: 100%;
     object-fit: cover;

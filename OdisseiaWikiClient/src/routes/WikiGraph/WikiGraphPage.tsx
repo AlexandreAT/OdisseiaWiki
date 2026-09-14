@@ -105,7 +105,7 @@ const WikiGraphPage = () => {
   return (
     <GraphPageRoot>
       <GraphBackground aria-hidden="true">
-        <video autoPlay muted loop playsInline preload="metadata">
+        <video autoPlay muted loop playsInline preload="auto">
           <source src={backgroundAnimation} type="video/mp4" />
         </video>
       </GraphBackground>

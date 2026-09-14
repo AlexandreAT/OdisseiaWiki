@@ -43,7 +43,14 @@ const MesaPublic = () => {
   const [joinOpen, setJoinOpen] = useState(false);
   const [message, setMessage] = useState('');
 
-  if (loading) return <MesaPageLoading><LoadingIndicator label="Carregando Mesa" /></MesaPageLoading>;
+  if (loading) {
+    return (
+      <>
+        <MesaPublicBackdrop $backgroundImage={normalizeImagePath(BannerMesa)} aria-hidden="true" />
+        <MesaPageLoading><LoadingIndicator label="Carregando mesa" /></MesaPageLoading>
+      </>
+    );
+  }
   if (!mesa) return null;
 
   const user = (() => {

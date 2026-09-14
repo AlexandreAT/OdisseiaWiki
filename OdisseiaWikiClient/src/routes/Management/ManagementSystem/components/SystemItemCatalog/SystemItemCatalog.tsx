@@ -567,7 +567,7 @@ export const SystemItemCatalog = ({
             Este catálogo é somente leitura. Duplique a versão para alterar suas regras de itens.
           </CatalogNotice>
         )}
-        {loading && <CatalogNotice role="status"><LoadingIndicator compact label="Carregando catálogo de itens" /></CatalogNotice>}
+        {loading && <CatalogNotice role="status"><LoadingIndicator compact label="Carregando catálogo" /></CatalogNotice>}
         {!loading && error && (
           <CatalogNotice $error role="alert">{error}</CatalogNotice>
         )}

@@ -1,3 +1,4 @@
+import { useId, useState } from 'react';
 import { BiErrorCircle, BiInfoCircle } from 'react-icons/bi';
 import { LoadingIndicator } from '../LoadingIndicator';
 import { SistemaRuntimeContexto, SistemaRuntimeOrigem } from '../../../models/SistemaRpg';
@@ -7,12 +8,13 @@ import {
   RuntimeMeta,
   RuntimeName,
   RuntimeActions,
+  RuntimeActionControls,
   RuntimeMessageList,
   RuntimeMessagePanel,
   RuntimeUpdateButton,
   RuntimeWarning,
-  RuntimeWarningGroup,
 } from './SystemRuntimeIndicator.style';
+import { getRuntimeFallbackMessage, getRuntimeWarningMessage } from './SystemRuntimeIndicator.utils';
 
 interface SystemRuntimeIndicatorProps {
   contexto?: SistemaRuntimeContexto | null;
@@ -38,8 +40,10 @@ export const SystemRuntimeIndicator = ({
   onUpdate,
   updating = false,
 }: SystemRuntimeIndicatorProps) => {
-  const warningMessages = contexto?.warnings?.map((warning) => warning.mensagem).filter(Boolean) ?? [];
-  const fallbackMessages = contexto?.fallbacks?.map((fallback) => fallback.motivo).filter(Boolean) ?? [];
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const detailsId = useId();
+  const warningMessages = contexto?.warnings?.map(getRuntimeWarningMessage).filter(Boolean) ?? [];
+  const fallbackMessages = contexto?.fallbacks?.map(getRuntimeFallbackMessage).filter(Boolean) ?? [];
   const messages = Array.from(new Map(
     [...warningMessages, ...fallbackMessages, ...(error ? [error] : [])]
       .map((message) => message.trim())
@@ -80,6 +84,12 @@ export const SystemRuntimeIndicator = ({
     : outdatedReason
       ? [outdatedReason]
       : [];
+  const hasDetails = displayedMessages.length > 0;
+  const warningLabel = isOutdated
+    ? 'Sistema desatualizado'
+    : hasCompatibilityData
+      ? `Dados de compatibilidade${messages.length > 1 ? ` (${messages.length})` : ''}`
+      : `${messages.length || 1} ${messages.length === 1 ? 'aviso' : 'avisos'}`;
 
   return (
     <RuntimeIndicator $hasWarnings={hasWarnings} aria-live="polite">
@@ -88,43 +98,35 @@ export const SystemRuntimeIndicator = ({
         <RuntimeMeta>v{version} · {origin}</RuntimeMeta>
       </RuntimeIdentity>
       <RuntimeActions>
-        {isOutdated ? (
-          <RuntimeWarningGroup>
-            <RuntimeWarning type="button" aria-label="Exibir detalhes do Sistema" $outdated>
-              <BiErrorCircle />
-              Sistema desatualizado
+        <RuntimeActionControls>
+          {(isOutdated || hasWarnings) && (
+            <RuntimeWarning
+              type="button"
+              aria-expanded={isDetailsOpen}
+              aria-controls={hasDetails ? detailsId : undefined}
+              aria-label={isDetailsOpen ? 'Ocultar avisos do Sistema' : 'Exibir avisos do Sistema'}
+              $outdated={isOutdated}
+              onClick={() => hasDetails && setIsDetailsOpen((current) => !current)}
+              disabled={!hasDetails}
+            >
+              {isOutdated ? <BiErrorCircle /> : <BiInfoCircle />}
+              {warningLabel}
             </RuntimeWarning>
-            {displayedMessages.length > 0 && (
-              <RuntimeMessagePanel role="tooltip">
-                <RuntimeMessageList>
-                  {displayedMessages.map((message) => <li key={message}>{message}</li>)}
-                </RuntimeMessageList>
-              </RuntimeMessagePanel>
-            )}
-          </RuntimeWarningGroup>
-        ) : hasWarnings && (
-          <RuntimeWarningGroup>
-            <RuntimeWarning type="button" aria-label="Exibir avisos do Sistema">
-              <BiInfoCircle />
-              {hasCompatibilityData
-                ? `Dados de compatibilidade${messages.length > 1 ? ` (${messages.length})` : ''}`
-                : `${messages.length || 1} ${messages.length === 1 ? 'aviso' : 'avisos'}`}
-            </RuntimeWarning>
-            {displayedMessages.length > 0 && (
-              <RuntimeMessagePanel role="tooltip">
-                <RuntimeMessageList>
-                  {displayedMessages.map((message) => <li key={message}>{message}</li>)}
-                </RuntimeMessageList>
-              </RuntimeMessagePanel>
-            )}
-          </RuntimeWarningGroup>
-        )}
-        {contexto?.atualizacaoDisponivel && onUpdate && (
-          <RuntimeUpdateButton type="button" onClick={onUpdate} disabled={updating}>
-            {updating
-              ? 'Atualizando...'
-              : `Atualizar para v${contexto.numeroVersaoDisponivel ?? ''}`}
-          </RuntimeUpdateButton>
+          )}
+          {contexto?.atualizacaoDisponivel && onUpdate && (
+            <RuntimeUpdateButton type="button" onClick={onUpdate} disabled={updating}>
+              {updating
+                ? 'Atualizando...'
+                : `Atualizar para v${contexto.numeroVersaoDisponivel ?? ''}`}
+            </RuntimeUpdateButton>
+          )}
+        </RuntimeActionControls>
+        {isDetailsOpen && hasDetails && (
+          <RuntimeMessagePanel id={detailsId} aria-label="Avisos do Sistema">
+            <RuntimeMessageList>
+              {displayedMessages.map((message) => <li key={message}>{message}</li>)}
+            </RuntimeMessageList>
+          </RuntimeMessagePanel>
         )}
       </RuntimeActions>
     </RuntimeIndicator>
