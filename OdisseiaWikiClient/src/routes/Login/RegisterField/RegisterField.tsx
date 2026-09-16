@@ -14,9 +14,10 @@ interface Props {
     theme: 'dark' | 'light';
     neon: 'on' | 'off';
     onBackToLogin?: () => void;
+    onRegistrationSuccess?: (email: string) => void;
 }
 
-const RegisterField = ({ theme, neon, onBackToLogin }: Props) => {
+const RegisterField = ({ theme, neon, onBackToLogin, onRegistrationSuccess }: Props) => {
     const [userName, setUserName] = useState('');
     const [email, setEmail] = useState('');
     const [phone, setPhone] = useState('');
@@ -64,10 +65,9 @@ const RegisterField = ({ theme, neon, onBackToLogin }: Props) => {
                 imagemUrl: avatarUrl
             };
 
-            await registerUsuario(payload).then(() => {
-                toast.success('Usuário cadastrado com sucesso!');
-                if (onBackToLogin) onBackToLogin();
-            });
+            await registerUsuario(payload);
+            toast.success('Conta criada! Confira seu e-mail para confirmar.');
+            onRegistrationSuccess?.(email.trim());
         } catch (error: unknown) {
             toast.error(getApiErrorMessage(error, 'Erro ao registrar'));
         } finally {
@@ -83,7 +83,7 @@ const RegisterField = ({ theme, neon, onBackToLogin }: Props) => {
                     <InputText
                         theme={theme}
                         neon={neon}
-                        label="Nome de usuário"
+                        label="Nome"
                         value={userName}
                         onChange={e => setUserName(e.target.value)}
                         onFocus={() => setUserError(false)}

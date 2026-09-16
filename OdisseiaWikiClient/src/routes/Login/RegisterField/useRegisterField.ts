@@ -1,3 +1,6 @@
+import { validatePassword } from '../passwordValidation';
+import { validateEmail } from '../emailValidation';
+
 export interface RegisterFormData {
   userName: string;
   email: string;
@@ -18,19 +21,21 @@ export function validateRegisterForm(data: RegisterFormData): RegisterFormErrors
   const errors: RegisterFormErrors = {};
 
   if (!data.userName || data.userName.trim().length < 3) {
-    errors.userName = 'Nome de usuário deve ter pelo menos 3 caracteres.';
+    errors.userName = 'Nome deve ter pelo menos 3 caracteres.';
   }
 
-  if (!data.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
-    errors.email = 'E-mail inválido.';
+  const emailError = validateEmail(data.email);
+  if (emailError) {
+    errors.email = emailError;
   }
 
   if (data.phone && data.phone.trim().length < 8) {
     errors.phone = 'Número de celular inválido.';
   }
 
-  if (!data.password || data.password.trim().length < 6) {
-    errors.password = 'Senha deve ter no mínimo 6 caracteres.';
+  const passwordError = validatePassword(data.password);
+  if (passwordError) {
+    errors.password = passwordError;
   }
 
   if (!data.nickname || data.nickname.trim().length < 2) {
