@@ -70,6 +70,18 @@ public class Program
                 "GoogleAuth:ClientId é obrigatório.")
             .ValidateOnStart();
 
+        builder.Services.AddOptions<EmailSettings>()
+            .Bind(builder.Configuration.GetSection(EmailSettings.SectionName))
+            .Validate(settings => !string.IsNullOrWhiteSpace(settings.Host),
+                "Email:Host é obrigatório.")
+            .Validate(settings => settings.Port is > 0 and <= 65535,
+                "Email:Port deve estar entre 1 e 65535.")
+            .Validate(settings => settings.ConfirmacaoEmailValidadeHoras is > 0 and <= 168,
+                "Email:ConfirmacaoEmailValidadeHoras deve estar entre 1 e 168.")
+            .Validate(settings => settings.RedefinicaoSenhaValidadeMinutos is > 0 and <= 1440,
+                "Email:RedefinicaoSenhaValidadeMinutos deve estar entre 1 e 1440.")
+            .ValidateOnStart();
+
         builder.Services.AddOptions<UploadSettings>()
             .Bind(builder.Configuration.GetSection(UploadSettings.SectionName))
             .Validate(settings => settings.MaxFileSizeBytes is > 0 and <= 20 * 1024 * 1024,
@@ -240,6 +252,14 @@ public class Program
                     "Muitas requisições",
                     "Aguarde alguns instantes antes de tentar novamente.");
             };
+            if (builder.Environment.IsDevelopment())
+            {
+                options.AddPolicy("authentication", _ => RateLimitPartition.GetNoLimiter("development"));
+                options.AddPolicy("uploads", _ => RateLimitPartition.GetNoLimiter("development"));
+                options.AddPolicy("account-email", _ => RateLimitPartition.GetNoLimiter("development"));
+                return;
+            }
+
             options.AddPolicy("authentication", context =>
                 RateLimitPartition.GetFixedWindowLimiter(
                     context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
@@ -259,6 +279,16 @@ public class Program
                     {
                         PermitLimit = 20,
                         Window = TimeSpan.FromMinutes(1),
+                        QueueLimit = 0,
+                        AutoReplenishment = true,
+                    }));
+            options.AddPolicy("account-email", context =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                    _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 5,
+                        Window = TimeSpan.FromMinutes(15),
                         QueueLimit = 0,
                         AutoReplenishment = true,
                     }));
@@ -494,8 +524,10 @@ public class Program
     private static void RegisterApplicationServices(IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<ITokenService, TokenService>();
+        services.AddScoped<IEmailService, GmailSmtpEmailService>();
 
         services.AddScoped<IUsuarioRepository, UsuarioRepository>();
+        services.AddScoped<IUsuarioEmailTokenRepository, UsuarioEmailTokenRepository>();
         services.AddScoped<IPersonagemRepository, PersonagemRepository>();
         services.AddScoped<IPersonagemJogadorRepository, PersonagemJogadorRepository>();
         services.AddScoped<IPersonagemVisibilidadeRepository, PersonagemVisibilidadeRepository>();

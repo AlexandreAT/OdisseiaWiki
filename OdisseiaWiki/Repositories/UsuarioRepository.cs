@@ -29,6 +29,13 @@ namespace OdisseiaWiki.Repositories
             return await _context.Usuarios.FirstOrDefaultAsync(u => u.Email == email);
         }
 
+        public Task<Usuario?> GetByLoginAsync(string login)
+        {
+            return login.Contains('@')
+                ? GetByEmailAsync(login)
+                : GetByNicknameAsync(login);
+        }
+
         public async Task<Usuario?> GetByNameAsync(string nome)
         {
             return await _context.Usuarios.FirstOrDefaultAsync(u => u.Nome == nome);

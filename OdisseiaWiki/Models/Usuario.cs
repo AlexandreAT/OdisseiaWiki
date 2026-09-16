@@ -23,6 +23,10 @@ public partial class Usuario
 
     public DateTime DataCriacao { get; set; } = DateTime.UtcNow;
 
+    // Usuários existentes recebem true na migração para preservar o acesso atual.
+    // Cadastros por senha definem explicitamente false até a confirmação do e-mail.
+    public bool EmailConfirmado { get; set; } = true;
+
     public virtual ICollection<PersonagemJogador> PersonagensJogadores { get; set; } = new List<PersonagemJogador>();
 
     public virtual ICollection<Mesa> Mesas { get; set; } = new List<Mesa>();
@@ -34,4 +38,6 @@ public partial class Usuario
     public virtual ICollection<MesaExpulsaoRegistro> MesaExpulsoesRecebidas { get; set; } = new List<MesaExpulsaoRegistro>();
 
     public virtual ICollection<MesaExpulsaoRegistro> MesaExpulsoesAplicadas { get; set; } = new List<MesaExpulsaoRegistro>();
+
+    public virtual ICollection<UsuarioEmailToken> EmailTokens { get; set; } = new List<UsuarioEmailToken>();
 }

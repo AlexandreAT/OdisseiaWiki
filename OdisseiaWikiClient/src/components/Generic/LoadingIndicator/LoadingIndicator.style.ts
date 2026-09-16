@@ -89,7 +89,10 @@ export const LoadingLabel = styled.span`
   flex: 1 1 auto;
   min-width: 3.5em;
   overflow: hidden;
-  color: inherit !important;
+  color: var(--clearneonBlue) !important;
+  -webkit-text-fill-color: var(--clearneonBlue) !important;
+  opacity: 1 !important;
+  visibility: visible !important;
   text-overflow: ellipsis;
   white-space: nowrap;
 `;

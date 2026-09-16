@@ -10,9 +10,11 @@ import { CheckBox } from '../../../components/Generic/CheckBox/CheckBox';
 import TitleGlitch from '../../../components/Generic/TitleGlitch/TitleGlitch';
 import { loginComGoogle, LoginGoogleDto, login } from '../../../services/usuarioService';
 import { useLocation, useNavigate } from 'react-router-dom';
-
-const REMEMBERED_USER_KEY = 'odisseia:last-manual-user';
-const REMEMBERED_PASSWORD_KEY = 'odisseia:last-manual-password';
+import {
+    forgetRememberedManualLogin,
+    getRememberedManualLogin,
+    rememberManualLogin,
+} from '../../../utils/rememberedLogin';
 
 interface LoginLocationState {
     returnTo?: unknown;
@@ -45,11 +47,12 @@ interface Props {
     theme: 'dark' | 'light';
     neon: 'on' | 'off';
     onRegisterClick?: () => void;
+    onEmailConfirmationRequired?: (email?: string) => void;
 }
 
-export const LoginField = ({ theme, neon, onRegisterClick }: Props) => {
-    const [userName, setUserName] = useState(() => localStorage.getItem(REMEMBERED_USER_KEY) ?? '');
-    const [password, setPassword] = useState(() => sessionStorage.getItem(REMEMBERED_PASSWORD_KEY) ?? '');
+export const LoginField = ({ theme, neon, onRegisterClick, onEmailConfirmationRequired }: Props) => {
+    const [userName, setUserName] = useState(getRememberedManualLogin);
+    const [password, setPassword] = useState('');
     const [rememberLogin, setRememberLogin] = useState(true);
     const [userError, setUserError] = useState(false);
     const [passError, setPassError] = useState(false);
@@ -67,11 +70,12 @@ export const LoginField = ({ theme, neon, onRegisterClick }: Props) => {
         e.preventDefault();
 
         let hasError = false;
+        const loginIdentifier = userName.trim();
 
-        if (!userName.trim() || userName.length < 3) {
+        if (!loginIdentifier || loginIdentifier.length < 3) {
             setUserError(true);
             hasError = true;
-            toast.error('Nome de usuário incorreto!');
+            toast.error('Informe um nickname ou e-mail válido.');
         } else {
             setUserError(false);
         }
@@ -88,15 +92,13 @@ export const LoginField = ({ theme, neon, onRegisterClick }: Props) => {
 
         setIsSubmitting(true);
         try {
-            const result = await login({ nickname: userName, senha: password });
+            const result = await login({ nickname: loginIdentifier, senha: password });
 
             if (result.sucesso && result.tokenJwt) {
                 if (rememberLogin) {
-                    localStorage.setItem(REMEMBERED_USER_KEY, userName);
-                    sessionStorage.setItem(REMEMBERED_PASSWORD_KEY, password);
+                    rememberManualLogin(loginIdentifier);
                 } else {
-                    localStorage.removeItem(REMEMBERED_USER_KEY);
-                    sessionStorage.removeItem(REMEMBERED_PASSWORD_KEY);
+                    forgetRememberedManualLogin();
                 }
 
                 localStorage.setItem('token', result.tokenJwt);
@@ -112,6 +114,9 @@ export const LoginField = ({ theme, neon, onRegisterClick }: Props) => {
 
                 toast.success('Login realizado com sucesso!');
                 navigateAfterLogin();
+            } else if (result.emailNaoConfirmado) {
+                toast.error(result.mensagemErro ?? 'Confirme seu e-mail antes de entrar.');
+                onEmailConfirmationRequired?.(result.email);
             } else {
                 toast.error(result.mensagemErro ?? 'Credenciais inválidas.');
             }
@@ -170,12 +175,12 @@ export const LoginField = ({ theme, neon, onRegisterClick }: Props) => {
                 <InputText
                     theme={theme}
                     neon={neon}
-                    label="Nome de usuário"
+                    label="Nickname ou e-mail"
                     value={userName}
                     onChange={e => setUserName(e.target.value)}
                     onFocus={() => setUserError(false)}
                     error={userError}
-                    errorMessage="Informe um nome de usu\u00e1rio v\u00e1lido."
+                    errorMessage="Informe um nickname ou e-mail válido."
                     required
                     width='100%'
                     name="username"
@@ -213,14 +218,14 @@ export const LoginField = ({ theme, neon, onRegisterClick }: Props) => {
             <CheckboxContainer>
                 <CheckBox
                     neon={neon}
-                    label='Lembrar usuário e senha'
+                    label='Lembrar acesso'
                     checked={rememberLogin}
                     onChange={setRememberLogin}
                     disabled={isSubmitting || isGoogleSubmitting}
                 />
             </CheckboxContainer>
             <LinkContainer>
-                <SpanLink theme={theme} neon={neon} link='/' colorScheme='pinkBlue'>Não consegue iniciar a sessão?</SpanLink>
+                <SpanLink theme={theme} neon={neon} link='/login?recover=true' colorScheme='pinkBlue'>Não consegue iniciar a sessão?</SpanLink>
             </LinkContainer>
         </Form>
     )

@@ -43,6 +43,8 @@ public partial class OdisseiaContext : DbContext
 
     public virtual DbSet<Usuario> Usuarios { get; set; }
 
+    public virtual DbSet<UsuarioEmailToken> UsuariosEmailTokens { get; set; }
+
     public virtual DbSet<Item> Itens { get; set; }
 
     public DbSet<Page> Pages { get; set; }
@@ -414,11 +416,48 @@ public partial class OdisseiaContext : DbContext
                 .HasColumnName("IDUsuario");
             entity.Property(e => e.Celular).HasMaxLength(15);
             entity.Property(e => e.DataRegistro).HasColumnType("datetime");
+            entity.Property(e => e.EmailConfirmado)
+                .HasColumnType("tinyint(1)")
+                .HasDefaultValue(true);
             entity.Property(e => e.Email).HasMaxLength(50);
             entity.Property(e => e.ImagemUrl).HasMaxLength(255);
             entity.Property(e => e.Nickname).HasMaxLength(50);
             entity.Property(e => e.Nome).HasMaxLength(100);
             entity.Property(e => e.Senha).HasMaxLength(100);
+        });
+
+        modelBuilder.Entity<UsuarioEmailToken>(entity =>
+        {
+            entity.HasKey(e => e.IdusuarioEmailToken).HasName("PRIMARY");
+
+            entity.ToTable("usuariosemailtokens");
+
+            entity.HasIndex(e => e.HashToken)
+                .IsUnique()
+                .HasDatabaseName("UX_UsuarioEmailToken_Hash");
+            entity.HasIndex(e => new { e.Idusuario, e.Tipo, e.DataUso, e.DataInvalidacao })
+                .HasDatabaseName("IX_UsuarioEmailToken_Usuario_Tipo_Ativo");
+
+            entity.Property(e => e.IdusuarioEmailToken)
+                .HasColumnType("int(11)")
+                .HasColumnName("IDUsuarioEmailToken");
+            entity.Property(e => e.Idusuario)
+                .HasColumnType("int(11)")
+                .HasColumnName("IDUsuario");
+            entity.Property(e => e.Tipo)
+                .HasConversion<string>()
+                .HasMaxLength(30);
+            entity.Property(e => e.HashToken).HasMaxLength(64);
+            entity.Property(e => e.DataCriacao).HasColumnType("datetime");
+            entity.Property(e => e.DataExpiracao).HasColumnType("datetime");
+            entity.Property(e => e.DataUso).HasColumnType("datetime");
+            entity.Property(e => e.DataInvalidacao).HasColumnType("datetime");
+
+            entity.HasOne(e => e.Usuario)
+                .WithMany(e => e.EmailTokens)
+                .HasForeignKey(e => e.Idusuario)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_UsuarioEmailToken_Usuario");
         });
 
         modelBuilder.Entity<Item>(entity =>
