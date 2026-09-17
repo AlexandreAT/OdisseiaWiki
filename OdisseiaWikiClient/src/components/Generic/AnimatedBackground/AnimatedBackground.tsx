@@ -1,10 +1,12 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { BackgroundContainer, Overlay, BlockerOverlay } from './AnimatedBackground.style';
 import { TypedText } from './TypedText';
 import CityBackgroundDistantCharacter from '../../../assets/CityBackgroundDistantCharacter.jpeg';
 import CityBackgrounDistant from '../../../assets/CityBackgroundDistant.jpeg';
 import CharacterBackgroundDistant from '../../../assets/CharacterBackgroundDistant.jpeg';
 import ManagementBackground from '../../../assets/ManagementBakcground.jpg';
+import { useDecodedImage } from '../../../hooks/useDecodedImage/useDecodedImage';
+import { useBackgroundIntro } from './useBackgroundIntro';
 
 export type BackgroundType = 'pov' | 'distant' | 'distantCharacter' | 'management';
 
@@ -29,62 +31,11 @@ const INTRO_TEXTS = {
   management: 'Gerenciando conteúdo...'
 };
 
-const getDailySessionIntroKey = () => {
-  const today = new Date().toISOString().slice(0, 10);
-  return `odisseia:background-intro:${today}`;
-};
-
-const hasSeenIntroThisSession = () => {
-  if (typeof window === 'undefined') return false;
-  return sessionStorage.getItem(getDailySessionIntroKey()) === 'seen';
-};
-
-const markIntroAsSeenThisSession = () => {
-  if (typeof window === 'undefined') return;
-  sessionStorage.setItem(getDailySessionIntroKey(), 'seen');
-};
-
 export const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ type, introText, skipIntro = false, onIntroComplete }) => {
-  const shouldSkipIntro = skipIntro || hasSeenIntroThisSession();
-  const [animationPhase, setAnimationPhase] = useState<'initial' | 'typing' | 'complete'>(shouldSkipIntro ? 'complete' : 'initial');
-  const [showOverlay, setShowOverlay] = useState(shouldSkipIntro);
-  const isFirstRender = useRef(!shouldSkipIntro);
-  const previousType = useRef(type);
-
-  useEffect(() => {
-    if (isFirstRender.current) {
-      setAnimationPhase('initial');
-      setShowOverlay(false);
-    } else if (previousType.current !== type) {
-      setAnimationPhase('complete');
-      setShowOverlay(true);
-    }
-
-    previousType.current = type;
-  }, [type]);
-
-  const handleInitialAnimationComplete = () => {
-    if (isFirstRender.current) {
-      setAnimationPhase('typing');
-    }
-  };
-
-  const handleTypingComplete = () => {
-    if (isFirstRender.current) {
-      setTimeout(() => {
-        setShowOverlay(true);
-        setAnimationPhase('complete');
-        isFirstRender.current = false;
-        markIntroAsSeenThisSession();
-        onIntroComplete?.();
-      }, 800);
-    }
-  };
-
-  const displayText = introText || INTRO_TEXTS[type];
-  const shouldShowText = isFirstRender.current && (animationPhase === 'typing' || animationPhase === 'initial');
-  const isAnimating = animationPhase !== 'complete';
-  const shouldAnimateEntry = !shouldSkipIntro && isFirstRender.current;
+  const backgroundImage = useDecodedImage(BACKGROUND_IMAGES[type]);
+  const { phase, shouldAnimateEntry, handleInitialAnimationComplete, handleTypingComplete } = useBackgroundIntro(skipIntro, onIntroComplete);
+  const [displayText] = useState(() => introText || INTRO_TEXTS[type]);
+  const isAnimating = phase !== 'complete';
 
   return (
     <>
@@ -97,19 +48,16 @@ export const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ type, in
       )}
       
       <BackgroundContainer
-        key={type}
-        $backgroundImage={BACKGROUND_IMAGES[type]}
+        $backgroundImage={backgroundImage}
+        $isIntro={isAnimating}
         initial={shouldAnimateEntry ? { opacity: 0 } : false}
         animate={{ opacity: 1 }}
         transition={shouldAnimateEntry
           ? { duration: 1.5, ease: 'easeInOut' }
           : { duration: 0 }}
         onAnimationComplete={handleInitialAnimationComplete}
-        style={{
-          zIndex: animationPhase === 'complete' ? 0 : 9999
-        }}
       >
-        {shouldShowText && animationPhase === 'typing' && (
+        {phase === 'typing' && (
           <TypedText
             text={displayText}
             typingSpeed={60}
@@ -117,13 +65,11 @@ export const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ type, in
           />
         )}
 
-        {showOverlay && (
-          <Overlay
-            initial={false}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0 }}
-          />
-        )}
+        <Overlay
+          initial={false}
+          animate={{ opacity: isAnimating ? 0 : 1 }}
+          transition={{ duration: 0 }}
+        />
       </BackgroundContainer>
     </>
   );

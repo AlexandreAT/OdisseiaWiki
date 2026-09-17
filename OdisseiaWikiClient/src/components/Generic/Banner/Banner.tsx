@@ -12,6 +12,7 @@ import {
 import { useSelector } from 'react-redux'
 import { TextScramble } from '../TextScramble';
 import { OdisseiaAnimatedTitle } from '../OdisseiaAnimatedTitle';
+import { useDecodedImage } from '../../../hooks/useDecodedImage/useDecodedImage';
 
 interface Props {
     title: string;
@@ -35,10 +36,11 @@ export const Banner = ({
     textAnimationDuration,
 }: Props) => {
     const { theme, neon } = useSelector((state: RootState) => state.themesReducer);
+    const backgroundImage = useDecodedImage(imageSrc);
 
     return (
         <ContainerBanner theme={theme} neon={neon} image={imageSrc}>
-            <BannerBackground theme={theme} neon={neon} image={imageSrc} />
+            <BannerBackground theme={theme} neon={neon} image={backgroundImage} />
             <BannerEfect theme={theme} neon={neon}/>
             <BannerContent theme={theme} neon={neon}>
                 <BannerRevealItem $delay={350}>

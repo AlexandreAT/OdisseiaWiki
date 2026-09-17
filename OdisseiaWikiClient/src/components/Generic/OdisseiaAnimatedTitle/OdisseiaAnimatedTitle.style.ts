@@ -76,4 +76,9 @@ export const AnimatedTitleSvg = styled.svg<TitleStyleProps>`
     width: ${({ $wide }) => ($wide ? '90vw' : '190px')};
     height: ${({ $wide }) => ($wide ? '46px' : '30px')};
   }
+
+  @media (prefers-reduced-motion: reduce) {
+    .title-outline { animation: none; }
+    .title-fill { animation: none; opacity: 1; }
+  }
 `;

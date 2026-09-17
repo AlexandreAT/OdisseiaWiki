@@ -1,8 +1,21 @@
-@import url('https://fonts.cdnfonts.com/css/cyberpunk-is-not-dead');
-@import url('https://fonts.googleapis.com/css2?family=Comfortaa&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Nunito&display=swap');
-@import url('https://fonts.cdnfonts.com/css/do-futuristic');
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Comfortaa&family=Nunito&family=Orbitron:wght@400..900&display=optional');
+
+/* Precarregadas no HTML. Se demorarem, a fonte de fallback permanece nesta visita. */
+@font-face {
+  font-family: 'Cyberpunk Is Not Dead';
+  font-style: normal;
+  font-weight: 400;
+  font-display: optional;
+  src: url('https://fonts.cdnfonts.com/s/73490/CIND.woff') format('woff');
+}
+
+@font-face {
+  font-family: 'DO Futuristic';
+  font-style: normal;
+  font-weight: 300;
+  font-display: optional;
+  src: url('https://fonts.cdnfonts.com/s/50214/DoFuturistic-JRwaB.woff') format('woff');
+}
 
 :root {
   /*-----------------------------------*/
@@ -57,6 +70,10 @@
   box-sizing: border-box;
   font-family: 'Lato', sans-serif;
   color: var(--whitesmoke);
+}
+
+html {
+  background-color: var(--black-blue);
 }
 
 /* Container para React Portals - Modais sempre no topo */

@@ -27,6 +27,8 @@ const bounceDot = keyframes`
 `;
 
 export const LoadingWrapper = styled.span<{ $compact: boolean }>`
+  position: relative;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -85,14 +87,15 @@ export const LoadingText = styled.span<{ $compact: boolean }>`
 `;
 
 export const LoadingLabel = styled.span`
+  font: inherit;
   display: block;
   flex: 1 1 auto;
   min-width: 3.5em;
   overflow: hidden;
   color: var(--clearneonBlue) !important;
   -webkit-text-fill-color: var(--clearneonBlue) !important;
-  opacity: 1 !important;
-  visibility: visible !important;
+  opacity: 1;
+  visibility: visible;
   text-overflow: ellipsis;
   white-space: nowrap;
 `;

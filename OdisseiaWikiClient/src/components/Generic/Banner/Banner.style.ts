@@ -1,4 +1,4 @@
-import styled, { keyframes } from 'styled-components';
+import styled, { css, keyframes } from 'styled-components';
 
 interface Props {
     image?: string;
@@ -49,6 +49,7 @@ const ContainerBanner = styled.div<Props>`
     position: relative;
     isolation: isolate;
     overflow: hidden;
+    background-color: var(--black-blue);
 
     ${props => props.theme === 'light' && `
         box-shadow: 0px 0px 10px var(--lightBlack);
@@ -71,7 +72,7 @@ const ContainerBanner = styled.div<Props>`
         padding: 10% 0% 2%;
     };
 
-    transition: all 0.3s ease-in-out;
+    transition: border-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
 `;
 
 const BannerBackground = styled.div<Props>`
@@ -79,11 +80,17 @@ const BannerBackground = styled.div<Props>`
     inset: 0;
     z-index: 0;
     border-radius: inherit;
-    background-image: url("${props => props.image}");
+    background-image: ${({ image }) => image ? `url("${image}")` : 'none'};
     background-size: cover;
     background-position: center bottom;
     background-repeat: no-repeat;
-    animation: ${revealBannerImage} 1.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+    ${({ image }) => image && css`
+        animation: ${revealBannerImage} 1.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+    `}
+
+    @media (prefers-reduced-motion: reduce) {
+        animation: none;
+    }
 
 `;
 
@@ -113,7 +120,6 @@ const BannerContent = styled.div<Props>`
     position: absolute;
     z-index: 2;
     isolation: isolate;
-    transition: all 0.3s ease-in-out;
 
     &::before {
         content: '';
@@ -131,6 +137,11 @@ const BannerContent = styled.div<Props>`
             ? 'linear-gradient(90deg, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.82) 34%, rgba(0, 0, 0, 0.46) 68%, rgba(0, 0, 0, 0) 100%)'
             : 'linear-gradient(90deg, rgba(238, 246, 244, 0.94) 0%, rgba(238, 246, 244, 0.82) 38%, rgba(238, 246, 244, 0.36) 74%, rgba(238, 246, 244, 0) 100%)'};
         pointer-events: none;
+
+        @media (prefers-reduced-motion: reduce) {
+            animation: none;
+            transform: scaleX(1);
+        }
     }
 
     @media (max-width: 1100px) {
@@ -201,6 +212,11 @@ const BannerRevealItem = styled.div<{ $delay: number }>`
     animation: ${revealBannerText} 650ms cubic-bezier(0.22, 1, 0.36, 1)
         ${({ $delay }) => $delay}ms forwards;
 
+    @media (prefers-reduced-motion: reduce) {
+        opacity: 1;
+        animation: none;
+    }
+
 `;
 
 const Title = styled.h1<Props>`
@@ -240,7 +256,7 @@ const Title = styled.h1<Props>`
         font-size: 24px;
     };
 
-    transition: all 0.3s ease-in-out;
+    transition: color 0.3s ease-in-out, text-shadow 0.3s ease-in-out;
 `;
 
 const Paragraph = styled.p<Props>`
@@ -280,7 +296,7 @@ const Paragraph = styled.p<Props>`
         font-size: 15px;
     };
 
-    transition: all 0.3s ease-in-out;
+    transition: color 0.3s ease-in-out, text-shadow 0.3s ease-in-out;
 `;
 
 export {

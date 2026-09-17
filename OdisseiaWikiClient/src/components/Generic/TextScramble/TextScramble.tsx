@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import { ScrambledText } from './TextScramble.style';
 import { TextScrambleProps } from './TextScramble.type';
 
@@ -27,8 +27,8 @@ export const TextScramble = ({
 }: TextScrambleProps) => {
   const [displayedText, setDisplayedText] = useState(text);
 
-  useEffect(() => {
-    if (!text) {
+  useLayoutEffect(() => {
+    if (!text || duration <= 0 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       setDisplayedText(text);
       return undefined;
     }

@@ -120,6 +120,8 @@ export const MesaPage = styled.main<{ $neon?: boolean }>`
 `;
 
 export const MesaPageLoading = styled.div`
+  position: relative;
+  z-index: 1;
   display: grid;
   width: 100%;
   min-height: calc(100svh - var(--main-header-height, 85px) - 4rem);
