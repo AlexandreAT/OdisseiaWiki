@@ -37,6 +37,9 @@ export const Title = styled.h1<{
     font-family: 'Cyberpunk Is Not Dead', sans-serif;
     font-size: ${props => props.$fontSize || '2rem'};
     color: var(--black) !important;
+    --title-outline-color: ${({ theme, $colorOverride }) => $colorOverride || (theme === 'dark' ? 'var(--neonBlue)' : 'var(--neonPink)')};
+    /* Mantém as letras legíveis durante o efeito de neon. */
+    -webkit-text-stroke: 0.5px var(--title-outline-color);
     text-shadow: ${({theme, $colorOverride}) => $colorOverride
         ? `-1px -1px 0px ${$colorOverride}, -1px 1px 0px ${$colorOverride}, 1px -1px 0px ${$colorOverride}, 1px 1px 0px ${$colorOverride}`
         : theme === 'dark'
@@ -46,6 +49,10 @@ export const Title = styled.h1<{
     ${({ neon, theme, $colorOverride }) => neon === 'on' && !$colorOverride && css`
       animation: ${theme === 'dark' ? neonBlinkBlue : neonBlinkPink} 12s infinite linear;
     `}
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
 
     @media (max-width: 768px) {
       width: 100%;

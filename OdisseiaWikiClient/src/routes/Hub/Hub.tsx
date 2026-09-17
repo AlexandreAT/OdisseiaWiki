@@ -10,18 +10,18 @@ import TitleGlitch from '../../components/Generic/TitleGlitch/TitleGlitch';
 import { UserCharacters, ViewMode } from './UserCharacters/UserCharacters';
 import { AnimatedBackground, BackgroundType } from '../../components/Generic/AnimatedBackground/AnimatedBackground';
 import { UserTables } from './UserTables/UserTables';
+import type { MesaThemeState } from '../Mesas/MesaThemeState';
 
 export const Hub = () => {
-    const { theme, neon } = useSelector((state: any) => state.themesReducer);
+    const { theme, neon } = useSelector((state: MesaThemeState) => state.themesReducer);
     const [searchParams, setSearchParams] = useSearchParams();
     const sectionParam = searchParams.get('section');
     const initialSection = sectionParam === 'personagens' || sectionParam === 'mesas' ? sectionParam : '';
     const [selected, setSelected] = useState<'mesas' | 'personagens' | ''>(initialSection);
     const [isCollapsed, setIsCollapsed] = useState(initialSection !== '');
     const [characterViewMode, setCharacterViewMode] = useState<ViewMode>('list');
-    const [hasPersonagens, setHasPersonagens] = useState(false);
+    const [hasPersonagens, setHasPersonagens] = useState<boolean | null>(null);
     const [hasPlayedIntro, setHasPlayedIntro] = useState(false);
-    const [isLoadingPersonagens, setIsLoadingPersonagens] = useState(true);
     const navigate = useNavigate();
 
     const usuarioLogadoStr = localStorage.getItem('usuario');
@@ -65,9 +65,8 @@ export const Hub = () => {
 
     const getBackgroundType = (): BackgroundType | null => {
         if (selected === 'personagens') {
-            if (isLoadingPersonagens) {
-                return null;
-            }
+            // Aguarda apenas a primeira consulta; recarregar a lista não remove o fundo.
+            if (hasPersonagens === null) return null;
             if (!hasPersonagens || characterViewMode !== 'list') {
                 return 'pov';
             }
@@ -94,7 +93,6 @@ export const Hub = () => {
                     userId={usuarioLogado.id}
                     onViewModeChange={setCharacterViewMode}
                     onPersonagensChange={setHasPersonagens}
-                    onLoadingChange={setIsLoadingPersonagens}
                 />;
             default:
                 return null;

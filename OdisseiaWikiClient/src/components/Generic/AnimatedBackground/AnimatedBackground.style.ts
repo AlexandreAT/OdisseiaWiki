@@ -3,16 +3,18 @@ import { motion } from 'framer-motion';
 
 interface BackgroundContainerProps {
   $backgroundImage: string;
+  $isIntro: boolean;
 }
 
 export const BackgroundContainer = styled(motion.div)<BackgroundContainerProps>`
   position: fixed;
   top: 0;
   left: 0;
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
+  z-index: ${({ $isIntro }) => $isIntro ? 9999 : 0};
   background-color: #010815;
-  background-image: url("${props => props.$backgroundImage}");
+  background-image: ${({ $backgroundImage }) => $backgroundImage ? `url("${$backgroundImage}")` : 'none'};
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;

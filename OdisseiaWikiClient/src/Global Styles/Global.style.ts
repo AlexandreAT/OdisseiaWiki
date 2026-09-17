@@ -33,7 +33,7 @@ const Page = styled.div<Props>`
         p, h1, h2, h3, h4, h5, span, .link, .icon {
             color: var(--whitesmoke);
             fill: var(--whitesmoke);
-            transition: all 0.3s ease-in-out;
+            transition: color 0.3s ease-in-out, fill 0.3s ease-in-out;
         }
     `}
 
@@ -41,11 +41,10 @@ const Page = styled.div<Props>`
         p, h1, h2, h3, h4, h5, span, .link, .icon {
             color: var(--deepgray);
             fill: var(--deepgray);
-            transition: all 0.3s ease-in-out;
+            transition: color 0.3s ease-in-out, fill 0.3s ease-in-out;
         }
     `}
 
-    transition: all 0.3s ease-in-out;
 `;
 
 const Header = styled.header<Props>`
@@ -65,7 +64,7 @@ const Header = styled.header<Props>`
     border-bottom: 1px solid ${({ theme }) =>
         theme === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)'};
 
-    transition: all 0.3s ease-in-out;
+    transition: background-color 0.3s ease-in-out, border-color 0.3s ease-in-out;
 `;
 
 const Body = styled.div<Props>`
@@ -104,7 +103,7 @@ const Body = styled.div<Props>`
                 : '66px 0 4rem'};
     };
 
-    transition: all 0.3s ease-in-out;
+    transition: background-color 0.3s ease-in-out;
 `;
 
 export { Page, Header, Body };
