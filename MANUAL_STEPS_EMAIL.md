@@ -1,12 +1,17 @@
-# Ações manuais para o Alexandre
+# E-mails de conta com Brevo
 
-## 1. Criar a senha de app do Google
+O backend envia confirmação de e-mail e redefinição de senha pela API HTTPS da Brevo. A chave fica
+somente no backend; nunca no Netlify, em `VITE_*` ou em arquivos versionados.
 
-1. Entre na conta Google que enviará os e-mails do OdisseiaWiki.
-2. Abra [Segurança da Conta Google](https://myaccount.google.com/security) e ative a **Verificação em duas etapas**.
-3. Abra [Senhas de app](https://myaccount.google.com/apppasswords), crie uma senha com o nome `OdisseiaWiki` e copie os 16 caracteres gerados.
+## 1. Configurar a Brevo
 
-Essa senha não é a senha normal do Gmail. Guarde-a: o Google só a mostra uma vez.
+1. Crie uma conta no plano Free da Brevo.
+2. Em **Settings > Remetentes, domínio, IPs**, adicione `OdisseiaWiki <odisseiawiki@gmail.com>` e
+   informe o código de verificação recebido no Gmail.
+3. Em **Settings > SMTP & API > Chaves de API**, gere uma chave chamada `OdisseiaWiki Backend`.
+4. Copie a chave e armazene-a em local seguro. A Brevo só a exibe uma vez.
+
+O remetente configurado no projeto deve corresponder exatamente a um remetente verificado na Brevo.
 
 ## 2. Configurar localmente
 
@@ -14,11 +19,8 @@ No arquivo ignorado pelo Git `OdisseiaWiki/appsettings.Development.json`, adicio
 
 ```json
 "Email": {
-  "Host": "smtp.gmail.com",
-  "Port": 587,
-  "Username": "seu-email@gmail.com",
-  "Password": "SUA_SENHA_DE_APP_DE_16_CARACTERES",
-  "From": "OdisseiaWiki <seu-email@gmail.com>",
+  "BrevoApiKey": "SUA_CHAVE_DA_API_BREVO",
+  "From": "OdisseiaWiki <odisseiawiki@gmail.com>",
   "FrontendUrl": "http://localhost:5173",
   "ConfirmacaoEmailValidadeHoras": 24,
   "RedefinicaoSenhaValidadeMinutos": 30
@@ -30,15 +32,14 @@ No arquivo ignorado pelo Git `OdisseiaWiki/appsettings.Development.json`, adicio
 No serviço do backend, em **Environment**, crie:
 
 ```text
-Email__Host=smtp.gmail.com
-Email__Port=587
-Email__Username=seu-email@gmail.com
-Email__Password=SUA_SENHA_DE_APP_DE_16_CARACTERES
-Email__From=OdisseiaWiki <seu-email@gmail.com>
+Email__BrevoApiKey=SUA_CHAVE_DA_API_BREVO
+Email__From=OdisseiaWiki <odisseiawiki@gmail.com>
 Email__FrontendUrl=https://odisseiawiki.netlify.app
 ```
 
-Não crie variáveis `VITE_*` para isso e não coloque a senha no Netlify. Depois de salvar, faça um novo deploy do backend.
+Remova as variáveis antigas `Email__Host`, `Email__Port`, `Email__Username` e `Email__Password` do
+Render depois que o novo deploy estiver funcionando. Não crie variáveis `VITE_*` e não coloque a chave
+da API no Netlify. Depois de salvar, faça um novo deploy do backend.
 
 ## 4. Aplicar a migration
 
@@ -51,7 +52,3 @@ dotnet ef database update --project OdisseiaWiki/OdisseiaWiki.csproj --startup-p
 ## 5. Testar
 
 Cadastre uma conta com outro e-mail, confirme pelo link recebido e solicite a redefinição de senha.
-
-## Se a opção "Senhas de app" não aparecer
-
-Confira se a Verificação em duas etapas está ativa. A opção pode ficar indisponível em contas corporativas ou escolares, contas com Proteção Avançada e contas configuradas apenas com chaves de segurança. Nesse caso, use outra conta Gmail comum com verificação em duas etapas ou será necessário configurar OAuth 2.0 do Gmail.

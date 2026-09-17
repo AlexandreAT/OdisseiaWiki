@@ -265,8 +265,7 @@ public sealed class UsuarioEmailSecurityServiceTests
             Options.Create(new GoogleAuthSettings { ClientId = "google-client" }),
             Options.Create(new EmailSettings
             {
-                Username = "contato@teste.com",
-                Password = "senha-de-app",
+                BrevoApiKey = "chave-da-api-brevo",
                 From = "OdisseiaWiki <contato@teste.com>",
                 FrontendUrl = "https://teste.com",
             }),
