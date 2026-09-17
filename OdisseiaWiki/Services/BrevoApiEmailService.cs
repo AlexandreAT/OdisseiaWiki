@@ -1,45 +1,43 @@
 using System.Net;
-using System.Net.Sockets;
-using MailKit.Net.Smtp;
-using MailKit.Security;
+using System.Net.Http.Json;
+using System.Net.Mail;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.Options;
-using MimeKit;
 using OdisseiaWiki.Models;
 using OdisseiaWiki.Services.Interfaces;
 using OdisseiaWiki.Settings;
 
 namespace OdisseiaWiki.Services;
 
-public sealed class GmailSmtpEmailService : IEmailService
+public sealed class BrevoApiEmailService : IEmailService
 {
+    private readonly HttpClient _httpClient;
     private readonly EmailSettings _settings;
-    private readonly ILogger<GmailSmtpEmailService> _logger;
+    private readonly ILogger<BrevoApiEmailService> _logger;
 
-    public GmailSmtpEmailService(
+    public BrevoApiEmailService(
+        HttpClient httpClient,
         IOptions<EmailSettings> emailOptions,
-        ILogger<GmailSmtpEmailService> logger)
+        ILogger<BrevoApiEmailService> logger)
     {
+        _httpClient = httpClient;
         _settings = emailOptions.Value;
         _logger = logger;
     }
 
     public bool IsConfigured =>
-        !string.IsNullOrWhiteSpace(_settings.Host)
-        && _settings.Port is > 0 and <= 65535
-        && !string.IsNullOrWhiteSpace(_settings.Username)
-        && !string.IsNullOrWhiteSpace(_settings.Password)
-        && !string.IsNullOrWhiteSpace(_settings.From)
-        && Uri.TryCreate(_settings.FrontendUrl, UriKind.Absolute, out Uri? frontendUri)
-        && (frontendUri.Scheme == Uri.UriSchemeHttp || frontendUri.Scheme == Uri.UriSchemeHttps);
+        !string.IsNullOrWhiteSpace(_settings.BrevoApiKey) &&
+        _settings.HasValidSender &&
+        _settings.HasValidFrontendUrl;
 
     public Task SendEmailConfirmationAsync(Usuario usuario, string token, DateTime expiraEm)
     {
         Uri link = BuildLink("confirmEmail", token);
         return SendAsync(
             usuario.Email,
+            usuario.Nome,
             "Confirme seu e-mail no OdisseiaWiki",
             "Confirme seu e-mail",
-            usuario.Nome,
             "Confirme seu e-mail para ativar sua conta no OdisseiaWiki.",
             "Confirmar e-mail",
             link,
@@ -52,9 +50,9 @@ public sealed class GmailSmtpEmailService : IEmailService
         Uri link = BuildLink("resetPassword", token);
         return SendAsync(
             usuario.Email,
+            usuario.Nome,
             "Redefina sua senha no OdisseiaWiki",
             "Redefina sua senha",
-            usuario.Nome,
             $"Recebemos uma solicitação para redefinir a senha da sua conta. Seu nickname para entrar é: {usuario.Nickname}.",
             "Redefinir senha",
             link,
@@ -63,10 +61,10 @@ public sealed class GmailSmtpEmailService : IEmailService
     }
 
     private async Task SendAsync(
-        string recipient,
+        string recipientEmail,
+        string recipientName,
         string subject,
         string title,
-        string name,
         string description,
         string actionLabel,
         Uri actionLink,
@@ -77,56 +75,40 @@ public sealed class GmailSmtpEmailService : IEmailService
 
         try
         {
-            string actionUrl = actionLink.AbsoluteUri;
-            MimeMessage message = BuildMessage(
-                recipient,
+            MailAddress sender = new(_settings.From);
+            BrevoEmailRequest requestBody = new(
+                new BrevoEmailAddress(sender.Address, GetSenderName(sender)),
+                new[] { new BrevoEmailAddress(recipientEmail, recipientName) },
                 subject,
-                BuildHtml(title, name, description, actionLabel, actionUrl, expiraEm, footer),
-                BuildText(description, actionLabel, actionUrl, expiraEm, footer));
+                BuildHtml(title, recipientName, description, actionLabel, actionLink.AbsoluteUri, expiraEm, footer));
 
-            using SmtpClient client = new()
+            using HttpRequestMessage request = new(HttpMethod.Post, "smtp/email")
             {
-                Timeout = 20_000,
+                Content = JsonContent.Create(requestBody),
             };
+            request.Headers.Add("api-key", _settings.BrevoApiKey.Trim());
 
-            await client.ConnectAsync(_settings.Host, _settings.Port, SecureSocketOptions.StartTls);
-            await client.AuthenticateAsync(_settings.Username, _settings.Password);
-            await client.SendAsync(message);
-            await client.DisconnectAsync(true);
-        }
-        catch (MailKit.Security.AuthenticationException exception)
-        {
-            _logger.LogWarning(exception, "O Gmail recusou as credenciais SMTP do envio de e-mail.");
-            throw new EmailDeliveryException("Não foi possível autenticar no provedor de e-mail.");
-        }
-        catch (SslHandshakeException exception)
-        {
-            _logger.LogWarning(exception, "Não foi possível estabelecer uma conexão TLS segura com o Gmail.");
-            throw new EmailDeliveryException("Não foi possível estabelecer uma conexão segura com o provedor de e-mail.");
-        }
-        catch (SmtpCommandException exception)
-        {
-            _logger.LogWarning(exception, "O Gmail recusou o envio de e-mail de conta.");
+            using HttpResponseMessage response = await _httpClient.SendAsync(request);
+            if (response.IsSuccessStatusCode)
+                return;
+
+            _logger.LogWarning(
+                "A Brevo recusou o envio de e-mail de conta com status HTTP {StatusCode}.",
+                (int)response.StatusCode);
             throw new EmailDeliveryException("O provedor de e-mail recusou o envio.");
         }
-        catch (SmtpProtocolException exception)
+        catch (EmailDeliveryException)
         {
-            _logger.LogWarning(exception, "Ocorreu um erro de protocolo ao enviar e-mail pelo Gmail.");
-            throw new EmailDeliveryException("Não foi possível enviar o e-mail pelo provedor.");
+            throw;
         }
-        catch (SocketException exception)
+        catch (HttpRequestException exception)
         {
-            _logger.LogWarning(exception, "Não foi possível alcançar o Gmail para enviar o e-mail.");
-            throw new EmailDeliveryException("Não foi possível conectar ao provedor de e-mail.");
-        }
-        catch (IOException exception)
-        {
-            _logger.LogWarning(exception, "Ocorreu um erro de comunicação ao enviar e-mail pelo Gmail.");
+            _logger.LogWarning(exception, "Não foi possível alcançar a Brevo para enviar o e-mail.");
             throw new EmailDeliveryException("Não foi possível conectar ao provedor de e-mail.");
         }
         catch (TaskCanceledException exception)
         {
-            _logger.LogWarning(exception, "O envio de e-mail pelo Gmail excedeu o tempo limite.");
+            _logger.LogWarning(exception, "O envio de e-mail pela Brevo excedeu o tempo limite.");
             throw new EmailDeliveryException("O envio de e-mail excedeu o tempo limite.");
         }
         catch (FormatException exception)
@@ -136,24 +118,9 @@ public sealed class GmailSmtpEmailService : IEmailService
         }
         catch (Exception exception)
         {
-            _logger.LogError(exception, "Ocorreu um erro inesperado ao enviar e-mail pelo Gmail.");
+            _logger.LogError(exception, "Ocorreu um erro inesperado ao enviar e-mail pela Brevo.");
             throw new EmailDeliveryException("Não foi possível enviar o e-mail.");
         }
-    }
-
-    private MimeMessage BuildMessage(string recipient, string subject, string html, string text)
-    {
-        MimeMessage message = new();
-        message.From.Add(MailboxAddress.Parse(_settings.From));
-        message.To.Add(MailboxAddress.Parse(recipient));
-        message.Subject = subject;
-        message.Body = new BodyBuilder
-        {
-            HtmlBody = html,
-            TextBody = text,
-        }.ToMessageBody();
-
-        return message;
     }
 
     private Uri BuildLink(string queryParameter, string token)
@@ -169,6 +136,9 @@ public sealed class GmailSmtpEmailService : IEmailService
         if (!IsConfigured)
             throw new EmailDeliveryException("O envio de e-mail não está configurado.");
     }
+
+    private static string GetSenderName(MailAddress sender) =>
+        string.IsNullOrWhiteSpace(sender.DisplayName) ? "OdisseiaWiki" : sender.DisplayName;
 
     private static string BuildHtml(
         string title,
@@ -200,14 +170,13 @@ public sealed class GmailSmtpEmailService : IEmailService
             """;
     }
 
-    private static string BuildText(
-        string description,
-        string actionLabel,
-        string actionUrl,
-        DateTime expiraEm,
-        string footer)
-    {
-        return $"OdisseiaWiki\n\n{description}\n\n{actionLabel}: {actionUrl}\n\n" +
-            $"Este link expira em {expiraEm.ToLocalTime():dd/MM/yyyy 'às' HH:mm}.\n\n{footer}";
-    }
+    private sealed record BrevoEmailRequest(
+        [property: JsonPropertyName("sender")] BrevoEmailAddress Sender,
+        [property: JsonPropertyName("to")] IReadOnlyCollection<BrevoEmailAddress> To,
+        [property: JsonPropertyName("subject")] string Subject,
+        [property: JsonPropertyName("htmlContent")] string HtmlContent);
+
+    private sealed record BrevoEmailAddress(
+        [property: JsonPropertyName("email")] string Email,
+        [property: JsonPropertyName("name")] string Name);
 }

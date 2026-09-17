@@ -72,10 +72,12 @@ public class Program
 
         builder.Services.AddOptions<EmailSettings>()
             .Bind(builder.Configuration.GetSection(EmailSettings.SectionName))
-            .Validate(settings => !string.IsNullOrWhiteSpace(settings.Host),
-                "Email:Host é obrigatório.")
-            .Validate(settings => settings.Port is > 0 and <= 65535,
-                "Email:Port deve estar entre 1 e 65535.")
+            .Validate(settings => !string.IsNullOrWhiteSpace(settings.BrevoApiKey),
+                "Email:BrevoApiKey é obrigatória.")
+            .Validate(settings => settings.HasValidSender,
+                "Email:From deve conter um remetente válido.")
+            .Validate(settings => settings.HasValidFrontendUrl,
+                "Email:FrontendUrl deve conter uma URL HTTP(S) válida.")
             .Validate(settings => settings.ConfirmacaoEmailValidadeHoras is > 0 and <= 168,
                 "Email:ConfirmacaoEmailValidadeHoras deve estar entre 1 e 168.")
             .Validate(settings => settings.RedefinicaoSenhaValidadeMinutos is > 0 and <= 1440,
@@ -524,7 +526,11 @@ public class Program
     private static void RegisterApplicationServices(IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<ITokenService, TokenService>();
-        services.AddScoped<IEmailService, GmailSmtpEmailService>();
+        services.AddHttpClient<IEmailService, BrevoApiEmailService>(client =>
+        {
+            client.BaseAddress = new Uri("https://api.brevo.com/v3/");
+            client.Timeout = TimeSpan.FromSeconds(15);
+        });
 
         services.AddScoped<IUsuarioRepository, UsuarioRepository>();
         services.AddScoped<IUsuarioEmailTokenRepository, UsuarioEmailTokenRepository>();
