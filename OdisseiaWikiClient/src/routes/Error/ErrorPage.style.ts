@@ -6,6 +6,8 @@ const errorPulse = keyframes`
 `;
 
 export const ErrorPageContainer = styled.main`
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -13,6 +15,7 @@ export const ErrorPageContainer = styled.main`
   min-height: calc(100svh - 84px);
   padding: 32px 20px;
   box-sizing: border-box;
+  pointer-events: auto;
   background:
     radial-gradient(circle at 50% 35%, rgba(0, 212, 255, 0.09), transparent 42%),
     var(--black-blue);

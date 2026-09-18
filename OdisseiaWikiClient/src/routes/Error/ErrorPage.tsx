@@ -9,7 +9,6 @@ import {
   ErrorTitle,
   ErrorActionButton,
 } from './ErrorPage.style';
-import { useApiAvailabilityStatus } from '../../hooks/useApiAvailabilityStatus';
 
 interface ErrorLocationState {
   errorTitle?: string;
@@ -62,8 +61,6 @@ const ErrorPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const routeError = useRouteError();
-  const apiAvailabilityStatus = useApiAvailabilityStatus();
-  const isApiUnavailable = apiAvailabilityStatus !== 'idle';
   const locationState = location.state as ErrorLocationState | null;
   const pathContext = getPathContext(location.pathname);
   const responseDescription = isRouteErrorResponse(routeError)
@@ -76,18 +73,22 @@ const ErrorPage = () => {
     ?? pathContext.errorDescription;
 
   const handleBack = () => {
-    if (isApiUnavailable) {
-      navigate('/', { replace: true });
-      return;
-    }
-
     const historyState = window.history.state as { idx?: number } | null;
     const hasPreviousAppRoute = typeof historyState?.idx === 'number'
       ? historyState.idx > 0
       : location.key !== 'default';
 
     if (hasPreviousAppRoute) {
+      const currentPath = location.pathname;
       navigate(-1);
+
+      // Se a rota anterior também for a página quebrada, não deixa a pessoa
+      // presa em um ciclo: a página inicial é local e continua acessível.
+      window.setTimeout(() => {
+        if (window.location.pathname === currentPath) {
+          window.location.assign('/');
+        }
+      }, 300);
       return;
     }
 
@@ -113,8 +114,6 @@ const ErrorPage = () => {
             type="button"
             $primary
             onClick={handleWiki}
-            disabled={isApiUnavailable}
-            title={isApiUnavailable ? 'A Wiki estarÃ¡ disponÃ­vel quando o servidor terminar de iniciar.' : undefined}
           >
             <BiBookOpen />
             Ir para a Wiki

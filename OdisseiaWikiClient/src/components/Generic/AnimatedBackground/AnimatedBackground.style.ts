@@ -38,7 +38,7 @@ export const BlockerOverlay = styled(motion.div)`
   width: 100vw;
   height: 100vh;
   background-color: transparent;
-  pointer-events: auto;
-  z-index: 9998;
-  cursor: wait;
+  /* A introdução é visual: ela nunca pode interceptar a navegação do site. */
+  pointer-events: none;
+  z-index: 0;
 `;
