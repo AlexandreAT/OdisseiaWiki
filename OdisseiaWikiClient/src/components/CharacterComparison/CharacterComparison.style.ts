@@ -273,6 +273,19 @@ export const IdentityText = styled.div<Pick<ThemeProps, '$theme'> & { $candidate
   }
 `;
 
+export const VariantMeta = styled.span`
+  display: block;
+  width: fit-content;
+  margin: -2px 0 7px;
+  padding: 2px 6px;
+  border: 1px solid color-mix(in srgb, var(--comparison-accent) 42%, transparent);
+  border-radius: 3px;
+  color: var(--comparison-accent);
+  font-size: 0.68rem;
+  line-height: 1.25;
+  opacity: 0.86;
+`;
+
 export const SystemLine = styled.div`
   display: flex;
   align-items: center;

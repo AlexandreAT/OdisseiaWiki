@@ -1,9 +1,9 @@
-import { useRef, useState, type ReactNode } from 'react';
+import { useId, useRef, useState, type ReactNode } from 'react';
 import { ConfirmDialog } from '../Generic/ConfirmDialog/ConfirmDialog';
 import { CheckBox } from '../Generic/CheckBox/CheckBox';
 import { InputText } from '../Generic/InputText/InputText';
 import { CyberButton } from '../Generic/HighlightButton/HighlightButton';
-import { VariantArrow, VariantFooter, VariantHeading, VariantSheet } from './CharacterVariants.style';
+import { VariantArrow, VariantFooter, VariantHeading, VariantPicker, VariantSheet } from './CharacterVariants.style';
 
 type Appearance = { theme: 'dark' | 'light'; neon: 'on' | 'off' };
 
@@ -32,17 +32,32 @@ export function CharacterVariantName({ value, onChange, error, errorMessage, the
 }
 
 export function CharacterVariantPager({ enabled, index, count, onSelect, onAdd, characterName, variantName,
-  children, theme, neon }: Appearance & {
+  variantOptions, children, theme, neon }: Appearance & {
   enabled: boolean; index: number; count: number; onSelect: (index: number) => void; onAdd?: () => void;
-  characterName: string; variantName?: string; children: ReactNode;
+  characterName: string; variantName?: string;
+  variantOptions?: ReadonlyArray<{ id: string; name: string }>;
+  children: ReactNode;
 }) {
   const sheetRef = useRef<HTMLElement>(null);
+  const pickerId = useId();
   if (!enabled) return <>{children}</>;
   return <VariantSheet ref={sheetRef} aria-label="Variantes do personagem">
     <VariantHeading>
       <strong>{characterName}</strong>
       {variantName && <span>{variantName}</span>}
       <small role="status">Variante {index + 1} de {count}</small>
+      {count > 1 && variantOptions?.length === count && (
+        <VariantPicker>
+          <label htmlFor={pickerId}>Selecionar variante</label>
+          <select id={pickerId} value={index} onChange={(event) => onSelect(Number(event.target.value))}>
+            {variantOptions.map((option, optionIndex) => (
+              <option key={option.id} value={optionIndex}>
+                {optionIndex + 1}. {option.name}
+              </option>
+            ))}
+          </select>
+        </VariantPicker>
+      )}
     </VariantHeading>
     <VariantArrow type="button" $side="left" $neon={neon === 'on'} aria-label="Variante anterior"
       disabled={index === 0} onClick={() => onSelect(index - 1)}>‹</VariantArrow>

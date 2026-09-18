@@ -110,7 +110,11 @@ public static class PersonagemVisibilidadeProjection
         PersonagemVisibilidadeDto visibilidade)
     {
         personagem.Visibilidade = visibilidade;
-        if (!visibilidade.Nome) personagem.Nome = null;
+        if (!visibilidade.Nome)
+        {
+            personagem.Nome = null;
+            personagem.NomeVariante = null;
+        }
         if (!visibilidade.Imagem) personagem.Imagem = null;
         if (!visibilidade.Skills) personagem.QuantidadeSkills = 0;
         if (!visibilidade.Vida) personagem.Status.Vida = 0;

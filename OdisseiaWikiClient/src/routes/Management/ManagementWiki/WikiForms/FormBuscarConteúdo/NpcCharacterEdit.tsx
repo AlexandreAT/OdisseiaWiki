@@ -918,6 +918,12 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
             runtimeContext={sistema.contexto}
             comparisonSource="Npc"
             comparisonId={Number(characterId)}
+            comparisonVariant={variants.generico ? {
+              id: variants.variants[variants.index].id,
+              name: variants.nome,
+              index: variants.index + 1,
+              total: variants.variants.length,
+            } : undefined}
           />
           </CharacterVariantPager>
           </>

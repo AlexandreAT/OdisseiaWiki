@@ -8,12 +8,12 @@ import {
   CharacterComparisonModalProps,
 } from './CharacterComparison.types';
 
-type HookArgs = Pick<CharacterComparisonModalProps, 'open' | 'current' | 'source' | 'sourceId' | 'tableId'>;
+type HookArgs = Pick<CharacterComparisonModalProps, 'open' | 'current' | 'source' | 'sourceId' | 'variantId' | 'tableId'>;
 
-export const useCharacterComparison = ({ open, current, source, sourceId, tableId }: HookArgs) => {
+export const useCharacterComparison = ({ open, current, source, sourceId, variantId, tableId }: HookArgs) => {
   const currentIdentity = current
-    ? `${current.origem}:${current.id ?? current.nome}`
-    : `${source}:${sourceId ?? ''}`;
+    ? `${current.origem}:${current.id ?? current.nome}:${current.idVariante ?? ''}`
+    : `${source}:${sourceId ?? ''}:${variantId ?? ''}`;
   const [currentCharacter, setCurrentCharacter] = React.useState(current ?? null);
   const [candidate, setCandidate] = React.useState<CharacterComparisonData | null>(null);
   const [query, setQuery] = React.useState('');
@@ -58,7 +58,7 @@ export const useCharacterComparison = ({ open, current, source, sourceId, tableI
     if (!open || current || !sourceId) return;
     const controller = new AbortController();
     setLoadingCurrent(true);
-    getCharacterForComparison(source, sourceId, controller.signal)
+    getCharacterForComparison(source, sourceId, variantId, controller.signal)
       .then(setCurrentCharacter)
       .catch((requestError) => {
         if (requestError?.name !== 'CanceledError') {
@@ -67,7 +67,7 @@ export const useCharacterComparison = ({ open, current, source, sourceId, tableI
       })
       .finally(() => setLoadingCurrent(false));
     return () => controller.abort();
-  }, [current, open, source, sourceId]);
+  }, [current, open, source, sourceId, variantId]);
 
   React.useEffect(() => {
     const term = query.trim();
@@ -84,7 +84,14 @@ export const useCharacterComparison = ({ open, current, source, sourceId, tableI
     const timer = window.setTimeout(() => {
       setSearching(true);
       setError('');
-      searchCharactersForComparison({ source, sourceId, tableId, term, signal: controller.signal })
+      searchCharactersForComparison({
+        source,
+        sourceId,
+        currentVariantId: currentCharacter?.idVariante ?? current?.idVariante ?? variantId,
+        tableId,
+        term,
+        signal: controller.signal,
+      })
         .then((characters) => {
           if (searchRequestRef.current === requestId) setResults(characters);
         })
@@ -103,7 +110,7 @@ export const useCharacterComparison = ({ open, current, source, sourceId, tableI
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [open, query, selectedCandidateName, source, sourceId, tableId]);
+  }, [current?.idVariante, currentCharacter?.idVariante, open, query, selectedCandidateName, source, sourceId, tableId, variantId]);
 
   const selectCandidate = React.useCallback(async (selected: CharacterComparisonData) => {
     if (!selected.id || !Number.isFinite(Number(selected.id))) {
@@ -124,7 +131,11 @@ export const useCharacterComparison = ({ open, current, source, sourceId, tableI
     try {
       // A busca Ã© apenas um Ã­ndice. Carregar a ficha individualmente impede que
       // uma projeÃ§Ã£o resumida da lista alimente os atributos do radar.
-      const detailed = await getCharacterForComparison(selected.origem, Number(selected.id));
+      const detailed = await getCharacterForComparison(
+        selected.origem,
+        Number(selected.id),
+        selected.idVariante,
+      );
       if (candidateRequestRef.current === requestId) setCandidate(detailed);
     } catch (requestError: unknown) {
       const canceled = requestError instanceof Error && requestError.name === 'CanceledError';

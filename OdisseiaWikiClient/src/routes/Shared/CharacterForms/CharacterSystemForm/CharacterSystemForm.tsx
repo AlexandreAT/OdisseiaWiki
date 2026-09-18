@@ -46,9 +46,11 @@ export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
   magiasColumns,
   runtimeContext,
   comparisonSource,
+  comparisonName,
   comparisonId,
   comparisonTableId,
   comparisonTableName,
+  comparisonVariant,
 }) => {
   const [comparisonItem, setComparisonItem] = React.useState<Item | null>(null);
   const [explodedTab, setExplodedTab] = React.useState<ExplodedViewTab | null>(null);
@@ -95,10 +97,12 @@ export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
         raceImageUrl={raceImageUrl}
         runtimeContext={runtimeContext}
         comparisonSource={comparisonSource}
+        comparisonName={comparisonName}
         comparisonId={comparisonId}
         comparisonTableId={comparisonTableId}
         comparisonTableName={comparisonTableName}
         comparisonSkillCount={filledSkillCount}
+        comparisonVariant={comparisonVariant}
       />
 
       <BottomContentController>

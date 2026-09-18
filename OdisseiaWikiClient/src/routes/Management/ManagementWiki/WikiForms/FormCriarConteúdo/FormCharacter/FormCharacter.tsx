@@ -597,7 +597,13 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
             skills={skills} setSkills={setSkills} magias={magias} setMagias={setMagias}
             listItens={listItens} handleSelectItem={handleSelectItem}
             itemColumns={itemColumns} skillsColumns={skillsColumns} magiasColumns={magiasColumns}
-            runtimeContext={sistema.contexto} comparisonSource="Npc" />
+            runtimeContext={sistema.contexto} comparisonSource="Npc" comparisonName={userName}
+            comparisonVariant={{
+              id: variants.variants[variants.index].id,
+              name: variants.nome,
+              index: variants.index + 1,
+              total: variants.variants.length,
+            }} />
         </CharacterVariantPager>
       )}
       {step === 2 && !variants.generico &&

@@ -2,6 +2,13 @@ import { ConfiguracaoCriacaoSistema } from '../../models/SistemaRpg';
 
 export type CharacterComparisonSource = 'Npc' | 'Jogador';
 
+export interface CharacterComparisonVariant {
+  id: string;
+  name: string;
+  index: number;
+  total: number;
+}
+
 export type RadarAxisKey =
   | 'vida'
   | 'precisao'
@@ -43,6 +50,10 @@ export interface CharacterComparisonData {
   id?: number;
   origem: CharacterComparisonSource;
   nome: string;
+  idVariante?: string | null;
+  nomeVariante?: string | null;
+  indiceVariante?: number | null;
+  totalVariantes?: number | null;
   imagem?: string;
   idMesa?: number | null;
   mesaNome?: string | null;
@@ -56,6 +67,7 @@ export interface CharacterComparisonModalProps {
   current?: CharacterComparisonData | null;
   source: CharacterComparisonSource;
   sourceId?: number;
+  variantId?: string | null;
   tableId?: number | null;
   onClose: () => void;
   theme: 'dark' | 'light';

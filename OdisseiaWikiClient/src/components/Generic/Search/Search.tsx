@@ -31,6 +31,7 @@ interface Props {
   iconSize?: number;
   disabled?: boolean;
   suggestions?: string[];
+  maxSuggestions?: number;
   onSelectSuggestion?: (value: string) => void;
   loading?: boolean;
   portal?: boolean;
@@ -53,6 +54,7 @@ const SearchComponent = ({
   iconSize = 20,
   disabled = false,
   suggestions = [],
+  maxSuggestions = 5,
   onSelectSuggestion,
   loading = false,
   portal = false
@@ -71,8 +73,8 @@ const SearchComponent = ({
   const [suggestionsTop, setSuggestionsTop] = useState<number | null>(null);
   const hasError = Boolean(error || nativeError);
   const rankedSuggestions = useMemo(() => (
-    getRankedSuggestions(suggestions, value ?? '', 5, getSuggestionDisplayLabel)
-  ), [suggestions, value]);
+    getRankedSuggestions(suggestions, value ?? '', maxSuggestions, getSuggestionDisplayLabel)
+  ), [maxSuggestions, suggestions, value]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

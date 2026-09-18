@@ -23,6 +23,7 @@ public sealed class PersonagensComparacaoController : ControllerBase
         [FromQuery] PersonagemComparacaoOrigem origem,
         [FromQuery] int? idPersonagemAtual,
         [FromQuery] int? idMesa,
+        [FromQuery] string? idVarianteAtual,
         [FromQuery] string termo = "")
     {
         PersonagemComparacaoPesquisaResultadoDto result = await _service.SearchAsync(
@@ -31,20 +32,25 @@ public sealed class PersonagensComparacaoController : ControllerBase
             idMesa,
             termo,
             User.GetUserId(),
-            User.IsAdmin());
+            User.IsAdmin(),
+            idVarianteAtual);
 
         return result.AcessoPermitido ? Ok(result.Personagens) : Forbid();
     }
 
     [HttpGet("{origem}/{id:int}")]
     [AllowAnonymous]
-    public async Task<IActionResult> Get(PersonagemComparacaoOrigem origem, int id)
+    public async Task<IActionResult> Get(
+        PersonagemComparacaoOrigem origem,
+        int id,
+        [FromQuery] string? idVariante)
     {
         PersonagemComparacaoPesquisaResultadoDto result = await _service.GetAsync(
             origem,
             id,
             User.GetUserId(),
-            User.IsAdmin());
+            User.IsAdmin(),
+            idVariante);
 
         if (!result.AcessoPermitido) return Forbid();
         return result.Personagens.FirstOrDefault() is { } personagem

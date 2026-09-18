@@ -34,7 +34,8 @@ public sealed class PersonagemComparacaoService : IPersonagemComparacaoService
         int? idMesa,
         string term,
         int? idUsuario,
-        bool administrador)
+        bool administrador,
+        string? idVarianteAtual = null)
     {
         string normalizedTerm = term.Trim();
         if (normalizedTerm.Length == 0)
@@ -57,7 +58,9 @@ public sealed class PersonagemComparacaoService : IPersonagemComparacaoService
         List<PersonagemComparacaoRegistro> registros = await _personagens
             .SearchVisibleForComparisonAsync(
                 normalizedTerm,
-                origem == PersonagemComparacaoOrigem.Npc ? idPersonagemAtual : null,
+                origem == PersonagemComparacaoOrigem.Npc && string.IsNullOrWhiteSpace(idVarianteAtual)
+                    ? idPersonagemAtual
+                    : null,
                 ResultLimit);
 
         if (origem == PersonagemComparacaoOrigem.Jogador && effectiveTableId.HasValue)
@@ -83,9 +86,19 @@ public sealed class PersonagemComparacaoService : IPersonagemComparacaoService
             .Take(ResultLimit)
             .ToList();
 
+        List<PersonagemComparacaoDto> mapped = await MapAsync(ordered, idUsuario, administrador);
+        if (origem == PersonagemComparacaoOrigem.Npc && idPersonagemAtual.HasValue)
+        {
+            mapped = mapped.Where(personagem =>
+                personagem.Id != idPersonagemAtual.Value ||
+                (!string.IsNullOrWhiteSpace(idVarianteAtual) &&
+                 !string.Equals(personagem.IdVariante, idVarianteAtual, StringComparison.Ordinal)))
+                .ToList();
+        }
+
         return new PersonagemComparacaoPesquisaResultadoDto
         {
-            Personagens = await MapAsync(ordered, idUsuario, administrador),
+            Personagens = mapped,
         };
     }
 
@@ -93,7 +106,8 @@ public sealed class PersonagemComparacaoService : IPersonagemComparacaoService
         PersonagemComparacaoOrigem origem,
         int id,
         int? idUsuario,
-        bool administrador)
+        bool administrador,
+        string? idVariante = null)
     {
         PersonagemComparacaoRegistro? registro;
         if (origem == PersonagemComparacaoOrigem.Npc)
@@ -123,11 +137,25 @@ public sealed class PersonagemComparacaoService : IPersonagemComparacaoService
             }
         }
 
+        List<PersonagemComparacaoDto> mapped = registro is null
+            ? new List<PersonagemComparacaoDto>()
+            : await MapAsync(new[] { registro }, idUsuario, administrador);
+
+        if (!string.IsNullOrWhiteSpace(idVariante))
+        {
+            mapped = mapped
+                .Where(personagem => string.Equals(personagem.IdVariante, idVariante, StringComparison.Ordinal))
+                .Take(1)
+                .ToList();
+        }
+        else
+        {
+            mapped = mapped.Take(1).ToList();
+        }
+
         return new PersonagemComparacaoPesquisaResultadoDto
         {
-            Personagens = registro is null
-                ? new List<PersonagemComparacaoDto>()
-                : await MapAsync(new[] { registro }, idUsuario, administrador),
+            Personagens = mapped,
         };
     }
 
@@ -152,32 +180,135 @@ public sealed class PersonagemComparacaoService : IPersonagemComparacaoService
             PersonagemVisibilidadeDto visibilidade = PersonagemVisibilidadeDefaults.FromEntity(
                 registro.ConfiguracaoVisibilidade,
                 registro.Jogador);
-            PersonagemComparacaoDto dto = new()
-            {
-                Id = registro.Id,
-                Origem = registro.Jogador
-                    ? PersonagemComparacaoOrigem.Jogador
-                    : PersonagemComparacaoOrigem.Npc,
-                Nome = registro.Nome,
-                Imagem = registro.Imagem,
-                IdMesa = registro.IdMesa,
-                MesaNome = registro.MesaNome,
-                QuantidadeSkills = CountEntries(registro.SkillsJson),
-                Status = ParseStatus(registro.StatusJson),
-                SistemaRuntime = SummarizeRuntime(runtime),
-                Visibilidade = visibilidade,
-            };
-
             bool podeVerDadosCompletos = administrador ||
                 (registro.Jogador && idUsuario.HasValue && registro.Idusuario == idUsuario.Value);
-            if (!podeVerDadosCompletos)
-                PersonagemVisibilidadeProjection.ApplyForExternalViewer(dto, visibilidade);
+            List<ComparacaoVariante> variantes = registro.Jogador
+                ? new List<ComparacaoVariante>()
+                : ParseVariants(registro.StatusJson);
 
-            result.Add(dto);
+            if (variantes.Count == 0)
+            {
+                result.Add(CreateComparisonDto(
+                    registro,
+                    registro.StatusJson,
+                    registro.SkillsJson,
+                    runtime,
+                    visibilidade,
+                    podeVerDadosCompletos));
+                continue;
+            }
+
+            foreach (ComparacaoVariante variante in variantes)
+            {
+                result.Add(CreateComparisonDto(
+                    registro,
+                    variante.StatusJson,
+                    variante.SkillsJson,
+                    runtime,
+                    visibilidade,
+                    podeVerDadosCompletos,
+                    variante));
+            }
         }
 
         return result;
     }
+
+    private static PersonagemComparacaoDto CreateComparisonDto(
+        PersonagemComparacaoRegistro registro,
+        string statusJson,
+        string? skillsJson,
+        SistemaRuntimeContextoDto runtime,
+        PersonagemVisibilidadeDto visibilidade,
+        bool podeVerDadosCompletos,
+        ComparacaoVariante? variante = null)
+    {
+        PersonagemComparacaoDto dto = new()
+        {
+            Id = registro.Id,
+            Origem = registro.Jogador
+                ? PersonagemComparacaoOrigem.Jogador
+                : PersonagemComparacaoOrigem.Npc,
+            Nome = registro.Nome,
+            IdVariante = variante?.Id,
+            NomeVariante = variante?.Nome,
+            IndiceVariante = variante?.Indice,
+            TotalVariantes = variante?.Total,
+            Imagem = registro.Imagem,
+            IdMesa = registro.IdMesa,
+            MesaNome = registro.MesaNome,
+            QuantidadeSkills = CountEntries(skillsJson),
+            Status = ParseStatus(statusJson),
+            SistemaRuntime = SummarizeRuntime(runtime),
+            Visibilidade = visibilidade,
+        };
+
+        if (!podeVerDadosCompletos)
+            PersonagemVisibilidadeProjection.ApplyForExternalViewer(dto, visibilidade);
+
+        return dto;
+    }
+
+    private static List<ComparacaoVariante> ParseVariants(string json)
+    {
+        var result = new List<ComparacaoVariante>();
+        if (string.IsNullOrWhiteSpace(json)) return result;
+
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(json);
+            JsonElement root = document.RootElement;
+            JsonElement generic = Property(root, "generico");
+            JsonElement variants = Property(root, "variantes");
+            if (generic.ValueKind != JsonValueKind.True || variants.ValueKind != JsonValueKind.Array)
+                return result;
+
+            List<JsonElement> entries = variants.EnumerateArray()
+                .Where(entry => entry.ValueKind == JsonValueKind.Object)
+                .Select(entry => entry.Clone())
+                .ToList();
+
+            for (int index = 0; index < entries.Count; index++)
+            {
+                JsonElement entry = entries[index];
+                JsonElement status = Property(entry, "statusJson");
+                if (status.ValueKind != JsonValueKind.Object) continue;
+
+                string? id = Text(entry, "id");
+                string? name = Text(entry, "nome");
+                if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(name)) continue;
+
+                JsonElement skills = Property(entry, "skills");
+                result.Add(new ComparacaoVariante(
+                    id,
+                    name,
+                    index + 1,
+                    entries.Count,
+                    status.GetRawText(),
+                    skills.ValueKind == JsonValueKind.Array ? skills.GetRawText() : "[]"));
+            }
+        }
+        catch (JsonException)
+        {
+            // Dados legados inválidos continuam usando a ficha-base.
+        }
+
+        return result;
+    }
+
+    private static string? Text(JsonElement element, string name)
+    {
+        JsonElement property = Property(element, name);
+        return property.ValueKind == JsonValueKind.String ? property.GetString() : null;
+    }
+
+    private sealed record ComparacaoVariante(
+        string Id,
+        string Nome,
+        int Indice,
+        int Total,
+        string StatusJson,
+        string SkillsJson);
 
     private static PersonagemComparacaoSistemaDto SummarizeRuntime(SistemaRuntimeContextoDto runtime)
     {

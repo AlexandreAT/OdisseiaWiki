@@ -7,6 +7,7 @@ import { getRacas } from '../../../services/racasService';
 import { getItens } from '../../../services/itensService';
 import { ServiceRequestOptions } from '../../../services/serviceRequestOptions';
 import { getRankedSuggestions } from '../../../utils/searchSuggestions';
+import { getCharacterVariants } from '../../../utils/characterVariants';
 import {
   createEmptyWikiSearchGroups,
   WikiSearchEntityType,
@@ -152,6 +153,9 @@ export const useWikiSearch = () => {
           })).filter((page) => page.title && page.id),
           characters: characters.map((character) => {
             const tags = getStringList(character.tags);
+            const variantNames = getCharacterVariants(character.statusJson)
+              .map((variant) => String(variant.nome ?? '').trim())
+              .filter(Boolean);
             return {
               id: String(character.idpersonagem),
               type: 'characters' as const,
@@ -160,7 +164,7 @@ export const useWikiSearch = () => {
               image: character.imagem,
               createdAt: character.dataCriacao,
               route: `/personagem/${character.idpersonagem}`,
-              searchTerms: tags,
+              searchTerms: [...tags, ...variantNames],
             };
           }).filter((character) => character.title && character.id),
           cities: cities.map((city) => {
