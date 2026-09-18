@@ -1036,8 +1036,11 @@ NPCs podem ser únicos (padrão legado) ou genéricos. Nome, raça, história, i
 - A primeira variante é espelhada nos campos tradicionais do NPC para manter catálogos e comparações compatíveis. Nunca usar os campos tradicionais para sobrescrever as demais variantes.
 - `useCharacterVariants`, `characterVariants` e `characterVariantsService` centralizam rascunhos, cópias independentes, validação e upload. Adicionar variante copia a ficha atual, deixando o nome vazio para preenchimento.
 - Criação e edição usam `CharacterSystemForm` e `CharacterVariantPager`. O nome do personagem é compartilhado; o nome da variante é editado na ficha. Trocar de variante não salva automaticamente.
+- A ficha pública preserva a variante ativa em `?variante=<id>` e oferece setas e seleção direta. Links sem variante, IDs inválidos e NPCs legados continuam abrindo a primeira ficha disponível.
+- A busca da Wiki indexa também os nomes das variantes, mas mantém um único resultado para o personagem; a seleção acontece na ficha dedicada.
+- A comparação expande cada NPC genérico em opções por variante, identificadas pelo nome e pela posição. Ao comparar variantes do mesmo personagem, somente a variante atualmente aberta é excluída.
 - `PersonagemVariantesHelper` valida todas as fichas antes de persistir. `PersonagemVisibilidadeProjection` aplica as mesmas regras de privacidade em cada variante. A busca de referências de assets inclui `StatusJson`, preservando imagens de variantes inativas.
-- Verificações: `npm run test:variants`, `npm run test:items` e `PersonagemVariantesTests` no backend.
+- Verificações: `npm run test:variants`, `npm run test:items`, `PersonagemVariantesTests` e `PersonagemComparacaoServiceTests` no backend.
 
 ---
 

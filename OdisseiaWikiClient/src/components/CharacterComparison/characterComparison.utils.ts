@@ -23,6 +23,10 @@ interface CreateComparisonDataArgs {
   id?: number;
   origem: CharacterComparisonSource;
   nome?: string;
+  idVariante?: string | null;
+  nomeVariante?: string | null;
+  indiceVariante?: number | null;
+  totalVariantes?: number | null;
   imagem?: string;
   idMesa?: number | null;
   mesaNome?: string | null;
@@ -35,6 +39,10 @@ export const createCharacterComparisonData = ({
   id,
   origem,
   nome,
+  idVariante,
+  nomeVariante,
+  indiceVariante,
+  totalVariantes,
   imagem,
   idMesa,
   mesaNome,
@@ -45,6 +53,10 @@ export const createCharacterComparisonData = ({
   id,
   origem,
   nome: nome?.trim() || 'Personagem sem nome',
+  idVariante,
+  nomeVariante,
+  indiceVariante,
+  totalVariantes,
   imagem,
   idMesa,
   mesaNome,
@@ -72,6 +84,14 @@ export const getCharacterSystemLabel = (character: CharacterComparisonData) => (
   || character.sistemaRuntime?.codigoSistema
   || 'Sistema não informado'
 );
+
+export const getCharacterVariantLabel = (character: CharacterComparisonData) => {
+  if (!character.idVariante || !character.indiceVariante || !character.totalVariantes) return '';
+  const position = `Variante ${character.indiceVariante} de ${character.totalVariantes}`;
+  return character.nomeVariante?.trim()
+    ? `${character.nomeVariante.trim()} · ${position}`
+    : position;
+};
 
 export const hasDifferentRuntime = (
   current: CharacterComparisonData,

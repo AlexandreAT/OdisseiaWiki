@@ -39,10 +39,12 @@ export const StatusForm: React.FC<StatusFormProps> = ({
   raceImageUrl,
   runtimeContext,
   comparisonSource,
+  comparisonName,
   comparisonId,
   comparisonTableId,
   comparisonTableName,
   comparisonSkillCount = 0,
+  comparisonVariant,
 }) => {
   const [comparisonOpen, setComparisonOpen] = React.useState(false);
   const primaryFields = React.useMemo(
@@ -73,7 +75,11 @@ export const StatusForm: React.FC<StatusFormProps> = ({
     ? createCharacterComparisonData({
         id: comparisonId,
         origem: comparisonSource,
-        nome: userName,
+        nome: comparisonName ?? userName,
+        idVariante: comparisonVariant?.id,
+        nomeVariante: comparisonVariant?.name,
+        indiceVariante: comparisonVariant?.index,
+        totalVariantes: comparisonVariant?.total,
         imagem: avatarUrl,
         idMesa: comparisonTableId,
         mesaNome: comparisonTableName,
@@ -95,10 +101,12 @@ export const StatusForm: React.FC<StatusFormProps> = ({
       atributosSecundarios,
       avatarUrl,
       comparisonId,
+      comparisonName,
       comparisonSkillCount,
       comparisonSource,
       comparisonTableId,
       comparisonTableName,
+      comparisonVariant,
       defesas,
       level,
       runtimeContext,
@@ -233,6 +241,7 @@ export const StatusForm: React.FC<StatusFormProps> = ({
           current={comparisonCharacter}
           source={comparisonSource}
           sourceId={comparisonId}
+          variantId={comparisonVariant?.id}
           tableId={comparisonTableId}
           onClose={() => setComparisonOpen(false)}
           theme={theme}

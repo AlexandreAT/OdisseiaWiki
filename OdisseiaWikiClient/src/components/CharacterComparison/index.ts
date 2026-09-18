@@ -4,4 +4,5 @@ export { createCharacterComparisonData } from './characterComparison.utils';
 export type {
   CharacterComparisonData,
   CharacterComparisonSource,
+  CharacterComparisonVariant,
 } from './CharacterComparison.types';

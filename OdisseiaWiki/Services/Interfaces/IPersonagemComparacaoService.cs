@@ -10,11 +10,13 @@ public interface IPersonagemComparacaoService
         int? idMesa,
         string term,
         int? idUsuario,
-        bool administrador);
+        bool administrador,
+        string? idVarianteAtual = null);
 
     Task<PersonagemComparacaoPesquisaResultadoDto> GetAsync(
         PersonagemComparacaoOrigem origem,
         int id,
         int? idUsuario,
-        bool administrador);
+        bool administrador,
+        string? idVariante = null);
 }

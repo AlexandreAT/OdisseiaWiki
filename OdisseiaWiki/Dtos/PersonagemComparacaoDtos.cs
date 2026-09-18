@@ -28,6 +28,10 @@ public sealed class PersonagemComparacaoDto
     public int Id { get; set; }
     public PersonagemComparacaoOrigem Origem { get; set; }
     public string? Nome { get; set; }
+    public string? IdVariante { get; set; }
+    public string? NomeVariante { get; set; }
+    public int? IndiceVariante { get; set; }
+    public int? TotalVariantes { get; set; }
     public string? Imagem { get; set; }
     public int? IdMesa { get; set; }
     public string? MesaNome { get; set; }

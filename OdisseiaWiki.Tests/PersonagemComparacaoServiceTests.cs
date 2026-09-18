@@ -240,6 +240,77 @@ public sealed class PersonagemComparacaoServiceTests
         Assert.DoesNotContain("carisma", runtime.Escalas.Keys);
     }
 
+    [Fact]
+    public async Task GetAsync_NpcGenericoRetornaAVarianteSelecionada()
+    {
+        TestContext context = CreateContext();
+        PersonagemComparacaoRegistro record = GenericNpc(30, "Sucateiro");
+        context.Npcs.Setup(repository => repository.GetForComparisonAsync(30, true)).ReturnsAsync(record);
+        SetupRuntime(context);
+
+        PersonagemComparacaoPesquisaResultadoDto result = await context.Service.GetAsync(
+            PersonagemComparacaoOrigem.Npc,
+            30,
+            null,
+            administrador: false,
+            idVariante: "variante-2");
+
+        PersonagemComparacaoDto character = Assert.Single(result.Personagens);
+        Assert.Equal("variante-2", character.IdVariante);
+        Assert.Equal("Veterano", character.NomeVariante);
+        Assert.Equal(2, character.IndiceVariante);
+        Assert.Equal(2, character.TotalVariantes);
+        Assert.Equal(2200, character.Status.Vida);
+        Assert.Equal(2, character.QuantidadeSkills);
+    }
+
+    [Fact]
+    public async Task SearchAsync_NpcGenericoExpandeVariantesEExcluiSomenteAAtual()
+    {
+        TestContext context = CreateContext();
+        context.Npcs.Setup(repository => repository.SearchVisibleForComparisonAsync("sucateiro", null, 12))
+            .ReturnsAsync(new List<PersonagemComparacaoRegistro> { GenericNpc(30, "Sucateiro") });
+        SetupRuntime(context);
+
+        PersonagemComparacaoPesquisaResultadoDto result = await context.Service.SearchAsync(
+            PersonagemComparacaoOrigem.Npc,
+            30,
+            null,
+            "sucateiro",
+            null,
+            administrador: false,
+            idVarianteAtual: "variante-1");
+
+        PersonagemComparacaoDto character = Assert.Single(result.Personagens);
+        Assert.Equal(30, character.Id);
+        Assert.Equal("variante-2", character.IdVariante);
+        Assert.Equal("Veterano", character.NomeVariante);
+        context.Npcs.Verify(repository => repository.SearchVisibleForComparisonAsync(
+            "sucateiro", null, 12), Times.Once);
+    }
+
+    [Fact]
+    public async Task SearchAsync_NpcGenericoDisponibilizaTodasAsVariantesParaOutroPersonagem()
+    {
+        TestContext context = CreateContext();
+        context.Npcs.Setup(repository => repository.SearchVisibleForComparisonAsync("sucateiro", 99, 12))
+            .ReturnsAsync(new List<PersonagemComparacaoRegistro> { GenericNpc(30, "Sucateiro") });
+        SetupRuntime(context);
+
+        PersonagemComparacaoPesquisaResultadoDto result = await context.Service.SearchAsync(
+            PersonagemComparacaoOrigem.Npc,
+            99,
+            null,
+            "sucateiro",
+            null,
+            administrador: false);
+
+        Assert.Collection(
+            result.Personagens,
+            character => Assert.Equal("variante-1", character.IdVariante),
+            character => Assert.Equal("variante-2", character.IdVariante));
+    }
+
     private static TestContext CreateContext()
     {
         Mock<IPersonagemRepository> npcs = new();
@@ -288,6 +359,47 @@ public sealed class PersonagemComparacaoServiceTests
         IdMesa = tableId,
         MesaNome = "Mesa",
         StatusJson = "{}",
+        SkillsJson = "[]",
+    };
+
+    private static PersonagemComparacaoRegistro GenericNpc(int id, string name) => new()
+    {
+        Id = id,
+        Nome = name,
+        IdRaca = 1,
+        ConfiguracaoVisibilidade = PersonagemVisibilidadeDefaults.CreateEntity(
+            idPersonagem: id,
+            idPersonagemJogador: null,
+            dto: PersonagemVisibilidadeDefaults.Jogador()),
+        StatusJson = """
+            {
+              "generico": true,
+              "variantes": [
+                {
+                  "id": "variante-1",
+                  "nome": "Comum",
+                  "statusJson": {
+                    "status": { "vida": 900, "vidaMaxima": 1000 },
+                    "atributos": { "principais": { "precisao": 2 } },
+                    "nivel": 1,
+                    "defesas": {}
+                  },
+                  "skills": [{ "nome": "Improviso" }]
+                },
+                {
+                  "id": "variante-2",
+                  "nome": "Veterano",
+                  "statusJson": {
+                    "status": { "vida": 1800, "vidaMaxima": 2200 },
+                    "atributos": { "principais": { "precisao": 5 } },
+                    "nivel": 4,
+                    "defesas": { "armadura": 15 }
+                  },
+                  "skills": [{ "nome": "Improviso" }, { "nome": "Reciclagem" }]
+                }
+              ]
+            }
+            """,
         SkillsJson = "[]",
     };
 

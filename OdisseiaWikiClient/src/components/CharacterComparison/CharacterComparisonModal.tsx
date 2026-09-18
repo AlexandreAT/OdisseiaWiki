@@ -41,10 +41,12 @@ import {
   SummaryGrid,
   SummaryItem,
   SystemLine,
+  VariantMeta,
 } from './CharacterComparison.style';
 import {
   formatComparisonDelta,
   formatNumber,
+  getCharacterVariantLabel,
   getCharacterSystemLabel,
   hasDifferentRuntime,
 } from './characterComparison.utils';
@@ -88,6 +90,7 @@ const CharacterCardContent = ({ character, current, candidate, focus, theme, neo
   const runtimeUnavailable = !character.sistemaRuntime?.idSistemaVersao
     || character.sistemaRuntime.usaFallbackLegado;
   const runtimeDifferent = Boolean(candidate && hasDifferentRuntime(current, candidate));
+  const variantLabel = getCharacterVariantLabel(character);
 
   return (
     <CharacterCard $candidate={isCandidate} $theme={theme} $neon={neon === 'on'}>
@@ -102,6 +105,7 @@ const CharacterCardContent = ({ character, current, candidate, focus, theme, neo
         />
         <IdentityText $theme={theme} $candidate={isCandidate}>
           <h3>{character.nome}</h3>
+          {variantLabel && <VariantMeta>{variantLabel}</VariantMeta>}
           <SystemLine>
             <StorageIcon aria-hidden="true" />
             <span><b>Sistema:</b> {getCharacterSystemLabel(character)}</span>
@@ -160,6 +164,7 @@ export const CharacterComparisonModal = ({
   current,
   source,
   sourceId,
+  variantId,
   tableId,
   onClose,
   theme,
@@ -176,18 +181,21 @@ export const CharacterComparisonModal = ({
     error,
     setQuery,
     selectCandidate,
-  } = useCharacterComparison({ open, current, source, sourceId, tableId });
+  } = useCharacterComparison({ open, current, source, sourceId, variantId, tableId });
 
   const suggestions = React.useMemo(() => results.map((result) => {
     const context = result.origem === 'Npc' ? 'NPC visível' : result.mesaNome || 'Personagem de jogador';
-    return `${result.origem}:${result.id}|${result.nome} · ${context}`;
+    const variant = getCharacterVariantLabel(result);
+    return `${result.origem}:${result.id}:${result.idVariante ?? ''}|${result.nome}${variant ? ` — ${variant}` : ''} · ${context}`;
   }), [results]);
 
   const handleSuggestion = React.useCallback((suggestion: string) => {
     const key = suggestion.slice(0, suggestion.indexOf('|'));
-    const [resultSource, resultId] = key.split(':');
+    const [resultSource, resultId, resultVariantId = ''] = key.split(':');
     const selected = results.find((result) => (
-      result.origem === resultSource && String(result.id) === resultId
+      result.origem === resultSource
+      && String(result.id) === resultId
+      && (result.idVariante ?? '') === resultVariantId
     ));
     if (selected) selectCandidate(selected);
   }, [results, selectCandidate]);
@@ -196,8 +204,15 @@ export const CharacterComparisonModal = ({
 
   const openCharacter = () => {
     if (!currentCharacter?.id) return;
-    const playerQuery = currentCharacter.origem === 'Jogador' ? '?tipo=jogador' : '';
-    window.open(`/personagem/${currentCharacter.id}${playerQuery}`, '_blank', 'noopener,noreferrer');
+    const params = new URLSearchParams();
+    if (currentCharacter.origem === 'Jogador') params.set('tipo', 'jogador');
+    if (currentCharacter.idVariante) params.set('variante', currentCharacter.idVariante);
+    const queryString = params.toString();
+    window.open(
+      `/personagem/${currentCharacter.id}${queryString ? `?${queryString}` : ''}`,
+      '_blank',
+      'noopener,noreferrer',
+    );
   };
 
   const hasNoSearchResult = query.trim().length >= 2
@@ -213,7 +228,10 @@ export const CharacterComparisonModal = ({
             <CompareArrowsIcon aria-hidden="true" />
             Comparar personagem
             {currentCharacter && (
-              <span className="comparison-character-name"> — {currentCharacter.nome}</span>
+              <span className="comparison-character-name">
+                {' — '}{currentCharacter.nome}
+                {getCharacterVariantLabel(currentCharacter) && ` · ${getCharacterVariantLabel(currentCharacter)}`}
+              </span>
             )}
           </ModalTitle>
           {currentCharacter?.id && (
@@ -248,6 +266,7 @@ export const CharacterComparisonModal = ({
             icon={<SearchIcon />}
             width="100%"
             suggestions={suggestions}
+            maxSuggestions={Math.max(5, suggestions.length)}
             onSelectSuggestion={handleSuggestion}
             loading={searching}
             portal

@@ -111,7 +111,9 @@ namespace OdisseiaWiki.Repositories
                 .AsNoTracking()
                 .Where(personagem => personagem.Visivel)
                 .Where(personagem => !excludedId.HasValue || personagem.Idpersonagem != excludedId.Value)
-                .Where(personagem => EF.Functions.Like(personagem.Nome, pattern))
+                .Where(personagem =>
+                    EF.Functions.Like(personagem.Nome, pattern) ||
+                    EF.Functions.Like(personagem.StatusJson, pattern))
                 .OrderBy(personagem => personagem.Nome)
                 .Take(limit)
                 .Select(personagem => new PersonagemComparacaoRegistro

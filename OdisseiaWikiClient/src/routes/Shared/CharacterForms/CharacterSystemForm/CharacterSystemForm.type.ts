@@ -5,7 +5,7 @@ import { Principais, Secundarios } from '../../../Hub/UserCharacters/CharacterCr
 import { RacaPayload } from '../../../../services/racasService';
 import { Defesas, StatusBase } from '../../../../models/Characters';
 import { SistemaRuntimeContexto } from '../../../../models/SistemaRpg';
-import { CharacterComparisonSource } from '../../../../components/CharacterComparison';
+import { CharacterComparisonSource, CharacterComparisonVariant } from '../../../../components/CharacterComparison';
 
 export interface CharacterSystemFormProps {
   theme: 'dark' | 'light';
@@ -41,7 +41,9 @@ export interface CharacterSystemFormProps {
   magiasColumns: any;
   runtimeContext?: SistemaRuntimeContexto | null;
   comparisonSource?: CharacterComparisonSource;
+  comparisonName?: string;
   comparisonId?: number;
   comparisonTableId?: number | null;
   comparisonTableName?: string | null;
+  comparisonVariant?: CharacterComparisonVariant;
 }

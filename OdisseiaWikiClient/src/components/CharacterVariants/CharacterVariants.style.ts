@@ -30,6 +30,50 @@ export const VariantHeading = styled.div`
   }
 `;
 
+export const VariantPicker = styled.div`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  max-width: 100%;
+  margin-top: 2px;
+  color: inherit;
+  font-size: 0.72rem;
+  opacity: 0.86;
+
+  label {
+    white-space: nowrap;
+  }
+
+  select {
+    min-width: 150px;
+    max-width: min(280px, 60vw);
+    padding: 4px 24px 4px 7px;
+    border: 1px solid var(--clearneonBlue);
+    border-radius: 3px;
+    background: var(--blackTransp);
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  option {
+    background: var(--black-blue);
+    color: var(--whitesmoke);
+  }
+
+  @media (max-width: 480px) {
+    flex-direction: column;
+    gap: 4px;
+
+    select {
+      width: min(210px, 58vw);
+      min-width: 0;
+      max-width: 100%;
+    }
+  }
+`;
+
 export const VariantArrow = styled.button<{ $side: 'left' | 'right'; $neon: boolean }>`
   position: absolute;
   ${({ $side }) => $side}: 0;

@@ -8,7 +8,7 @@ import { useSelector } from 'react-redux';
 import { usePersonagem } from './usePersonagem';
 import { PageContainer, TopSection, BottomSection, AvatarWrapper, MetaRow, Sections, CardContent, InfoList, InfoItem, MetaContent, SectionSpacer, AvatarDivController, SatusDivController, StatusList, StatusDiv, HeaderStatusController, StatusController, StatusHeader, StatusBarWrapper, StatusBarFill, InfoControllers, TitleDiv, TagItem, TagList, RelatedLink, HistoryWrapper, HistoryModalOverlay, HistoryModalSheet, HistoryModalHeader, HistoryModalTitle, HistoryModalClose, HistoryModalContent, HistoryModalActions, ItemModalViewButton, InfoSpan, BottomInfoLeft, BottomInfoRight, StoryWithImage, StoryImage, HudCornerEl, HudTopLine, HudBottomLine, HudLeftLine, HudRightLine, StatusTopLine, StatusBottomLine, StatusLeftLine, StatusRightLine, BackgroundVideoContainer, BackgroundVideo, BackgroundOverlay, HexagonHud, HexagonBackground, HexagonBorder, HexagonContent, HexagonValue, PageController, PageLoadingState, SectionRow, InventoryList, LoadBar, LoadProgress, ImplantGrid, ImplantMods, SkillGrid, AbilityDescription, AbilityPair, AbilityCard, CooldownBar, CooldownFill, ItemDescriptionPreview, ItemDescriptionLayout, ItemDetailsBody, ViewMoreButton, DetailAttributes, DetailAttribute, DetailTextPair, DetailText, ItemDescriptionImage } from './PersonagemPage.style';
 import { PersonagemRichText, FlexRow, MutedText, BoldLabel, ItemThumb, ItemPlaceholder, GalleryToggle, GalleryContent, MaskIcon, AuthorIcon, ItemRow, FlexFill } from './PersonagemPage.style';
-import { CharacterComparisonButton, CharacterComparisonModal } from '../../components/CharacterComparison';
+import { CharacterComparisonButton, CharacterComparisonModal, createCharacterComparisonData } from '../../components/CharacterComparison';
 import glassHeart from '../../assets/svg/glass-heart.svg';
 import rollingEnergy from '../../assets/svg/rolling-energy.svg';
 import electric from '../../assets/svg/electric.svg';
@@ -374,15 +374,27 @@ const HudContentSection: React.FC<HudContentSectionProps> = ({
 
 const PersonagemPage: React.FC = () => {
   const params = useParams();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const id = params.id;
   const characterSource = searchParams.get('tipo') === 'jogador' ? 'player' : 'public';
   const { loading, error, personagem: basePersonagem, relatedPages, reload: reloadPersonagem } = usePersonagem(id, characterSource);
   const variants = React.useMemo(() => characterSource === 'public'
     ? getCharacterVariants(basePersonagem?.statusJson) : [], [basePersonagem, characterSource]);
-  const [variantIndex, setVariantIndex] = React.useState(0);
-  React.useEffect(() => { setVariantIndex(0); }, [id, characterSource]);
+  const requestedVariantId = searchParams.get('variante');
+  const variantIndex = React.useMemo(() => {
+    const requestedIndex = requestedVariantId
+      ? variants.findIndex((variant) => variant.id === requestedVariantId)
+      : -1;
+    return requestedIndex >= 0 ? requestedIndex : 0;
+  }, [requestedVariantId, variants]);
   const activeVariant = variants[variantIndex] ?? variants[0];
+  const selectVariant = React.useCallback((nextIndex: number) => {
+    const selected = variants[nextIndex];
+    if (!selected) return;
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set('variante', selected.id);
+    setSearchParams(nextParams, { replace: true });
+  }, [searchParams, setSearchParams, variants]);
   const personagem = React.useMemo(() => {
     if (!basePersonagem || !activeVariant) return basePersonagem;
     const sheet = normalizePersonagem({ ...basePersonagem, ...activeVariant,
@@ -777,6 +789,21 @@ const PersonagemPage: React.FC = () => {
       : null,
   ].filter((entry): entry is { label: string; value: string } => entry !== null) : [];
   const detailAttributeEntries = [...selectedAttributeEntries, ...selectedAbilityEntries];
+  const comparisonCurrentCharacter = createCharacterComparisonData({
+    id: id ? Number(id) : undefined,
+    origem: characterSource === 'player' ? 'Jogador' : 'Npc',
+    nome,
+    idVariante: activeVariant?.id,
+    nomeVariante: activeVariant?.nome,
+    indiceVariante: activeVariant ? variantIndex + 1 : undefined,
+    totalVariantes: activeVariant ? variants.length : undefined,
+    imagem,
+    idMesa: characterSource === 'player' ? Number((personagem as any)?.idmesa) || null : null,
+    mesaNome: (personagem as any)?.mesaNome,
+    quantidadeSkills: skills.length,
+    status: (personagem as any)?.statusJson,
+    sistemaRuntime: runtimeContext,
+  });
 
                 console.log("🚀 ~ PersonagemPage ~ visibleAbilities:", visibleAbilities)
   return (
@@ -792,9 +819,11 @@ const PersonagemPage: React.FC = () => {
           />
           <BackgroundOverlay />
         </BackgroundVideoContainer>
-        <CharacterVariantPager enabled={variants.length > 0} index={variants.indexOf(activeVariant)}
-          count={variants.length} onSelect={setVariantIndex} characterName={nome}
-          variantName={activeVariant?.nome || (variants.length ? 'Variante' : undefined)} theme={theme} neon={neon}>
+        <CharacterVariantPager enabled={variants.length > 0} index={variantIndex}
+          count={variants.length} onSelect={selectVariant} characterName={nome}
+          variantName={activeVariant?.nome || (variants.length ? 'Variante' : undefined)}
+          variantOptions={variants.map((variant) => ({ id: variant.id, name: variant.nome }))}
+          theme={theme} neon={neon}>
         <PageController>
         <ClipBox theme={theme} neon={neon} width="100%" height="auto" useClip={false} borderRadius="8px" zIndex={1}>
             <TopSection>
@@ -958,8 +987,10 @@ const PersonagemPage: React.FC = () => {
             </TopSection>
             <CharacterComparisonModal
               open={characterComparisonOpen}
+              current={comparisonCurrentCharacter}
               source={characterSource === 'player' ? 'Jogador' : 'Npc'}
               sourceId={id ? Number(id) : undefined}
+              variantId={activeVariant?.id}
               tableId={characterSource === 'player' ? Number(personagem?.idmesa) || null : null}
               onClose={() => setCharacterComparisonOpen(false)}
               theme={theme}
