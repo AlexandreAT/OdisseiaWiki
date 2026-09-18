@@ -1,4 +1,7 @@
 import React from 'react';
+import { getCharacterVariants } from '../../utils/characterVariants';
+import { normalizePersonagem } from '../../utils/normalizePersonagem';
+import { CharacterVariantPager } from '../../components/CharacterVariants/CharacterVariants';
 import { createPortal } from 'react-dom';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
@@ -374,7 +377,19 @@ const PersonagemPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const id = params.id;
   const characterSource = searchParams.get('tipo') === 'jogador' ? 'player' : 'public';
-  const { loading, error, personagem, relatedPages, reload: reloadPersonagem } = usePersonagem(id, characterSource);
+  const { loading, error, personagem: basePersonagem, relatedPages, reload: reloadPersonagem } = usePersonagem(id, characterSource);
+  const variants = React.useMemo(() => characterSource === 'public'
+    ? getCharacterVariants(basePersonagem?.statusJson) : [], [basePersonagem, characterSource]);
+  const [variantIndex, setVariantIndex] = React.useState(0);
+  React.useEffect(() => { setVariantIndex(0); }, [id, characterSource]);
+  const activeVariant = variants[variantIndex] ?? variants[0];
+  const personagem = React.useMemo(() => {
+    if (!basePersonagem || !activeVariant) return basePersonagem;
+    const sheet = normalizePersonagem({ ...basePersonagem, ...activeVariant,
+      nome: basePersonagem.nome, skills: activeVariant.skills ?? [], magia: activeVariant.magia ?? [] });
+    return { ...basePersonagem, statusJson: sheet.statusJson, inventarioJson: sheet.inventarioJson,
+      skills: sheet.skills, magia: sheet.magia, implantes: undefined };
+  }, [basePersonagem, activeVariant]);
   const { theme, neon } = useSelector((state: any) => state.themesReducer);
   const runtimeRaceId = Number((personagem as any)?.idraca ?? (personagem as any)?.Idraca);
   const embeddedRuntimeContext = (personagem as any)?.sistemaRuntime ?? null;
@@ -434,9 +449,9 @@ const PersonagemPage: React.FC = () => {
   }, [characterSource, id, reloadPersonagem]);
   const characterGalleryImages = React.useMemo(
     () => normalizeGalleryImages(
-      personagem && 'galeriaImagem' in personagem ? personagem.galeriaImagem : undefined,
+      basePersonagem?.galeriaImagem,
     ),
-    [personagem],
+    [basePersonagem],
   );
 
   React.useEffect(() => {
@@ -464,7 +479,7 @@ const PersonagemPage: React.FC = () => {
     let mounted = true;
     const fetchRelated = async () => {
       try {
-        const idCidade = getField(personagem, ['idcidade', 'Idcidade', 'idCidade', 'idcidade']) as any;
+        const idCidade = getField(basePersonagem, ['idcidade', 'Idcidade', 'idCidade', 'idcidade']) as any;
         if (idCidade) {
           const res: any = await getCidadeById(Number(idCidade));
           const cidade = res?.cidade ?? res;
@@ -473,7 +488,7 @@ const PersonagemPage: React.FC = () => {
             setCidadeImagem(cidade.imagem ?? null);
           }
         }
-        const idRaca = getField(personagem, ['idraca', 'Idraca', 'idRaca']) as any;
+        const idRaca = getField(basePersonagem, ['idraca', 'Idraca', 'idRaca']) as any;
         
         if (idRaca) {
           const rr: any = await getRacaById(Number(idRaca));
@@ -483,7 +498,7 @@ const PersonagemPage: React.FC = () => {
           }
         }
 
-        const vinculados = (personagem as any)?.personagemsVinculados;
+        const vinculados = basePersonagem?.personagemsVinculados;
         if (Array.isArray(vinculados) && vinculados.length > 0) {
           const res = await getPersonagensByIds(vinculados);
           if (mounted && Array.isArray(res)) {
@@ -500,7 +515,7 @@ const PersonagemPage: React.FC = () => {
     };
     fetchRelated();
     return () => { mounted = false; };
-  }, [personagem]);
+  }, [basePersonagem]);
 
   React.useEffect(() => {
     const inventory = Array.isArray((personagem as any)?.inventarioJson)
@@ -777,6 +792,9 @@ const PersonagemPage: React.FC = () => {
           />
           <BackgroundOverlay />
         </BackgroundVideoContainer>
+        <CharacterVariantPager enabled={variants.length > 0} index={variants.indexOf(activeVariant)}
+          count={variants.length} onSelect={setVariantIndex} characterName={nome}
+          variantName={activeVariant?.nome || (variants.length ? 'Variante' : undefined)} theme={theme} neon={neon}>
         <PageController>
         <ClipBox theme={theme} neon={neon} width="100%" height="auto" useClip={false} borderRadius="8px" zIndex={1}>
             <TopSection>
@@ -809,7 +827,7 @@ const PersonagemPage: React.FC = () => {
                       <HudRightLine $isActive={neon === 'on'} $neon={neon === 'on'} />
                       <InfoControllers>
                         <TitleDiv>
-                            <TitleGlitch theme={theme} neon={neon} text={nome} fontSize="20px" />
+                            <TitleGlitch theme={theme} neon={neon} text={activeVariant?.nome || nome} fontSize="20px" />
                         </TitleDiv>
                         <SystemRuntimeIndicator
                           contexto={runtimeContext}
@@ -1422,6 +1440,7 @@ const PersonagemPage: React.FC = () => {
         </AbilityPair>
 
         </Sections>
+        </CharacterVariantPager>
 
         <Lightbox
           isOpen={mainImageOpen}

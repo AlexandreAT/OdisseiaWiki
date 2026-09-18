@@ -10,8 +10,8 @@ import toast from 'react-hot-toast';
 import { ConfirmDialog } from '../../../../components/Generic/ConfirmDialog/ConfirmDialog';
 import { PersonagemJogador } from '../../../../models/PersonagemJogador';
 import { useFormUserCharacter } from '../CharacterCreate/useFormUserCharacter';
-import { FormController, FormEditController, NavegationButtons } from '../CharacterCreate/FormUserCharacter/FormUserCharacter.style';
-import { CyberButton } from '../../../../components/Generic/HighlightButton/HighlightButton';
+import { FormController, FormEditController } from '../CharacterCreate/FormUserCharacter/FormUserCharacter.style';
+import { MultiStepNavigation } from '../../../../components/Generic/MultiStepNavigation';
 import { createItemColumns, createSkillsColumns, createMagiasColumns } from '../CharacterCreate/tableColumnsConfig';
 import { CharacterSystemForm } from '../../../Shared/CharacterForms/CharacterSystemForm';
 import { CharacterRoleplayForm } from '../../../Shared/CharacterForms/CharacterRoleplayForm';
@@ -315,6 +315,36 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, initialStep = 1
               onStepClick={handleStepDotClick}
             />
 
+            <MultiStepNavigation
+              position="top"
+              theme={theme}
+              neon={neon}
+              previous={{
+                label: 'Anterior',
+                onClick: () => setEditStep(1),
+                disabled: isFirstStep || isSubmitting,
+                colorType: 'secondary',
+              }}
+              save={{
+                label: 'Salvar',
+                onClick: () => handleSave(true),
+                disabled: isSubmitting,
+                loading: isSubmitting,
+              }}
+              next={{
+                label: isLastStep ? 'Atualizar' : 'Próximo',
+                onClick: () => {
+                  if (isLastStep) {
+                    void handleSave(false);
+                    return;
+                  }
+                  setEditStep(2);
+                },
+                disabled: isSubmitting,
+                loading: isLastStep && isSubmitting,
+              }}
+            />
+
             {selectedMesa && (
               <SystemRuntimeIndicator
                 contexto={runtimeContext}
@@ -420,46 +450,35 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, initialStep = 1
               )}
             </FormEditController>
         
-            <NavegationButtons>
-              <CyberButton
-                colorType="secondary"
-                theme={theme}
-                neon={neon}
-                text="Anterior"
-                width="200px"
-                type="button"
-                onClick={() => setEditStep(1)}
-                disabled={isFirstStep || isSubmitting}
-              />
-
-              <CyberButton
-                theme={theme}
-                neon={neon}
-                text={'Salvar'}
-                width="200px"
-                type="button"
-                onClick={() => handleSave(true)}
-                disabled={isSubmitting}
-                loading={isSubmitting}
-              />
-
-              <CyberButton
-                theme={theme}
-                neon={neon}
-                text={isLastStep ? 'Atualizar' : 'Próximo'}
-                width="200px"
-                type="button"
-                onClick={() => {
+            <MultiStepNavigation
+              position="bottom"
+              theme={theme}
+              neon={neon}
+              previous={{
+                label: 'Anterior',
+                onClick: () => setEditStep(1),
+                disabled: isFirstStep || isSubmitting,
+                colorType: 'secondary',
+              }}
+              save={{
+                label: 'Salvar',
+                onClick: () => handleSave(true),
+                disabled: isSubmitting,
+                loading: isSubmitting,
+              }}
+              next={{
+                label: isLastStep ? 'Atualizar' : 'Próximo',
+                onClick: () => {
                   if (isLastStep) {
-                    handleSave(false);
+                    void handleSave(false);
                     return;
                   }
                   setEditStep(2);
-                }}
-                disabled={isSubmitting}
-                loading={isLastStep && isSubmitting}
-              />
-            </NavegationButtons>
+                },
+                disabled: isSubmitting,
+                loading: isLastStep && isSubmitting,
+              }}
+            />
 
             <FloatingActions>
               <SyncIconBadge

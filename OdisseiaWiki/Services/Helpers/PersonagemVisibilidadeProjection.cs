@@ -278,10 +278,29 @@ public static class PersonagemVisibilidadeProjection
         if (!visibilidade.Xp) Remove(root, "xp");
         if (!visibilidade.Nivel) Remove(root, "nivel");
 
+        if (GetProperty(root, "variantes") is JsonArray variants)
+        {
+            foreach (JsonObject variant in variants.OfType<JsonObject>())
+            {
+                if (!visibilidade.Nome) Remove(variant, "nome");
+                var maskedStatus = MaskStatusJson(GetProperty(variant, "statusJson")?.ToJsonString(), visibilidade);
+                Remove(variant, "statusJson");
+                variant["statusJson"] = JsonNode.Parse(maskedStatus);
+                var inventory = ProjectInventoryJson(GetProperty(variant, "inventarioJson")?.ToJsonString(),
+                    visibilidade.Inventario, visibilidade.Proteses);
+                Remove(variant, "inventarioJson");
+                variant["inventarioJson"] = inventory is null ? new JsonArray() : JsonNode.Parse(inventory);
+                if (!visibilidade.Skills) Remove(variant, "skills");
+                if (!visibilidade.Magias) Remove(variant, "magia");
+            }
+        }
+
         return root.ToJsonString();
     }
 
     private static bool HasHiddenStatusFields(PersonagemVisibilidadeDto visibilidade) =>
+        !visibilidade.Nome || !visibilidade.Inventario || !visibilidade.Proteses ||
+        !visibilidade.Skills || !visibilidade.Magias ||
         !visibilidade.Vida ||
         !visibilidade.Estamina ||
         !visibilidade.Mana ||

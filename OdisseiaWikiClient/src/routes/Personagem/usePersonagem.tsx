@@ -6,15 +6,7 @@ import { PageDto } from '../../models/Pages';
 import { getPagesReferencingEntity } from '../../services/pageService';
 import { getProjectedHiddenCharacterFields } from '../../utils/characterVisibility';
 
-export type NormalizedPersonagem = ReturnType<typeof normalizePersonagem> | {
-  // fallback shape for personagensService payloads (minimal)
-  id?: string | number;
-  idmesa?: number;
-  nome?: string;
-  imagem?: string;
-  historia?: any;
-  visivel?: boolean;
-};
+export type NormalizedPersonagem = ReturnType<typeof normalizePersonagem>;
 
 export const usePersonagem = (idParam?: string | undefined, source: 'public' | 'player' = 'public') => {
   const [loading, setLoading] = useState(true);

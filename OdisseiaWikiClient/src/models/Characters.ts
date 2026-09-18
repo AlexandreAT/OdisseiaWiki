@@ -40,6 +40,8 @@ export interface Personagem {
 // ---- Status ----
 
 export interface PersonagemStatus {
+  generico?: boolean;
+  variantes?: PersonagemVariante[];
   status: StatusBase;
   atributos: Atributos;
   nivel: number;
@@ -50,6 +52,15 @@ export interface PersonagemStatus {
   pontosUltimate?: number;
   condicioes?: string[];
   defesas: Defesas;
+}
+
+export interface PersonagemVariante {
+  id: string;
+  nome: string;
+  statusJson: Omit<PersonagemStatus, 'generico' | 'variantes'>;
+  inventarioJson: Item[];
+  skills: Skills[];
+  magia: Magia[];
 }
 
 export interface StatusBase {

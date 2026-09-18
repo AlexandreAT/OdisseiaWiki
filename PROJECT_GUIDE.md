@@ -960,6 +960,8 @@ Formulários devem:
 - Validar antes de enviar;
 - Evitar duplicação entre criação e edição;
 - Separar roleplay, gameplay, mídia e relações quando fizer sentido.
+- Em formulários com etapas, usar `MultiStepNavigation` no topo e na base da etapa atual. A posição é sempre após o indicador de etapa e antes do primeiro campo, com os mesmos rótulos, ações e estados desabilitados nas duas cópias.
+- Em fichas genéricas, a navegação das etapas continua usando `MultiStepNavigation` no topo e na base. A troca entre variantes usa as setas laterais, sem duplicar os controles do formulário.
 
 ---
 
@@ -1023,6 +1025,19 @@ O tipo `acessorio` já faz parte do contrato de itens. Armas e acessórios usam 
 - Preservar `bonus`, `efeito`, propriedades legadas e metadados da vista explodida. Bônus textuais antigos não são interpretados como números. Ao completar um item do inventário com seu catálogo base, `modificadores` é uma substituição integral, para não ressuscitar bônus removidos pelo usuário.
 
 Verificação: `npm run test:items` no client cobre somas, penalidades, compatibilidade, remoção, snapshots, reabertura, legado e comparação. `ItemWeaponAccessoriesTests` no backend cobre o contrato de persistência de itens e serialização do inventário.
+
+---
+
+## 29.2. Personagens genéricos da Wiki
+
+NPCs podem ser únicos (padrão legado) ou genéricos. Nome, raça, história, imagem, galeria e vínculo de Sistema pertencem ao personagem. Cada variante tem `id` estável, `nome` obrigatório (até 100 caracteres), `statusJson`, `inventarioJson` (incluindo próteses), `skills` e `magia` próprios.
+
+- O contrato usa `StatusJson.generico` e `StatusJson.variantes`, sem novas tabelas ou migração. Ausência dos campos significa personagem único.
+- A primeira variante é espelhada nos campos tradicionais do NPC para manter catálogos e comparações compatíveis. Nunca usar os campos tradicionais para sobrescrever as demais variantes.
+- `useCharacterVariants`, `characterVariants` e `characterVariantsService` centralizam rascunhos, cópias independentes, validação e upload. Adicionar variante copia a ficha atual, deixando o nome vazio para preenchimento.
+- Criação e edição usam `CharacterSystemForm` e `CharacterVariantPager`. O nome do personagem é compartilhado; o nome da variante é editado na ficha. Trocar de variante não salva automaticamente.
+- `PersonagemVariantesHelper` valida todas as fichas antes de persistir. `PersonagemVisibilidadeProjection` aplica as mesmas regras de privacidade em cada variante. A busca de referências de assets inclui `StatusJson`, preservando imagens de variantes inativas.
+- Verificações: `npm run test:variants`, `npm run test:items` e `PersonagemVariantesTests` no backend.
 
 ---
 

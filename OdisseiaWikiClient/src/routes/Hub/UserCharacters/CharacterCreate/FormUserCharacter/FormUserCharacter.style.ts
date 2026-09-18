@@ -222,6 +222,17 @@ export const StatusHeader = styled.div<Props>`
     gap: 20px;
 `
 
+export const HeaderNameField = styled.div`
+    width: min(320px, 100%);
+    flex: 0 1 320px;
+    min-width: 0;
+
+    @media (max-width: 768px) {
+        width: 100%;
+        flex: 1 1 100%;
+    }
+`
+
 export const HeaderInfo = styled.div<Props>`
     display: flex;
     flex-direction: row;
@@ -239,6 +250,10 @@ export const HeaderInfo = styled.div<Props>`
         > * {
             flex: 1 1 130px;
             min-width: 0;
+        }
+
+        > ${HeaderNameField} {
+            flex: 1 1 100%;
         }
     }
 `

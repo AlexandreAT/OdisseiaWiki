@@ -1,5 +1,5 @@
 import React from 'react'
-import { AtributeController, AtributoBox, AtributoDiv, AvatarController, HeaderInfo, InfoImage, LabelStatus, MinimalInput, SectionStatus, StatusAtributosDiv, StatusContent, StatusContentCenter, StatusDefesaController, StatusDefesaDiv, StatusHeader, StatusImageDiv } from '../FormUserCharacter.style';
+import { AtributeController, AtributoBox, AtributoDiv, AvatarController, HeaderInfo, HeaderNameField, InfoImage, LabelStatus, MinimalInput, SectionStatus, StatusAtributosDiv, StatusContent, StatusContentCenter, StatusDefesaController, StatusDefesaDiv, StatusHeader, StatusImageDiv } from '../FormUserCharacter.style';
 import { LabelInfoBox } from '../../../../../../components/Generic/LabelInfoBox/LabelInfoBox';
 import { StatusInput } from '../../../../../../components/Generic/StatusInput/StatusInput';
 import { AvatarIcon } from '../../../../../../components/Generic/AvatarIcon/AvatarIcon';
@@ -20,6 +20,7 @@ export const StatusForm: React.FC<StatusFormProps> = ({
   theme,
   neon,
   userName,
+  nameField,
   selectedRace,
   xp,
   setXp,
@@ -110,9 +111,11 @@ export const StatusForm: React.FC<StatusFormProps> = ({
     <>
       <StatusHeader>
         <HeaderInfo>
-          <LabelInfoBox theme={theme} neon={neon}>
-            <LabelStatus>Nome: {userName}</LabelStatus>
-          </LabelInfoBox>
+          {nameField ? <HeaderNameField>{nameField}</HeaderNameField> : (
+            <LabelInfoBox theme={theme} neon={neon}>
+              <LabelStatus>Nome: {userName}</LabelStatus>
+            </LabelInfoBox>
+          )}
           <LabelInfoBox theme={theme} neon={neon}>
             <LabelStatus>Raça: {selectedRace?.nome}</LabelStatus>
           </LabelInfoBox>
