@@ -3,7 +3,6 @@ import { ConfirmDialog } from '../Generic/ConfirmDialog/ConfirmDialog';
 import { CheckBox } from '../Generic/CheckBox/CheckBox';
 import { InputText } from '../Generic/InputText/InputText';
 import { CyberButton } from '../Generic/HighlightButton/HighlightButton';
-import { MultiStepNavigation } from '../Generic/MultiStepNavigation';
 import { VariantArrow, VariantFooter, VariantHeading, VariantSheet } from './CharacterVariants.style';
 
 type Appearance = { theme: 'dark' | 'light'; neon: 'on' | 'off' };
@@ -24,17 +23,18 @@ export function CharacterVariantType({ generico, count, onChange, neon }: {
   </>;
 }
 
-export function CharacterVariantName({ value, onChange, theme, neon }: Appearance & {
-  value: string; onChange: (value: string) => void;
+export function CharacterVariantName({ value, onChange, error, errorMessage, theme, neon }: Appearance & {
+  value: string; onChange: (value: string) => void; error?: boolean; errorMessage?: string;
 }) {
   return <InputText label="Nome da variante" value={value} onChange={event => onChange(event.target.value.slice(0, 100))}
-    theme={theme} neon={neon} required width="100%" />;
+    theme={theme} neon={neon} required width="100%" name="nomeVariante" autoComplete="off"
+    error={error} errorMessage={errorMessage} />;
 }
 
-export function CharacterVariantPager({ enabled, index, count, onSelect, onAdd, characterName, variantName, formNavigation = false,
+export function CharacterVariantPager({ enabled, index, count, onSelect, onAdd, characterName, variantName,
   children, theme, neon }: Appearance & {
   enabled: boolean; index: number; count: number; onSelect: (index: number) => void; onAdd?: () => void;
-  characterName: string; variantName?: string; formNavigation?: boolean; children: ReactNode;
+  characterName: string; variantName?: string; children: ReactNode;
 }) {
   const sheetRef = useRef<HTMLElement>(null);
   if (!enabled) return <>{children}</>;
@@ -44,50 +44,13 @@ export function CharacterVariantPager({ enabled, index, count, onSelect, onAdd, 
       {variantName && <span>{variantName}</span>}
       <small role="status">Variante {index + 1} de {count}</small>
     </VariantHeading>
-    {formNavigation ? (
-      <MultiStepNavigation
-        position="top"
-        theme={theme}
-        neon={neon}
-        previous={{
-          label: 'Anterior',
-          onClick: () => onSelect(index - 1),
-          disabled: index === 0,
-          colorType: 'secondary',
-        }}
-        next={{
-          label: 'Próxima',
-          onClick: () => onSelect(index + 1),
-          disabled: index >= count - 1,
-        }}
-      />
-    ) : <>
-      <VariantArrow type="button" $side="left" $neon={neon === 'on'} aria-label="Variante anterior"
-        disabled={index === 0} onClick={() => onSelect(index - 1)}>‹</VariantArrow>
-      <VariantArrow type="button" $side="right" $neon={neon === 'on'} aria-label="Próxima variante"
-        disabled={index >= count - 1} onClick={() => onSelect(index + 1)}>›</VariantArrow>
-    </>}
+    <VariantArrow type="button" $side="left" $neon={neon === 'on'} aria-label="Variante anterior"
+      disabled={index === 0} onClick={() => onSelect(index - 1)}>‹</VariantArrow>
+    <VariantArrow type="button" $side="right" $neon={neon === 'on'} aria-label="Próxima variante"
+      disabled={index >= count - 1} onClick={() => onSelect(index + 1)}>›</VariantArrow>
     {children}
-    {formNavigation && (
-      <MultiStepNavigation
-        position="bottom"
-        theme={theme}
-        neon={neon}
-        previous={{
-          label: 'Anterior',
-          onClick: () => onSelect(index - 1),
-          disabled: index === 0,
-          colorType: 'secondary',
-        }}
-        next={{
-          label: 'Próxima',
-          onClick: () => onSelect(index + 1),
-          disabled: index >= count - 1,
-        }}
-      />
-    )}
     {onAdd && <VariantFooter><small>A nova variante começa com uma cópia da ficha atual.</small>
-      <CyberButton type="button" theme={theme} neon={neon}
+      <CyberButton type="button" theme={theme} neon={neon} width="280px" height="50px"
         text="Adicionar outra variante" onClick={() => {
           onAdd();
           sheetRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });

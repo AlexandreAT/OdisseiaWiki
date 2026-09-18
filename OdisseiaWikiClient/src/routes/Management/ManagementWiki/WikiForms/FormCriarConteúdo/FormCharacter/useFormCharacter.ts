@@ -463,9 +463,9 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType, idEnti
 
     const invalidVariant = variants.generico ? findInvalidVariant(variants.variants) : -1;
     if (invalidVariant >= 0) {
+      variants.showNameError(invalidVariant);
       variants.select(invalidVariant);
       setStep(2);
-      toast.error('Preencha o nome de cada variante (até 100 caracteres).');
       return;
     }
 

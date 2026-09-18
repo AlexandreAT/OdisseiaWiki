@@ -961,7 +961,7 @@ Formulários devem:
 - Evitar duplicação entre criação e edição;
 - Separar roleplay, gameplay, mídia e relações quando fizer sentido.
 - Em formulários com etapas, usar `MultiStepNavigation` no topo e na base da etapa atual. A posição é sempre após o indicador de etapa e antes do primeiro campo, com os mesmos rótulos, ações e estados desabilitados nas duas cópias.
-- Se uma ficha genérica tiver variantes, a navegação entre elas segue o mesmo padrão durante criação e edição. Setas laterais são reservadas à leitura pública, onde não há formulário para salvar.
+- Em fichas genéricas, a navegação das etapas continua usando `MultiStepNavigation` no topo e na base. A troca entre variantes usa as setas laterais, sem duplicar os controles do formulário.
 
 ---
 

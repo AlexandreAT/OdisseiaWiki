@@ -562,9 +562,9 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
     if (!validateEdit()) return;
     const invalidVariant = variants.generico ? findInvalidVariant(variants.variants) : -1;
     if (invalidVariant >= 0) {
+      variants.showNameError(invalidVariant);
       variants.select(invalidVariant);
       setEditStep(1);
-      toast.error('Preencha o nome de cada variante (até 100 caracteres).');
       return;
     }
     if (!sistema.vinculo.acompanharPublicacaoAtual && !sistema.vinculo.idSistemaVersao) {
@@ -878,12 +878,13 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
         {editStep === 1 && (
           <>
           <SystemEntityBinding theme={theme} neon={neon} state={sistema} />
-          <CharacterVariantPager enabled={variants.generico} formNavigation index={variants.index} count={variants.variants.length}
+          <CharacterVariantPager enabled={variants.generico} index={variants.index} count={variants.variants.length}
             onSelect={variants.select} onAdd={variants.add} characterName={userName} theme={theme} neon={neon}>
           <CharacterSystemForm
             key={variants.generico ? variants.variants[variants.index].id : 'unique'}
             nameField={variants.generico ? <CharacterVariantName theme={theme} neon={neon}
-              value={variants.nome} onChange={variants.setNome} /> : undefined}
+              value={variants.nome} onChange={variants.setNome}
+              error={variants.nameError} errorMessage={variants.nameErrorMessage} /> : undefined}
             theme={theme}
             neon={neon}
             allowMaxStatusEditing

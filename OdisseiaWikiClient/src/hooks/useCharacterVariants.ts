@@ -6,7 +6,8 @@ export function useCharacterVariants(sheet: CharacterVariantSheet, applySheet: (
   const [generico, setGenerico] = useState(false);
   const [stored, setStored] = useState<PersonagemVariante[]>([]);
   const [index, setIndex] = useState(0);
-  const [nome, setNome] = useState('');
+  const [nome, setNomeValue] = useState('');
+  const [nameErrorIndex, setNameErrorIndex] = useState<number | null>(null);
   const [initialId] = useState(() => crypto.randomUUID());
   const variants = useMemo(() => {
     const next = stored.length ? [...stored] : [{ ...sheet, id: initialId, nome }];
@@ -18,24 +19,48 @@ export function useCharacterVariants(sheet: CharacterVariantSheet, applySheet: (
     if (target === index || !variants[target]) return;
     setStored(structuredClone(variants));
     setIndex(target);
-    setNome(variants[target].nome);
+    setNomeValue(variants[target].nome);
     applySheet(structuredClone(variants[target]));
   };
   const add = () => {
     const variant = createCharacterVariant(sheet);
     setStored([...structuredClone(variants), variant]);
     setIndex(variants.length);
-    setNome('');
+    setNomeValue('');
+    setNameErrorIndex(null);
     applySheet(variant);
   };
+  const setNome = useCallback((value: string) => {
+    setNomeValue(value);
+    setNameErrorIndex(current => current === index ? null : current);
+  }, [index]);
+  const showNameError = useCallback((target: number) => {
+    setNameErrorIndex(target);
+  }, []);
   // Metadata hydration is stable; the edit form already restores the canonical first sheet.
   const hydrate = useCallback((status: unknown) => {
     const loaded = getCharacterVariants(status).map(normalizeVariantForEditing);
     setGenerico(loaded.length > 0);
     setStored(structuredClone(loaded));
     setIndex(0);
-    setNome(loaded[0]?.nome ?? '');
+    setNomeValue(loaded[0]?.nome ?? '');
+    setNameErrorIndex(null);
   }, []);
 
-  return { generico, setGenerico, variants, index, nome, setNome, select, add, hydrate };
+  return {
+    generico,
+    setGenerico,
+    variants,
+    index,
+    nome,
+    setNome,
+    nameError: nameErrorIndex === index,
+    nameErrorMessage: nome.trim()
+      ? 'O nome da variante deve ter no máximo 100 caracteres.'
+      : 'O nome da variante é obrigatório.',
+    showNameError,
+    select,
+    add,
+    hydrate,
+  };
 }

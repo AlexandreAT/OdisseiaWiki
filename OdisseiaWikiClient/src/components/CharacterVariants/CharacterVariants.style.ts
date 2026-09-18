@@ -23,6 +23,11 @@ export const VariantHeading = styled.div`
   overflow-wrap: anywhere;
   color: inherit;
   small { opacity: .8; }
+
+  @media (max-width: 768px) {
+    margin: 14px 0 16px;
+    padding: 0 48px;
+  }
 `;
 
 export const VariantArrow = styled.button<{ $side: 'left' | 'right'; $neon: boolean }>`

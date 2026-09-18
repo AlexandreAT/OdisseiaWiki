@@ -582,11 +582,12 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
         </>
       )}
       {step === 2 && variants.generico && (
-        <CharacterVariantPager enabled formNavigation index={variants.index} count={variants.variants.length}
+        <CharacterVariantPager enabled index={variants.index} count={variants.variants.length}
           onSelect={variants.select} onAdd={variants.add} characterName={userName} theme={theme} neon={neon}>
           <CharacterSystemForm key={variants.variants[variants.index].id} theme={theme} neon={neon} allowMaxStatusEditing
             userName={`${userName} — ${variants.nome}`}
-            nameField={<CharacterVariantName theme={theme} neon={neon} value={variants.nome} onChange={variants.setNome} />}
+            nameField={<CharacterVariantName theme={theme} neon={neon} value={variants.nome} onChange={variants.setNome}
+              error={variants.nameError} errorMessage={variants.nameErrorMessage} />}
             selectedRace={selectedRace} raceImageUrl={raceImageUrl} avatarUrl={avatarUrl}
             xp={xp} setXp={setXp} level={level} setLevel={setLevel}
             statusBasico={statusBasico} setStatusBasico={setStatusBasico}
