@@ -31,6 +31,8 @@ namespace OdisseiaWiki.Services
 
         public async Task<ResultPersonagem> CreateAsync(PersonagemDto dto)
         {
+            string? variantError = PersonagemVariantesHelper.ValidateAndNormalize(dto);
+            if (variantError is not null) return ResultPersonagem.Fail(variantError);
             if (string.IsNullOrWhiteSpace(dto.Nome))
                 return ResultPersonagem.Fail("Nome é obrigatório.");
 
@@ -122,6 +124,8 @@ namespace OdisseiaWiki.Services
 
         public async Task<ResultPersonagem> UpdateAsync(int id, PersonagemDto dto)
         {
+            string? variantError = PersonagemVariantesHelper.ValidateAndNormalize(dto);
+            if (variantError is not null) return ResultPersonagem.Fail(variantError);
             var personagem = await _repository.GetByIdAsync(id);
             if (personagem == null)
                 return ResultPersonagem.Fail($"Personagem com id {id} não encontrado.");
@@ -212,6 +216,7 @@ namespace OdisseiaWiki.Services
             => AssetReferenceHelper.Extract(
                 personagem.Imagem,
                 personagem.GaleriaImagem,
+                personagem.StatusJson,
                 personagem.InventarioJson,
                 personagem.Skills,
                 personagem.Magia,

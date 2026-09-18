@@ -8,7 +8,10 @@ import { persistCharacterEntryImages } from './../../../../../../services/charac
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { CharacterFormData, CharacterFormErrors } from './FormCharacter.type';
 import toast from 'react-hot-toast';
-import { Principais, Secundarios, JSONContent } from '../../../../../../models/Characters';
+import { Principais, Secundarios, JSONContent, StatusBase, Defesas } from '../../../../../../models/Characters';
+import { useCharacterVariants } from '../../../../../../hooks/useCharacterVariants';
+import { findInvalidVariant } from '../../../../../../utils/characterVariants';
+import { persistCharacterVariants } from '../../../../../../services/characterVariantsService';
 import { SkillElemento, Skills, SkillTipoString } from '../../../../../../models/Skills';
 import { Item, ItemTipo } from '../../../../../../models/Itens';
 import { Magia, MagiaElemento, MagiaTipoString } from '../../../../../../models/Magias';
@@ -17,7 +20,7 @@ import { getItens } from '../../../../../../services/itensService';
 import { prepareForAPI } from '../../../../../../utils/richTextHelpers';
 import { TOTAL_STEPS } from '../../../../../../constants';
 import { ensureContentCategoryTag, isContentCategoryTag } from '../../../../../../utils/contentCategoryTag';
-import { CharacterStatusExtras, DEFAULT_CHARACTER_STATUS_EXTRAS } from '../../../../../../utils/characterStatus';
+import { CharacterStatusExtras, DEFAULT_CHARACTER_STATUS_EXTRAS, normalizeCharacterStatusExtras } from '../../../../../../utils/characterStatus';
 import { getApiErrorMessage } from '../../../../../../utils/apiError';
 import { addOrReplaceEmptyItem } from '../../../../../../utils/itemInventorySections';
 import { useSistemaEntidadeGlobalForm } from '../../../../../../hooks/useSistemaEntidadeGlobalForm';
@@ -85,7 +88,7 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType, idEnti
   const [statusError, setStatusError] = useState(false);
 
   // --- status básico ---
-  const [statusBasico, setStatusBasico] = useState({
+  const [statusBasico, setStatusBasico] = useState<StatusBase>({
     vida: 0,
     vidaMaxima: 0,
     estamina: 0,
@@ -95,7 +98,7 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType, idEnti
     capacidadeCarga: 0,
   });
   // --- defesas ---
-  const [defesas, setDefesas] = useState({
+  const [defesas, setDefesas] = useState<Defesas>({
     armadura: 0,
     protecao: 0,
     escudo: 0,
@@ -117,6 +120,24 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType, idEnti
     percepcao: 0,
     labia: 0,
     intimidacao: 0,
+  });
+
+  const variantSheet = useMemo(() => ({
+    statusJson: { status: statusBasico, atributos: { principais: atributosPrincipais, secundarios: atributosSecundarios },
+      nivel: level, xp, ...statusExtras, defesas },
+    inventarioJson: itens, skills, magia: magias,
+  }), [statusBasico, atributosPrincipais, atributosSecundarios, level, xp, statusExtras, defesas, itens, skills, magias]);
+  const variants = useCharacterVariants(variantSheet, sheet => {
+    setStatusBasico(sheet.statusJson.status);
+    setAtributosPrincipais(sheet.statusJson.atributos.principais);
+    setAtributosSecundarios(sheet.statusJson.atributos.secundarios);
+    setDefesas(sheet.statusJson.defesas);
+    setLevel(sheet.statusJson.nivel);
+    setXp(sheet.statusJson.xp);
+    setStatusExtras(normalizeCharacterStatusExtras(sheet.statusJson));
+    setItens(sheet.inventarioJson);
+    setSkills(sheet.skills);
+    setMagias(sheet.magia);
   });
 
   // --- cidades ---
@@ -440,6 +461,14 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType, idEnti
       return;
     }
 
+    const invalidVariant = variants.generico ? findInvalidVariant(variants.variants) : -1;
+    if (invalidVariant >= 0) {
+      variants.select(invalidVariant);
+      setStep(2);
+      toast.error('Preencha o nome de cada variante (até 100 caracteres).');
+      return;
+    }
+
     if (!sistema.vinculo.acompanharPublicacaoAtual && !sistema.vinculo.idSistemaVersao) {
       toast.error('Selecione uma versão publicada para fixar o Sistema deste NPC.');
       setStep(1);
@@ -483,17 +512,17 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType, idEnti
         capacidadeCarga: statusBasico.capacidadeCarga,
       };
 
-      const itensComImagens = await persistCharacterEntryImages(itens, {
+      const itensComImagens = await persistCharacterEntryImages(variants.generico ? [] : itens, {
         assetType: 'personagens',
         entityName: userName,
         resolveFolderName: (item) => item.tipo === 'implante' ? 'proteses' : 'inventario',
       });
-      const magiasComImagens = await persistCharacterEntryImages(magias, {
+      const magiasComImagens = await persistCharacterEntryImages(variants.generico ? [] : magias, {
         assetType: 'personagens',
         entityName: userName,
         resolveFolderName: () => 'magias',
       });
-      const skillsComImagens = await persistCharacterEntryImages(skills, {
+      const skillsComImagens = await persistCharacterEntryImages(variants.generico ? [] : skills, {
         assetType: 'personagens',
         entityName: userName,
         resolveFolderName: () => 'skills',
@@ -588,6 +617,7 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType, idEnti
       };
       console.log("🚀 ~ handleSubmit ~ payload:", payload)
 
+      if (variants.generico) Object.assign(payload, await persistCharacterVariants(variants.variants, userName));
       const result = await salvarPersonagem(payload);
       console.log("🚀 ~ handleSubmit ~ result:", result)
 
@@ -600,14 +630,16 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType, idEnti
       }
 
       toast.success("Personagem salvo com sucesso!");
+      if (!variants.generico) variants.hydrate(null);
     } catch (err: any) {
       toast.error(getApiErrorMessage(err, 'Erro ao salvar personagem'));
     } finally {
       setIsSubmitting(false);
     }
-  }, [avatarUrl, avatarFile, galeriaFiles, galeriaCaptions, userName, statusBasico, itens, magias, skills, race, city, history, costumes, nanites, alignment, traits, idpassiva, ultimate, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, statusExtras, defesas, tags, contentType, visivel, destaque, validateStepOne, sistema]);
+  }, [avatarUrl, avatarFile, galeriaFiles, galeriaCaptions, userName, statusBasico, itens, magias, skills, race, city, history, costumes, nanites, alignment, traits, idpassiva, ultimate, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, statusExtras, defesas, tags, contentType, visivel, destaque, validateStepOne, sistema, variants]);
 
   return {
+    variants,
     step, setStep,
     userName, setUserName,
     race, setRace, handleRaceChange,

@@ -12,6 +12,7 @@ export interface CharacterSystemFormProps {
   neon: 'on' | 'off';
   allowMaxStatusEditing?: boolean;
   userName: string;
+  nameField?: React.ReactNode;
   selectedRace?: RacaPayload;
   raceImageUrl: string;
   avatarUrl: string;

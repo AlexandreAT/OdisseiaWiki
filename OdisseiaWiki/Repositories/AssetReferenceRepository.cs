@@ -68,6 +68,7 @@ public sealed class AssetReferenceRepository : IAssetReferenceRepository
         var personagens = await _context.Personagens.AsNoTracking()
             .Select(entity => new
             {
+                entity.StatusJson,
                 entity.GaleriaImagem,
                 entity.InventarioJson,
                 entity.Skills,
@@ -78,6 +79,7 @@ public sealed class AssetReferenceRepository : IAssetReferenceRepository
             .ToListAsync(cancellationToken);
         if (personagens.Any(entity => ContainsAsset(
                 assetUrl,
+                entity.StatusJson,
                 entity.GaleriaImagem,
                 entity.InventarioJson,
                 entity.Skills,

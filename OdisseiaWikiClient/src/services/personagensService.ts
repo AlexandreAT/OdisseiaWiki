@@ -3,6 +3,7 @@ import api from "../axios/api";
 import { ServiceRequestOptions } from './serviceRequestOptions';
 import { GalleryImage } from '../models/GalleryImage';
 import type { PersonagemVisibilidade } from '../models/PersonagemVisibilidade';
+import type { PersonagemVariante } from '../models/Characters';
 import type { SistemaRuntimeContexto, SistemaRuntimeWarning } from '../models/SistemaRpg';
 
 export interface PersonagemPayload {
@@ -33,6 +34,8 @@ export interface PersonagemPayload {
   sistemaRuntime?: SistemaRuntimeContexto | null;
   visibilidade?: PersonagemVisibilidade;
   statusJson: {
+    generico?: boolean;
+    variantes?: PersonagemVariante[];
     status: {
       vida: number;
       vidaMaxima: number;
@@ -95,6 +98,8 @@ export interface PersonagemCreatePayload {
   idSistemaVersao?: number | null;
   acompanharPublicacaoAtual?: boolean;
   statusJson?: {
+    generico?: boolean;
+    variantes?: PersonagemVariante[];
     status: {
       vida: number;
       vidaMaxima?: number;
@@ -139,6 +144,8 @@ export interface PersonagemUpdatePayload {
   idpassiva?: number;
   ultimate?: string;
   statusJson?: {
+    generico?: boolean;
+    variantes?: PersonagemVariante[];
     status: {
       vida: number;
       vidaMaxima?: number;

@@ -1,10 +1,12 @@
 import React, { useRef, useEffect } from 'react';
-import { FormController, FormHeader, HeaderInputs, HeaderAvatar, GridInputs, SectionTable, TableTitle, RelatedCharactersSection, SectionTitle, SectionStatus, NavegationButtons, StatusHeader, HeaderInfo, LabelStatus, MinimalInput, StatusContent, StatusAtributosDiv, StatusImageDiv, AtributoBox, AtributoDiv, InfoImage, AvatarController, AtributeController, StatusContentCenter, StatusDefesaDiv, StatusDefesaController, CheckboxSection } from './FormCharacter.style';
+import { CharacterVariantName, CharacterVariantPager, CharacterVariantType } from '../../../../../../components/CharacterVariants/CharacterVariants';
+import { CharacterSystemForm } from '../../../../../Shared/CharacterForms/CharacterSystemForm/CharacterSystemForm';
+import { FormController, FormHeader, HeaderInputs, HeaderAvatar, GridInputs, SectionTable, TableTitle, RelatedCharactersSection, SectionTitle, SectionStatus, StatusHeader, HeaderInfo, LabelStatus, MinimalInput, StatusContent, StatusAtributosDiv, StatusImageDiv, AtributoBox, AtributoDiv, InfoImage, AvatarController, AtributeController, StatusContentCenter, StatusDefesaDiv, StatusDefesaController, CheckboxSection } from './FormCharacter.style';
 import { InputText } from '../../../../../../components/Generic/InputText/InputText';
 import { Select } from '../../../../../../components/Generic/Select/Select';
 import { ImageUploader } from '../../../../../../components/Generic/ImageUploader/ImageUploader';
 import { ImageGalleryWithCrop } from '../../../../../../components/Generic/ImageGallery/ImageGalleryWithCrop';
-import { CyberButton } from '../../../../../../components/Generic/HighlightButton/HighlightButton';
+import { MultiStepNavigation } from '../../../../../../components/Generic/MultiStepNavigation';
 import { TextArea } from '../../../../../../components/Generic/TextArea/TextArea';
 import { RichTextEditor } from '../../../../../../components/Generic/RichTextEditor/RichTextEditor';
 import { Search } from '../../../../../../components/Generic/Search/Search';
@@ -27,6 +29,7 @@ import { TRAITS_OPTIONS, ALIGNMENT_OPTIONS } from '../../formOptions';
 import { getInventarioItems, getProtesesItems, getProtesesTableItems, isEmptyItemRow, replaceItemSection } from '../../../../../../utils/itemInventorySections';
 import { openItemPreview } from '../../../../../../utils/itemPreview';
 import { SystemEntityBinding } from '../../../../../../components/Generic/SystemEntityBinding';
+import { CharacterStepDots } from '../../../../../Shared/CharacterForms/CharacterStepDots';
 import { ItemComparisonModal } from '../../../../../../components/ItemComparison';
 import {
   CharacterComparisonButton,
@@ -52,7 +55,7 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
   const [characterComparisonOpen, setCharacterComparisonOpen] = React.useState(false);
   const [explodedTab, setExplodedTab] = React.useState<ExplodedViewTab | null>(null);
   const {
-    step, handleNext, handleSubmit,
+    step, setStep, handleNext, handleSubmit,
     isSubmitting,
     handlePrev, isFirstStep, isLastStep,
     userName, setUserName,
@@ -96,6 +99,7 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
     defesas, setDefesas,
     listItens, handleSelectItem,
     sistema,
+    variants,
   } = useFormCharacter({ contentType });
   
   const tagInputRef = useRef<HTMLInputElement>(null);
@@ -132,6 +136,15 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
     setAvatarUrl(result.preview);
     setAvatarFile(result.file);
   };
+
+  const handleStepDotClick = React.useCallback((targetStep: 1 | 2) => {
+    if (targetStep === step) return;
+    if (targetStep === 2 && step === 1) {
+      handleNext();
+      return;
+    }
+    setStep(targetStep);
+  }, [handleNext, setStep, step]);
 
   const itemColumns = React.useMemo(() => createItemColumns(theme, neon), [theme, neon]);
   const skillsColumns = React.useMemo(() => createSkillsColumns(theme, neon), [theme, neon]);
@@ -173,6 +186,31 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
                 console.log("🚀 ~ FormCharacter ~ allPersonagens:", allPersonagens)
   return (
     <FormController onSubmit={handleSubmit}>
+      <CharacterStepDots
+        theme={theme}
+        neon={neon}
+        activeStep={step as 1 | 2}
+        onStepClick={handleStepDotClick}
+      />
+      <MultiStepNavigation
+        position="top"
+        theme={theme}
+        neon={neon}
+        previous={{
+          label: 'Anterior',
+          onClick: handlePrev,
+          disabled: isFirstStep || isSubmitting,
+          colorType: 'secondary',
+        }}
+        next={{
+          label: isLastStep ? 'Finalizar' : 'Próximo',
+          onClick: isLastStep ? handleSubmit : handleNext,
+          disabled: isSubmitting,
+          loading: isLastStep && isSubmitting,
+        }}
+      />
+      {step === 1 && <CharacterVariantType generico={variants.generico} count={variants.variants.length}
+        onChange={variants.setGenerico} neon={neon} />}
       {step === 1 && (
         <>
           <FormHeader theme={theme} neon={neon}>
@@ -230,7 +268,7 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
 
           <SystemEntityBinding theme={theme} neon={neon} state={sistema} />
 
-          {selectedRace && (
+          {selectedRace && !variants.generico && (
             <SectionStatus theme={theme} neon={neon}>
               <StatusInput
                 theme={theme}
@@ -422,7 +460,7 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
             )}
           </RelatedCharactersSection>
 
-          <SectionTable>
+          {!variants.generico && <><SectionTable>
             <TableHeading>
               <TableTitle>Inventário</TableTitle>
               <CharacterExplodedViewLauncher
@@ -520,6 +558,7 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
             />
           </SectionTable>
 
+          </>}
           <CheckboxSection>
             <VisibilityToggle
               label="Personagem visível"
@@ -542,7 +581,25 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
           />
         </>
       )}
-      {step === 2 && 
+      {step === 2 && variants.generico && (
+        <CharacterVariantPager enabled formNavigation index={variants.index} count={variants.variants.length}
+          onSelect={variants.select} onAdd={variants.add} characterName={userName} theme={theme} neon={neon}>
+          <CharacterSystemForm key={variants.variants[variants.index].id} theme={theme} neon={neon} allowMaxStatusEditing
+            userName={`${userName} — ${variants.nome}`}
+            nameField={<CharacterVariantName theme={theme} neon={neon} value={variants.nome} onChange={variants.setNome} />}
+            selectedRace={selectedRace} raceImageUrl={raceImageUrl} avatarUrl={avatarUrl}
+            xp={xp} setXp={setXp} level={level} setLevel={setLevel}
+            statusBasico={statusBasico} setStatusBasico={setStatusBasico}
+            atributosPrincipais={atributosPrincipais} setAtributosPrincipais={setAtributosPrincipais}
+            atributosSecundarios={atributosSecundarios} setAtributosSecundarios={setAtributosSecundarios}
+            defesas={defesas} setDefesas={setDefesas} itens={itens} setItens={setItens}
+            skills={skills} setSkills={setSkills} magias={magias} setMagias={setMagias}
+            listItens={listItens} handleSelectItem={handleSelectItem}
+            itemColumns={itemColumns} skillsColumns={skillsColumns} magiasColumns={magiasColumns}
+            runtimeContext={sistema.contexto} comparisonSource="Npc" />
+        </CharacterVariantPager>
+      )}
+      {step === 2 && !variants.generico &&
         <>
           <StatusHeader>
             <HeaderInfo>
@@ -727,29 +784,23 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
         </>
       }
 
-      <NavegationButtons>
-        <CyberButton
-          colorType="secondary"
-          theme={theme}
-          neon={neon}
-          text="Anterior"
-          width="200px"
-          onClick={handlePrev}
-          type="button"
-          disabled={isFirstStep}
-        />
-        
-        <CyberButton
-          theme={theme}
-          neon={neon}
-          text={isLastStep ? "Finalizar" : "Próximo"}
-          width="200px"
-          type="button"
-          onClick={isLastStep ? handleSubmit : handleNext}
-          disabled={isSubmitting}
-          loading={isLastStep && isSubmitting}
-        />
-      </NavegationButtons>
+      <MultiStepNavigation
+        position="bottom"
+        theme={theme}
+        neon={neon}
+        previous={{
+          label: 'Anterior',
+          onClick: handlePrev,
+          disabled: isFirstStep || isSubmitting,
+          colorType: 'secondary',
+        }}
+        next={{
+          label: isLastStep ? 'Finalizar' : 'Próximo',
+          onClick: isLastStep ? handleSubmit : handleNext,
+          disabled: isSubmitting,
+          loading: isLastStep && isSubmitting,
+        }}
+      />
 
       <ItemComparisonModal
         open={Boolean(comparisonItem)}

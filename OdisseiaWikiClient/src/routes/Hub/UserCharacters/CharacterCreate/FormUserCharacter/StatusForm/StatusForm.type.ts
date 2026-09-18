@@ -9,6 +9,7 @@ export interface StatusFormProps {
   neon: 'on' | 'off';
   allowMaxStatusEditing?: boolean;
   userName: string;
+  nameField?: React.ReactNode;
   selectedRace: RacaPayload | undefined;
   xp: number;
   setXp: (value: number) => void;

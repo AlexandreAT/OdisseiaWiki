@@ -1,16 +1,20 @@
 import React from 'react';
+import { CharacterVariantName, CharacterVariantPager, CharacterVariantType } from '../../../../../components/CharacterVariants/CharacterVariants';
+import { findInvalidVariant } from '../../../../../utils/characterVariants';
+import { persistCharacterVariants } from '../../../../../services/characterVariantsService';
 import CloudDoneIcon from '@mui/icons-material/CloudDone';
 import CloudOffIcon from '@mui/icons-material/CloudOff';
 import SaveIcon from '@mui/icons-material/Save';
 import toast from 'react-hot-toast';
 import { CyberButton } from '../../../../../components/Generic/HighlightButton/HighlightButton';
+import { MultiStepNavigation } from '../../../../../components/Generic/MultiStepNavigation';
 import { CharacterRoleplayForm } from '../../../../Shared/CharacterForms/CharacterRoleplayForm';
 import { CharacterStepDots } from '../../../../Shared/CharacterForms/CharacterStepDots';
 import { CharacterSystemForm } from '../../../../Shared/CharacterForms/CharacterSystemForm';
 import { createItemColumns, createMagiasColumns, createSkillsColumns } from '../../../../Hub/UserCharacters/CharacterCreate/tableColumnsConfig';
 import { generateId } from '../../../../Hub/UserCharacters/CharacterCreate/helpers';
 import { FloatingActions, FloatingSaveButton, SyncIconBadge } from '../../../../Hub/UserCharacters/CharacterEdit/CharacterEdit.style';
-import { FormController, FormEditController, NavegationButtons } from '../../../../Hub/UserCharacters/CharacterCreate/FormUserCharacter/FormUserCharacter.style';
+import { FormController, FormEditController } from '../../../../Hub/UserCharacters/CharacterCreate/FormUserCharacter/FormUserCharacter.style';
 import { saveAsset } from '../../../../../services/assetsService';
 import { persistCharacterEntryImages } from '../../../../../services/characterEntryImageService';
 import { atualizarPersonagem, getPersonagemById, getPersonagens, PersonagemPayload, PersonagemUpdatePayload } from '../../../../../services/personagensService';
@@ -191,7 +195,9 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
     handleSelectItem,
     avatarFile,
     sistema,
+    variants,
   } = useFormCharacter({ applyRaceDefaults: false, idEntidade: characterId });
+  const hydrateVariants = variants.hydrate;
   const hydrateSistemaVinculo = sistema.hydrateVinculo;
   const npcId = Number(characterId);
   const canConfigureVisibility = Number.isInteger(npcId) && npcId > 0;
@@ -256,6 +262,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
           defesas: { armadura: 0, protecao: 0, escudo: 0, outras: 0 },
         });
         setStatusExtras(normalizeCharacterStatusExtras(status));
+        hydrateVariants(payload.statusJson);
 
         const loadedTraits = parseJson<string[] | string>(payload.tracos, []);
         const loadedCostumes = parseJson<string[] | string>(payload.costumes, []);
@@ -332,6 +339,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
         setMagias(Array.isArray(loadedMagias) ? loadedMagias.filter((magia) => Boolean(magia?.nome?.trim())) : []);
         setListPersonagemRelacionado(relatedList);
         setStatusBasico({
+          ...status.status,
           vida: status.status?.vida ?? 0,
           vidaMaxima: status.status?.vidaMaxima ?? status.status?.vida ?? 0,
           estamina: status.status?.estamina ?? 0,
@@ -406,9 +414,12 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
     setXp,
     setAvatarUrl,
     hydrateSistemaVinculo,
+    hydrateVariants,
   ]);
 
   const snapshot = React.useMemo(() => JSON.stringify({
+    generico: variants.generico,
+    variantes: variants.generico ? variants.variants : [],
     userName,
     race,
     city,
@@ -425,20 +436,16 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
     idpassiva,
     ultimate,
     listPersonagemRelacionado,
-    statusBasico,
-    xp,
-    level,
-    atributosPrincipais,
-    atributosSecundarios,
-    defesas,
-    itens,
-    skills,
-    magias,
+    ficha: variants.generico ? undefined : {
+      statusBasico, xp, level, statusExtras, atributosPrincipais, atributosSecundarios, defesas, itens, skills, magias,
+    },
     galeriaUrls,
     galeriaShapes,
     galeriaCaptions,
     sistema: sistema.vinculo,
   }), [
+    variants.generico, variants.variants,
+    statusExtras,
     userName,
     race,
     city,
@@ -553,6 +560,13 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
 
   const handleSave = React.useCallback(async (options?: { goBackAfterSave?: boolean }) => {
     if (!validateEdit()) return;
+    const invalidVariant = variants.generico ? findInvalidVariant(variants.variants) : -1;
+    if (invalidVariant >= 0) {
+      variants.select(invalidVariant);
+      setEditStep(1);
+      toast.error('Preencha o nome de cada variante (até 100 caracteres).');
+      return;
+    }
     if (!sistema.vinculo.acompanharPublicacaoAtual && !sistema.vinculo.idSistemaVersao) {
       setEditStep(1);
       toast.error('Selecione uma versão publicada para fixar o Sistema deste NPC.');
@@ -596,17 +610,17 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
 
 
 
-      const itensComImagens = await persistCharacterEntryImages(itens, {
+      const itensComImagens = await persistCharacterEntryImages(variants.generico ? [] : itens, {
         assetType: 'personagens',
         entityName: userName,
         resolveFolderName: (item) => item.tipo === 'implante' ? 'proteses' : 'inventario',
       });
-      const skillsComImagens = await persistCharacterEntryImages(skills, {
+      const skillsComImagens = await persistCharacterEntryImages(variants.generico ? [] : skills, {
         assetType: 'personagens',
         entityName: userName,
         resolveFolderName: () => 'skills',
       });
-      const magiasComImagens = await persistCharacterEntryImages(magias, {
+      const magiasComImagens = await persistCharacterEntryImages(variants.generico ? [] : magias, {
         assetType: 'personagens',
         entityName: userName,
         resolveFolderName: () => 'magias',
@@ -730,6 +744,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
           },
         },
       };
+      if (variants.generico) Object.assign(payload, await persistCharacterVariants(variants.variants, userName));
       const result = await atualizarPersonagem(characterId, payload);
       if (result?.sucesso === false) {
         toast.error(result.mensagemErro || 'Erro ao atualizar personagem.');
@@ -737,6 +752,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
       }
 
       setLastSavedSnapshot(snapshot);
+      if (!variants.generico) variants.hydrate(null);
       toast.success('NPC atualizado com sucesso!');
       await onSave?.();
 
@@ -781,6 +797,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
     userName,
     ultimate,
     validateEdit,
+    variants,
     visivel,
     xp,
     onBack,
@@ -821,24 +838,52 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
         rightPosition='30px'
       />
 
+      <MultiStepNavigation
+        position="top"
+        theme={theme}
+        neon={neon}
+        previous={{
+          label: 'Voltar',
+          onClick: isFirstStep ? onBack : () => setEditStep(1),
+          disabled: isSaving,
+          colorType: 'secondary',
+        }}
+        save={{
+          label: 'Salvar',
+          onClick: handleSaveAndBack,
+          disabled: isSaving,
+          loading: isSaving,
+        }}
+        next={{
+          label: isLastStep ? 'Atualizar' : 'Próximo',
+          onClick: () => {
+            if (isLastStep) {
+              void handleSave();
+              return;
+            }
+            setEditStep(2);
+          },
+          disabled: isSaving,
+          loading: isLastStep && isSaving,
+        }}
+      />
+
       <EditHeader theme={theme} neon={neon}>
         <h2>Editando: {userName || 'Personagem'}</h2>
-        <CyberButton
-          type="button"
-          onClick={onBack}
-          theme={theme}
-          neon={neon}
-          colorType="secondary"
-          text="Voltar"
-          width="120px"
-        />
       </EditHeader>
 
       <FormEditController>
+        <CharacterVariantType generico={variants.generico} count={variants.variants.length}
+          onChange={variants.setGenerico} neon={neon} />
         {editStep === 1 && (
           <>
           <SystemEntityBinding theme={theme} neon={neon} state={sistema} />
+          <CharacterVariantPager enabled={variants.generico} formNavigation index={variants.index} count={variants.variants.length}
+            onSelect={variants.select} onAdd={variants.add} characterName={userName} theme={theme} neon={neon}>
           <CharacterSystemForm
+            key={variants.generico ? variants.variants[variants.index].id : 'unique'}
+            nameField={variants.generico ? <CharacterVariantName theme={theme} neon={neon}
+              value={variants.nome} onChange={variants.setNome} /> : undefined}
             theme={theme}
             neon={neon}
             allowMaxStatusEditing
@@ -873,6 +918,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
             comparisonSource="Npc"
             comparisonId={Number(characterId)}
           />
+          </CharacterVariantPager>
           </>
         )}
 
@@ -941,43 +987,35 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
         )}
       </FormEditController>
 
-      <NavegationButtons>
-        <CyberButton
-          type="button"
-          colorType="secondary"
-          theme={theme}
-          neon={neon}
-          text="Voltar"
-          width="200px"
-          onClick={isFirstStep ? onBack : () => setEditStep(1)}
-        />
-
-        <CyberButton
-          type="button"
-          theme={theme}
-          neon={neon}
-          text="Salvar"
-          width="200px"
-          onClick={handleSaveAndBack}
-          loading={isSaving}
-        />
-
-        <CyberButton
-          type="button"
-          theme={theme}
-          neon={neon}
-          text={isLastStep ? 'Atualizar' : 'Próximo'}
-          width="200px"
-          onClick={() => {
+      <MultiStepNavigation
+        position="bottom"
+        theme={theme}
+        neon={neon}
+        previous={{
+          label: 'Voltar',
+          onClick: isFirstStep ? onBack : () => setEditStep(1),
+          disabled: isSaving,
+          colorType: 'secondary',
+        }}
+        save={{
+          label: 'Salvar',
+          onClick: handleSaveAndBack,
+          disabled: isSaving,
+          loading: isSaving,
+        }}
+        next={{
+          label: isLastStep ? 'Atualizar' : 'Próximo',
+          onClick: () => {
             if (isLastStep) {
-              handleSave();
+              void handleSave();
               return;
             }
             setEditStep(2);
-          }}
-          disabled={isSaving}
-        />
-      </NavegationButtons>
+          },
+          disabled: isSaving,
+          loading: isLastStep && isSaving,
+        }}
+      />
 
       <FloatingActions>
         <SyncIconBadge

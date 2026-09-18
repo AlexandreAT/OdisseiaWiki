@@ -17,6 +17,7 @@ export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
   neon,
   allowMaxStatusEditing = false,
   userName,
+  nameField,
   selectedRace,
   raceImageUrl,
   avatarUrl,
@@ -75,6 +76,7 @@ export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
         neon={neon}
         allowMaxStatusEditing={allowMaxStatusEditing}
         userName={userName}
+        nameField={nameField}
         selectedRace={selectedRace}
         xp={xp}
         setXp={setXp}

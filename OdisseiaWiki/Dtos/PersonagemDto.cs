@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace OdisseiaWiki.Dtos
 {
@@ -33,18 +34,43 @@ namespace OdisseiaWiki.Dtos
         public List<int>? PersonagemsVinculados { get; set; }
     }
 
-    public class PersonagemStatus
+    public class PersonagemStatus : PersonagemFichaStatus
+    {
+        public bool generico { get; set; }
+        public List<PersonagemVariante> variantes { get; set; } = new();
+    }
+
+    public class PersonagemVariante
+    {
+        public string id { get; set; } = "";
+        public string nome { get; set; } = "";
+        public PersonagemFichaStatus statusJson { get; set; } = null!;
+        public List<Item> inventarioJson { get; set; } = new();
+        public List<Skills> skills { get; set; } = new();
+        public List<Magia> magia { get; set; } = new();
+    }
+
+    public class PersonagemFichaStatus
     {
         public StatusBase status { get; set; } = null!;
         public Atributos atributos { get; set; } = null!;
         public int nivel { get; set; }
         public int xp { get; set; }
         public int pontos { get; set; }
-        public List<string> condicioes { get; set; }
+        public int pontosAtributo { get; set; }
+        public int pontosSkill { get; set; }
+        public int pontosUltimate { get; set; }
+        public List<string> condicioes { get; set; } = new();
         public Defesas defesas { get; set; } = null!;
     }
 
-    public class StatusBase
+    public abstract class PersonagemCamposNumericos
+    {
+        [JsonExtensionData]
+        public Dictionary<string, JsonElement>? CamposAdicionais { get; set; }
+    }
+
+    public class StatusBase : PersonagemCamposNumericos
     {
         public int vida { get; set; }
         public int vidaMaxima { get; set; }
@@ -61,7 +87,7 @@ namespace OdisseiaWiki.Dtos
         public Secundarios secundarios { get; set; } = null!;
     }
 
-    public class Principais
+    public class Principais : PersonagemCamposNumericos
     {
         public int resistencia { get; set; }
         public int agilidade { get; set; }
@@ -70,7 +96,7 @@ namespace OdisseiaWiki.Dtos
         public int forca { get; set; }
     }
 
-    public class Secundarios
+    public class Secundarios : PersonagemCamposNumericos
     {
         public int sanidade { get; set; }
         public int coragem { get; set; }
@@ -80,7 +106,7 @@ namespace OdisseiaWiki.Dtos
         public int intimidacao { get; set; }
     }
 
-    public class Defesas
+    public class Defesas : PersonagemCamposNumericos
     {
         public int armadura { get; set; }
         public int protecao { get; set; }
@@ -106,6 +132,8 @@ namespace OdisseiaWiki.Dtos
 
     public class Skills
     {
+        public string? imagem { get; set; }
+        public string? efeito { get; set; }
         public string id { get; set; } = null!;
         public string nome { get; set; } = null!;
         public string tipo { get; set; } = null!;
@@ -117,6 +145,8 @@ namespace OdisseiaWiki.Dtos
 
     public class Magia
     {
+        public string? imagem { get; set; }
+        public string? efeito { get; set; }
         public string id { get; set; } = null!;
         public string nome { get; set; } = null!;
         public string tipo { get; set; } = null!;

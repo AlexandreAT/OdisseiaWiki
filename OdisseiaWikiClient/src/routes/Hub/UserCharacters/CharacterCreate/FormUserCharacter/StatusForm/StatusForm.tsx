@@ -20,6 +20,7 @@ export const StatusForm: React.FC<StatusFormProps> = ({
   theme,
   neon,
   userName,
+  nameField,
   selectedRace,
   xp,
   setXp,
@@ -111,7 +112,7 @@ export const StatusForm: React.FC<StatusFormProps> = ({
       <StatusHeader>
         <HeaderInfo>
           <LabelInfoBox theme={theme} neon={neon}>
-            <LabelStatus>Nome: {userName}</LabelStatus>
+            <>{nameField ?? <LabelStatus>Nome: {userName}</LabelStatus>}</>
           </LabelInfoBox>
           <LabelInfoBox theme={theme} neon={neon}>
             <LabelStatus>Raça: {selectedRace?.nome}</LabelStatus>

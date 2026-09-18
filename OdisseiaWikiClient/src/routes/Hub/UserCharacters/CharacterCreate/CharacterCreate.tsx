@@ -1,7 +1,7 @@
 import React, { memo } from 'react'
-import { FormController, NavegationButtons } from './FormUserCharacter/FormUserCharacter.style';
+import { FormController } from './FormUserCharacter/FormUserCharacter.style';
 import { Select } from '../../../../components/Generic/Select/Select';
-import { CyberButton } from '../../../../components/Generic/HighlightButton/HighlightButton';
+import { MultiStepNavigation } from '../../../../components/Generic/MultiStepNavigation';
 import { useFormUserCharacter } from './useFormUserCharacter';
 import { createItemColumns, createSkillsColumns, createMagiasColumns } from './tableColumnsConfig';
 import { BasicInfoForm } from './FormUserCharacter/BasicInfoForm/BasicInfoForm';
@@ -89,6 +89,24 @@ const CharacterCreateComponent = ({ theme, neon, userId, onSave }: UserCharacter
         neon={neon}
         activeStep={step as 1 | 2}
         onStepClick={handleStepDotClick}
+      />
+
+      <MultiStepNavigation
+        position="top"
+        theme={theme}
+        neon={neon}
+        previous={{
+          label: 'Anterior',
+          onClick: handlePrev,
+          disabled: isFirstStep || isSubmitting,
+          colorType: 'secondary',
+        }}
+        next={{
+          label: isLastStep ? 'Finalizar' : 'Próximo',
+          onClick: isLastStep ? handleSubmit : handleNext,
+          disabled: isSubmitting,
+          loading: isLastStep && isSubmitting,
+        }}
       />
 
       <Select
@@ -208,29 +226,23 @@ const CharacterCreateComponent = ({ theme, neon, userId, onSave }: UserCharacter
         />
       )}
 
-      <NavegationButtons>
-        <CyberButton
-          colorType="secondary"
-          theme={theme}
-          neon={neon}
-          text="Anterior"
-          width="200px"
-          onClick={handlePrev}
-          type="button"
-          disabled={isFirstStep || isSubmitting}
-        />
-
-        <CyberButton
-          theme={theme}
-          neon={neon}
-          text={isLastStep ? "Finalizar" : "Próximo"}
-          width="200px"
-          type="button"
-          onClick={isLastStep ? handleSubmit : handleNext}
-          disabled={isSubmitting}
-          loading={isLastStep && isSubmitting}
-        />
-      </NavegationButtons>
+      <MultiStepNavigation
+        position="bottom"
+        theme={theme}
+        neon={neon}
+        previous={{
+          label: 'Anterior',
+          onClick: handlePrev,
+          disabled: isFirstStep || isSubmitting,
+          colorType: 'secondary',
+        }}
+        next={{
+          label: isLastStep ? 'Finalizar' : 'Próximo',
+          onClick: isLastStep ? handleSubmit : handleNext,
+          disabled: isSubmitting,
+          loading: isLastStep && isSubmitting,
+        }}
+      />
     </FormController>
   );
 }
