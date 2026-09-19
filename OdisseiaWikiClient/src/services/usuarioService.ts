@@ -6,6 +6,7 @@ export interface RegisterUsuarioPayload {
   email: string;
   senha: string;
   nickname: string;
+  celular?: string;
   imagemUrl?: string;
 }
 
@@ -29,6 +30,20 @@ export interface LoginUsuarioDto {
 export interface AccountActionResult {
   sucesso: boolean;
   mensagemErro?: string;
+}
+
+export interface UsuarioPerfil {
+  id: number;
+  nome: string;
+  email: string;
+  celular?: string | null;
+  nickname: string;
+  imagemUrl?: string | null;
+}
+
+export interface UsuarioPerfilAtualizado {
+  perfil: UsuarioPerfil;
+  tokenJwt: string;
 }
 
 const resultFromError = (error: unknown): AccountActionResult => {
@@ -113,4 +128,30 @@ export const resetPassword = async (
   } catch (error) {
     return resultFromError(error);
   }
+};
+
+export const getCurrentUserProfile = async (): Promise<UsuarioPerfil> => {
+  const response = await api.get<UsuarioPerfil>('/usuarios/me');
+  return response.data;
+};
+
+export const updateCurrentUserProfile = async (payload: {
+  nickname: string;
+  imagemUrl?: string | null;
+}): Promise<UsuarioPerfilAtualizado> => {
+  const response = await api.patch<UsuarioPerfilAtualizado>('/usuarios/me', payload);
+  return response.data;
+};
+
+export const requestCurrentUserPasswordRecovery = async (): Promise<AccountActionResult> => {
+  try {
+    const response = await api.post<AccountActionResult>('/usuarios/me/password-recovery');
+    return response.data;
+  } catch (error) {
+    return resultFromError(error);
+  }
+};
+
+export const deleteCurrentUserAccount = async (confirmacao: string): Promise<void> => {
+  await api.delete('/usuarios/me', { data: { confirmacao } });
 };

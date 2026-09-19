@@ -5,11 +5,11 @@ using OdisseiaWiki.Dtos;
 using OdisseiaWiki.Models;
 using OdisseiaWiki.Services;
 using OdisseiaWiki.Services.Interfaces;
+using OdisseiaWiki.Security;
 
 namespace OdisseiaWiki.Controllers
 {
     [ApiController]
-    [AllowAnonymous]
     [EnableRateLimiting("authentication")]
     [Route("api/[controller]")]
     public class UsuariosController : ControllerBase
@@ -22,6 +22,7 @@ namespace OdisseiaWiki.Controllers
         }
 
         [HttpPost("register")]
+        [AllowAnonymous]
         public async Task<IActionResult> Register([FromBody] RegisterUsuarioDto dto)
         {
             ResultRegisterUsuario resultado = await _service.Register(dto);
@@ -41,6 +42,7 @@ namespace OdisseiaWiki.Controllers
         }
 
         [HttpPost("google-login")]
+        [AllowAnonymous]
         public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginDto dto)
         {
             ResultLoginUsuario resultado = await _service.LoginGoogleAsync(dto.TokenGoogle);
@@ -52,6 +54,7 @@ namespace OdisseiaWiki.Controllers
         }
 
         [HttpPost("login")]
+        [AllowAnonymous]
         public async Task<IActionResult> Login([FromBody] LoginUsuarioDto dto)
         {
             ResultLoginUsuario resultado = await _service.Login(dto);
@@ -65,6 +68,7 @@ namespace OdisseiaWiki.Controllers
         }
 
         [HttpPost("email-confirmation/confirm")]
+        [AllowAnonymous]
         [EnableRateLimiting("account-email")]
         public async Task<IActionResult> ConfirmEmail([FromBody] ConfirmarEmailDto dto)
         {
@@ -73,6 +77,7 @@ namespace OdisseiaWiki.Controllers
         }
 
         [HttpPost("email-confirmation/resend")]
+        [AllowAnonymous]
         [EnableRateLimiting("account-email")]
         public async Task<IActionResult> ResendEmailConfirmation([FromBody] SolicitarEmailDto dto)
         {
@@ -85,6 +90,7 @@ namespace OdisseiaWiki.Controllers
         }
 
         [HttpPost("password-recovery")]
+        [AllowAnonymous]
         [EnableRateLimiting("account-email")]
         public async Task<IActionResult> RequestPasswordReset([FromBody] SolicitarEmailDto dto)
         {
@@ -97,11 +103,69 @@ namespace OdisseiaWiki.Controllers
         }
 
         [HttpPost("password-reset")]
+        [AllowAnonymous]
         [EnableRateLimiting("account-email")]
         public async Task<IActionResult> ResetPassword([FromBody] RedefinirSenhaDto dto)
         {
             ResultAccountAction resultado = await _service.RedefinirSenhaAsync(dto);
             return resultado.Sucesso ? Ok(resultado) : BadRequest(resultado);
+        }
+
+        [HttpGet("me")]
+        [Authorize]
+        public async Task<IActionResult> GetCurrentProfile()
+        {
+            int? idUsuario = User.GetUserId();
+            if (!idUsuario.HasValue)
+                return Unauthorized();
+
+            UsuarioPerfilDto? perfil = await _service.ObterPerfilAsync(idUsuario.Value);
+            return perfil is null ? NotFound("Usuário não encontrado.") : Ok(perfil);
+        }
+
+        [HttpPatch("me")]
+        [Authorize]
+        public async Task<IActionResult> UpdateCurrentProfile([FromBody] AtualizarUsuarioPerfilDto dto)
+        {
+            int? idUsuario = User.GetUserId();
+            if (!idUsuario.HasValue)
+                return Unauthorized();
+
+            ResultUsuarioPerfil resultado = await _service.AtualizarPerfilAsync(idUsuario.Value, dto);
+            if (!resultado.Sucesso)
+                return resultado.MensagemErro == "Usuário não encontrado."
+                    ? NotFound(resultado.MensagemErro)
+                    : BadRequest(resultado.MensagemErro);
+
+            return Ok(resultado.Dados);
+        }
+
+        [HttpPost("me/password-recovery")]
+        [Authorize]
+        [EnableRateLimiting("account-email")]
+        public async Task<IActionResult> RequestCurrentUserPasswordReset()
+        {
+            int? idUsuario = User.GetUserId();
+            if (!idUsuario.HasValue)
+                return Unauthorized();
+
+            ResultAccountAction resultado = await _service
+                .SolicitarRedefinicaoSenhaDoUsuarioAsync(idUsuario.Value);
+            return resultado.Sucesso ? Ok(resultado) : BadRequest(resultado);
+        }
+
+        [HttpDelete("me")]
+        [Authorize]
+        public async Task<IActionResult> DeleteCurrentAccount([FromBody] ExcluirContaDto dto)
+        {
+            int? idUsuario = User.GetUserId();
+            if (!idUsuario.HasValue)
+                return Unauthorized();
+
+            ResultAccountAction resultado = await _service.ExcluirContaAsync(
+                idUsuario.Value,
+                dto.Confirmacao);
+            return resultado.Sucesso ? NoContent() : BadRequest(resultado);
         }
     }
 }

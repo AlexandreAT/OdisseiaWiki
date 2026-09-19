@@ -1,14 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { PerfilDropdown, PerfilOption, PerfilButton } from './PerfilList.style';
 import { clearAuthSession } from '../../../../services/authSession';
+import type { StoredAuthUser } from '../../../../services/authSession';
 
 interface Props {
-    usuario: {
-        email: string;
-        imagemUrl?: string;
-        nome?: string;
-        role?: string;
-    };
+    usuario: StoredAuthUser;
     onClose: () => void;
     avatarRef: React.RefObject<HTMLDivElement>;
     theme: 'light' | 'dark';
@@ -78,10 +74,10 @@ export const PerfilList = ({ usuario, onClose, avatarRef, theme }: Props) => {
             $mobileTop={mobilePosition.top}
             $mobileAnchorX={mobilePosition.anchorX}
         >
-            {/* A opção Perfil retornará em uma versão futura. */}
-            <PerfilOption to="/hub" themeMode={theme}>Mesas e personagens</PerfilOption>
+            <PerfilOption to="/perfil" themeMode={theme} onClick={onClose}>Perfil</PerfilOption>
+            <PerfilOption to="/hub" themeMode={theme} onClick={onClose}>Mesas e personagens</PerfilOption>
             {usuario.role === 'Admin' && (
-                <PerfilOption to="/management" themeMode={theme}>Gerenciamento</PerfilOption>
+                <PerfilOption to="/management" themeMode={theme} onClick={onClose}>Gerenciamento</PerfilOption>
             )}
             <PerfilButton onClick={handleLogout} themeMode={theme}>Sair</PerfilButton>
         </PerfilDropdown>

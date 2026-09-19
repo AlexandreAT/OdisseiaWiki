@@ -43,18 +43,18 @@ const mesaFuturisticTitle = css<{ $neon?: boolean }>`
     : 'none'};
 `;
 
-export const MesaPage = styled.main<{ $neon?: boolean }>`
+export const MesaPage = styled.main<{ $neon?: boolean; $embedded?: boolean }>`
   position: relative;
   z-index: 1;
-  width: min(1520px, calc(100% - 48px));
-  min-height: calc(100vh - 130px);
-  margin: 0 auto;
-  padding: 36px 0 64px;
+  width: ${({ $embedded }) => $embedded ? '100%' : 'min(1520px, calc(100% - 48px))'};
+  min-height: ${({ $embedded }) => $embedded ? '0' : 'calc(100vh - 130px)'};
+  margin: ${({ $embedded }) => $embedded ? '0' : '0 auto'};
+  padding: ${({ $embedded }) => $embedded ? '0' : '36px 0 64px'};
   animation: ${fadeUp} 420ms ease both;
 
   @media (max-width: 720px) {
-    width: min(100% - 20px, 1520px);
-    padding: 22px 0 40px;
+    width: ${({ $embedded }) => $embedded ? '100%' : 'min(100% - 20px, 1520px)'};
+    padding: ${({ $embedded }) => $embedded ? '0' : '22px 0 40px'};
   }
 
   .mesa-hub-header {

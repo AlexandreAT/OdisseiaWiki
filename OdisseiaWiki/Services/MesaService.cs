@@ -524,7 +524,8 @@ namespace OdisseiaWiki.Services
                 Tags = DeserializarTags(mesa.Tags),
                 IdUsuarioCriacao = mesa.IdusuarioCriacao,
                 MestreNome = mesa.IdusuarioCriacaoNavigation?.Nome ??
-                    mesa.IdusuarioCriacaoNavigation?.Nickname ?? string.Empty,
+                    mesa.IdusuarioCriacaoNavigation?.Nickname ??
+                    (mesa.PadraoSistema ? "Sistema" : "Mestre removido"),
                 MestreImagem = mesa.IdusuarioCriacaoNavigation?.ImagemUrl,
                 IdSistemaRpg = mesa.SistemaVersao?.IdSistemaRpg,
                 SistemaNome = mesa.SistemaVersao?.SistemaRpg?.Nome ?? string.Empty,

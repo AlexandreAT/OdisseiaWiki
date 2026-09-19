@@ -2,12 +2,25 @@ import { jwtDecode } from 'jwt-decode';
 
 const SESSION_EXPIRED_MESSAGE_KEY = 'odisseia:session-expired-message';
 const SESSION_EXPIRED_MESSAGE = 'Sua sessão expirou. Entre novamente para continuar.';
+export const AUTH_USER_UPDATED_EVENT = 'odisseia:auth-user-updated';
 
 let sessionExpirationInProgress = false;
 
 interface JwtAuthPayload {
   exp?: number;
   role?: string | string[];
+  nickname?: string;
+  imagemUrl?: string;
+  email?: string;
+  id?: string;
+}
+
+export interface StoredAuthUser {
+  nickname?: string;
+  imagemUrl?: string;
+  email?: string;
+  id?: string;
+  role?: string;
 }
 
 export type AuthSession =
@@ -17,6 +30,33 @@ export type AuthSession =
 export const clearAuthSession = () => {
   localStorage.removeItem('token');
   localStorage.removeItem('usuario');
+  window.dispatchEvent(new Event(AUTH_USER_UPDATED_EVENT));
+};
+
+export const storeAuthSession = (token: string) => {
+  const payload = jwtDecode<JwtAuthPayload>(token);
+  const role = Array.isArray(payload.role) ? payload.role[0] : payload.role;
+  const usuario: StoredAuthUser = {
+    nickname: payload.nickname,
+    imagemUrl: payload.imagemUrl || undefined,
+    email: payload.email,
+    id: payload.id,
+    role,
+  };
+
+  localStorage.setItem('token', token);
+  localStorage.setItem('usuario', JSON.stringify(usuario));
+  window.dispatchEvent(new Event(AUTH_USER_UPDATED_EVENT));
+  return usuario;
+};
+
+export const getStoredAuthUser = (): StoredAuthUser | null => {
+  try {
+    const value = localStorage.getItem('usuario');
+    return value ? JSON.parse(value) as StoredAuthUser : null;
+  } catch {
+    return null;
+  }
 };
 
 export const isTokenExpired = (token: string) => {

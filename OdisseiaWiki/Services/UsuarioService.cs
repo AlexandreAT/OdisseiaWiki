@@ -17,6 +17,8 @@ namespace OdisseiaWiki.Services
         private readonly IUsuarioEmailTokenRepository _emailTokenRepository;
         private readonly ITokenService _tokenService;
         private readonly IEmailService _emailService;
+        private readonly IAssetService _assetService;
+        private readonly IMesaRealtimeNotifier _mesaRealtimeNotifier;
         private readonly GoogleAuthSettings _googleAuthSettings;
         private readonly EmailSettings _emailSettings;
         private readonly ILogger<UsuarioService> _logger;
@@ -26,6 +28,8 @@ namespace OdisseiaWiki.Services
             IUsuarioEmailTokenRepository emailTokenRepository,
             ITokenService tokenService,
             IEmailService emailService,
+            IAssetService assetService,
+            IMesaRealtimeNotifier mesaRealtimeNotifier,
             IOptions<GoogleAuthSettings> googleAuthOptions,
             IOptions<EmailSettings> emailOptions,
             ILogger<UsuarioService> logger)
@@ -34,6 +38,8 @@ namespace OdisseiaWiki.Services
             _emailTokenRepository = emailTokenRepository;
             _tokenService = tokenService;
             _emailService = emailService;
+            _assetService = assetService;
+            _mesaRealtimeNotifier = mesaRealtimeNotifier;
             _googleAuthSettings = googleAuthOptions.Value;
             _emailSettings = emailOptions.Value;
             _logger = logger;
@@ -50,13 +56,23 @@ namespace OdisseiaWiki.Services
                 Nome = usuarioDto.Nome,
                 Email = usuarioDto.Email.Trim(),
                 Senha = PasswordHasher.Hash(usuarioDto.Senha),
-                Nickname = usuarioDto.Nickname,
+                Nickname = usuarioDto.Nickname.Trim(),
+                Celular = string.IsNullOrWhiteSpace(usuarioDto.Celular) ? null : usuarioDto.Celular.Trim(),
                 ImagemUrl = usuarioDto.ImagemUrl,
                 DataRegistro = DateTime.UtcNow,
                 EmailConfirmado = false,
             };
 
-            Usuario criado = await _repository.CreateAsync(usuario);
+            Usuario criado;
+            try
+            {
+                criado = await _repository.CreateAsync(usuario);
+            }
+            catch (Microsoft.EntityFrameworkCore.DbUpdateException exception)
+                when (exception.InnerException is MySqlConnector.MySqlException { Number: 1062 })
+            {
+                return ResultRegisterUsuario.Falha("Nickname já está em uso.");
+            }
             ResultAccountAction envio = await CriarEEnviarTokenAsync(
                 criado,
                 UsuarioEmailTokenTipo.ConfirmacaoEmail);
@@ -141,20 +157,37 @@ namespace OdisseiaWiki.Services
             if (string.IsNullOrWhiteSpace(usuarioDto.Nickname))
                 return ResultRegisterUsuario.Falha("Nickname é obrigatório.");
 
+            string nickname = usuarioDto.Nickname.Trim();
+            if (nickname.Length < 2)
+                return ResultRegisterUsuario.Falha("Nickname deve ter pelo menos 2 caracteres.");
+            if (nickname.Length > 50)
+                return ResultRegisterUsuario.Falha("Nickname deve ter no máximo 50 caracteres.");
+
             Usuario? existente = await _repository.GetByEmailAsync(usuarioDto.Email.Trim());
             if (existente != null)
                 return ResultRegisterUsuario.Falha("Email já registrado.");
+
+            if (await _repository.NicknameExistsAsync(nickname))
+                return ResultRegisterUsuario.Falha("Nickname já está em uso.");
 
             return ResultRegisterUsuario.Ok(null!);
         }
 
         private async Task<string> GenerateNicknameUniqueAsync(string baseNickname)
         {
-            string? nickname = baseNickname;
+            const int tamanhoMaximo = 50;
+            string nicknameBase = string.IsNullOrWhiteSpace(baseNickname)
+                ? "user"
+                : baseNickname.Trim();
+            nicknameBase = nicknameBase[..Math.Min(nicknameBase.Length, tamanhoMaximo)];
+
+            string nickname = nicknameBase;
             int count = 1;
             while (await _repository.GetByNicknameAsync(nickname) is not null)
             {
-                nickname = $"{baseNickname}{count}";
+                string sufixo = count.ToString();
+                int tamanhoDisponivel = tamanhoMaximo - sufixo.Length;
+                nickname = $"{nicknameBase[..Math.Min(nicknameBase.Length, tamanhoDisponivel)]}{sufixo}";
                 count++;
             }
             return nickname;
@@ -241,6 +274,116 @@ namespace OdisseiaWiki.Services
                 ? ResultAccountAction.Falha("Link de redefinição inválido ou expirado.")
                 : ResultAccountAction.Ok();
         }
+
+        public async Task<UsuarioPerfilDto?> ObterPerfilAsync(int idUsuario)
+        {
+            Usuario? usuario = await _repository.GetByIdAsync(idUsuario);
+            return usuario is null ? null : MapPerfil(usuario);
+        }
+
+        public async Task<ResultUsuarioPerfil> AtualizarPerfilAsync(
+            int idUsuario,
+            AtualizarUsuarioPerfilDto dto)
+        {
+            Usuario? usuario = await _repository.GetByIdAsync(idUsuario);
+            if (usuario is null)
+                return ResultUsuarioPerfil.Falha("Usuário não encontrado.");
+
+            string nickname = dto.Nickname?.Trim() ?? string.Empty;
+            if (nickname.Length < 2)
+                return ResultUsuarioPerfil.Falha("Nickname deve ter pelo menos 2 caracteres.");
+            if (nickname.Length > 50)
+                return ResultUsuarioPerfil.Falha("Nickname deve ter no máximo 50 caracteres.");
+            if (await _repository.NicknameExistsAsync(nickname, idUsuario))
+                return ResultUsuarioPerfil.Falha("Nickname já está em uso.");
+
+            string? imagemAnterior = usuario.ImagemUrl;
+            usuario.Nickname = nickname;
+            usuario.ImagemUrl = string.IsNullOrWhiteSpace(dto.ImagemUrl)
+                ? null
+                : dto.ImagemUrl.Trim();
+
+            try
+            {
+                await _repository.UpdateAsync(usuario);
+            }
+            catch (Microsoft.EntityFrameworkCore.DbUpdateException exception)
+                when (exception.InnerException is MySqlConnector.MySqlException { Number: 1062 })
+            {
+                return ResultUsuarioPerfil.Falha("Nickname já está em uso.");
+            }
+
+            if (!string.Equals(imagemAnterior, usuario.ImagemUrl, StringComparison.Ordinal))
+                await _assetService.DeleteIfUnreferencedAsync(imagemAnterior);
+
+            return ResultUsuarioPerfil.Ok(new UsuarioPerfilAtualizadoDto
+            {
+                Perfil = MapPerfil(usuario),
+                TokenJwt = _tokenService.GerarToken(usuario, usuario.EmailConfirmado),
+            });
+        }
+
+        public async Task<ResultAccountAction> SolicitarRedefinicaoSenhaDoUsuarioAsync(int idUsuario)
+        {
+            Usuario? usuario = await _repository.GetByIdAsync(idUsuario);
+            return usuario is null
+                ? ResultAccountAction.Falha("Usuário não encontrado.")
+                : await CriarEEnviarTokenAsync(usuario, UsuarioEmailTokenTipo.RedefinicaoSenha);
+        }
+
+        public async Task<ResultAccountAction> ExcluirContaAsync(int idUsuario, string confirmacao)
+        {
+            if (!string.Equals(confirmacao, "DELETAR MINHA CONTA", StringComparison.Ordinal))
+                return ResultAccountAction.Falha("Digite a confirmação exatamente como solicitado.");
+
+            UsuarioExclusaoDados? dados = await _repository.DeleteAccountAsync(idUsuario);
+            if (dados is null)
+                return ResultAccountAction.Falha("Usuário não encontrado.");
+
+            HashSet<string> assets = AssetReferenceHelper.Extract(dados.ImagemPerfil);
+            foreach (PersonagemJogador personagem in dados.Personagens)
+            {
+                assets.UnionWith(AssetReferenceHelper.Extract(
+                    personagem.Imagem,
+                    personagem.GaleriaImagem,
+                    personagem.InventarioJson,
+                    personagem.Skills,
+                    personagem.Magia,
+                    personagem.Historia,
+                    personagem.Implantes,
+                    personagem.Ultimate));
+            }
+
+            await AssetReferenceHelper.DeleteAllAsync(_assetService, assets);
+            foreach (int idMesa in dados.MesasAfetadas)
+            {
+                try
+                {
+                    await _mesaRealtimeNotifier.RevogarAcessoUsuarioAsync(idMesa, idUsuario);
+                    await _mesaRealtimeNotifier.NotificarMesaAlteradaAsync(idMesa);
+                }
+                catch (Exception exception)
+                {
+                    _logger.LogWarning(
+                        exception,
+                        "A conta foi excluída, mas não foi possível atualizar uma conexão ativa da Mesa {IdMesa}.",
+                        idMesa);
+                }
+            }
+
+            return ResultAccountAction.Ok();
+        }
+
+        private static UsuarioPerfilDto MapPerfil(Usuario usuario)
+            => new()
+            {
+                Id = usuario.Idusuario,
+                Nome = usuario.Nome,
+                Email = usuario.Email,
+                Celular = usuario.Celular,
+                Nickname = usuario.Nickname,
+                ImagemUrl = usuario.ImagemUrl,
+            };
 
         private async Task<Usuario?> FindUnconfirmedUserByEmailAsync(string email)
         {

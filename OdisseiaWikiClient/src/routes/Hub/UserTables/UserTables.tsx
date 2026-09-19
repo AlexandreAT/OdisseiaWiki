@@ -29,9 +29,10 @@ import { useUserTables } from './useUserTables';
 interface UserTablesProps {
   theme: 'dark' | 'light';
   neon: 'on' | 'off';
+  embedded?: boolean;
 }
 
-export const UserTables = ({ neon }: UserTablesProps) => {
+export const UserTables = ({ neon, embedded = false }: UserTablesProps) => {
   const navigate = useNavigate();
   const {
     data,
@@ -84,7 +85,7 @@ export const UserTables = ({ neon }: UserTablesProps) => {
   );
 
   return (
-    <MesaPage $neon={neon === 'on'} aria-label="Gerenciamento de Mesas">
+    <MesaPage $neon={neon === 'on'} $embedded={embedded} aria-label="Gerenciamento de Mesas">
       <header className="mesa-hub-header">
         <MesaHudDecor neon={neon === 'on'} />
         <div className="mesa-hub-copy">
