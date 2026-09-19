@@ -422,6 +422,9 @@ public partial class OdisseiaContext : DbContext
             entity.Property(e => e.Email).HasMaxLength(50);
             entity.Property(e => e.ImagemUrl).HasMaxLength(255);
             entity.Property(e => e.Nickname).HasMaxLength(50);
+            entity.HasIndex(e => e.Nickname)
+                .IsUnique()
+                .HasDatabaseName("UX_Usuario_Nickname");
             entity.Property(e => e.Nome).HasMaxLength(100);
             entity.Property(e => e.Senha).HasMaxLength(100);
         });

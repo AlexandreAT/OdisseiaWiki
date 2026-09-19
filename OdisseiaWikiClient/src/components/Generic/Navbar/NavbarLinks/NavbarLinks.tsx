@@ -2,11 +2,12 @@ import { Link } from 'react-router-dom';
 import { SpanOption, AvatarCotroller, Avatar, NavbarAvatarImage, NavigationLinks } from '.././Navbar.style';
 import { PerfilList } from '../PerfilList/PerfilList';
 import { useRef, useState } from 'react';
+import type { StoredAuthUser } from '../../../../services/authSession';
 
 interface Props {
   theme: 'dark' | 'light';
   neon: 'on' | 'off';
-  usuario: any; 
+  usuario: StoredAuthUser | null;
 }
 
 export  const NavbarLinks = ({ theme, neon, usuario }: Props) => {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { Add, ArrowBack, DeleteOutline, FilterAlt, Checklist, SortByAlpha } from '@mui/icons-material';
 import toast from 'react-hot-toast';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -11,8 +11,6 @@ import { Mesa } from '../../../models/Mesa';
 import { atualizarSistemaPersonagemJogador, deletarPersonagensJogador, getPersonagensPorUsuario } from '../../../services/personagemJogadorService';
 import { getRacas, getRacasByIds, RacaPayload } from '../../../services/racasService';
 import { getApiErrorMessage } from '../../../utils/apiError';
-import { CharacterCreate } from './CharacterCreate/CharacterCreate';
-import { CharacterEdit } from './CharacterEdit/CharacterEdit';
 import { CharacterSelectionCard } from './CharacterSelectionCard/CharacterSelectionCard';
 import {
   BackButtonDiv,
@@ -28,6 +26,13 @@ import {
   ToolSelect,
   Title,
 } from './UserCharacters.style';
+
+const CharacterCreate = lazy(() => import('./CharacterCreate/CharacterCreate').then((module) => ({
+  default: module.CharacterCreate,
+})));
+const CharacterEdit = lazy(() => import('./CharacterEdit/CharacterEdit').then((module) => ({
+  default: module.CharacterEdit,
+})));
 
 interface UserCharactersProps {
   theme: 'dark' | 'light';
@@ -389,15 +394,17 @@ export const UserCharacters = ({
           </StyledIconButton>
         </BackButtonDiv>
         <Title theme={theme} neon={neon}>Criar Personagem</Title>
-        <CharacterCreate
-          theme={theme}
-          neon={neon}
-          userId={userId}
-          onSave={async () => {
-            updateRouteState('list');
-            await refreshCharacters();
-          }}
-        />
+        <Suspense fallback={<LoadingIndicator label="Carregando formulário" />}>
+          <CharacterCreate
+            theme={theme}
+            neon={neon}
+            userId={userId}
+            onSave={async () => {
+              updateRouteState('list');
+              await refreshCharacters();
+            }}
+          />
+        </Suspense>
       </Main>
     );
   }
@@ -412,15 +419,17 @@ export const UserCharacters = ({
         </BackButtonDiv>
         <Title theme={theme} neon={neon} $editMode>Editar Personagem</Title>
         {selectedCharacter && (
-          <CharacterEdit
-            theme={theme}
-            neon={neon}
-            personagem={selectedCharacter}
-            userId={userId}
-            initialStep={requestedStep}
-            onSave={refreshCharacters}
-            onBack={() => updateRouteState('list')}
-          />
+          <Suspense fallback={<LoadingIndicator label="Carregando formulário" />}>
+            <CharacterEdit
+              theme={theme}
+              neon={neon}
+              personagem={selectedCharacter}
+              userId={userId}
+              initialStep={requestedStep}
+              onSave={refreshCharacters}
+              onBack={() => updateRouteState('list')}
+            />
+          </Suspense>
         )}
       </Main>
     );

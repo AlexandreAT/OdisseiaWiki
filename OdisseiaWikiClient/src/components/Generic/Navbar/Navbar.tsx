@@ -3,6 +3,12 @@ import { ContainerNavbar, ContainerLogo, Options, ContainerTheme } from './Navba
 import { LogoButton } from '../Logo/LogoButton';
 import { ThemeNeonButtons } from '../ThemeNeonButtons/ThemeNeonButtons';
 import { NavbarLinks } from './NavbarLinks/NavbarLinks';
+import { useEffect, useState } from 'react';
+import {
+    AUTH_USER_UPDATED_EVENT,
+    getStoredAuthUser,
+    type StoredAuthUser,
+} from '../../../services/authSession';
 
 interface RootState {
     themesReducer: {
@@ -13,8 +19,17 @@ interface RootState {
 
 export const Navbar = () => {
     const { theme, neon } = useSelector((state: RootState) => state.themesReducer);
-    const usuario = localStorage.getItem('usuario');
-    const usuarioObj = usuario ? JSON.parse(usuario) : null;
+    const [usuario, setUsuario] = useState<StoredAuthUser | null>(getStoredAuthUser);
+
+    useEffect(() => {
+        const updateUser = () => setUsuario(getStoredAuthUser());
+        window.addEventListener(AUTH_USER_UPDATED_EVENT, updateUser);
+        window.addEventListener('storage', updateUser);
+        return () => {
+            window.removeEventListener(AUTH_USER_UPDATED_EVENT, updateUser);
+            window.removeEventListener('storage', updateUser);
+        };
+    }, []);
 
 
     return (
@@ -23,7 +38,7 @@ export const Navbar = () => {
                 <LogoButton theme={theme} neon={neon} />
             </ContainerLogo>
             <Options id="main-navigation" theme={theme} neon={neon}>
-                <NavbarLinks theme={theme} neon={neon} usuario={usuarioObj} />
+                <NavbarLinks theme={theme} neon={neon} usuario={usuario} />
             </Options>
             <ContainerTheme>
                 <ThemeNeonButtons />

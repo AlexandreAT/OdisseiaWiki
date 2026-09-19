@@ -31,6 +31,7 @@ const MesaPublic = lazy(() => import('./routes/Mesas/MesaPublic/MesaPublic'));
 const MesaCreate = lazy(() => import('./routes/Mesas/MesaCreate/MesaCreate'));
 const MesaManagement = lazy(() => import('./routes/Mesas/MesaManagement/MesaManagement'));
 const MesaGame = lazy(() => import('./routes/Mesas/MesaGame/MesaGame'));
+const Profile = lazy(() => import('./routes/Profile/Profile'));
 
 const withRouteLoading = (element: React.ReactNode) => (
   <Suspense fallback={<RouteLoading />}>{element}</Suspense>
@@ -83,6 +84,10 @@ const router = createBrowserRouter([{
         {
           path: 'hub',
           element: withRouteLoading(<Hub />)
+        },
+        {
+          path: 'perfil',
+          element: <MesaAccessGuard>{withRouteLoading(<Profile />)}</MesaAccessGuard>
         },
         {
           path: 'mesas/pesquisar',

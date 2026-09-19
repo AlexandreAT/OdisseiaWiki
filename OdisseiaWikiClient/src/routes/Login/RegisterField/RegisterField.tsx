@@ -62,6 +62,7 @@ const RegisterField = ({ theme, neon, onBackToLogin, onRegistrationSuccess }: Pr
                 email,
                 senha: password,
                 nickname,
+                celular: phone,
                 imagemUrl: avatarUrl
             };
 

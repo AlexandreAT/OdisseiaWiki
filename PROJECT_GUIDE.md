@@ -1596,6 +1596,26 @@ Para evoluir regras, crie ou duplique uma versão, altere apenas o rascunho e pu
 
 ---
 
+## 50.2. Perfil do usuário e encerramento de conta
+
+A área autenticada de perfil usa `/perfil` no frontend e os endpoints `api/usuarios/me` no backend. O usuário autenticado é sempre identificado pelo claim `id` do JWT; IDs de usuário enviados pelo cliente não participam de leituras, alterações, recuperação de senha ou exclusão da própria conta.
+
+Regras obrigatórias:
+
+- `Nome`, `Email` e `Celular` são somente leitura no perfil; apenas `Nickname` e `ImagemUrl` podem ser atualizados;
+- senhas e hashes nunca fazem parte do DTO de perfil; a mudança de senha reutiliza os tokens e e-mails do fluxo de recuperação existente;
+- após alterar nickname ou avatar, a API emite um novo JWT para manter os claims e o Header sincronizados;
+- nicknames são únicos, sem distinção entre maiúsculas e minúsculas pela collation atual, e devem ter entre 2 e 50 caracteres;
+- a página reutiliza `UserTables`, `UserCharacters`, `ImageUploader`, `HudFrame`, `Modal`, `InputText` e os botões existentes;
+- a exclusão exige a frase exata `DELETAR MINHA CONTA` tanto no cliente quanto no servidor;
+- excluir uma conta remove personagens, vínculos de Mesa, solicitações, registros de expulsão e tokens pessoais; assets deixam o storage somente depois da transação e apenas quando não possuem outras referências;
+- Mesas criadas não são excluídas: `Mesa.IdusuarioCriacao` torna-se `null` e a interface apresenta `Mestre removido` (ou `Sistema` para a Mesa Padrão);
+- conexões em Mesas são revogadas e JWTs antigos são rejeitados quando o usuário vinculado não existe mais.
+
+O índice `UX_Usuario_Nickname` garante a unicidade no banco. A migration correspondente renomeia nicknames legados duplicados de forma determinística antes de criar o índice.
+
+---
+
 # 51. Prioridades atuais
 
 As prioridades devem ser:

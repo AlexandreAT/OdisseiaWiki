@@ -12,5 +12,9 @@ namespace OdisseiaWiki.Services.Interfaces
         Task ReenviarConfirmacaoEmailAsync(string email);
         Task SolicitarRedefinicaoSenhaAsync(string email);
         Task<ResultAccountAction> RedefinirSenhaAsync(RedefinirSenhaDto dto);
+        Task<UsuarioPerfilDto?> ObterPerfilAsync(int idUsuario);
+        Task<ResultUsuarioPerfil> AtualizarPerfilAsync(int idUsuario, AtualizarUsuarioPerfilDto dto);
+        Task<ResultAccountAction> SolicitarRedefinicaoSenhaDoUsuarioAsync(int idUsuario);
+        Task<ResultAccountAction> ExcluirContaAsync(int idUsuario, string confirmacao);
     }
 }

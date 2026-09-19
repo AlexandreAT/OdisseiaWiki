@@ -3,7 +3,6 @@ import { Form, InputContainer, ButtonContainer, GoogleLoginContainer, GoogleLogi
 import { CyberButton } from '../../../components/Generic/HighlightButton/HighlightButton';
 import { InputText } from '../../../components/Generic/InputText/InputText';
 import { CredentialResponse, GoogleLogin } from '@react-oauth/google';
-import { jwtDecode  } from 'jwt-decode';
 import toast from 'react-hot-toast';
 import { SpanLink } from '../../../components/Generic/SpanLink/SpanLink';
 import { CheckBox } from '../../../components/Generic/CheckBox/CheckBox';
@@ -15,17 +14,10 @@ import {
     getRememberedManualLogin,
     rememberManualLogin,
 } from '../../../utils/rememberedLogin';
+import { storeAuthSession } from '../../../services/authSession';
 
 interface LoginLocationState {
     returnTo?: unknown;
-}
-
-interface AuthTokenPayload {
-    nickname?: string;
-    imagemUrl?: string;
-    email?: string;
-    id?: string;
-    role?: string;
 }
 
 const getSafeReturnPath = (state: LoginLocationState | null) => {
@@ -101,16 +93,7 @@ export const LoginField = ({ theme, neon, onRegisterClick, onEmailConfirmationRe
                     forgetRememberedManualLogin();
                 }
 
-                localStorage.setItem('token', result.tokenJwt);
-
-                const payload = jwtDecode<AuthTokenPayload>(result.tokenJwt);
-                localStorage.setItem('usuario', JSON.stringify({
-                    nickname: payload.nickname,
-                    imagemUrl: payload.imagemUrl,
-                    email: payload.email,
-                    id: payload.id,
-                    role: payload.role
-                }));
+                storeAuthSession(result.tokenJwt);
 
                 toast.success('Login realizado com sucesso!');
                 navigateAfterLogin();
@@ -139,16 +122,7 @@ export const LoginField = ({ theme, neon, onRegisterClick, onEmailConfirmationRe
                 const result = await loginComGoogle(dto);
 
                 if (result.sucesso && result.tokenJwt) {
-                    localStorage.setItem('token', result.tokenJwt);
-
-                    const payload = jwtDecode<AuthTokenPayload>(result.tokenJwt);
-                    localStorage.setItem('usuario', JSON.stringify({
-                        nickname: payload.nickname,
-                        imagemUrl: payload.imagemUrl,
-                        email: payload.email,
-                        id: payload.id,
-                        role: payload.role
-                    }));
+                    storeAuthSession(result.tokenJwt);
 
                     toast.success('Login realizado com sucesso!');
                     navigateAfterLogin();

@@ -219,6 +219,23 @@ public class Program
 
                         return Task.CompletedTask;
                     },
+                    OnTokenValidated = async context =>
+                    {
+                        int? idUsuario = context.Principal?.GetUserId();
+                        if (!idUsuario.HasValue)
+                        {
+                            context.Fail("Token sem identificação de usuário.");
+                            return;
+                        }
+
+                        OdisseiaContext database = context.HttpContext.RequestServices
+                            .GetRequiredService<OdisseiaContext>();
+                        bool usuarioExiste = await database.Usuarios
+                            .AsNoTracking()
+                            .AnyAsync(usuario => usuario.Idusuario == idUsuario.Value);
+                        if (!usuarioExiste)
+                            context.Fail("A conta vinculada ao token não existe mais.");
+                    },
                     OnChallenge = async context =>
                     {
                         context.HandleResponse();
