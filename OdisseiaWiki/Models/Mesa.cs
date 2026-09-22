@@ -39,6 +39,10 @@ public partial class Mesa
     /// </summary>
     public bool AoVivo { get; set; }
 
+    public long? IdMesaSessaoAtiva { get; set; }
+
+    public long RevisaoRuntime { get; set; }
+
     public int? IdSistemaVersao { get; set; }
 
     public DateTime DataCriacao { get; set; } = DateTime.UtcNow;
@@ -59,4 +63,13 @@ public partial class Mesa
     public virtual ICollection<MesaSolicitacaoEntrada> SolicitacoesEntrada { get; set; } = new List<MesaSolicitacaoEntrada>();
 
     public virtual ICollection<MesaExpulsaoRegistro> Expulsoes { get; set; } = new List<MesaExpulsaoRegistro>();
+
+    [JsonIgnore]
+    public virtual MesaSessao? SessaoAtiva { get; set; }
+
+    [JsonIgnore]
+    public virtual ICollection<MesaSessao> Sessoes { get; set; } = new List<MesaSessao>();
+
+    [JsonIgnore]
+    public virtual ICollection<MesaComando> ComandosGameplay { get; set; } = new List<MesaComando>();
 }

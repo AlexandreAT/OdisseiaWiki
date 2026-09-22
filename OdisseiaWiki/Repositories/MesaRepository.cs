@@ -553,12 +553,27 @@ namespace OdisseiaWiki.Repositories
 
         public async Task<bool> DeleteAsync(int id)
         {
-            var mesa = await _context.Mesas.FindAsync(id);
-            if (mesa == null) return false;
+            var strategy = _context.Database.CreateExecutionStrategy();
+            return await strategy.ExecuteAsync(async () =>
+            {
+                _context.ChangeTracker.Clear();
+                await using var transaction = await _context.Database.BeginTransactionAsync();
+                var mesa = await _context.Mesas.FindAsync(id);
+                if (mesa is null) return false;
 
-            _context.Mesas.Remove(mesa);
-            await _context.SaveChangesAsync();
-            return true;
+                // A mesa aponta para a sessão ativa e a sessão pertence à mesa.
+                // Desfazemos primeiro esse vínculo circular para o cascade funcionar.
+                if (mesa.IdMesaSessaoAtiva.HasValue)
+                {
+                    mesa.IdMesaSessaoAtiva = null;
+                    await _context.SaveChangesAsync();
+                }
+
+                _context.Mesas.Remove(mesa);
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+                return true;
+            });
         }
 
         private static string MesclarConfiguracoes(string baseJson, string overrideJson)

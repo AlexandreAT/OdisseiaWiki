@@ -78,7 +78,8 @@ public sealed class MesaPersonagemService : IMesaPersonagemService
         List<MesaPersonagemResumoDto> personagens = new();
         foreach (PersonagemJogadorDto personagem in await _personagemService.GetByMesaIdAsync(idMesa))
         {
-            if (!participantes.Contains(personagem.Idusuario) || !personagem.Visivel)
+            if (!participantes.Contains(personagem.Idusuario) ||
+                (!personagem.Visivel && personagem.Idusuario != idUsuario))
                 continue;
 
             bool morto = TryGetStatusNumber(personagem.StatusJson, "vida", out int vida) && vida <= 0;
@@ -102,12 +103,16 @@ public sealed class MesaPersonagemService : IMesaPersonagemService
                 "Mesa não encontrada.");
 
         bool mestreOuAdmin = admin || mesa.IdusuarioCriacao == idUsuario;
-        bool podeVerEstadoCompartilhado = mesa.AoVivo || mestreOuAdmin;
+        // Fora da sessao cada jogador ainda pode consultar a propria ficha para
+        // testes sem persistencia, sem expor os personagens dos demais.
+        IReadOnlyCollection<MesaPersonagemResumoDto> personagensVisiveis = mesa.AoVivo || mestreOuAdmin
+            ? personagens
+            : personagens.Where(item => item.IdUsuarioDono == idUsuario).ToList();
 
         return MesaOperacaoResultado<MesaAoVivoSnapshotDto>.Ok(new MesaAoVivoSnapshotDto
         {
             Mesa = mesaResumo.Dados,
-            Personagens = podeVerEstadoCompartilhado ? personagens : Array.Empty<MesaPersonagemResumoDto>(),
+            Personagens = personagensVisiveis,
             Participantes = participantes.Count,
             JogadoresOnline = 0,
             TurnoAtual = "Mestre",

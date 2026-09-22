@@ -14,7 +14,7 @@ import {
   RuntimeUpdateButton,
   RuntimeWarning,
 } from './SystemRuntimeIndicator.style';
-import { getRuntimeFallbackMessage, getRuntimeWarningMessage } from './SystemRuntimeIndicator.utils';
+import { getRuntimeFallbackMessage, getRuntimeWarningMessage, isDisplayableRuntimeWarning } from './SystemRuntimeIndicator.utils';
 
 interface SystemRuntimeIndicatorProps {
   contexto?: SistemaRuntimeContexto | null;
@@ -42,7 +42,7 @@ export const SystemRuntimeIndicator = ({
 }: SystemRuntimeIndicatorProps) => {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const detailsId = useId();
-  const warningMessages = contexto?.warnings?.map(getRuntimeWarningMessage).filter(Boolean) ?? [];
+  const warningMessages = contexto?.warnings?.filter(isDisplayableRuntimeWarning).map(getRuntimeWarningMessage).filter(Boolean) ?? [];
   const fallbackMessages = contexto?.fallbacks?.map(getRuntimeFallbackMessage).filter(Boolean) ?? [];
   const messages = Array.from(new Map(
     [...warningMessages, ...fallbackMessages, ...(error ? [error] : [])]
