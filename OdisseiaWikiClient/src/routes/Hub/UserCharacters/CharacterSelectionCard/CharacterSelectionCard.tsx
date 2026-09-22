@@ -5,6 +5,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
 import CheckBoxIcon from '@mui/icons-material/CheckBox';
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
+import CasinoOutlinedIcon from '@mui/icons-material/CasinoOutlined';
 import { useNavigate } from 'react-router-dom';
 import dnaIcon from '../../../../assets/svg/dna1.svg';
 import scalesIcon from '../../../../assets/svg/scales.svg';
@@ -25,7 +26,7 @@ import {
 import { resolveCharacterProgression } from '../../../../utils/characterProgression';
 import { useSistemaRuntimeContexto } from '../../../../hooks/useSistemaRuntimeContexto';
 import { getRuntimeResourceLabel } from '../../../../utils/systemRuntimeCharacter';
-import { SystemRuntimeIndicator } from '../../../../components/Generic/SystemRuntimeIndicator';
+import { SystemRuntimeIndicator, isDisplayableRuntimeWarning } from '../../../../components/Generic/SystemRuntimeIndicator';
 import { CharacterComparisonButton, CharacterComparisonModal } from '../../../../components/CharacterComparison';
 import { createCharacterComparisonData } from '../../../../components/CharacterComparison/characterComparison.utils';
 import { normalizeImagePath } from '../../../Wiki/utils/imagePathHelper';
@@ -79,6 +80,7 @@ interface CharacterSelectionCardProps {
   onView: () => void;
   onSheet: () => void;
   onEdit: () => void;
+  onActions?: () => void;
   onUpdateSystem?: () => void;
   updatingSystem?: boolean;
   selectionMode?: boolean;
@@ -263,6 +265,7 @@ export const CharacterSelectionCard = ({
   onView,
   onSheet,
   onEdit,
+  onActions,
   onUpdateSystem,
   updatingSystem = false,
   selectionMode = false,
@@ -310,7 +313,7 @@ export const CharacterSelectionCard = ({
     !runtimeContext
     || Boolean(runtimeError)
     || !runtimeContext.idSistemaVersao
-    || (runtimeContext.warnings?.length ?? 0) > 0
+    || Boolean(runtimeContext.warnings?.some(isDisplayableRuntimeWarning))
     || (runtimeContext.fallbacks?.length ?? 0) > 0
   );
   const {
@@ -521,6 +524,7 @@ export const CharacterSelectionCard = ({
       )}
 
       <Actions>
+        {onActions && <ActionButton type="button" onClick={onActions}><CasinoOutlinedIcon />Ações</ActionButton>}
         <ActionButton type="button" onClick={onView}><VisibilityIcon />Visualizar</ActionButton>
         {context !== 'mesa-other' && <ActionButton type="button" onClick={onSheet}><MenuBookIcon />Ficha</ActionButton>}
         {(context === 'owner' || context === 'mesa-own') && <ActionButton type="button" onClick={onEdit}><EditIcon />Editar</ActionButton>}

@@ -600,7 +600,7 @@ export const Actions = styled.div`
   gap: 8px;
 
   > button:only-child,
-  > button:nth-child(3) {
+  > button:last-child:nth-child(odd) {
     grid-column: 1 / -1;
   }
 `;

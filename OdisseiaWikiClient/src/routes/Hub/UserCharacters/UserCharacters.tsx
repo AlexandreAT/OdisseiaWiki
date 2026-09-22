@@ -502,6 +502,7 @@ export const UserCharacters = ({
               xp={personagem.xp}
               theme={theme}
               neon={neon}
+              onActions={() => navigate(`/mesa/${personagem.idmesa}/jogo?acoes=${personagem.idpersonagemJogador}`)}
               onView={() => navigate(`/personagem/${personagem.idpersonagemJogador}?tipo=jogador`)}
               onSheet={() => updateRouteState('edit', personagem, 2)}
               onEdit={() => updateRouteState('edit', personagem, 1)}

@@ -222,6 +222,8 @@ Evoluir a aplicação de enciclopédia para ferramenta prática de RPG.
 - Próteses;
 - Sistema de progressão.
 
+A execução prática dessas regras — sessões, comandos, rolagens, histórico, aplicação de estado, combate e estatísticas — deve seguir `docs/GAMEPLAY_ENGINE.md`, fonte da verdade específica da engine de gameplay.
+
 ---
 
 ## 4.5. V2 — Inteligência artificial
@@ -1575,7 +1577,7 @@ Regras obrigatórias:
 - toda escrita administrativa deve usar a policy de Admin no backend;
 - regras ambíguas do livro permanecem configuráveis e não devem ser inventadas pela implementação.
 
-A arquitetura, o fluxo de publicação e a estratégia de compatibilidade estão detalhados em `docs/RPG_SYSTEMS.md`. A matriz de testes está em `docs/RPG_SYSTEMS_QA.md`.
+A arquitetura, o fluxo de publicação e a estratégia de compatibilidade estão detalhados em `docs/RPG_SYSTEMS.md`. A matriz de testes está em `docs/RPG_SYSTEMS_QA.md`. A execução das regras em sessões, rolagens, ações e combate está especificada em `docs/GAMEPLAY_ENGINE.md`.
 
 Estrutura implementada:
 

@@ -19,6 +19,8 @@ namespace OdisseiaWiki.Models
 
         public bool Visivel { get; set; } = true;
 
+        public long RevisaoRuntime { get; set; }
+
         public virtual Mesa Mesa { get; set; } = null!;
         public virtual Usuario Usuario { get; set; } = null!;
 

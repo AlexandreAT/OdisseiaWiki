@@ -17,6 +17,7 @@ import { InputText } from '../../../components/Generic/InputText/InputText';
 import { LoadingIndicator } from '../../../components/Generic/LoadingIndicator';
 import { Modal } from '../../../components/Generic/Modal/Modal';
 import { Select } from '../../../components/Generic/Select/Select';
+import { getStoredAuthUser } from '../../../services/authSession';
 import { MesaHudDecor } from '../components/MesaHudDecor/MesaHudDecor';
 import type { PersonagemStatus, StatusBase } from '../../../models/PersonagemJogador';
 import { CharacterSelectionCard } from '../../Hub/UserCharacters/CharacterSelectionCard/CharacterSelectionCard';
@@ -70,6 +71,7 @@ const MesaManagement = () => {
   const tab: MesaManagementTab = ['pedidos', 'jogadores', 'personagens'].includes(rawTab || '') ? rawTab as MesaManagementTab : 'geral';
   const { theme, neon } = useSelector((state: MesaThemeState) => state.themesReducer);
   const isNeonActive = neon === 'on';
+  const currentUserId = Number(getStoredAuthUser()?.id);
   const state = useMesaManagement(idMesa, tab);
   const [expelUser, setExpelUser] = useState<{ id: number; name: string } | null>(null);
   const [expelReason, setExpelReason] = useState('');
@@ -186,6 +188,9 @@ const MesaManagement = () => {
                         context="mesa-master"
                         ownerName={entry.donoNome}
                         online={entry.online}
+                        onActions={currentUserId > 0 && Number(entry.idUsuarioDono ?? entry.personagem.idusuario) === currentUserId
+                          ? () => navigate(`/mesa/${idMesa}/jogo?acoes=${entry.personagem.idpersonagemJogador}`)
+                          : undefined}
                         onView={() => navigate(`/personagem/${entry.personagem.idpersonagemJogador}?tipo=jogador&mesaId=${idMesa}&modo=leitura`)}
                         onSheet={() => navigate(`/personagem/${entry.personagem.idpersonagemJogador}?tipo=jogador&mesaId=${idMesa}&modo=ficha`)}
                         onEdit={() => undefined}

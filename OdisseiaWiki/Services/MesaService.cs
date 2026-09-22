@@ -14,19 +14,22 @@ namespace OdisseiaWiki.Services
         private readonly ISistemaRpgService _sistemaRpgService;
         private readonly ISistemaRpgResolver _sistemaRpgResolver;
         private readonly IMesaRealtimeNotifier _realtimeNotifier;
+        private readonly IGameplayEngineService? _gameplayEngine;
 
         public MesaService(
             IMesaRepository repository,
             IAssetService assetService,
             ISistemaRpgService sistemaRpgService,
             ISistemaRpgResolver sistemaRpgResolver,
-            IMesaRealtimeNotifier? realtimeNotifier = null)
+            IMesaRealtimeNotifier? realtimeNotifier = null,
+            IGameplayEngineService? gameplayEngine = null)
         {
             _repository = repository;
             _assetService = assetService;
             _sistemaRpgService = sistemaRpgService;
             _sistemaRpgResolver = sistemaRpgResolver;
             _realtimeNotifier = realtimeNotifier ?? new NullMesaRealtimeNotifier();
+            _gameplayEngine = gameplayEngine;
         }
 
         public async Task<ResultMesa> CreateAsync(MesaDto dto)
@@ -124,6 +127,10 @@ namespace OdisseiaWiki.Services
                 return MesaOperacaoResultado<MesaResumoDto>.Falha(
                     MesaOperacaoErro.Proibido,
                     "Somente o mestre pode editar esta Mesa.");
+            if (mesa.IdMesaSessaoAtiva.HasValue && dto.IdSistemaVersao != mesa.IdSistemaVersao)
+                return MesaOperacaoResultado<MesaResumoDto>.Falha(
+                    MesaOperacaoErro.Conflito,
+                    "Encerre a sessão antes de mudar a versão do Sistema.");
 
             string nome = dto.Nome?.Trim() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(nome))
@@ -184,6 +191,30 @@ namespace OdisseiaWiki.Services
                 return MesaOperacaoResultado<MesaResumoDto>.Falha(
                     MesaOperacaoErro.Proibido,
                     "Somente o mestre pode iniciar ou encerrar a Mesa ao vivo.");
+
+            if (_gameplayEngine is not null)
+            {
+                GameplayOperationResult<GameplaySessionDto?> gameplayResult =
+                    await _gameplayEngine.SetLegacyLiveStatusAsync(idMesa, idUsuario, aoVivo);
+                if (!gameplayResult.Sucesso)
+                {
+                    MesaOperacaoErro erro = gameplayResult.Erro switch
+                    {
+                        GameplayOperationError.NaoEncontrado => MesaOperacaoErro.NaoEncontrado,
+                        GameplayOperationError.Proibido => MesaOperacaoErro.Proibido,
+                        GameplayOperationError.Conflito => MesaOperacaoErro.Conflito,
+                        _ => MesaOperacaoErro.Validacao,
+                    };
+                    return MesaOperacaoResultado<MesaResumoDto>.Falha(
+                        erro,
+                        gameplayResult.Mensagem ?? "Não foi possível atualizar a sessão.");
+                }
+
+                Mesa? atualizada = await _repository.GetDetailedByIdAsync(idMesa);
+                return MesaOperacaoResultado<MesaResumoDto>.Ok(
+                    MapResumo(atualizada ?? mesa, idUsuario),
+                    aoVivo ? "Mesa iniciada ao vivo." : "Mesa encerrada.");
+            }
 
             if (mesa.AoVivo != aoVivo)
             {

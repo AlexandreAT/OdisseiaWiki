@@ -265,17 +265,25 @@ public class Program
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
             options.OnRejected = async (context, _) =>
             {
+                int? retryAfterSeconds = context.Lease.TryGetMetadata(
+                    MetadataName.RetryAfter,
+                    out TimeSpan retryAfter)
+                    ? Math.Max(1, (int)Math.Ceiling(retryAfter.TotalSeconds))
+                    : null;
                 await WriteProblemAsync(
                     context.HttpContext,
                     StatusCodes.Status429TooManyRequests,
                     "Muitas requisições",
-                    "Aguarde alguns instantes antes de tentar novamente.");
+                    "Aguarde alguns instantes antes de tentar novamente.",
+                    retryAfterSeconds);
             };
             if (builder.Environment.IsDevelopment())
             {
                 options.AddPolicy("authentication", _ => RateLimitPartition.GetNoLimiter("development"));
                 options.AddPolicy("uploads", _ => RateLimitPartition.GetNoLimiter("development"));
                 options.AddPolicy("account-email", _ => RateLimitPartition.GetNoLimiter("development"));
+                options.AddPolicy("gameplay-read", _ => RateLimitPartition.GetNoLimiter("development"));
+                options.AddPolicy("gameplay-simulation", _ => RateLimitPartition.GetNoLimiter("development"));
                 return;
             }
 
@@ -308,6 +316,28 @@ public class Program
                     {
                         PermitLimit = 5,
                         Window = TimeSpan.FromMinutes(15),
+                        QueueLimit = 0,
+                        AutoReplenishment = true,
+                    }));
+            options.AddPolicy("gameplay-read", context =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    $"{context.User.GetUserId()?.ToString() ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown"}:{context.Request.RouteValues["idMesa"]}",
+                    _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 120,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueLimit = 0,
+                        AutoReplenishment = true,
+                    }));
+            options.AddPolicy("gameplay-simulation", context =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    context.User.GetUserId()?.ToString()
+                        ?? context.Connection.RemoteIpAddress?.ToString()
+                        ?? "unknown",
+                    _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 60,
+                        Window = TimeSpan.FromMinutes(1),
                         QueueLimit = 0,
                         AutoReplenishment = true,
                     }));
@@ -558,6 +588,7 @@ public class Program
         services.AddScoped<ICidadeRepository, CidadeRepository>();
         services.AddScoped<IItemRepository, ItemRepository>();
         services.AddScoped<IMesaRepository, MesaRepository>();
+        services.AddScoped<IGameplayEngineRepository, GameplayEngineRepository>();
         services.AddScoped<IMesaEntidadeConfigRepository, MesaEntidadeConfigRepository>();
         services.AddScoped<IInfoLoreRepository, InfoLoreRepository>();
         services.AddScoped<IPageRepository, PageRepository>();
@@ -574,6 +605,12 @@ public class Program
         services.AddScoped<ICidadeService, CidadeService>();
         services.AddScoped<IItemService, ItemService>();
         services.AddScoped<IMesaService, MesaService>();
+        services.AddScoped<IGameplayEngineService, GameplayEngineService>();
+        services.AddSingleton<IGameplayCommandRateLimiter, GameplayCommandRateLimiter>();
+        services.AddScoped<GameplayRollEvaluator>();
+        services.AddSingleton<IDiceRandomSource, CryptoDiceRandomSource>();
+        services.AddScoped<IDiceRoller, DiceRoller>();
+        services.AddSingleton<IGameplayCursorCodec, GameplayCursorCodec>();
         services.AddScoped<IMesaPersonagemService, MesaPersonagemService>();
         services.AddSingleton<IMesaPresenceTracker, MesaPresenceTracker>();
         services.AddSingleton<IMesaRealtimeNotifier, SignalRMesaRealtimeNotifier>();
@@ -610,7 +647,8 @@ public class Program
         HttpContext context,
         int statusCode,
         string title,
-        string detail)
+        string detail,
+        int? retryAfterSeconds = null)
     {
         if (context.Response.HasStarted)
             return;
@@ -626,6 +664,11 @@ public class Program
             Instance = context.Request.Path,
         };
         problem.Extensions["traceId"] = context.TraceIdentifier;
+        if (retryAfterSeconds.HasValue)
+        {
+            context.Response.Headers.RetryAfter = retryAfterSeconds.Value.ToString();
+            problem.Extensions["retryAfter"] = retryAfterSeconds.Value;
+        }
 
         await context.Response.WriteAsync(JsonSerializer.Serialize(problem));
     }

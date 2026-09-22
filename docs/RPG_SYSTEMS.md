@@ -321,7 +321,7 @@ Os consumidores integrados usam o contexto runtime para:
 
 Ao carregar ou editar uma ficha existente, propriedades históricas e códigos desconhecidos continuam preservados. Defaults do Sistema são aplicados na criação ou quando o campo ainda não possui valor explícito; não são uma rotina de normalização destrutiva.
 
-Os hardcodes remanescentes ficam restritos a fallbacks de compatibilidade quando o contexto, módulo, configuração racial ou escopo de item estiver ausente. A execução completa de ações, movimento, condições, descanso, morte e rolagens continua fora deste runtime: os catálogos são resolvidos, mas ainda não constituem uma engine universal de combate. Itens customizados sem códigos reconhecíveis também mantêm a renderização e as constantes legadas.
+Os hardcodes remanescentes ficam restritos a fallbacks de compatibilidade quando o contexto, módulo, configuração racial ou escopo de item estiver ausente. A execução completa de ações, movimento, condições, descanso, morte e rolagens continua fora deste runtime: os catálogos são resolvidos, mas ainda não constituem uma engine universal de combate. A arquitetura e o plano canônico dessa execução estão em [GAMEPLAY_ENGINE.md](GAMEPLAY_ENGINE.md). Itens customizados sem códigos reconhecíveis também mantêm a renderização e as constantes legadas.
 
 Criação e atualização de Item e NPC resolvem também o snapshot proposto antes de persistir. Extrapolações válidas não são bloqueadas nem normalizadas: a resposta do save já devolve o contexto e os warnings tipados correspondentes, permitindo ao formulário informar a referência sem realizar um GET adicional.
 

@@ -3,12 +3,15 @@ import LayersOutlinedIcon from '@mui/icons-material/LayersOutlined';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import StorageOutlinedIcon from '@mui/icons-material/StorageOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import CasinoOutlinedIcon from '@mui/icons-material/CasinoOutlined';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useSelector } from 'react-redux';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AnimatedBackground } from '../../../components/Generic/AnimatedBackground/AnimatedBackground';
+import { GameplayActionCenter } from '../../../components/Gameplay';
 import { LoadingIndicator } from '../../../components/Generic/LoadingIndicator';
+import { useGameplayEngine } from '../../../hooks/useGameplayEngine';
 import type { MesaPersonagemResumo } from '../../../models/Mesa';
 import type { PersonagemStatus, StatusBase } from '../../../models/PersonagemJogador';
 import { CharacterSelectionCard } from '../../Hub/UserCharacters/CharacterSelectionCard/CharacterSelectionCard';
@@ -29,6 +32,8 @@ import {
 } from '../Mesas.style';
 import { useMesaGameData } from './useMesaGameData';
 import type { MesaThemeState } from '../MesaThemeState';
+import { GameplayLiveHistory } from './GameplayLiveHistory';
+import { MesaGameActivityLayout, MesaGameActivityMain } from './GameplayLiveHistory.style';
 
 const emptyStatus: StatusBase = {
   vida: 0,
@@ -71,6 +76,7 @@ const MesaGame = () => {
   const { id } = useParams();
   const idMesa = Number(id);
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { theme, neon } = useSelector((state: MesaThemeState) => state.themesReducer);
   const isNeonActive = neon === 'on';
   const {
@@ -82,8 +88,24 @@ const MesaGame = () => {
   } = useMesaGameData(idMesa);
   const [displayed, setDisplayed] = useState<DisplayCharacter[]>([]);
   const [updatingLiveStatus, setUpdatingLiveStatus] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
+  const [actionCharacterId, setActionCharacterId] = useState<number | null>(null);
   const removalTimers = useRef(new Map<number, number>());
   const currentUserId = useMemo(getCurrentUserId, []);
+  const gameplay = useGameplayEngine({ idMesa, enabled: Boolean(snapshot), mesaAoVivo: Boolean(snapshot?.mesa.aoVivo) });
+  const gameplayCharacters = useMemo(() => displayed
+    .filter((entry) => Number(entry.idUsuarioDono ?? entry.personagem.idusuario ?? 0) === currentUserId)
+    .map((entry) => ({ personagem: entry.personagem, ownerName: entry.donoNome })), [currentUserId, displayed]);
+
+  useEffect(() => {
+    const requestedId = Number(searchParams.get('acoes'));
+    if (!requestedId || !gameplayCharacters.some((entry) => entry.personagem.idpersonagemJogador === requestedId)) return;
+    setActionCharacterId(requestedId);
+    setActionsOpen(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete('acoes');
+    setSearchParams(next, { replace: true });
+  }, [gameplayCharacters, searchParams, setSearchParams]);
 
   const handleAccessRevoked = useCallback(() => {
     toast.error('Seu acesso a esta Mesa foi removido.');
@@ -94,7 +116,10 @@ const MesaGame = () => {
     idMesa,
     enabled: Boolean(snapshot),
     aoVivo: Boolean(snapshot?.mesa.aoVivo),
-    onMesaInvalidada: () => refresh(false).catch(() => undefined),
+    onMesaInvalidada: () => Promise.all([
+      refresh(false).catch(() => undefined),
+      gameplay.refresh(false).catch(() => undefined),
+    ]).then(() => undefined),
     onAcessoRevogado: handleAccessRevoked,
   });
 
@@ -155,7 +180,8 @@ const MesaGame = () => {
 
   const handleLiveStatusChange = async (aoVivo: boolean) => {
     setUpdatingLiveStatus(true);
-    await updateMesaLiveStatus(aoVivo);
+    const updated = await updateMesaLiveStatus(aoVivo);
+    if (updated) await gameplay.refresh(false);
     setUpdatingLiveStatus(false);
   };
 
@@ -184,6 +210,16 @@ const MesaGame = () => {
                 <span>{updatingLiveStatus ? 'Atualizando' : mesaAoVivo ? 'Encerrar ao vivo' : 'Iniciar ao vivo'}</span>
               </LiveControl>
             )}
+            <ActionButton
+              $accent="pink"
+              title="Abrir Central de ações"
+              onClick={() => {
+                setActionCharacterId(gameplayCharacters[0]?.personagem.idpersonagemJogador ?? null);
+                setActionsOpen(true);
+              }}
+            >
+              <CasinoOutlinedIcon /> Ações
+            </ActionButton>
             <ActionButton onClick={() => navigate(`/mesa/${idMesa}`)}>
               <VisibilityOutlinedIcon sx={{ color: 'var(--clearneonBlue)' }} /> Ver Mesa
             </ActionButton>
@@ -199,45 +235,84 @@ const MesaGame = () => {
           <div><small>Turno atual</small><strong>{snapshot.turnoAtual || 'Mestre'}</strong></div>
         </GameStatus>
 
-        {!mesaAoVivo && !isMaster ? (
-          <EmptyState>A Mesa está offline. Aguarde o mestre iniciar a sessão ao vivo.</EmptyState>
-        ) : displayed.length === 0 ? (
-          <EmptyState>Nenhum personagem visível e ativo nesta Mesa.</EmptyState>
-        ) : (
-          <MesaGameCharacterGrid>
-            {displayed.map((entry) => {
-              const characterId = entry.personagem.idpersonagemJogador;
-              const parsed = parseStatus(entry.personagem.statusJson);
-              const ownerId = Number(entry.idUsuarioDono ?? entry.personagem.idusuario ?? 0);
-              const isOwn = ownerId > 0 && ownerId === currentUserId;
-              const online = mesaAoVivo && realtime.conectado && ownerId > 0
-                ? realtime.idsUsuariosOnline.includes(ownerId)
-                : entry.online;
-              return (
-                <DeadCardWrapper key={characterId} $exiting={entry.exiting}>
-                  <CharacterSelectionCard
-                    personagem={entry.personagem}
-                    status={entry.status || parsed?.status || emptyStatus}
-                    level={entry.nivel ?? parsed?.nivel ?? 1}
-                    xp={entry.xp ?? parsed?.xp ?? 0}
-                    theme={theme}
-                    neon={neon}
-                    context={isOwn ? 'mesa-own' : 'mesa-other'}
-                    ownerName={entry.donoNome}
-                    online={online}
-                    variant="mesa-game"
-                    onQuickStatusUpdate={isOwn
-                      ? (changes) => updateCharacterResources(characterId, changes)
-                      : undefined}
-                    onView={() => navigate(`/personagem/${characterId}?tipo=jogador&mesaId=${idMesa}&modo=leitura`)}
-                    onSheet={() => navigate(`/hub?section=personagens&mode=edit&characterId=${characterId}&step=2`)}
-                    onEdit={() => navigate(`/hub?section=personagens&mode=edit&characterId=${characterId}&step=1`)}
-                  />
-                </DeadCardWrapper>
-              );
-            })}
-          </MesaGameCharacterGrid>
-        )}
+        <MesaGameActivityLayout>
+          <MesaGameActivityMain>
+            {displayed.length === 0 ? (
+              <EmptyState>Nenhum personagem visível e ativo nesta Mesa.</EmptyState>
+            ) : (
+              <MesaGameCharacterGrid>
+                {displayed.map((entry) => {
+                  const characterId = entry.personagem.idpersonagemJogador;
+                  const parsed = parseStatus(entry.personagem.statusJson);
+                  const ownerId = Number(entry.idUsuarioDono ?? entry.personagem.idusuario ?? 0);
+                  const isOwn = ownerId > 0 && ownerId === currentUserId;
+                  const online = mesaAoVivo && realtime.conectado && ownerId > 0
+                    ? realtime.idsUsuariosOnline.includes(ownerId)
+                    : entry.online;
+                  return (
+                    <DeadCardWrapper key={characterId} $exiting={entry.exiting}>
+                      <CharacterSelectionCard
+                        personagem={entry.personagem}
+                        status={entry.status || parsed?.status || emptyStatus}
+                        level={entry.nivel ?? parsed?.nivel ?? 1}
+                        xp={entry.xp ?? parsed?.xp ?? 0}
+                        theme={theme}
+                        neon={neon}
+                        context={isOwn ? 'mesa-own' : 'mesa-other'}
+                        ownerName={entry.donoNome}
+                        online={online}
+                        variant="mesa-game"
+                        onActions={isOwn ? () => {
+                          setActionCharacterId(characterId);
+                          setActionsOpen(true);
+                        } : undefined}
+                        onQuickStatusUpdate={isOwn
+                          ? (changes) => updateCharacterResources(characterId, changes)
+                          : undefined}
+                        onView={() => navigate(`/personagem/${characterId}?tipo=jogador&mesaId=${idMesa}&modo=leitura`)}
+                        onSheet={() => navigate(`/hub?section=personagens&mode=edit&characterId=${characterId}&step=2`)}
+                        onEdit={() => navigate(`/hub?section=personagens&mode=edit&characterId=${characterId}&step=1`)}
+                      />
+                    </DeadCardWrapper>
+                  );
+                })}
+              </MesaGameCharacterGrid>
+            )}
+          </MesaGameActivityMain>
+          <GameplayLiveHistory
+            session={gameplay.session}
+            mesaAoVivo={mesaAoVivo}
+            events={gameplay.events}
+            characters={displayed}
+            loading={gameplay.loading}
+            loadingMore={gameplay.loadingMore}
+            error={gameplay.error}
+            hasMore={gameplay.hasMore}
+            neon={isNeonActive}
+            onRefresh={gameplay.refresh}
+            onLoadMore={gameplay.loadMore}
+          />
+        </MesaGameActivityLayout>
+        <GameplayActionCenter
+          open={actionsOpen}
+          onClose={() => setActionsOpen(false)}
+          initialCharacterId={actionCharacterId}
+          characters={gameplayCharacters}
+          session={gameplay.session}
+          mesaAoVivo={mesaAoVivo}
+          events={gameplay.events}
+          loading={gameplay.loading}
+          loadingMore={gameplay.loadingMore}
+          submitting={gameplay.submitting}
+          error={gameplay.error}
+          hasMore={gameplay.hasMore}
+          theme={theme}
+          neon={neon}
+          onRoll={gameplay.roll}
+          onRecordManual={gameplay.recordManual}
+          onLoadMore={gameplay.loadMore}
+          onRefresh={gameplay.refresh}
+        />
       </MesaPage>
     </>
   );

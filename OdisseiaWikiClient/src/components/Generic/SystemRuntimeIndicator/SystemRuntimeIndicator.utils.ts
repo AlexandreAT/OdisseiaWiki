@@ -1,5 +1,15 @@
 import type { SistemaRuntimeFallback, SistemaRuntimeWarning } from '../../../models/SistemaRpg';
 
+const EXPECTED_CHARACTER_RESOURCE_DIFFERENCES = new Set(
+  ['statusJson.status', 'entidade.statusJson.status'].flatMap((prefix) =>
+    ['vida', 'vidaMaxima', 'mana', 'manaMaxima', 'estamina', 'estaminaMaxima']
+      .map((field) => `${prefix}.${field}`)),
+);
+
+export const isDisplayableRuntimeWarning = (warning: SistemaRuntimeWarning) =>
+  warning.codigo !== 'ValorForaReferencia'
+  || !EXPECTED_CHARACTER_RESOURCE_DIFFERENCES.has(warning.caminho ?? '');
+
 const RESOURCE_LABELS: Record<string, string> = {
   vidaMaxima: 'Vida máxima',
   estaminaMaxima: 'Estamina máxima',

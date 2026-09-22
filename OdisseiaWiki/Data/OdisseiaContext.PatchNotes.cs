@@ -8,6 +8,7 @@ public partial class OdisseiaContext
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
         ValidarImutabilidadePatchNotes();
+        ValidarImutabilidadeGameplay();
         return base.SaveChanges(acceptAllChangesOnSuccess);
     }
 
@@ -16,6 +17,7 @@ public partial class OdisseiaContext
         CancellationToken cancellationToken = default)
     {
         ValidarImutabilidadePatchNotes();
+        ValidarImutabilidadeGameplay();
         return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
     }
 
@@ -27,6 +29,19 @@ public partial class OdisseiaContext
         {
             throw new InvalidOperationException(
                 "Patch notes publicados são snapshots imutáveis e não podem ser alterados ou excluídos.");
+        }
+    }
+
+    private void ValidarImutabilidadeGameplay()
+    {
+        bool tentativaDeAlterarEvento = ChangeTracker.Entries<MesaEvento>().Any(entry =>
+            entry.State is EntityState.Modified or EntityState.Deleted);
+        bool tentativaDeAlterarRolagem = ChangeTracker.Entries<MesaRolagem>().Any(entry =>
+            entry.State is EntityState.Modified or EntityState.Deleted);
+        if (tentativaDeAlterarEvento || tentativaDeAlterarRolagem)
+        {
+            throw new InvalidOperationException(
+                "Eventos e rolagens de gameplay são imutáveis e não podem ser alterados ou excluídos.");
         }
     }
 }
