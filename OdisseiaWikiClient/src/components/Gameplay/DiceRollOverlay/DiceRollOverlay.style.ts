@@ -29,7 +29,7 @@ export const DiceStage = styled.div`
   pointer-events: none;
 `;
 
-export const Dice = styled.div`
+export const Dice = styled.div<{ $interactive: boolean; $dragging: boolean }>`
   position: absolute;
   top: 0;
   left: 0;
@@ -39,6 +39,10 @@ export const Dice = styled.div`
   perspective-origin: center center;
   transform-style: preserve-3d;
   will-change: transform;
+  pointer-events: ${({ $interactive }) => $interactive ? 'auto' : 'none'};
+  cursor: ${({ $interactive, $dragging }) => !$interactive ? 'default' : $dragging ? 'grabbing' : 'grab'};
+  touch-action: none;
+  user-select: none;
 `;
 
 export const DiceMesh = styled.div`
@@ -63,27 +67,22 @@ export const DieStatus = styled.span<{ $discarded: boolean }>`
   transform: translateX(-50%);
 `;
 
-export const DiceFace = styled.div<{ $discarded: boolean; $selected: boolean; $settled: boolean }>`
+export const DiceFace = styled.div<{ $discarded: boolean; $selected: boolean }>`
   position: absolute;
   inset: 0;
   backface-visibility: hidden;
   transform-style: preserve-3d;
-  opacity: ${({ $settled, $selected }) => $settled && !$selected ? .68 : 1};
 
   svg {
     width: 100%;
     height: 100%;
     overflow: visible;
-    filter: ${({ $selected, $discarded }) => $selected && !$discarded
-      ? 'drop-shadow(0 0 10px rgba(0, 210, 255, .9))'
-      : 'drop-shadow(0 0 4px rgba(0, 188, 255, .4))'};
+    filter: drop-shadow(0 0 4px rgba(0, 188, 255, .4));
   }
   polygon {
-    fill: ${({ $selected }) => $selected ? 'rgba(3, 42, 66, .99)' : 'rgba(2, 23, 40, .97)'};
-    stroke: ${({ $discarded, $selected }) => $discarded
-      ? 'var(--lightGrey)'
-      : $selected ? 'var(--clearneonYellow)' : 'var(--clearneonBlue)'};
-    stroke-width: ${({ $selected }) => $selected ? '2.8px' : '1.65px'};
+    fill: rgba(2, 23, 40, .97);
+    stroke: ${({ $discarded }) => $discarded ? 'var(--lightGrey)' : 'var(--clearneonBlue)'};
+    stroke-width: 1.65px;
     stroke-linejoin: round;
   }
   text {
@@ -91,14 +90,12 @@ export const DiceFace = styled.div<{ $discarded: boolean; $selected: boolean; $s
       ? 'var(--lightGrey)'
       : $selected ? 'var(--clearneonYellow)' : 'var(--whitesmoke)'};
     font-family: 'Cyberpunk Is Not Dead', sans-serif;
-    font-size: ${({ $selected }) => $selected ? '38px' : '26px'};
+    font-size: 26px;
     font-weight: 700;
     paint-order: stroke;
     stroke: rgba(0, 19, 35, .96);
-    stroke-width: ${({ $selected }) => $selected ? '4px' : '3px'};
-    filter: ${({ $selected, $discarded }) => $selected && !$discarded
-      ? 'drop-shadow(0 0 7px var(--clearneonYellow))'
-      : 'drop-shadow(0 0 3px var(--clearneonBlue))'};
+    stroke-width: 3px;
+    filter: drop-shadow(0 0 3px var(--clearneonBlue));
   }
 `;
 

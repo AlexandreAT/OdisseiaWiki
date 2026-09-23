@@ -1726,6 +1726,7 @@ A pagina de Mesa em jogo deve ganhar uma area de gameplay, sem substituir a fich
 - status de conexao/reconexao;
 - combate/turno quando a Fase 5 existir;
 - controles de mestre separados dos controles do jogador.
+- rolagens oficiais de outros participantes aparecem automaticamente sobre a ficha apenas depois do evento ser persistido e autorizado.
 
 Desktop pode usar painel/drawer lateral. Em mobile, usar sheet ou tela cheia e cards empilhados.
 
@@ -1897,6 +1898,8 @@ Nao incluir personagem, alvo, dado, resultado ou conteudo privado. O evento atua
 - buscar eventos a partir do ultimo cursor opaco confirmado;
 - refazer snapshot completo apenas quando o servidor invalidar o cursor ou indicar ressincronizacao;
 - deduplicar pelo ID/sequencia, sem exigir adjacencia entre eventos visiveis;
+- animar somente novos eventos automaticos de rolagem recebidos durante a sessao; carga inicial, reconexao e historico antigo nao repetem animacoes;
+- nao repetir no cliente autor a animacao que ele proprio ja iniciou;
 - invalidar catalogo quando revisao da sessao ou personagem mudar;
 - manter polling como recuperacao;
 - ao reconectar, consultar REST antes de assumir estado;
@@ -2761,12 +2764,12 @@ Esta tabela e obrigatoria e deve ser atualizada em cada entrega.
 | Estudo do livro e arquitetura | `Concluido` | Regras, riscos, UI e arquitetura alvo documentados. |
 | Fase 0 - Preparacao | `Parcial` | Vida zero permanece na Mesa; revisao otimista de ficha, dados legados e calculos de arma ainda precisam de trabalho. |
 | Fase 1 - Fundacao | `Parcial` | Sessoes, comandos idempotentes, eventos, RNG, visibilidade, historico, transacao e adaptador `AoVivo` implementados; faltam testes concorrentes e revisao das escritas de ficha. |
-| Fase 2 - MVP de rolagens | `Parcial` | Rolagens genericas, atributos Odisseia, fontes de XP calculadas, registro manual, simulacao offline via API, Central com teste de atributo em modal, dado 3D opcional, historico em aba e feed lateral na Mesa. A UI permite testes offline sem historico; faltam ficha dedicada e aplicacao auditada de XP. |
+| Fase 2 - MVP de rolagens | `Parcial` | Rolagens genericas, atributos Odisseia, fontes de XP calculadas, registro manual, simulacao offline via API, Central com teste de atributo em modal, dado 3D opcional, animacao autorizada das rolagens dos outros participantes e historico em tempo real na Mesa. A UI permite testes offline sem historico; faltam ficha dedicada e aplicacao auditada de XP. |
 | Fase 3 - Acoes de itens/poderes | `Nao iniciada` | Modificadores atuais continuam preview no frontend. |
 | Fase 4 - Engine de estado | `Nao iniciada` | Recursos atuais nao formam engine transacional. |
 | Fase 5 - Combate/movimento | `Nao iniciada` | `TurnoAtual = Mestre` continua placeholder. |
 | Fase 6 - Estatisticas | `Nao iniciada` | Nenhum agregado deve ser criado antes do ledger. |
-| Animacao 3D | `PoC integrada` | Poliedros CSS 3D D4/D6/D8/D10/D12/D20 com impulso e giro visual aleatorios, colisao nas bordas, dois dados simultaneos em vantagem/desvantagem e faces assentadas nos valores do servidor. O dado permanece onde parou; outros tipos usam fallback textual. Sem biblioteca 3D ou fisica real. |
+| Animacao 3D | `PoC integrada` | Poliedros CSS 3D D4/D6/D8/D10/D12/D20 com clique ou arremesso por ponteiro, impulso proporcional a velocidade e distancia do gesto, colisao nas bordas, dois dados simultaneos em vantagem/desvantagem e pouso continuo nos valores do servidor. O pouso planeja voltas completas e desacelera monotonicamente ate a face oficial, sem mola, aceleracao corretiva ou troca abrupta no final. Novos eventos autorizados iniciam a mesma animacao nos demais participantes via invalidacao SignalR + leitura REST; abrir o modal sem rolar nao transmite nada. Outros tipos usam fallback textual. Sem biblioteca 3D ou fisica real. |
 | Ambiguidades do livro | `Abertas` | Registro `GE-A001` a `GE-A040`. |
 
 Validacao desta entrega: build do backend e do frontend, testes direcionados de gameplay/Mesa, seis testes novos de simulacao offline e fluxos HTTP reais em uma copia temporaria do MySQL (sessao, idempotencia, permissao, visibilidade, manual, XP, simulacao offline e compatibilidade `AoVivo`). A copia foi removida; o banco local original nao recebeu migracoes nesta entrega. A suite completa ainda apresenta uma falha anterior em `WikiGraphServiceTests.GetAsync_OcultaMetadadosELigacoesDoPersonagemConformeVisibilidadeGranular`, sem alteracoes nesta area. A inspecao visual pelo Chrome conectado permanece pendente por falha de comunicacao da extensao. A animacao de dado e visual: apenas o backend determina e devolve o resultado.
@@ -2793,6 +2796,8 @@ Validacao desta entrega: build do backend e do frontend, testes direcionados de 
 | `GE-D014` | 20/09/2026 | Admin nao personifica mestre/jogador em endpoint normal | Excecoes tecnicas exigem operacao explicita e auditada | - |
 | `GE-D015` | 20/09/2026 | Identidade de linha nao usa nome ou indice visual | Reordenacao e nomes duplicados nao alteram o alvo | - |
 | `GE-D016` | 20/09/2026 | Migracao de Mesa fica bloqueada durante sessao ativa | Uma partida nunca muda de regra no meio e a proxima sessao nasce com contexto consistente | - |
+| `GE-D017` | 22/09/2026 | Animacao remota nasce apenas de evento persistido e autorizado obtido por REST apos invalidacao SignalR | Mantem a rolagem ao vivo sem transmitir resultado privado pelo hub, sem animar apenas a abertura do modal e sem repetir historico antigo | - |
+| `GE-D018` | 22/09/2026 | Pouso visual usa uma trajetoria continua com desaceleracao monotona ate o valor autoritativo | Evita a aparencia de resultado manipulado causada por aceleracao ou correcao tardia da orientacao; o gesto define impulso e duracao, mas nunca o RNG | - |
 
 Novas decisoes devem receber ID sequencial, data, justificativa, impacto e referencia a decisao substituida. Nao apagar decisoes antigas.
 

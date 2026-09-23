@@ -34,32 +34,40 @@ export const useGameplayEngine = ({
 }: UseGameplayEngineOptions) => {
   const [session, setSession] = useState<GameplaySession | null>(null);
   const [events, setEvents] = useState<GameplayEvent[]>([]);
+  const [realtimeEvents, setRealtimeEvents] = useState<GameplayEvent[]>([]);
   const [loading, setLoading] = useState(enabled);
   const [loadingMore, setLoadingMore] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const cursorRef = useRef<string | null>(null);
+  const eventIdsRef = useRef(new Set<number>());
   const sessionIdRef = useRef<number | null>(null);
   const sessionLoadSequenceRef = useRef(0);
 
   const consumePage = useCallback((page: Awaited<ReturnType<typeof listarEventosGameplay>>) => {
-    setEvents((current) => mergeEvents(current, page.itens ?? []));
+    const items = page.itens ?? [];
+    const fresh = items.filter((event) => !eventIdsRef.current.has(event.idEvento));
+    items.forEach((event) => eventIdsRef.current.add(event.idEvento));
+    setEvents((current) => mergeEvents(current, items));
     cursorRef.current = page.proximoCursor ?? cursorRef.current;
     setHasMore(Boolean(page.haMais));
+    return fresh;
   }, []);
 
   const loadNewEvents = useCallback(async (mesaId: number, sessionId: number, sequence: number) => {
     let cursor = cursorRef.current;
+    const freshEvents: GameplayEvent[] = [];
     // O feed ao vivo não pode ficar preso nas primeiras páginas de uma sessão longa.
     // O limite evita esgotar a cota de leitura em históricos excepcionalmente grandes.
     for (let pageIndex = 0; pageIndex < 10; pageIndex += 1) {
       const page = await listarEventosGameplay(mesaId, sessionId, cursor, 100);
-      if (sequence !== sessionLoadSequenceRef.current || sessionIdRef.current !== sessionId) return;
-      consumePage(page);
-      if (!page.haMais || !page.proximoCursor || page.proximoCursor === cursor) return;
+      if (sequence !== sessionLoadSequenceRef.current || sessionIdRef.current !== sessionId) return freshEvents;
+      freshEvents.push(...consumePage(page));
+      if (!page.haMais || !page.proximoCursor || page.proximoCursor === cursor) return freshEvents;
       cursor = page.proximoCursor;
     }
+    return freshEvents;
   }, [consumePage]);
 
   const loadSession = useCallback(async (resetHistory = false) => {
@@ -67,6 +75,8 @@ export const useGameplayEngine = ({
     if (!enabled || !idMesa || idMesa <= 0 || !mesaAoVivo) {
       setSession(null);
       setEvents([]);
+      setRealtimeEvents([]);
+      eventIdsRef.current.clear();
       sessionIdRef.current = null;
       cursorRef.current = null;
       setHasMore(false);
@@ -83,6 +93,8 @@ export const useGameplayEngine = ({
       sessionIdRef.current = null;
       cursorRef.current = null;
       setEvents([]);
+      setRealtimeEvents([]);
+      eventIdsRef.current.clear();
       setHasMore(false);
       return { session: null, loadedHistory: false };
     }
@@ -91,19 +103,24 @@ export const useGameplayEngine = ({
       sessionIdRef.current = currentSession.idMesaSessao;
       cursorRef.current = null;
       setEvents([]);
+      setRealtimeEvents([]);
+      eventIdsRef.current.clear();
       await loadNewEvents(idMesa, currentSession.idMesaSessao, sequence);
     }
 
     return { session: currentSession, loadedHistory: resetHistory || changedSession };
   }, [enabled, idMesa, loadNewEvents, mesaAoVivo]);
 
-  const refresh = useCallback(async (showError = true) => {
+  const refresh = useCallback(async (showError = true, announceRealtime = false) => {
     if (!enabled || !idMesa || idMesa <= 0) return;
     try {
       const { session: currentSession, loadedHistory } = await loadSession(false);
       setError(null);
       if (!currentSession || loadedHistory || currentSession.idMesaSessao !== sessionIdRef.current) return;
-      await loadNewEvents(idMesa, currentSession.idMesaSessao, sessionLoadSequenceRef.current);
+      const fresh = await loadNewEvents(idMesa, currentSession.idMesaSessao, sessionLoadSequenceRef.current);
+      if (announceRealtime && fresh.length > 0) {
+        setRealtimeEvents((current) => mergeEvents(current, fresh));
+      }
     } catch (requestError) {
       if (showError) setError(getApiErrorMessage(requestError, 'Não foi possível atualizar as ações.'));
     }
@@ -135,6 +152,7 @@ export const useGameplayEngine = ({
 
   const consumeCommand = useCallback((response: GameplayCommandResponse) => {
     if (response.evento) {
+      eventIdsRef.current.add(response.evento.idEvento);
       setEvents((current) => mergeEvents(current, [response.evento as GameplayEvent]));
     }
     setSession((current) => current ? {
@@ -251,6 +269,7 @@ export const useGameplayEngine = ({
   return {
     session,
     events,
+    realtimeEvents,
     loading,
     loadingMore,
     submitting,

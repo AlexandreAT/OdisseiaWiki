@@ -63,6 +63,8 @@ export interface GameplayEvent {
   descricao?: string | null;
   idUsuarioAtor?: number | null;
   idPersonagemJogador?: number | null;
+  autorNome?: string | null;
+  personagemNome?: string | null;
   visibilidade: GameplayVisibility;
   manual: boolean;
   resultadoSemantico?: string | null;
