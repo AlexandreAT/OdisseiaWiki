@@ -1,13 +1,16 @@
-import { useEffect, useId, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { createPortal } from 'react-dom';
+import { MdVibration } from 'react-icons/md';
 import type { GameplayRollResult } from '../../../models/Gameplay';
 import { getGameplayRollOutcome } from '../../../utils/gameplayOutcome';
 import { getDieFaces, identity, quaternionAxis, quaternionMatrix, quaternionMultiply,
   quaternionNormalize, quaternionSlerp, quaternionToFace, type Quaternion } from './dieGeometry';
 import { createNaturalLandingPlan, getNaturalLandingAngularSpeed, getNaturalLandingRotation, resolveGestureLaunch,
   type MotionVector3, type NaturalLandingPlan } from './diceMotion';
+import type { DiceShakeSample } from './diceShake';
 import { getVisualDiceResults } from './diceResult';
-import { Dice, DiceFace, DiceMesh, DiceStage, DieStatus, Overlay, ResultStrip } from './DiceRollOverlay.style';
+import { Dice, DiceFace, DiceMesh, DiceStage, DieStatus, MotionHint, Overlay, ResultStrip } from './DiceRollOverlay.style';
+import { useDiceShake } from './useDiceShake';
 
 export interface DiceRollOverlayProps {
   open: boolean;
@@ -55,10 +58,16 @@ interface DragInteraction {
 }
 
 interface ThrowCommand {
-  kind: 'random' | 'gesture';
+  kind: 'random' | 'gesture' | 'motion';
   dieIndex: number;
   vx: number;
   vy: number;
+}
+
+interface MotionImpulse {
+  vx: number;
+  vy: number;
+  intensity: number;
 }
 
 interface Flight {
@@ -90,6 +99,11 @@ const scaleVector = (vector: Vector3, amount: number): Vector3 => [
   vector[1] * amount,
   vector[2] * amount,
 ];
+const addVector = (first: Vector3, second: Vector3): Vector3 => [
+  first[0] + second[0],
+  first[1] + second[1],
+  first[2] + second[2],
+];
 const smoothStep = (amount: number) => {
   const progress = clamp(amount, 0, 1);
   return progress * progress * (3 - 2 * progress);
@@ -107,6 +121,7 @@ export const DiceRollOverlay = ({ open, result, error, onClose, title = 'Rolagem
   const onThrowRef = useRef(onThrow);
   const dragRef = useRef<DragInteraction | null>(null);
   const throwCommandRef = useRef<ThrowCommand | null>(null);
+  const motionImpulseRef = useRef<MotionImpulse | null>(null);
   const throwPhaseRef = useRef<ThrowPhase>('ready');
   const [throwPhase, setThrowPhase] = useState<ThrowPhase>('ready');
   const [settled, setSettled] = useState(false);
@@ -122,6 +137,30 @@ export const DiceRollOverlay = ({ open, result, error, onClose, title = 'Rolagem
   dieFacesRef.current = dieFaces;
   resultRef.current = result;
 
+  const handleShake = useCallback((sample: DiceShakeSample) => {
+    if (!open || !visualDie || autoThrow || error || throwPhaseRef.current === 'settled') return;
+    const speed = 1050 + sample.intensity * (MAX_THROW_SPEED - 1050);
+    const impulse: MotionImpulse = {
+      vx: sample.directionX * speed,
+      vy: sample.directionY * speed,
+      intensity: sample.intensity,
+    };
+
+    if (throwPhaseRef.current === 'ready') {
+      throwCommandRef.current = { kind: 'motion', dieIndex: 0, vx: impulse.vx, vy: impulse.vy };
+      throwPhaseRef.current = 'rolling';
+      setThrowPhase('rolling');
+      onThrowRef.current?.();
+      return;
+    }
+
+    if (throwPhaseRef.current === 'rolling') motionImpulseRef.current = impulse;
+  }, [autoThrow, error, open, visualDie]);
+  const diceShake = useDiceShake({
+    enabled: open && visualDie && !autoThrow && !error && throwPhase !== 'settled',
+    onShake: handleShake,
+  });
+
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
   useEffect(() => { onThrowRef.current = onThrow; }, [onThrow]);
 
@@ -129,6 +168,7 @@ export const DiceRollOverlay = ({ open, result, error, onClose, title = 'Rolagem
     if (!open) return undefined;
     dragRef.current = null;
     throwCommandRef.current = null;
+    motionImpulseRef.current = null;
     throwPhaseRef.current = 'ready';
     setThrowPhase('ready');
     setSettled(false);
@@ -369,6 +409,33 @@ export const DiceRollOverlay = ({ open, result, error, onClose, title = 'Rolagem
             : 2200 + rollStrength * 2300;
         });
       }
+      const motionImpulse = throwStartedAt !== null ? motionImpulseRef.current : null;
+      if (motionImpulse && throwStartedAt !== null) {
+        motionImpulseRef.current = null;
+        const elapsedRoll = now - throwStartedAt;
+        freeRollDuration = Math.min(7000, Math.max(
+          freeRollDuration,
+          elapsedRoll + 520 + motionImpulse.intensity * 480,
+        ));
+        flights.forEach((flight) => {
+          if (flight.settleStart !== null) return;
+          flight.vx = clamp(flight.vx + motionImpulse.vx * .16, -MAX_TRANSLATION_SPEED, MAX_TRANSLATION_SPEED);
+          flight.vy = clamp(flight.vy + motionImpulse.vy * .16, -MAX_TRANSLATION_SPEED, MAX_TRANSLATION_SPEED);
+          const impulseAxis = normalizeVector([
+            motionImpulse.vy,
+            -motionImpulse.vx,
+            (motionImpulse.vx - motionImpulse.vy) * .35,
+          ]);
+          flight.angularVelocity = addVector(
+            flight.angularVelocity,
+            scaleVector(impulseAxis, 7 + motionImpulse.intensity * 22),
+          );
+          flight.landingDurationTarget = Math.max(
+            flight.landingDurationTarget,
+            2300 + motionImpulse.intensity * 2200,
+          );
+        });
+      }
       flights.forEach((flight, index) => {
         if (throwStartedAt !== null && currentResult
           && now - throwStartedAt >= freeRollDuration && flight.settleStart === null) {
@@ -541,6 +608,21 @@ export const DiceRollOverlay = ({ open, result, error, onClose, title = 'Rolagem
               : <span>{visualDie && (throwPhase === 'ready' || throwPhase === 'dragging')
                 ? 'Clique para uma rolagem aleatória ou arraste para definir força e direção.'
                 : 'Aguardando o resultado do teste.'}</span>}
+          {visualDie && throwPhase === 'ready' && diceShake.status === 'listening' && (
+            <MotionHint as="span" $passive>
+              <MdVibration aria-hidden="true" />
+              Chacoalhe o celular para lançar
+            </MotionHint>
+          )}
+          {visualDie && throwPhase === 'ready' && diceShake.status === 'permission-required' && (
+            <MotionHint type="button" onClick={(event) => {
+              event.stopPropagation();
+              void diceShake.requestPermission();
+            }}>
+              <MdVibration aria-hidden="true" />
+              Ativar movimento
+            </MotionHint>
+          )}
         </div>
         {(visibleResult || error) && <small>Toque ou clique em qualquer lugar para continuar.</small>}
       </ResultStrip>

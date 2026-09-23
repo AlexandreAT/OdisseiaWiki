@@ -867,7 +867,7 @@ const PersonagemPage: React.FC = () => {
                         />
                         {perfilOculto && (
                           <InfoSpan title="Este personagem está oculto para outros usuários.">
-                            <VisibilityOffOutlinedIcon aria-hidden="true" style={{ fontSize: 15, marginRight: 4, verticalAlign: 'text-bottom' }} />
+                            <VisibilityOffOutlinedIcon aria-hidden="true" />
                             Perfil oculto
                           </InfoSpan>
                         )}

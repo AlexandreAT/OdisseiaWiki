@@ -18,6 +18,8 @@
 }
 
 :root {
+  --stable-viewport-height: 100vh;
+
   /*-----------------------------------*/
   --clearneonBlue: #4deeea;
   --neonBlue: #00b8ff;
@@ -64,16 +66,41 @@
   /*-----------------------------------*/
 }
 
+@supports (height: 100lvh) {
+  :root {
+    /* Nao varia quando a barra do navegador mobile aparece ou desaparece. */
+    --stable-viewport-height: 100lvh;
+  }
+}
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
   font-family: 'Lato', sans-serif;
-  color: var(--whitesmoke);
 }
 
 html {
   background-color: var(--black-blue);
+  color: var(--whitesmoke);
+}
+
+body,
+#root {
+  min-height: 100%;
+  color: inherit;
+}
+
+/* Icones de bibliotecas usam currentColor. Sem uma cor propria em cada SVG,
+   eles acompanham corretamente o azul/amarelo/vermelho do componente pai. */
+svg {
+  color: currentColor;
+  vertical-align: middle;
+}
+
+:where(button, a, [role='button'], label, h1, h2, h3, h4, h5, h6) svg {
+  display: inline-block;
+  flex: 0 0 auto;
 }
 
 /* Container para React Portals - Modais sempre no topo */

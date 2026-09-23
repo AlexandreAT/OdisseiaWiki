@@ -7,7 +7,10 @@ import { FallbackImage } from '../../components/Generic/FallbackImage/FallbackIm
 
 export const BackgroundVideoContainer = styled.div`
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: var(--stable-viewport-height, 100vh);
   overflow: hidden;
   background: #010815;
   pointer-events: none;
@@ -1029,8 +1032,18 @@ export const BoldLabel = styled.div<{ $color?: string }>`
 `;
 
 export const InfoSpan = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   color: var(--lightGrey);
   font-size: 13px;
+
+  svg {
+    width: 15px;
+    height: 15px;
+    flex: 0 0 auto;
+    color: currentColor;
+  }
 `
 
 export const ItemThumb = styled(FallbackImage)<{ $size?: number; $color?: string; $clearColor?: string }>`

@@ -132,7 +132,7 @@ export const CityPageContainer = styled.main<{
   position: relative;
   isolation: isolate;
   width: 100%;
-  min-height: calc(100vh - var(--main-header-height));
+  min-height: calc(100svh - var(--main-header-height));
   --city-panel-max-height: 500px;
   color: ${({ $theme }) => ($theme === 'dark' ? 'var(--whitesmoke)' : 'var(--deepgray)')};
   overflow: hidden;
@@ -140,7 +140,10 @@ export const CityPageContainer = styled.main<{
   &::before {
     content: '';
     position: fixed;
-    inset: 0;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: var(--stable-viewport-height, 100vh);
     z-index: -1;
     pointer-events: none;
     background-image: ${({ $backgroundImage }) => $backgroundImage
@@ -170,7 +173,7 @@ export const CityBanner = styled.section<{ $neon: boolean; $clickable?: boolean 
   position: relative;
   display: grid;
   place-items: center;
-  min-height: clamp(310px, 46vh, 520px);
+  min-height: clamp(310px, 46svh, 520px);
   overflow: hidden;
   border: ${({ $neon }) => $neon
     ? '2px solid transparent'

@@ -142,3 +142,32 @@ export const ResultStrip = styled.div<{ $tone: 'success' | 'failure' | 'neutral'
     > small { flex: none; text-align: left; }
   }
 `;
+
+export const MotionHint = styled.button<{ $passive?: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: fit-content;
+  margin-top: 5px;
+  padding: ${({ $passive }) => $passive ? '0' : '4px 7px'};
+  border: ${({ $passive }) => $passive ? '0' : '1px solid currentColor'};
+  border-radius: 3px;
+  color: var(--clearneonBlue);
+  background: ${({ $passive }) => $passive ? 'transparent' : 'rgba(0, 30, 48, .72)'};
+  font-size: .68rem;
+  line-height: 1.2;
+  pointer-events: ${({ $passive }) => $passive ? 'none' : 'auto'};
+
+  svg {
+    width: 15px;
+    height: 15px;
+    color: currentColor;
+  }
+
+  &:not(:disabled):hover,
+  &:not(:disabled):focus-visible {
+    color: var(--black);
+    background: var(--clearneonBlue);
+  }
+`;

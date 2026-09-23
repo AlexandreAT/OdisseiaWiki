@@ -5,7 +5,7 @@ export const WikiPageContainer = styled.div<{
   neon: 'on' | 'off';
 }>`
   position: relative;
-  min-height: 100vh;
+  min-height: 100svh;
   isolation: isolate;
   width: 100%;
   max-width: 100%;
@@ -15,7 +15,10 @@ export const WikiPageContainer = styled.div<{
   &::before {
     content: '';
     position: fixed;
-    inset: 0;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: var(--stable-viewport-height, 100vh);
     z-index: -1;
     pointer-events: none;
     background-image: var(--wiki-background-image);

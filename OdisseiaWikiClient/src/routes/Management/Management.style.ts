@@ -23,7 +23,7 @@ interface ToggleSidebarButtonProps extends Props {
 
 export const MainContainer = styled.div`
     width: 100%;
-    min-height: 100vh;
+    min-height: 100svh;
     display: flex;
     flex-direction: row;
     min-width: 0;
@@ -110,7 +110,7 @@ export const Options = styled.div<Props>`
 export const MainContent = styled.div<MainContentProps>`
     padding: 20px;
     width: 100%;
-    min-height: 100vh;
+    min-height: 100svh;
     height: 100%;
     margin-left: ${props => props.sidebarExpanded ? '150px' : '0px'};
     display: flex;
