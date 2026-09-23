@@ -10,6 +10,7 @@ import type {
 export interface GameplayActionCenterProps {
   open: boolean;
   onClose: () => void;
+  onDiceVisualOpenChange?: (open: boolean) => void;
   initialCharacterId?: number | null;
   characters: GameplayCharacterOption[];
   mesaAoVivo: boolean;

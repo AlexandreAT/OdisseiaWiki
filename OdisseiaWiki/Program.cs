@@ -24,6 +24,7 @@ using OdisseiaWiki.Middleware;
 using OdisseiaWiki.Repositories;
 using OdisseiaWiki.Repositories.Interfaces;
 using OdisseiaWiki.Security;
+using OdisseiaWiki.Serialization;
 using OdisseiaWiki.Services;
 using OdisseiaWiki.Services.Interfaces;
 using OdisseiaWiki.Services.StorageProviders;
@@ -48,6 +49,7 @@ public class Program
             .AddJsonOptions(options =>
             {
                 options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+                options.JsonSerializerOptions.Converters.Add(new UtcDateTimeJsonConverter());
             });
         builder.Services.AddProblemDetails();
 
@@ -347,14 +349,18 @@ public class Program
         ConfigureForwardedHeaders(builder);
         RegisterApplicationServices(builder.Services, builder.Configuration);
         builder.Services.AddSignalR(options =>
-        {
-            options.ClientTimeoutInterval = TimeSpan.FromSeconds(45);
-            options.HandshakeTimeout = TimeSpan.FromSeconds(15);
-            options.KeepAliveInterval = TimeSpan.FromSeconds(15);
-            options.MaximumParallelInvocationsPerClient = 1;
-            options.MaximumReceiveMessageSize = 32 * 1024;
-            options.EnableDetailedErrors = builder.Environment.IsDevelopment();
-        });
+            {
+                options.ClientTimeoutInterval = TimeSpan.FromSeconds(45);
+                options.HandshakeTimeout = TimeSpan.FromSeconds(15);
+                options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+                options.MaximumParallelInvocationsPerClient = 1;
+                options.MaximumReceiveMessageSize = 32 * 1024;
+                options.EnableDetailedErrors = builder.Environment.IsDevelopment();
+            })
+            .AddJsonProtocol(options =>
+            {
+                options.PayloadSerializerOptions.Converters.Add(new UtcDateTimeJsonConverter());
+            });
 
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();

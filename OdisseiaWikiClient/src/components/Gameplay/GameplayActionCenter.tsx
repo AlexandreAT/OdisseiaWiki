@@ -154,6 +154,7 @@ const rollValues = (response: GameplayCommandResponse | null) => (
 export const GameplayActionCenter = ({
   open,
   onClose,
+  onDiceVisualOpenChange,
   initialCharacterId,
   characters,
   mesaAoVivo,
@@ -204,11 +205,21 @@ export const GameplayActionCenter = ({
     hasDice: boolean;
     requestedFaces: number;
     requestedDiceCount: number;
-  }>({ open: false, result: null, error: null, title: '', hasDice: true, requestedFaces: 6, requestedDiceCount: 1 });
+    response: GameplayCommandResponse | null;
+    target: ResultTarget | null;
+  }>({
+    open: false, result: null, error: null, title: '', hasDice: true,
+    requestedFaces: 6, requestedDiceCount: 1, response: null, target: null,
+  });
   const attributeDialogOpenRef = useRef(false);
   const diceVisualOpenRef = useRef(false);
+  const diceThrowResolverRef = useRef<((launched: boolean) => void) | null>(null);
   attributeDialogOpenRef.current = attributeDialogOpen;
   diceVisualOpenRef.current = diceVisual.open;
+
+  useEffect(() => {
+    onDiceVisualOpenChange?.(open && diceVisual.open);
+  }, [diceVisual.open, onDiceVisualOpenChange, open]);
 
   const selectedCharacter = useMemo(
     () => characters.find((entry) => entry.personagem.idpersonagemJogador === Number(selectedCharacterId)) ?? null,
@@ -263,6 +274,8 @@ export const GameplayActionCenter = ({
 
   useEffect(() => {
     if (!open) {
+      diceThrowResolverRef.current?.(false);
+      diceThrowResolverRef.current = null;
       initializedOpenRef.current = false;
       requestedCharacterRef.current = null;
       return;
@@ -353,12 +366,36 @@ export const GameplayActionCenter = ({
     return created;
   };
 
-  const finishRequest = (fingerprint: string, response: GameplayCommandResponse, target: ResultTarget) => {
-    commandKeysRef.current.delete(fingerprint);
+  const presentRollResult = (response: GameplayCommandResponse, target: ResultTarget) => {
     setLastResult(response);
     setLastResultTarget(target);
     setSubmitError(null);
     setSubmitErrorTarget(null);
+  };
+
+  const finishRequest = (fingerprint: string, response: GameplayCommandResponse, target: ResultTarget) => {
+    commandKeysRef.current.delete(fingerprint);
+    presentRollResult(response, target);
+  };
+
+  const closeDiceVisual = () => {
+    diceVisualOpenRef.current = false;
+    diceThrowResolverRef.current?.(false);
+    diceThrowResolverRef.current = null;
+    if (diceVisual.response && diceVisual.target) {
+      presentRollResult(diceVisual.response, diceVisual.target);
+    }
+    setDiceVisual((current) => ({
+      ...current,
+      open: false,
+      response: null,
+      target: null,
+    }));
+  };
+
+  const launchDiceVisual = () => {
+    diceThrowResolverRef.current?.(true);
+    diceThrowResolverRef.current = null;
   };
 
   const submitRoll = async (
@@ -383,24 +420,42 @@ export const GameplayActionCenter = ({
       visibilidade: visibility,
     };
     const fingerprint = JSON.stringify(basePayload);
+    const requestedFaces = groups[0]?.faces ?? 6;
+    const waitsForPhysicalThrow = groups.length > 0 && [4, 6, 8, 10, 12, 20].includes(requestedFaces);
+    const launchPromise = waitsForPhysicalThrow
+      ? new Promise<boolean>((resolve) => { diceThrowResolverRef.current = resolve; })
+      : Promise.resolve(true);
     setSubmitError(null);
     setSubmitErrorTarget(null);
+    diceVisualOpenRef.current = true;
     setDiceVisual({ open: true, result: null, error: null, title,
       hasDice: groups.length > 0,
-      requestedFaces: groups[0]?.faces ?? 6,
+      requestedFaces,
       requestedDiceCount: Math.min(2, groups.reduce((total, group) => total + group.quantidade, 0) * (rollMode === 'Normal' ? 1 : 2)),
+      response: null,
+      target: null,
     });
+    const launched = await launchPromise;
+    if (!launched) return;
     try {
       const response = await onRoll({
         ...basePayload,
         chaveIdempotencia: requestKeyFor(fingerprint),
       });
-      finishRequest(fingerprint, response, target);
-      setDiceVisual((current) => ({
-        ...current,
-        result: response.rolagem,
-        error: response.rolagem ? null : 'O resultado está oculto pela visibilidade escolhida.',
-      }));
+      commandKeysRef.current.delete(fingerprint);
+      setSubmitError(null);
+      setSubmitErrorTarget(null);
+      if (!diceVisualOpenRef.current) {
+        presentRollResult(response, target);
+      } else {
+        setDiceVisual((current) => ({
+          ...current,
+          result: response.rolagem,
+          response,
+          target,
+          error: response.rolagem ? null : 'O resultado está oculto pela visibilidade escolhida.',
+        }));
+      }
     } catch (requestError) {
       const message = getApiErrorMessage(requestError, 'Não foi possível concluir a rolagem.');
       setSubmitError(message);
@@ -852,7 +907,8 @@ export const GameplayActionCenter = ({
       requestedFaces={diceVisual.requestedFaces}
       requestedDiceCount={diceVisual.requestedDiceCount}
       neon={neon === 'on'}
-      onClose={() => setDiceVisual((current) => ({ ...current, open: false }))}
+      onClose={closeDiceVisual}
+      onThrow={launchDiceVisual}
     />
   </>;
 };

@@ -10,6 +10,7 @@ import { useSelector } from 'react-redux';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AnimatedBackground } from '../../../components/Generic/AnimatedBackground/AnimatedBackground';
 import { GameplayActionCenter } from '../../../components/Gameplay';
+import { DiceRollOverlay } from '../../../components/Gameplay/DiceRollOverlay/DiceRollOverlay';
 import { LoadingIndicator } from '../../../components/Generic/LoadingIndicator';
 import { useGameplayEngine } from '../../../hooks/useGameplayEngine';
 import type { MesaPersonagemResumo } from '../../../models/Mesa';
@@ -31,6 +32,7 @@ import {
   PageHeader,
 } from '../Mesas.style';
 import { useMesaGameData } from './useMesaGameData';
+import { useRemoteGameplayRolls } from './useRemoteGameplayRolls';
 import type { MesaThemeState } from '../MesaThemeState';
 import { GameplayLiveHistory } from './GameplayLiveHistory';
 import { MesaGameActivityLayout, MesaGameActivityMain } from './GameplayLiveHistory.style';
@@ -90,12 +92,22 @@ const MesaGame = () => {
   const [updatingLiveStatus, setUpdatingLiveStatus] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [actionCharacterId, setActionCharacterId] = useState<number | null>(null);
+  const [localDiceOpen, setLocalDiceOpen] = useState(false);
   const removalTimers = useRef(new Map<number, number>());
   const currentUserId = useMemo(getCurrentUserId, []);
   const gameplay = useGameplayEngine({ idMesa, enabled: Boolean(snapshot), mesaAoVivo: Boolean(snapshot?.mesa.aoVivo) });
   const gameplayCharacters = useMemo(() => displayed
     .filter((entry) => Number(entry.idUsuarioDono ?? entry.personagem.idusuario ?? 0) === currentUserId)
     .map((entry) => ({ personagem: entry.personagem, ownerName: entry.donoNome })), [currentUserId, displayed]);
+  const { remoteRoll, dismissRemoteRoll } = useRemoteGameplayRolls({
+    currentUserId,
+    events: gameplay.realtimeEvents,
+    sessionId: gameplay.session?.idMesaSessao,
+  });
+  const remoteCharacterName = remoteRoll?.idPersonagemJogador
+    ? displayed.find((entry) => entry.personagem.idpersonagemJogador === remoteRoll.idPersonagemJogador)
+      ?.personagem.nome
+    : null;
 
   useEffect(() => {
     const requestedId = Number(searchParams.get('acoes'));
@@ -118,7 +130,11 @@ const MesaGame = () => {
     aoVivo: Boolean(snapshot?.mesa.aoVivo),
     onMesaInvalidada: () => Promise.all([
       refresh(false).catch(() => undefined),
-      gameplay.refresh(false).catch(() => undefined),
+      gameplay.refresh(false, true).catch(() => undefined),
+    ]).then(() => undefined),
+    onMesaRessincronizar: () => Promise.all([
+      refresh(false).catch(() => undefined),
+      gameplay.refresh(false, false).catch(() => undefined),
     ]).then(() => undefined),
     onAcessoRevogado: handleAccessRevoked,
   });
@@ -296,6 +312,7 @@ const MesaGame = () => {
         <GameplayActionCenter
           open={actionsOpen}
           onClose={() => setActionsOpen(false)}
+          onDiceVisualOpenChange={setLocalDiceOpen}
           initialCharacterId={actionCharacterId}
           characters={gameplayCharacters}
           session={gameplay.session}
@@ -313,6 +330,21 @@ const MesaGame = () => {
           onLoadMore={gameplay.loadMore}
           onRefresh={gameplay.refresh}
         />
+        {remoteRoll && (
+          <DiceRollOverlay
+            key={remoteRoll.idEvento}
+            open={!localDiceOpen}
+            autoThrow
+            result={remoteRoll.rolagem ?? null}
+            title={`${remoteCharacterName || remoteRoll.personagemNome || remoteRoll.autorNome || 'Jogador'} · ${remoteRoll.titulo || 'Rolagem na Mesa'}`}
+            hasDice={Boolean(remoteRoll.rolagem?.grupos.length)}
+            requestedFaces={remoteRoll.rolagem?.grupos[0]?.faces ?? 6}
+            requestedDiceCount={Math.min(2, remoteRoll.rolagem?.grupos
+              .reduce((total, group) => total + group.valores.length, 0) ?? 1)}
+            neon={isNeonActive}
+            onClose={dismissRemoteRoll}
+          />
+        )}
       </MesaPage>
     </>
   );

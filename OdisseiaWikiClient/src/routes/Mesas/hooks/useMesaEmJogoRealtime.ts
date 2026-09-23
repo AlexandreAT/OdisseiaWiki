@@ -30,6 +30,7 @@ interface UseMesaEmJogoRealtimeOptions {
   enabled?: boolean;
   aoVivo?: boolean;
   onMesaInvalidada?: () => void | Promise<void>;
+  onMesaRessincronizar?: () => void | Promise<void>;
   onAcessoRevogado?: () => void | Promise<void>;
 }
 
@@ -63,16 +64,22 @@ export const useMesaEmJogoRealtime = ({
   enabled = true,
   aoVivo = false,
   onMesaInvalidada,
+  onMesaRessincronizar,
   onAcessoRevogado,
 }: UseMesaEmJogoRealtimeOptions): UseMesaEmJogoRealtimeResult => {
   const [status, setStatus] = useState<MesaRealtimeStatus>('disconnected');
   const [presence, setPresence] = useState<MesaPresencaAtualizada | null>(null);
   const invalidationCallback = useRef(onMesaInvalidada);
+  const resyncCallback = useRef(onMesaRessincronizar);
   const revokedCallback = useRef(onAcessoRevogado);
 
   useEffect(() => {
     invalidationCallback.current = onMesaInvalidada;
   }, [onMesaInvalidada]);
+
+  useEffect(() => {
+    resyncCallback.current = onMesaRessincronizar;
+  }, [onMesaRessincronizar]);
 
   useEffect(() => {
     revokedCallback.current = onAcessoRevogado;
@@ -159,7 +166,7 @@ export const useMesaEmJogoRealtime = ({
           } catch {
             // A mesa pode ter sido encerrada entre o snapshot REST e o hub.
             // Mantemos a observação para receber a atualização que corrige o estado.
-            await invalidationCallback.current?.();
+            await (resyncCallback.current ?? invalidationCallback.current)?.();
           }
         }
         setStatus('connected');
@@ -197,7 +204,7 @@ export const useMesaEmJogoRealtime = ({
           await enterMesa();
         }
         setStatus('connected');
-        await invalidationCallback.current?.();
+        await (resyncCallback.current ?? invalidationCallback.current)?.();
       } catch {
         setStatus('disconnected');
         await connection.stop();
