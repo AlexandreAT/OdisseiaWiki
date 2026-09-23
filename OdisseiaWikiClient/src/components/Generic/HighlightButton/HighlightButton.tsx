@@ -49,7 +49,7 @@ const CyberButtonComponent = ({
       borderColor={borderColor}
       width={width}
       height={height}
-      style={{ opacity: isDisabledState ? 0.5 : 1, pointerEvents: isDisabledState ? 'none' : 'auto' }}
+      $disabled={isDisabledState}
     >
       <ButtonBoxShadow theme={theme} neon={neon} colorType={colorType} width={width} height={height} />
       <ButtonClipBorder theme={theme} neon={neon} colorType={colorType} width={width} height={height} />
@@ -64,6 +64,7 @@ const CyberButtonComponent = ({
         onClick={onClick}
         type={type}
         disabled={isDisabledState}
+        aria-busy={loading || hasActiveApiRequest}
         {...rest}
       >
         {loading || hasActiveApiRequest ? (

@@ -39,7 +39,7 @@ export const WikiPageHeaderSection = styled.section<{
 
   @media (max-width: 768px) {
     height: auto;
-    min-height: clamp(360px, 65vh, 620px);
+    min-height: clamp(360px, 65svh, 620px);
   }
 `;
 

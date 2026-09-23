@@ -17,7 +17,7 @@ export const ItemPageRoot = styled.main`
   position: relative;
   isolation: isolate;
   width: 100%;
-  min-height: calc(100vh - var(--main-header-height));
+  min-height: calc(100svh - var(--main-header-height));
   overflow: hidden;
   color: var(--whitesmoke);
   background: rgba(0, 0, 16, 0.35);

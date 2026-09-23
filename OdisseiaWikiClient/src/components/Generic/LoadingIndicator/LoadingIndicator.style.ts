@@ -36,7 +36,7 @@ export const LoadingWrapper = styled.span<{ $compact: boolean }>`
   max-width: 100%;
   min-width: 0;
   white-space: nowrap;
-  color: var(--clearneonBlue) !important;
+  color: ${({ $compact }) => $compact ? 'inherit' : 'var(--clearneonBlue)'} !important;
 
   @media (max-width: 768px) {
     gap: ${({ $compact }) => ($compact ? '0' : '10px')};
@@ -92,8 +92,8 @@ export const LoadingLabel = styled.span`
   flex: 1 1 auto;
   min-width: 3.5em;
   overflow: hidden;
-  color: var(--clearneonBlue) !important;
-  -webkit-text-fill-color: var(--clearneonBlue) !important;
+  color: inherit !important;
+  -webkit-text-fill-color: currentColor !important;
   opacity: 1;
   visibility: visible;
   text-overflow: ellipsis;

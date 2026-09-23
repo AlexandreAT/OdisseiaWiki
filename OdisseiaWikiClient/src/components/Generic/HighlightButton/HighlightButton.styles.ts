@@ -9,6 +9,7 @@ interface Props {
   width?: string;
   height?: string;
   colorType?: 'primary' | 'secondary';
+  $disabled?: boolean;
 }
 
 interface ColorConfig {
@@ -51,6 +52,9 @@ export const ButtonClipController = styled.div<Props>`
   justify-content: center;
   overflow: visible;
   cursor: default;
+  opacity: ${({ $disabled }) => $disabled ? 0.58 : 1};
+  pointer-events: ${({ $disabled }) => $disabled ? 'none' : 'auto'};
+  transition: opacity 180ms ease;
 `;
 
 export const ButtonBoxShadow = styled.div<Props>`
@@ -109,6 +113,11 @@ export const ButtonContentContainer = styled.button<Props>`
   overflow: hidden;
   cursor: pointer;
 
+  svg {
+    color: currentColor;
+    vertical-align: middle;
+  }
+
   &::before {
     content: '';
     position: absolute;
@@ -133,8 +142,12 @@ export const ButtonContentContainer = styled.button<Props>`
     transition: all 0.5s ease;
   }
 
-  &:hover {
+  &:not(:disabled):hover {
     color: var(--black);
     background: ${({ colorType = 'primary' }) => colorConfigs[colorType].hover};
+  }
+
+  &:disabled {
+    cursor: wait;
   }
 `;

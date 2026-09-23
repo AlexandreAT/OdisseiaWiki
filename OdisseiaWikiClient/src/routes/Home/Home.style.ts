@@ -13,7 +13,10 @@ const Main = styled.div<{ $backgroundImage: string }>`
     &::after {
         content: '';
         position: fixed;
-        inset: 0;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: var(--stable-viewport-height, 100vh);
         pointer-events: none;
     }
 

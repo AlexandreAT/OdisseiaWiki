@@ -25,9 +25,10 @@ export const Background = styled.div`
     background-position: center;
     z-index: -2;
     position: fixed;
-    inset: 0;
+    top: 0;
+    left: 0;
     width: 100vw;
-    height: 100dvh;
+    height: var(--stable-viewport-height, 100vh);
 `
 
 export const ContainerController = styled.div`

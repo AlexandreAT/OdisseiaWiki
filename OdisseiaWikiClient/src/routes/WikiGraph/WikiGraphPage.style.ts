@@ -18,7 +18,10 @@ export const GraphPageRoot = styled.main`
 
 export const GraphBackground = styled.div`
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: var(--stable-viewport-height, 100vh);
   z-index: -2;
   overflow: hidden;
   background: #010815;

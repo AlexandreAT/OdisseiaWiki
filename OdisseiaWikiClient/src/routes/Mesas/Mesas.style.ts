@@ -410,7 +410,10 @@ export const CardFooter = styled.div`
 
 export const MesaPublicBackdrop = styled.div<{ $backgroundImage?: string }>`
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: var(--stable-viewport-height, 100vh);
   z-index: 0;
   overflow: hidden;
   pointer-events: none;

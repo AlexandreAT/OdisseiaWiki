@@ -12,6 +12,7 @@ const Page = styled.div<Props>`
     display: flex;
     flex-direction: column;
     min-height: 100dvh;
+    color: ${({ theme }) => theme === 'dark' ? 'var(--whitesmoke)' : 'var(--deepgray)'};
 
     @media (max-width: 1100px) {
         --main-header-height: 67px;
@@ -29,21 +30,10 @@ const Page = styled.div<Props>`
         cursor: pointer;
     }
 
-    ${props => props.theme === 'dark' && `
-        p, h1, h2, h3, h4, h5, span, .link, .icon {
-            color: var(--whitesmoke);
-            fill: var(--whitesmoke);
-            transition: color 0.3s ease-in-out, fill 0.3s ease-in-out;
-        }
-    `}
-
-    ${props => props.theme === 'light' && `
-        p, h1, h2, h3, h4, h5, span, .link, .icon {
-            color: var(--deepgray);
-            fill: var(--deepgray);
-            transition: color 0.3s ease-in-out, fill 0.3s ease-in-out;
-        }
-    `}
+    .link {
+        color: inherit;
+        transition: color 0.3s ease-in-out;
+    }
 
 `;
 
