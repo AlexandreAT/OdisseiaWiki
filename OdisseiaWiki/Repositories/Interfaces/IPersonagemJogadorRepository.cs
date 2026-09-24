@@ -13,6 +13,10 @@ namespace OdisseiaWiki.Repositories.Interfaces
         Task<Dictionary<int, List<Proficiencia>>> GetProficienciasByPersonagemIdsAsync(IEnumerable<int> personagemIds);
         Task<PersonagemJogador> CreateAsync(PersonagemJogador personagem);
         Task<PersonagemJogador> UpdateAsync(PersonagemJogador personagem);
+        Task<PersonagemJogador> UpdateWithRuntimeAuditAsync(
+            PersonagemJogador personagem,
+            long revisaoEsperada,
+            PersonagemRuntimeWriteAudit audit);
         Task<bool> DeleteAsync(int id);
         Task<int> DeleteManyAsync(IEnumerable<int> ids);
         Task<int?> GetTableIdAsync(int id);

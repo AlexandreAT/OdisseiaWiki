@@ -18,6 +18,8 @@ public sealed class GameplayEngineService : IGameplayEngineService
     private const int MaxDiceGroups = 8;
     private const int MaxDicePerCommand = 100;
     private const int MaxManualAbsoluteValue = 1_000_000;
+    private const int HistoryScanBatchSize = 101;
+    private const int MaxHistoryRowsPerRequest = 2_000;
 
     private static readonly HashSet<string> ManualCategories = new(StringComparer.Ordinal)
     {
@@ -436,6 +438,8 @@ public sealed class GameplayEngineService : IGameplayEngineService
                         request.IdPersonagemJogador,
                         request.ChaveIdempotencia,
                         hash,
+                        request.RevisaoSessaoEsperada,
+                        request.RevisaoPersonagemEsperada,
                         token);
                 if (!contextResult.Sucesso || contextResult.Dados is null)
                     return ConvertFailure<GameplayCommandContext, GameplayCommandResponseDto>(contextResult);
@@ -464,7 +468,8 @@ public sealed class GameplayEngineService : IGameplayEngineService
                     "REGISTRO_MANUAL",
                     null,
                     null,
-                    now);
+                    now,
+                    request.RevisaoPersonagemEsperada);
                 _repository.AddCommand(command);
                 await _repository.SaveChangesAsync(token);
 
@@ -557,16 +562,55 @@ public sealed class GameplayEngineService : IGameplayEngineService
             return NotFound<GameplayEventPageDto>("SESSAO_NAO_ENCONTRADA", "Sessão não encontrada.");
 
         bool isMaster = mesa.IdusuarioCriacao == idUsuario;
-        List<MesaEvento> visible = await _repository.GetVisibleEventsAsync(
-            idMesaSessao,
-            idUsuario,
-            isMaster,
-            afterSequence,
-            limit + 1,
-            cancellationToken);
-        bool hasMore = visible.Count > limit;
-        List<MesaEvento> page = visible.Take(limit).ToList();
-        long examinedUntil = page.Count == 0 ? afterSequence : page[^1].Sequencia;
+        var page = new List<MesaEvento>(limit);
+        long examinedUntil = afterSequence;
+        int scanned = 0;
+        bool hasMore = false;
+
+        // A cursor represents the last ledger row inspected, not the last row
+        // revealed. Otherwise a page containing only private events from other
+        // players is fetched forever by every non-authorized client.
+        while (page.Count < limit && scanned < MaxHistoryRowsPerRequest)
+        {
+            int take = Math.Min(HistoryScanBatchSize, MaxHistoryRowsPerRequest - scanned);
+            List<MesaEvento> batch = await _repository.GetEventsAfterSequenceAsync(
+                idMesaSessao,
+                examinedUntil,
+                take,
+                cancellationToken);
+            if (batch.Count == 0)
+                break;
+
+            for (int index = 0; index < batch.Count; index++)
+            {
+                MesaEvento item = batch[index];
+                examinedUntil = item.Sequencia;
+                scanned++;
+                if (CanReadEvent(item, idUsuario, isMaster))
+                    page.Add(item);
+
+                if (page.Count == limit)
+                {
+                    // If the page ended at the final row of a short batch, the
+                    // ledger is exhausted. Do not make the client request one
+                    // artificial empty page.
+                    hasMore = index < batch.Count - 1 || batch.Count == take;
+                    break;
+                }
+            }
+
+            // A full batch may have more rows. A partially consumed batch also
+            // has at least one remaining row for the next request.
+            if (page.Count == limit)
+                break;
+
+            if (batch.Count < take)
+                break;
+        }
+
+        if (scanned >= MaxHistoryRowsPerRequest)
+            hasMore = true;
+
         return GameplayOperationResult<GameplayEventPageDto>.Ok(new GameplayEventPageDto
         {
             Itens = page.Select(item => MapEvent(item, idUsuario, isMaster)).ToList(),
@@ -710,6 +754,9 @@ public sealed class GameplayEngineService : IGameplayEngineService
             grupos = request.Grupos.Select(group => new { group.Quantidade, group.Faces }).ToArray(),
             request.Modo,
             request.Visibilidade,
+            request.RevisaoSessaoEsperada,
+            request.RevisaoPersonagemEsperada,
+            request.ReferenciaAcao,
         };
         string hash = HashPayload(normalizedHashPayload);
         GameplayOperationResult<GameplayCommandResponseDto> result;
@@ -725,6 +772,8 @@ public sealed class GameplayEngineService : IGameplayEngineService
                         request.IdPersonagemJogador,
                         request.ChaveIdempotencia,
                         hash,
+                        request.RevisaoSessaoEsperada,
+                        request.RevisaoPersonagemEsperada,
                         token);
                 if (!contextResult.Sucesso || contextResult.Dados is null)
                     return ConvertFailure<GameplayCommandContext, GameplayCommandResponseDto>(contextResult);
@@ -754,8 +803,9 @@ public sealed class GameplayEngineService : IGameplayEngineService
                     hash,
                     "ROLAGEM_REALIZAR",
                     null,
-                    null,
-                    now);
+                    request.RevisaoSessaoEsperada,
+                    now,
+                    request.RevisaoPersonagemEsperada);
                 _repository.AddCommand(command);
                 await _repository.SaveChangesAsync(token);
 
@@ -829,6 +879,8 @@ public sealed class GameplayEngineService : IGameplayEngineService
         int? idCharacter,
         Guid idempotencyKey,
         string hash,
+        long? expectedSessionRevision,
+        long? expectedCharacterRevision,
         CancellationToken cancellationToken)
     {
         Mesa? mesa = await _repository.LockMesaAsync(idMesa, cancellationToken);
@@ -861,6 +913,12 @@ public sealed class GameplayEngineService : IGameplayEngineService
         MesaSessao? session = await _repository.LockSessionAsync(idMesaSessao, cancellationToken);
         if (session is null || session.IdMesa != idMesa || session.Status != MesaSessaoStatus.Ativa)
             return Conflict<GameplayCommandContext>("SESSAO_NAO_ATIVA", "Esta sessão não está mais ativa.");
+        if (expectedSessionRevision.HasValue && expectedSessionRevision.Value != session.RevisaoEstado)
+        {
+            return Conflict<GameplayCommandContext>(
+                "REVISAO_SESSAO_DESATUALIZADA",
+                "A sessao mudou. Recarregue antes de continuar.");
+        }
         SistemaVersao? version = await _repository.GetSystemVersionAsync(session.IdSistemaVersao, cancellationToken);
         if (version is null)
             return Conflict<GameplayCommandContext>("VERSAO_NAO_ENCONTRADA", "A versão da sessão não está disponível.");
@@ -873,6 +931,14 @@ public sealed class GameplayEngineService : IGameplayEngineService
                 return NotFound<GameplayCommandContext>("PERSONAGEM_NAO_ENCONTRADO", "Personagem não encontrado nesta Mesa.");
             if (character.Idusuario != idUsuario)
                 return Forbidden<GameplayCommandContext>("PERSONAGEM_SEM_CONTROLE", "Você não controla este personagem.");
+        }
+
+        if (character is not null && expectedCharacterRevision.HasValue &&
+            expectedCharacterRevision.Value != character.RevisaoRuntime)
+        {
+            return Conflict<GameplayCommandContext>(
+                "REVISAO_PERSONAGEM_DESATUALIZADA",
+                "A ficha mudou. Recarregue antes de continuar.");
         }
 
         return GameplayOperationResult<GameplayCommandContext>.Ok(new GameplayCommandContext(
@@ -891,6 +957,12 @@ public sealed class GameplayEngineService : IGameplayEngineService
     {
         if (!Enum.IsDefined(request.Modo) || !Enum.IsDefined(request.Visibilidade) || request.Grupos is null)
             return Validation<GameplayRollResultDto>("OPCAO_INVALIDA", "A opção de rolagem é inválida.");
+        if (HasActionReference(request.ReferenciaAcao))
+        {
+            return RuleFailure<GameplayRollResultDto>(
+                "ORIGEM_ACAO_NAO_SUPORTADA",
+                "Esta acao ainda nao possui uma regra autoritativa para arma, item ou poder.");
+        }
         string action = NormalizeCode(request.CodigoAcao);
         bool isOdisseia = string.Equals(
             version.SistemaRpg?.Codigo,
@@ -912,13 +984,44 @@ public sealed class GameplayEngineService : IGameplayEngineService
                 0));
             if (isOdisseia && groups.Count == 1 && groups[0] == new GameplayDiceGroupSpec(1, 6))
             {
-                return GameplayOperationResult<GameplayRollResultDto>.Ok(WithOutcome(
+                GameplayRollResultDto resolved = WithOutcome(
                     raw,
                     raw.Total >= 4 ? "SUCESSO" : "FALHA",
                     raw.Total >= 4 ? "Sucesso" : "Falha",
-                    null));
+                    null);
+                return GameplayOperationResult<GameplayRollResultDto>.Ok(WithRollContract(
+                    resolved,
+                    request.Modo,
+                    new GameplayDifficultyDto
+                    {
+                        Codigo = "TESTE_GENERICO_D6",
+                        Nome = "Teste generico D6",
+                        Alvo = 4,
+                        Comparador = ">=",
+                    },
+                    OutcomeRanges(4),
+                    new GameplayActionSnapshotDto
+                    {
+                        Tipo = "ROLAGEM_GENERICA",
+                        IdSistemaVersao = version.IdSistemaVersao,
+                        Codigo = action,
+                        Nome = "Teste generico",
+                    },
+                    FallbackNotice("A regra estruturada desta acao ainda usa a tabela padrao do Odisseia.")));
             }
-            return GameplayOperationResult<GameplayRollResultDto>.Ok(raw);
+            return GameplayOperationResult<GameplayRollResultDto>.Ok(WithRollContract(
+                raw,
+                request.Modo,
+                null,
+                Array.Empty<GameplayResultRangeDto>(),
+                new GameplayActionSnapshotDto
+                {
+                    Tipo = "ROLAGEM_GENERICA",
+                    IdSistemaVersao = version.IdSistemaVersao,
+                    Codigo = action,
+                    Nome = "Rolagem generica",
+                },
+                FallbackNotice("Nenhuma dificuldade foi configurada para esta rolagem generica.")));
         }
 
         if (!isOdisseia)
@@ -960,11 +1063,24 @@ public sealed class GameplayEngineService : IGameplayEngineService
                     Valor = attributeValue,
                     Origem = "PERSONAGEM",
                 }));
-            return GameplayOperationResult<GameplayRollResultDto>.Ok(WithOutcome(
+            GameplayRollResultDto resolved = WithOutcome(
                 raw,
                 raw.Total > 6 ? "SUCESSO" : "FALHA",
                 raw.Total > 6 ? "Sucesso" : "Falha",
-                null));
+                null);
+            return GameplayOperationResult<GameplayRollResultDto>.Ok(WithRollContract(
+                resolved,
+                request.Modo,
+                new GameplayDifficultyDto
+                {
+                    Codigo = "TESTE_ATRIBUTO",
+                    Nome = "Teste de atributo",
+                    Alvo = 7,
+                    Comparador = ">",
+                },
+                OutcomeRanges(7),
+                AttributeSnapshot(character, version, attributeCode, attributeValue),
+                FallbackNotice("A dificuldade deste teste usa a regra padrao do Odisseia.")));
         }
 
         return EvaluateExperienceRoll(action, version);
@@ -1034,11 +1150,40 @@ public sealed class GameplayEngineService : IGameplayEngineService
             "XP_MINIBOSS" or "XP_CONTRATO" or "XP_MISSAO_SECUNDARIA" => raw.Subtotal % 2 == 0 ? 2 : 1,
             _ => raw.Subtotal,
         };
-        return GameplayOperationResult<GameplayRollResultDto>.Ok(WithOutcome(
+        GameplayRollResultDto resolved = WithOutcome(
             raw,
             "XP_CALCULADO",
             "XP calculado",
-            xp));
+            xp);
+        return GameplayOperationResult<GameplayRollResultDto>.Ok(WithRollContract(
+            resolved,
+            plan.Mode,
+            null,
+            new[]
+            {
+                new GameplayResultRangeDto
+                {
+                    Codigo = "XP",
+                    Nome = "XP calculado",
+                    Minimo = source.ValorMinimo,
+                    Maximo = source.ValorMaximo,
+                },
+            },
+            new GameplayActionSnapshotDto
+            {
+                Tipo = "FONTE_XP",
+                IdSistemaVersao = version.IdSistemaVersao,
+                IdInstancia = source.IdSistemaFonteExperiencia.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                Codigo = source.Codigo,
+                Nome = source.Nome,
+                Valores = new Dictionary<string, string>
+                {
+                    ["valorMinimo"] = source.ValorMinimo?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty,
+                    ["valorMaximo"] = source.ValorMaximo?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty,
+                    ["usaVantagem"] = source.UsaVantagem.ToString(),
+                },
+            },
+            FallbackNotice("A fonte de XP foi resolvida pela tabela publicada da versao da Mesa.")));
     }
 
     private static GameplayOperationResult<IReadOnlyList<GameplayDiceGroupSpec>> ValidateGenericGroups(
@@ -1203,7 +1348,8 @@ public sealed class GameplayEngineService : IGameplayEngineService
         string type,
         long? expectedMesaRevision,
         long? expectedSessionRevision,
-        DateTime now) => new()
+        DateTime now,
+        long? expectedCharacterRevision = null) => new()
     {
         IdMesa = idMesa,
         IdMesaSessao = idSession,
@@ -1214,6 +1360,7 @@ public sealed class GameplayEngineService : IGameplayEngineService
         Tipo = type,
         RevisaoMesaEsperada = expectedMesaRevision,
         RevisaoSessaoEsperada = expectedSessionRevision,
+        RevisaoPersonagemEsperada = expectedCharacterRevision,
         Status = MesaComandoStatus.Concluido,
         RespostaJson = "{}",
         CriadoEmUtc = now,
@@ -1318,7 +1465,8 @@ public sealed class GameplayEngineService : IGameplayEngineService
         }
 
         JsonElement? data = ParseJson(source.DadosJson);
-        GameplayRollResultDto? roll = source.Rolagem is null ? null : MapRoll(source.Rolagem);
+        GameplayRollResultDto? roll = ReadRollFromEvent(data) ??
+            (source.Rolagem is null ? null : MapRoll(source.Rolagem));
         string? title = ReadString(data, "titulo");
         string? description = ReadString(data, "descricao");
         string? semantic = ReadString(data, "resultadoSemantico") ?? roll?.NomeResultado;
@@ -1362,6 +1510,20 @@ public sealed class GameplayEngineService : IGameplayEngineService
         Manual = roll.Manual,
     };
 
+    private static bool CanReadEvent(MesaEvento source, int idUser, bool isMaster)
+    {
+        bool canReadByVisibility = source.Visibilidade == GameplayEventVisibility.PublicaMesa ||
+            isMaster ||
+            source.IdUsuarioAtor == idUser;
+        if (!canReadByVisibility)
+            return false;
+
+        return !source.IdPersonagemJogador.HasValue ||
+            isMaster ||
+            source.IdUsuarioAtor == idUser ||
+            source.PersonagemJogador?.Visivel == true;
+    }
+
     private static GameplayRollResultDto MapRoll(MesaRolagem source) => new()
     {
         Expressao = source.Expressao,
@@ -1377,6 +1539,24 @@ public sealed class GameplayEngineService : IGameplayEngineService
         ValorAssociado = source.ValorAssociado,
         Manual = source.Manual,
     };
+
+    private static GameplayRollResultDto? ReadRollFromEvent(JsonElement? data)
+    {
+        if (!data.HasValue || data.Value.ValueKind != JsonValueKind.Object ||
+            !data.Value.TryGetProperty("rolagem", out JsonElement roll))
+        {
+            return null;
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<GameplayRollResultDto>(roll.GetRawText(), JsonOptions);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
 
     private static GameplayRollResultDto BuildManualRoll(GameplayManualNormalized source)
     {
@@ -1395,6 +1575,22 @@ public sealed class GameplayEngineService : IGameplayEngineService
             NomeResultado = source.SemanticResult,
             ValorAssociado = source.AssociatedValue,
             Manual = true,
+            Modo = GameplayRollMode.Normal,
+            OrigemAcao = new GameplayActionSnapshotDto
+            {
+                Tipo = "REGISTRO_MANUAL",
+                Codigo = source.Categoria,
+                Nome = source.Label,
+            },
+            Avisos = new[]
+            {
+                new GameplayExecutionNoticeDto
+                {
+                    Codigo = "VALOR_MANUAL",
+                    Mensagem = "Valor informado manualmente; nenhuma regra foi executada.",
+                    Fallback = false,
+                },
+            },
         };
     }
 
@@ -1415,6 +1611,85 @@ public sealed class GameplayEngineService : IGameplayEngineService
         NomeResultado = resultName,
         ValorAssociado = associatedValue,
         Manual = source.Manual,
+    };
+
+    private static GameplayRollResultDto WithRollContract(
+        GameplayRollResultDto source,
+        GameplayRollMode mode,
+        GameplayDifficultyDto? difficulty,
+        IReadOnlyList<GameplayResultRangeDto> ranges,
+        GameplayActionSnapshotDto origin,
+        IReadOnlyList<GameplayExecutionNoticeDto> notices) => new()
+    {
+        Expressao = source.Expressao,
+        Grupos = source.Grupos,
+        Modificadores = source.Modificadores,
+        ValorNatural = source.ValorNatural,
+        Modificador = source.Modificador,
+        Subtotal = source.Subtotal,
+        Total = source.Total,
+        CodigoResultado = source.CodigoResultado,
+        NomeResultado = source.NomeResultado,
+        ValorAssociado = source.ValorAssociado,
+        Manual = source.Manual,
+        Modo = mode,
+        Dificuldade = difficulty,
+        FaixasResultado = ranges,
+        // Nenhuma regra atual publicada do Odisseia marca automaticamente
+        // critical outcomes for these tests. Null states that no critical rule
+        // was evaluated, rather than inventing one from the natural die.
+        CriticoNatural = null,
+        FalhaCriticaNatural = null,
+        OrigemAcao = origin,
+        Avisos = notices,
+    };
+
+    private static IReadOnlyList<GameplayResultRangeDto> OutcomeRanges(int successMinimum) => new[]
+    {
+        new GameplayResultRangeDto
+        {
+            Codigo = "FALHA",
+            Nome = "Falha",
+            Maximo = successMinimum - 1,
+            Critico = null,
+            FalhaCritica = null,
+        },
+        new GameplayResultRangeDto
+        {
+            Codigo = "SUCESSO",
+            Nome = "Sucesso",
+            Minimo = successMinimum,
+            Critico = null,
+            FalhaCritica = null,
+        },
+    };
+
+    private static GameplayActionSnapshotDto AttributeSnapshot(
+        PersonagemJogador character,
+        SistemaVersao version,
+        string attributeCode,
+        int attributeValue) => new()
+    {
+        Tipo = "ATRIBUTO",
+        IdPersonagemJogador = character.IdpersonagemJogador,
+        RevisaoPersonagem = character.RevisaoRuntime,
+        IdSistemaVersao = version.IdSistemaVersao,
+        Codigo = attributeCode,
+        Nome = attributeCode,
+        Valores = new Dictionary<string, string>
+        {
+            ["valor"] = attributeValue.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        },
+    };
+
+    private static IReadOnlyList<GameplayExecutionNoticeDto> FallbackNotice(string message) => new[]
+    {
+        new GameplayExecutionNoticeDto
+        {
+            Codigo = "REGRA_FALLBACK_ODISSEIA",
+            Mensagem = message,
+            Fallback = true,
+        },
     };
 
     private static bool TryGetAttributeValue(
@@ -1548,6 +1823,12 @@ public sealed class GameplayEngineService : IGameplayEngineService
         string? value = source?.Trim();
         return string.IsNullOrWhiteSpace(value) ? null : value;
     }
+
+    private static bool HasActionReference(GameplayActionReferenceDto? source) => source is not null &&
+        (!string.IsNullOrWhiteSpace(source.Tipo) ||
+         !string.IsNullOrWhiteSpace(source.IdInstancia) ||
+         source.IdItemSistema.HasValue ||
+         source.IdPoderSistema.HasValue);
 
     private static GameplayOperationResult<T> Validation<T>(string code, string message)
         => GameplayOperationResult<T>.Falha(GameplayOperationError.Validacao, code, message);

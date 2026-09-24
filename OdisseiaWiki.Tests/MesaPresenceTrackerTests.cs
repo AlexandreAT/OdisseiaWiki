@@ -53,6 +53,20 @@ public sealed class MesaPresenceTrackerTests
     }
 
     [Fact]
+    public void Reconexao_DoMesmoUsuarioRestauraPresencaSemDuplicarUsuario()
+    {
+        MesaPresenceTracker tracker = new();
+        tracker.Register(10, 7, "connection-old");
+        tracker.RemoveConnection("connection-old");
+
+        MesaPresenceRegistration reconnected = tracker.Register(10, 7, "connection-new");
+
+        Assert.True(reconnected.Changes.Single().UsuariosOnlineAlterados);
+        Assert.Equal(new[] { 7 }, tracker.GetSnapshot(10).IdsUsuariosOnline);
+        Assert.Equal("connection-new", tracker.GetConnection("connection-new")?.IdConexao);
+    }
+
+    [Fact]
     public void RemoveUser_RevogaTodasAsConexoesESomenteDaMesaInformada()
     {
         MesaPresenceTracker tracker = new();

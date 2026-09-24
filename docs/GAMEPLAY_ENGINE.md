@@ -143,26 +143,24 @@ Ao final das fases previstas, um participante autorizado deve conseguir:
 | Atualizacao rapida de recursos | `Implementado parcialmente` | Patch de recursos regrava o JSON de status com validacao de limites. |
 | Realtime | `Implementado parcialmente` | SignalR notifica invalidacao e presenca; cliente refaz a leitura autorizada. |
 | Catalogos de dados e resultados | `Implementado parcialmente` | `SistemaResultadoDado` descreve dado, quantidade, faixas, natural, resultado e efeito JSON. |
-| Engine de execucao | `Nao implementado` | Nao ha sessao persistente, comando, RNG autoritativo, evento ou aplicacao transacional. |
+| Sessao, comando e ledger | `Implementado` | `MesaSessao`, `MesaComando`, `MesaEvento` e `MesaRolagem` mantem inicio/fim, idempotencia, sequencia e imutabilidade. |
+| Rolagem autoritativa | `Implementado parcialmente` | RNG do servidor para teste generico, atributo e fontes de XP; simulacao offline nao persiste. |
+| Contrato de rolagem auditavel | `Implementado parcialmente` | Resultado registra dados, modo, dificuldade/faixas quando existentes, snapshot de origem, revisoes e avisos/fallbacks. Acoes de arma/item/poder ainda aguardam regras estruturadas. |
+| Escritas runtime da ficha | `Implementado parcialmente` | Vida, mana, estamina, XP, defesas e inventario passam por `RevisaoRuntime`; em sessao ativa a escrita gera comando e evento na mesma transacao. Ainda faltam comandos tipados para custo, dano, condicao e equipamentos. |
 
 ## 4.2. O que ainda nao existe
 
-Ainda nao existem no dominio:
+Ainda nao existem no dominio, ou nao estao completos:
 
-- sessao persistente com inicio, fim e revisao;
 - encontro ou combate persistente;
 - participante de combate independente da entidade Wiki;
 - ordem real de iniciativa, turno e rodada;
-- catalogo executavel de acoes permitidas;
-- comandos idempotentes;
-- historico imutavel de eventos e rolagens;
-- RNG autoritativo para gameplay;
-- autorizacao granular para cada comando;
-- revisao ou token de concorrencia para o estado da ficha;
-- aplicacao atomica de custo, dano, defesa e condicao;
+- catalogo versionado e executavel de acoes de arma, item, skill, magia e condicao;
+- aplicacao atomica de custo, dano, defesa, inventario e condicao por comandos tipados;
 - cooldown e duracao executados pela engine;
 - projecoes de estatistica;
-- componente compartilhado de rolagem e animacao 3D.
+- regras autoritativas de modificadores de arma e acessorio;
+- execucao continua, em ambiente MariaDB, da suite de integracao que cobre concorrencia, reconexao e dois usuarios da mesma Mesa.
 
 ## 4.3. Correcoes preparatorias obrigatorias
 
@@ -175,7 +173,7 @@ Antes de automatizar efeitos, a Fase 0 deve tratar estes pontos verificados no c
 5. O tipo frontend `DadoAcerto` aceita apenas `D6`, `D8` e `D20`. O contrato geral precisa suportar ao menos os dados usados pelo livro (`D4`, `D6`, `D10` e `D20`) e dados configurados pelo Sistema.
 6. O calculo efetivo de modificadores de arma e acessorios existe apenas no cliente. O backend deve possuir a implementacao autoritativa e testes de paridade.
 7. `acerto` em skill e magia e apenas um dado opcional e nao representa condicao de sucesso, modificadores, custos, cooldowns ou efeitos.
-8. O update completo da ficha e os patches rapidos podem disputar o mesmo `StatusJson`. Deve haver revisao e merge atomico antes de comandos de estado.
+8. O update completo da ficha e os patches rapidos podem disputar o mesmo `StatusJson`. **Resolvido para as escritas atuais de ficha:** `RevisaoRuntime`, chave de idempotencia e transacao com evento em sessao ativa. Proximas aplicacoes devem reutilizar este caminho, nunca atualizar o JSON diretamente.
 9. `MesaAoVivoSnapshot` informa `TurnoAtual = "Mestre"` de forma fixa. Isso e apenas placeholder e nao pode ser tratado como engine de turno.
 10. A presenca SignalR e local e efemera. Ela nao substitui sessao, evento ou estado duravel.
 
@@ -2558,6 +2556,16 @@ Cobrir:
 
 Testes de concorrencia, migration e constraint devem usar MySQL/MariaDB real em Docker quando a semantica do banco importar. EF InMemory nao comprova esses cenarios.
 
+O projeto possui `GameplayMariaDbIntegrationTests` para esta camada. A suite cria e remove um banco com nome aleatorio; ela nunca usa a connection string normal de desenvolvimento. Para executa-la, apontar as duas variaveis para um servidor MariaDB descartavel com permissao de criar banco:
+
+```text
+RUN_GAMEPLAY_MARIADB_TESTS=1
+ODISSEIA_TEST_MYSQL_CONNECTION=Server=localhost;Port=3306;Uid=root;Pwd=<senha>;
+dotnet test --filter FullyQualifiedName~GameplayMariaDbIntegrationTests
+```
+
+Os cenarios minimos permanentes dessa suite sao: leitura de eventos privados sem travar cursor, idempotencia da escrita runtime, revisao concorrente, inicio/encerramento simultaneo e dois usuarios autorizados na mesma Mesa. A reconexao de presenca fica coberta em `MesaPresenceTrackerTests`; toda mudanca no Hub deve preservar esse teste e a recuperacao do ledger por REST.
+
 ## 35.3. Frontend
 
 Cobrir logica pura e componentes para:
@@ -2759,11 +2767,11 @@ Antes de adicionar uma acao, responder:
 
 Esta tabela e obrigatoria e deve ser atualizada em cada entrega.
 
-| Area | Estado em 21/09/2026 | Observacao |
+| Area | Estado em 23/09/2026 | Observacao |
 |---|---|---|
 | Estudo do livro e arquitetura | `Concluido` | Regras, riscos, UI e arquitetura alvo documentados. |
-| Fase 0 - Preparacao | `Parcial` | Vida zero permanece na Mesa; revisao otimista de ficha, dados legados e calculos de arma ainda precisam de trabalho. |
-| Fase 1 - Fundacao | `Parcial` | Sessoes, comandos idempotentes, eventos, RNG, visibilidade, historico, transacao e adaptador `AoVivo` implementados; faltam testes concorrentes e revisao das escritas de ficha. |
+| Fase 0 - Preparacao | `Parcial` | Vida zero permanece na Mesa; revisao otimista e auditoria transacional das escritas atuais da ficha estao implementadas. Dados legados e calculos autoritativos de arma ainda precisam de trabalho. |
+| Fase 1 - Fundacao | `Parcial` | Sessoes, comandos idempotentes, eventos, RNG, visibilidade, historico com cursor que avanca sobre linhas privadas, transacao e adaptador `AoVivo` implementados. A suite MariaDB e opt-in e deve entrar na execucao continua antes de ampliar comandos de estado. |
 | Fase 2 - MVP de rolagens | `Parcial` | Rolagens genericas, atributos Odisseia, fontes de XP calculadas, registro manual, simulacao offline via API, Central com teste de atributo em modal, dado 3D opcional, animacao autorizada das rolagens dos outros participantes e historico em tempo real na Mesa. A UI permite testes offline sem historico; faltam ficha dedicada e aplicacao auditada de XP. |
 | Fase 3 - Acoes de itens/poderes | `Nao iniciada` | Modificadores atuais continuam preview no frontend. |
 | Fase 4 - Engine de estado | `Nao iniciada` | Recursos atuais nao formam engine transacional. |
@@ -2772,7 +2780,7 @@ Esta tabela e obrigatoria e deve ser atualizada em cada entrega.
 | Animacao 3D | `PoC integrada` | Poliedros CSS 3D D4/D6/D8/D10/D12/D20 com clique, arremesso por ponteiro ou movimento do celular, impulso proporcional a velocidade e distancia do gesto, colisao nas bordas, dois dados simultaneos em vantagem/desvantagem e pouso continuo nos valores do servidor. Chacoalhadas sucessivas reforcam e prolongam apenas a animacao local; em navegadores que exigem permissao, ela e solicitada por acao explicita. O pouso planeja voltas completas e desacelera monotonicamente ate a face oficial, sem mola, aceleracao corretiva ou troca abrupta no final. Novos eventos autorizados iniciam a mesma animacao nos demais participantes via invalidacao SignalR + leitura REST; abrir o modal sem rolar nao transmite nada. Outros tipos usam fallback textual. Sem biblioteca 3D ou fisica real. |
 | Ambiguidades do livro | `Abertas` | Registro `GE-A001` a `GE-A040`. |
 
-Validacao desta entrega: build do backend e do frontend, testes direcionados de gameplay/Mesa, seis testes novos de simulacao offline e fluxos HTTP reais em uma copia temporaria do MySQL (sessao, idempotencia, permissao, visibilidade, manual, XP, simulacao offline e compatibilidade `AoVivo`). A copia foi removida; o banco local original nao recebeu migracoes nesta entrega. A suite completa ainda apresenta uma falha anterior em `WikiGraphServiceTests.GetAsync_OcultaMetadadosELigacoesDoPersonagemConformeVisibilidadeGranular`, sem alteracoes nesta area. A inspecao visual pelo Chrome conectado permanece pendente por falha de comunicacao da extensao. A animacao de dado e visual: apenas o backend determina e devolve o resultado.
+Validacao desta entrega: build do backend e TypeScript, testes direcionados de gameplay (rolagem offline e paginacao/privacidade do ledger). A suite MariaDB opt-in cobre a semantica que testes em memoria nao comprovam: bloqueios `FOR UPDATE`, isolamento serializavel e indices unicos. Ela deve ser executada em ambiente descartavel antes de publicar mudancas de estado. A animacao de dado e visual: apenas o backend determina e devolve o resultado.
 
 ---
 
@@ -2799,6 +2807,9 @@ Validacao desta entrega: build do backend e do frontend, testes direcionados de 
 | `GE-D017` | 22/09/2026 | Animacao remota nasce apenas de evento persistido e autorizado obtido por REST apos invalidacao SignalR | Mantem a rolagem ao vivo sem transmitir resultado privado pelo hub, sem animar apenas a abertura do modal e sem repetir historico antigo | - |
 | `GE-D018` | 22/09/2026 | Pouso visual usa uma trajetoria continua com desaceleracao monotona ate o valor autoritativo | Evita a aparencia de resultado manipulado causada por aceleracao ou correcao tardia da orientacao; o gesto define impulso e duracao, mas nunca o RNG | - |
 | `GE-D019` | 23/09/2026 | Movimento do celular pode iniciar e reforcar somente a animacao local do dado | Mantem o resultado autoritativo no backend, preserva clique e toque como fallback e exige permissao explicita apenas quando o navegador solicitar | - |
+| `GE-D020` | 23/09/2026 | Cursor do historico representa a ultima linha inspecionada, nao a ultima linha revelada | Eventos privados continuam invisiveis, mas nunca prendem clientes em paginas repetidas; a leitura percorre o ledger autorizado sem vazar dados | - |
+| `GE-D021` | 23/09/2026 | Escritas atuais da ficha usam revisao e comando/evento na mesma transacao quando a sessao esta ativa | Evita perda silenciosa entre patch rapido e edicao completa e preserva auditoria sem transformar a ficha em event sourcing | `GE-D004` |
+| `GE-D022` | 23/09/2026 | O contrato de rolagem declara modo, dificuldade, faixas, origem e fallbacks | A UI e o historico conseguem explicar a regra aplicada; referencias de arma/item/poder so serao aceitas quando houver resolucao autoritativa publicada | - |
 
 Novas decisoes devem receber ID sequencial, data, justificativa, impacto e referencia a decisao substituida. Nao apagar decisoes antigas.
 

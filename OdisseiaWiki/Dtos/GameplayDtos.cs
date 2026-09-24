@@ -58,6 +58,11 @@ public sealed class GameplayRollRequestDto
     public List<GameplayDiceGroupRequestDto> Grupos { get; set; } = new();
     public GameplayRollMode Modo { get; set; }
     public GameplayEventVisibility Visibilidade { get; set; } = GameplayEventVisibility.PublicaMesa;
+    [Range(0, long.MaxValue)]
+    public long? RevisaoSessaoEsperada { get; set; }
+    [Range(0, long.MaxValue)]
+    public long? RevisaoPersonagemEsperada { get; set; }
+    public GameplayActionReferenceDto? ReferenciaAcao { get; set; }
 }
 
 public sealed class GameplayManualRecordRequestDto
@@ -77,6 +82,25 @@ public sealed class GameplayManualRecordRequestDto
     [MaxLength(300)]
     public string? Observacao { get; set; }
     public GameplayEventVisibility Visibilidade { get; set; } = GameplayEventVisibility.PublicaMesa;
+    [Range(0, long.MaxValue)]
+    public long? RevisaoSessaoEsperada { get; set; }
+    [Range(0, long.MaxValue)]
+    public long? RevisaoPersonagemEsperada { get; set; }
+}
+
+/// <summary>
+/// Stable identifiers requested by a client for a future item, weapon or power
+/// action. They are never trusted as rules; the engine resolves and snapshots
+/// supported references on the server.
+/// </summary>
+public sealed class GameplayActionReferenceDto
+{
+    [MaxLength(40)]
+    public string? Tipo { get; set; }
+    [MaxLength(120)]
+    public string? IdInstancia { get; set; }
+    public int? IdItemSistema { get; set; }
+    public int? IdPoderSistema { get; set; }
 }
 
 public sealed class GameplayDiceGroupResultDto
@@ -96,6 +120,46 @@ public sealed class GameplayModifierDto
     public string Origem { get; init; } = string.Empty;
 }
 
+public sealed class GameplayDifficultyDto
+{
+    public string Codigo { get; init; } = string.Empty;
+    public string Nome { get; init; } = string.Empty;
+    public int? Alvo { get; init; }
+    public string? Comparador { get; init; }
+}
+
+public sealed class GameplayResultRangeDto
+{
+    public string Codigo { get; init; } = string.Empty;
+    public string Nome { get; init; } = string.Empty;
+    public int? Minimo { get; init; }
+    public int? Maximo { get; init; }
+    public bool? Critico { get; init; }
+    public bool? FalhaCritica { get; init; }
+}
+
+public sealed class GameplayActionSnapshotDto
+{
+    public string Tipo { get; init; } = string.Empty;
+    public int? IdPersonagemJogador { get; init; }
+    public long? RevisaoPersonagem { get; init; }
+    public string? IdInstancia { get; init; }
+    public int? IdItemSistema { get; init; }
+    public int? IdPoderSistema { get; init; }
+    public int? IdSistemaVersao { get; init; }
+    public string? Codigo { get; init; }
+    public string? Nome { get; init; }
+    public IReadOnlyDictionary<string, string> Valores { get; init; } =
+        new Dictionary<string, string>();
+}
+
+public sealed class GameplayExecutionNoticeDto
+{
+    public string Codigo { get; init; } = string.Empty;
+    public string Mensagem { get; init; } = string.Empty;
+    public bool Fallback { get; init; }
+}
+
 public sealed class GameplayRollResultDto
 {
     public string Expressao { get; init; } = string.Empty;
@@ -111,6 +175,15 @@ public sealed class GameplayRollResultDto
     public string? NomeResultado { get; init; }
     public int? ValorAssociado { get; init; }
     public bool Manual { get; init; }
+    public GameplayRollMode Modo { get; init; }
+    public GameplayDifficultyDto? Dificuldade { get; init; }
+    public IReadOnlyList<GameplayResultRangeDto> FaixasResultado { get; init; } =
+        Array.Empty<GameplayResultRangeDto>();
+    public bool? CriticoNatural { get; init; }
+    public bool? FalhaCriticaNatural { get; init; }
+    public GameplayActionSnapshotDto? OrigemAcao { get; init; }
+    public IReadOnlyList<GameplayExecutionNoticeDto> Avisos { get; init; } =
+        Array.Empty<GameplayExecutionNoticeDto>();
 }
 
 public sealed class GameplayEventDto

@@ -1,5 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using OdisseiaWiki.Data;
+using System.Data;
+using OdisseiaWiki.Enums;
 using OdisseiaWiki.Models;
 using OdisseiaWiki.Repositories.Interfaces;
 
@@ -119,6 +121,151 @@ namespace OdisseiaWiki.Repositories
             _context.PersonagemJogadores.Update(personagem);
             await _context.SaveChangesAsync();
             return personagem;
+        }
+
+        public async Task<PersonagemJogador> UpdateWithRuntimeAuditAsync(
+            PersonagemJogador personagem,
+            long revisaoEsperada,
+            PersonagemRuntimeWriteAudit audit)
+        {
+            var strategy = _context.Database.CreateExecutionStrategy();
+            return await strategy.ExecuteAsync(async () =>
+            {
+                _context.ChangeTracker.Clear();
+                int? idMesaAtual = await _context.PersonagemJogadores
+                    .AsNoTracking()
+                    .Where(item => item.IdpersonagemJogador == personagem.IdpersonagemJogador)
+                    .Select(item => (int?)item.Idmesa)
+                    .SingleOrDefaultAsync();
+                if (!idMesaAtual.HasValue)
+                    throw new KeyNotFoundException("PERSONAGEM_NAO_ENCONTRADO");
+
+                await using var transaction = await _context.Database.BeginTransactionAsync(
+                    IsolationLevel.Serializable);
+                try
+                {
+                    // Lock source and destination in a stable order. A sheet edit
+                    // must not bypass the active-session ledger by changing Idmesa.
+                    List<Mesa> mesasBloqueadas = await _context.Mesas
+                        .FromSqlInterpolated($"SELECT * FROM `mesas` WHERE `IDMesa` IN ({idMesaAtual.Value}, {personagem.Idmesa}) ORDER BY `IDMesa` FOR UPDATE")
+                        .ToListAsync();
+                    Mesa? mesaAtual = mesasBloqueadas.SingleOrDefault(item => item.Idmesa == idMesaAtual.Value);
+                    Mesa? mesaDestino = mesasBloqueadas.SingleOrDefault(item => item.Idmesa == personagem.Idmesa);
+                    if (mesaAtual is null || mesaDestino is null)
+                        throw new InvalidOperationException("MESA_NAO_ENCONTRADA");
+
+                    var sessoesAtivas = new Dictionary<int, MesaSessao>();
+                    foreach (Mesa mesaBloqueada in mesasBloqueadas)
+                    {
+                        if (!mesaBloqueada.IdMesaSessaoAtiva.HasValue)
+                            continue;
+
+                        MesaSessao? sessaoBloqueada = await _context.MesaSessoes
+                            .FromSqlInterpolated(
+                                $"SELECT * FROM `mesasessoes` WHERE `IDMesaSessao` = {mesaBloqueada.IdMesaSessaoAtiva.Value} FOR UPDATE")
+                            .SingleOrDefaultAsync();
+                        if (sessaoBloqueada is null || sessaoBloqueada.Status != MesaSessaoStatus.Ativa)
+                            throw new DbUpdateConcurrencyException("SESSAO_ATIVA_INCONSISTENTE");
+
+                        sessoesAtivas[mesaBloqueada.Idmesa] = sessaoBloqueada;
+                    }
+
+                    PersonagemJogador? locked = await _context.PersonagemJogadores
+                        .FromSqlInterpolated(
+                            $"SELECT * FROM `personagensJogador` WHERE `IDPersonagemJogador` = {personagem.IdpersonagemJogador} FOR UPDATE")
+                        .SingleOrDefaultAsync();
+                    if (locked is null)
+                        throw new KeyNotFoundException("PERSONAGEM_NAO_ENCONTRADO");
+
+                    if (locked.Idmesa != idMesaAtual.Value)
+                        throw new DbUpdateConcurrencyException("PERSONAGEM_MOVIMENTADO");
+
+                    bool mudouDeMesa = locked.Idmesa != personagem.Idmesa;
+                    if (mudouDeMesa && sessoesAtivas.Count > 0)
+                        throw new InvalidOperationException("MESA_EM_SESSAO_NAO_PODE_MOVER_PERSONAGEM");
+
+                    MesaSessao? sessao = mudouDeMesa
+                        ? null
+                        : sessoesAtivas.GetValueOrDefault(mesaAtual.Idmesa);
+
+                    if (sessao is not null)
+                    {
+                        MesaComando? existing = await _context.MesaComandos.AsNoTracking().FirstOrDefaultAsync(item =>
+                            item.IdMesa == mesaAtual.Idmesa &&
+                            item.IdUsuarioAtor == audit.IdUsuarioAtor &&
+                            item.ChaveIdempotencia == audit.ChaveIdempotencia.ToString("D"));
+                        if (existing is not null)
+                        {
+                            if (!string.Equals(existing.HashPayload, audit.HashPayload, StringComparison.Ordinal))
+                                throw new DbUpdateConcurrencyException("CHAVE_IDEMPOTENCIA_REUTILIZADA");
+
+                            await transaction.CommitAsync();
+                            return locked;
+                        }
+                    }
+
+                    if (locked.RevisaoRuntime != revisaoEsperada)
+                        throw new DbUpdateConcurrencyException("REVISAO_PERSONAGEM_DESATUALIZADA");
+
+                    _context.Entry(locked).CurrentValues.SetValues(personagem);
+                    locked.RevisaoRuntime = checked(revisaoEsperada + 1);
+
+                    if (sessao is not null)
+                    {
+                        DateTime now = DateTime.UtcNow;
+                        var command = new MesaComando
+                        {
+                            IdMesa = mesaAtual.Idmesa,
+                            IdMesaSessao = sessao.IdMesaSessao,
+                            ChaveIdempotencia = audit.ChaveIdempotencia.ToString("D"),
+                            HashPayload = audit.HashPayload,
+                            IdUsuarioAtor = audit.IdUsuarioAtor,
+                            IdPersonagemJogador = locked.IdpersonagemJogador,
+                            Tipo = audit.TipoComando,
+                            RevisaoSessaoEsperada = sessao.RevisaoEstado,
+                            RevisaoPersonagemEsperada = revisaoEsperada,
+                            RevisoesAlvosJson = $$"""{"personagem":{{revisaoEsperada}}}""",
+                            Status = MesaComandoStatus.Concluido,
+                            RespostaJson = "{}",
+                            CriadoEmUtc = now,
+                            ConcluidoEmUtc = now,
+                        };
+                        _context.MesaComandos.Add(command);
+                        await _context.SaveChangesAsync();
+
+                        sessao.UltimaSequenciaEvento++;
+                        sessao.RevisaoEstado++;
+                        _context.MesaEventos.Add(new MesaEvento
+                        {
+                            IdMesaSessao = sessao.IdMesaSessao,
+                            IdMesaComando = command.IdMesaComando,
+                            Sequencia = sessao.UltimaSequenciaEvento,
+                            Tipo = "FICHA_ATUALIZADA",
+                            Origem = GameplayEventOrigin.Automatica,
+                            Visibilidade = GameplayEventVisibility.PublicaMesa,
+                            IdUsuarioAtor = audit.IdUsuarioAtor,
+                            IdPersonagemJogador = locked.IdpersonagemJogador,
+                            IdSistemaVersaoEfetiva = sessao.IdSistemaVersao,
+                            IdSistemaVersaoPersonagem = locked.IdSistemaVersao,
+                            CodigoRegra = "FICHA_ATUALIZAR",
+                            SchemaVersion = 1,
+                            DadosJson = audit.DadosEventoJson,
+                            OcorreuEmUtc = now,
+                        });
+                        command.RespostaJson = $$"""{"idPersonagemJogador":{{locked.IdpersonagemJogador}},"revisaoRuntime":{{locked.RevisaoRuntime}},"sequenciaEvento":{{sessao.UltimaSequenciaEvento}}}""";
+                    }
+
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+                    return locked;
+                }
+                catch
+                {
+                    await transaction.RollbackAsync();
+                    _context.ChangeTracker.Clear();
+                    throw;
+                }
+            });
         }
 
         public async Task<bool> DeleteAsync(int id)

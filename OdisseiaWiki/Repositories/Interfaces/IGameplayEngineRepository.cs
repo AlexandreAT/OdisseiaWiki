@@ -19,10 +19,13 @@ public interface IGameplayEngineRepository
         int idSistemaVersao, CancellationToken cancellationToken = default);
     Task<bool> CanAccessTableAsync(
         int idMesa, int idUsuario, CancellationToken cancellationToken = default);
-    Task<List<MesaEvento>> GetVisibleEventsAsync(
+    /// <summary>
+    /// Returns the next immutable ledger rows without applying viewer visibility.
+    /// Visibility belongs to the service so an unreadable row can still advance
+    /// the cursor used by that viewer.
+    /// </summary>
+    Task<List<MesaEvento>> GetEventsAfterSequenceAsync(
         long idMesaSessao,
-        int idUsuario,
-        bool isMaster,
         long afterSequence,
         int take,
         CancellationToken cancellationToken = default);

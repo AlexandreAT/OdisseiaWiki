@@ -7,6 +7,9 @@ using OdisseiaWiki.Services.Helpers;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using OdisseiaWiki.Enums;
+using System.Security.Cryptography;
+using System.Text;
+using Microsoft.EntityFrameworkCore;
 
 namespace OdisseiaWiki.Services
 {
@@ -62,6 +65,11 @@ namespace OdisseiaWiki.Services
 
         public async Task<ResultPersonagemJogador> UpdateAsync(int id, PersonagemJogadorDto personagemDto)
         {
+            if (!personagemDto.RevisaoRuntime.HasValue)
+                return ResultFail("Recarregue a ficha antes de salvar as alteracoes.");
+            if (!personagemDto.ChaveIdempotencia.HasValue || personagemDto.ChaveIdempotencia == Guid.Empty)
+                return ResultFail("Nao foi possivel identificar este salvamento. Tente novamente.");
+
             PersonagemJogador? personagem = await _repository.GetByIdAsync(id);
             if (personagem == null)
                 return ResultFail($"PersonagemJogador com id {id} não encontrado.");
@@ -88,7 +96,34 @@ namespace OdisseiaWiki.Services
                 personagem.IdSistemaVersao = novoContexto.IdSistemaVersao;
             }
 
-            PersonagemJogador atualizado = await _repository.UpdateAsync(personagem);
+            PersonagemJogador atualizado;
+            try
+            {
+                atualizado = await _repository.UpdateWithRuntimeAuditAsync(
+                    personagem,
+                    personagemDto.RevisaoRuntime.Value,
+                    BuildRuntimeWriteAudit(
+                        personagemDto.Idusuario,
+                        personagemDto.ChaveIdempotencia.Value,
+                        personagem,
+                        personagemDto.RevisaoRuntime.Value,
+                        "FICHA_ATUALIZAR",
+                        "Ficha atualizada",
+                        "status",
+                        "defesas",
+                        "inventario",
+                        "skills",
+                        "magias"));
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return ResultFail("A ficha foi alterada em outra tela. Recarregue antes de salvar.");
+            }
+            catch (InvalidOperationException exception) when (
+                exception.Message == "MESA_EM_SESSAO_NAO_PODE_MOVER_PERSONAGEM")
+            {
+                return ResultFail("Nao mova o personagem enquanto a Mesa estiver em jogo.");
+            }
             await AssetReferenceHelper.DeleteRemovedAsync(
                 _assetService,
                 oldAssets,
@@ -160,6 +195,11 @@ namespace OdisseiaWiki.Services
             int id,
             AtualizarRecursosPersonagemDto dto)
         {
+            if (!dto.RevisaoRuntime.HasValue)
+                return ResultFail("Recarregue a ficha antes de atualizar os recursos.");
+            if (!dto.ChaveIdempotencia.HasValue || dto.ChaveIdempotencia == Guid.Empty)
+                return ResultFail("Nao foi possivel identificar esta atualizacao. Tente novamente.");
+
             PersonagemJogador? personagem = await _repository.GetByIdAsync(id);
             if (personagem is null)
                 return ResultFail($"PersonagemJogador com id {id} não encontrado.");
@@ -183,7 +223,25 @@ namespace OdisseiaWiki.Services
                 SetNodeValue(root, "xp", dto.Xp.Value);
 
             personagem.StatusJson = root.ToJsonString();
-            PersonagemJogador atualizado = await _repository.UpdateAsync(personagem);
+            PersonagemJogador atualizado;
+            try
+            {
+                atualizado = await _repository.UpdateWithRuntimeAuditAsync(
+                    personagem,
+                    dto.RevisaoRuntime.Value,
+                    BuildRuntimeWriteAudit(
+                        personagem.Idusuario,
+                        dto.ChaveIdempotencia.Value,
+                        personagem,
+                        dto.RevisaoRuntime.Value,
+                        "FICHA_RECURSOS_ATUALIZAR",
+                        "Recursos atualizados",
+                        "recursos"));
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return ResultFail("Os recursos foram alterados em outra tela. Recarregue antes de salvar.");
+            }
             await _mesaRealtimeNotifier.NotificarPersonagemAlteradoAsync(
                 atualizado.Idmesa,
                 atualizado.IdpersonagemJogador);
@@ -329,6 +387,49 @@ namespace OdisseiaWiki.Services
             return personagem;
         }
 
+        private static PersonagemRuntimeWriteAudit BuildRuntimeWriteAudit(
+            int idUsuarioAtor,
+            Guid chaveIdempotencia,
+            PersonagemJogador personagem,
+            long revisaoAnterior,
+            string tipoComando,
+            string titulo,
+            params string[] campos)
+        {
+            string dadosEvento = JsonSerializer.Serialize(new
+            {
+                schemaVersion = 1,
+                titulo,
+                descricao = "A ficha do personagem foi atualizada durante a sessao.",
+                manual = false,
+                revisaoAnterior,
+                revisaoNova = revisaoAnterior + 1,
+                personagem.IdpersonagemJogador,
+                campos,
+            });
+            string payloadParaHash = JsonSerializer.Serialize(new
+            {
+                personagem.IdpersonagemJogador,
+                revisaoAnterior,
+                tipoComando,
+                campos,
+                personagem.StatusJson,
+                personagem.InventarioJson,
+                personagem.Skills,
+                personagem.Magia,
+                personagem.Implantes,
+                personagem.Idpassiva,
+                personagem.Ultimate,
+            });
+            string hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(payloadParaHash)));
+            return new PersonagemRuntimeWriteAudit(
+                idUsuarioAtor,
+                chaveIdempotencia,
+                hash,
+                tipoComando,
+                dadosEvento);
+        }
+
         private static ResultPersonagemJogador ResultFail(string mensagem) => new() { Sucesso = false, MensagemErro = mensagem };
 
         private static void UpdateBoundedResource(
@@ -379,6 +480,7 @@ namespace OdisseiaWiki.Services
                 Idmesa = personagem.Idmesa,
                 Idraca = personagem.Idraca,
                 Idcidade = personagem.Idcidade,
+                RevisaoRuntime = personagem.RevisaoRuntime,
                 Visivel = personagem.Visivel,
                 Nome = personagem.Nome,
                 Imagem = personagem.Imagem,
@@ -415,6 +517,7 @@ namespace OdisseiaWiki.Services
             Idusuario = personagem.Idusuario,
             Idmesa = personagem.Idmesa,
             IdSistemaVersao = personagem.IdSistemaVersao,
+            RevisaoRuntime = personagem.RevisaoRuntime,
             Visivel = personagem.Visivel,
             Idraca = personagem.Idraca,
             Idcidade = personagem.Idcidade,

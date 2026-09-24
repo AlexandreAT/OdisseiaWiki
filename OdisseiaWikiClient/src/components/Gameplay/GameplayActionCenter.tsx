@@ -418,6 +418,8 @@ export const GameplayActionCenter = ({
       grupos: groups,
       modo: rollMode,
       visibilidade: visibility,
+      revisaoSessaoEsperada: session?.revisaoEstado,
+      revisaoPersonagemEsperada: selectedCharacter.personagem.revisaoRuntime,
     };
     const fingerprint = JSON.stringify(basePayload);
     const requestedFaces = groups[0]?.faces ?? 6;
@@ -494,6 +496,8 @@ export const GameplayActionCenter = ({
       valorAssociado: numeric(manualAssociatedValue),
       observacao: manualNote.trim() || undefined,
       visibilidade: visibility,
+      revisaoSessaoEsperada: session?.revisaoEstado,
+      revisaoPersonagemEsperada: selectedCharacter?.personagem.revisaoRuntime,
     };
     const fingerprint = JSON.stringify(basePayload);
     try {

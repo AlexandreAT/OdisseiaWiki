@@ -14,6 +14,8 @@ namespace OdisseiaWiki.Dtos
         public int Idmesa { get; set; }
         public int Idusuario { get; set; }
         public int? IdSistemaVersao { get; set; }
+        public long? RevisaoRuntime { get; set; }
+        public Guid? ChaveIdempotencia { get; set; }
         public bool Visivel { get; set; } = true;
         public string? Alinhamento { get; set; }
         public JsonElement? Historia { get; set; }
@@ -56,6 +58,13 @@ namespace OdisseiaWiki.Dtos
     /// </summary>
     public sealed class AtualizarRecursosPersonagemDto
     {
+        [Required]
+        [Range(0, long.MaxValue)]
+        public long? RevisaoRuntime { get; set; }
+
+        [Required]
+        public Guid? ChaveIdempotencia { get; set; }
+
         [Range(0, int.MaxValue)]
         public int? Vida { get; set; }
 
