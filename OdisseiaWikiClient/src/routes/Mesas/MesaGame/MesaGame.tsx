@@ -283,7 +283,11 @@ const MesaGame = () => {
                           setActionsOpen(true);
                         } : undefined}
                         onQuickStatusUpdate={isOwn
-                          ? (changes) => updateCharacterResources(characterId, changes)
+                          ? (changes) => updateCharacterResources(
+                            characterId,
+                            entry.personagem.revisaoRuntime ?? 0,
+                            changes,
+                          )
                           : undefined}
                         onView={() => navigate(`/personagem/${characterId}?tipo=jogador&mesaId=${idMesa}&modo=leitura`)}
                         onSheet={() => navigate(`/hub?section=personagens&mode=edit&characterId=${characterId}&step=2`)}

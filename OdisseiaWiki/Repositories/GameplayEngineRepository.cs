@@ -107,27 +107,16 @@ public sealed class GameplayEngineRepository : IGameplayEngineRepository
                  link.Idmesa == idMesa && link.Idusuario == idUsuario)),
             cancellationToken);
 
-    public Task<List<MesaEvento>> GetVisibleEventsAsync(
+    public Task<List<MesaEvento>> GetEventsAfterSequenceAsync(
         long idMesaSessao,
-        int idUsuario,
-        bool isMaster,
         long afterSequence,
         int take,
         CancellationToken cancellationToken = default)
         => _context.MesaEventos
             .AsNoTracking()
             .Include(item => item.Rolagem)
+            .Include(item => item.PersonagemJogador)
             .Where(item => item.IdMesaSessao == idMesaSessao && item.Sequencia > afterSequence)
-            .Where(item =>
-                item.Visibilidade == GameplayEventVisibility.PublicaMesa ||
-                isMaster ||
-                item.IdUsuarioAtor == idUsuario)
-            .Where(item =>
-                !item.IdPersonagemJogador.HasValue ||
-                isMaster ||
-                item.IdUsuarioAtor == idUsuario ||
-                _context.PersonagemJogadores.Any(character =>
-                    character.IdpersonagemJogador == item.IdPersonagemJogador && character.Visivel))
             .OrderBy(item => item.Sequencia)
             .Take(take)
             .ToListAsync(cancellationToken);

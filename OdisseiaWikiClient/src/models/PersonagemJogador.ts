@@ -19,6 +19,7 @@ export interface PersonagemJogador {
   idusuario: number;
   idmesa: number;
   idSistemaVersao?: number | null;
+  revisaoRuntime?: number;
   visivel?: boolean;
   nome: string;
   idraca: number;

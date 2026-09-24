@@ -772,6 +772,8 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
         idcidade: city!,
         idusuario: userId,
         idmesa: selectedMesa!,
+        revisaoRuntime: personagem?.revisaoRuntime,
+        chaveIdempotencia: crypto.randomUUID(),
         visivel,
         historia: prepareForAPI(history),
         imagem: avatarPath,

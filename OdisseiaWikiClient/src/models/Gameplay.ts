@@ -48,6 +48,40 @@ export interface GameplayRollResult {
   nomeResultado?: string | null;
   valorAssociado?: number | null;
   manual: boolean;
+  modo: GameplayRollMode;
+  dificuldade?: {
+    codigo: string;
+    nome: string;
+    alvo?: number | null;
+    comparador?: string | null;
+  } | null;
+  faixasResultado?: Array<{
+    codigo: string;
+    nome: string;
+    minimo?: number | null;
+    maximo?: number | null;
+    critico?: boolean | null;
+    falhaCritica?: boolean | null;
+  }>;
+  criticoNatural?: boolean | null;
+  falhaCriticaNatural?: boolean | null;
+  origemAcao?: {
+    tipo: string;
+    idPersonagemJogador?: number | null;
+    revisaoPersonagem?: number | null;
+    idInstancia?: string | null;
+    idItemSistema?: number | null;
+    idPoderSistema?: number | null;
+    idSistemaVersao?: number | null;
+    codigo?: string | null;
+    nome?: string | null;
+    valores?: Record<string, string>;
+  } | null;
+  avisos?: Array<{
+    codigo: string;
+    mensagem: string;
+    fallback: boolean;
+  }>;
 }
 
 export interface GameplayEvent {
@@ -93,6 +127,14 @@ export interface GameplayRollRequest {
   grupos: GameplayDiceGroupRequest[];
   modo: GameplayRollMode;
   visibilidade: GameplayVisibility;
+  revisaoSessaoEsperada?: number;
+  revisaoPersonagemEsperada?: number;
+  referenciaAcao?: {
+    tipo?: string;
+    idInstancia?: string;
+    idItemSistema?: number;
+    idPoderSistema?: number;
+  };
 }
 
 export interface GameplayManualRecordRequest {
@@ -106,6 +148,8 @@ export interface GameplayManualRecordRequest {
   valorAssociado?: number;
   observacao?: string;
   visibilidade: GameplayVisibility;
+  revisaoSessaoEsperada?: number;
+  revisaoPersonagemEsperada?: number;
 }
 
 export interface GameplayCommandResponse {

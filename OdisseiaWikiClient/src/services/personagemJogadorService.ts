@@ -10,6 +10,8 @@ export interface PersonagemJogadorPayload {
   idcidade?: number;
   idusuario: number;
   idmesa: number;
+  revisaoRuntime?: number;
+  chaveIdempotencia?: string;
   visivel?: boolean;
   historia?: JSONContent | string;
   imagem?: string;
@@ -65,6 +67,7 @@ export interface PersonagemJogadorResumo {
   idmesa: number;
   idraca: number;
   idcidade?: number;
+  revisaoRuntime?: number;
   nome: string;
   imagem?: string;
   visivel?: boolean;
@@ -72,6 +75,8 @@ export interface PersonagemJogadorResumo {
 }
 
 export interface AtualizarRecursosPersonagemPayload {
+  revisaoRuntime: number;
+  chaveIdempotencia: string;
   vida?: number;
   mana?: number;
   estamina?: number;

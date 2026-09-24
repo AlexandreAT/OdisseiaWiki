@@ -52,10 +52,15 @@ export const useMesaGameData = (idMesa?: number) => {
 
   const updateCharacterResources = useCallback(async (
     idPersonagemJogador: number,
-    changes: AtualizarRecursosPersonagemPayload,
+    revisaoRuntime: number,
+    changes: Omit<AtualizarRecursosPersonagemPayload, 'revisaoRuntime' | 'chaveIdempotencia'>,
   ) => {
     try {
-      const result = await atualizarRecursosPersonagemJogador(idPersonagemJogador, changes);
+      const result = await atualizarRecursosPersonagemJogador(idPersonagemJogador, {
+        ...changes,
+        revisaoRuntime,
+        chaveIdempotencia: crypto.randomUUID(),
+      });
       if (!result.sucesso) {
         throw new Error(result.mensagemErro || result.mensagem || 'Não foi possível atualizar os recursos.');
       }

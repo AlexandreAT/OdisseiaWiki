@@ -25,6 +25,10 @@ public sealed class GameplayOfflineSimulationTests
         Assert.True(result.Dados.Simulacao);
         Assert.Equal("SUCESSO", result.Dados.Rolagem.CodigoResultado);
         Assert.Equal(4, result.Dados.Rolagem.Total);
+        Assert.Equal(GameplayRollMode.Normal, result.Dados.Rolagem.Modo);
+        Assert.Equal(4, result.Dados.Rolagem.Dificuldade?.Alvo);
+        Assert.Equal("ROLAGEM_GENERICA", result.Dados.Rolagem.OrigemAcao?.Tipo);
+        Assert.Contains(result.Dados.Rolagem.Avisos, notice => notice.Fallback);
         fixture.Repository.Verify(repo => repo.GetSystemVersionAsync(42, It.IsAny<CancellationToken>()), Times.Once);
         fixture.AssertReadOnly();
     }
@@ -42,6 +46,10 @@ public sealed class GameplayOfflineSimulationTests
         Assert.Equal(7, result.Dados!.Rolagem.Total);
         Assert.Equal("SUCESSO", result.Dados.Rolagem.CodigoResultado);
         Assert.Equal(2, result.Dados.Rolagem.Modificador);
+        Assert.Equal(7, result.Dados.Rolagem.Dificuldade?.Alvo);
+        Assert.Equal("ATRIBUTO", result.Dados.Rolagem.OrigemAcao?.Tipo);
+        Assert.Equal(7, result.Dados.Rolagem.OrigemAcao?.IdPersonagemJogador);
+        Assert.Equal("2", result.Dados.Rolagem.OrigemAcao?.Valores["valor"]);
         fixture.AssertReadOnly();
     }
 
@@ -65,6 +73,8 @@ public sealed class GameplayOfflineSimulationTests
         Assert.True(result.Sucesso);
         Assert.Equal(3, result.Dados!.Rolagem.ValorAssociado);
         Assert.Equal("XP_CALCULADO", result.Dados.Rolagem.CodigoResultado);
+        Assert.Equal("FONTE_XP", result.Dados.Rolagem.OrigemAcao?.Tipo);
+        Assert.Equal("BOSS", result.Dados.Rolagem.OrigemAcao?.Codigo);
         fixture.AssertReadOnly();
     }
 
