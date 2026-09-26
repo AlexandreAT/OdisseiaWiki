@@ -855,16 +855,9 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
           loading: isSaving,
         }}
         next={{
-          label: isLastStep ? 'Atualizar' : 'Próximo',
-          onClick: () => {
-            if (isLastStep) {
-              void handleSave();
-              return;
-            }
-            setEditStep(2);
-          },
-          disabled: isSaving,
-          loading: isLastStep && isSaving,
+          label: 'Próximo',
+          onClick: () => setEditStep(2),
+          disabled: isSaving || isLastStep,
         }}
       />
 
@@ -1011,16 +1004,9 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
           loading: isSaving,
         }}
         next={{
-          label: isLastStep ? 'Atualizar' : 'Próximo',
-          onClick: () => {
-            if (isLastStep) {
-              void handleSave();
-              return;
-            }
-            setEditStep(2);
-          },
-          disabled: isSaving,
-          loading: isLastStep && isSaving,
+          label: 'Próximo',
+          onClick: () => setEditStep(2),
+          disabled: isSaving || isLastStep,
         }}
       />
 

@@ -6,7 +6,7 @@ import { createPortal } from 'react-dom';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { usePersonagem } from './usePersonagem';
-import { PageContainer, TopSection, BottomSection, AvatarWrapper, MetaRow, Sections, CardContent, InfoList, InfoItem, MetaContent, SectionSpacer, AvatarDivController, SatusDivController, StatusList, StatusDiv, HeaderStatusController, StatusController, StatusHeader, StatusBarWrapper, StatusBarFill, InfoControllers, TitleDiv, TagItem, TagList, RelatedLink, HistoryWrapper, HistoryModalOverlay, HistoryModalSheet, HistoryModalHeader, HistoryModalTitle, HistoryModalClose, HistoryModalContent, HistoryModalActions, ItemModalViewButton, InfoSpan, BottomInfoLeft, BottomInfoRight, StoryWithImage, StoryImage, HudCornerEl, HudTopLine, HudBottomLine, HudLeftLine, HudRightLine, StatusTopLine, StatusBottomLine, StatusLeftLine, StatusRightLine, BackgroundVideoContainer, BackgroundVideo, BackgroundOverlay, HexagonHud, HexagonBackground, HexagonBorder, HexagonContent, HexagonValue, PageController, PageLoadingState, SectionRow, InventoryList, LoadBar, LoadProgress, ImplantGrid, ImplantMods, SkillGrid, AbilityDescription, AbilityPair, AbilityCard, CooldownBar, CooldownFill, ItemDescriptionPreview, ItemDescriptionLayout, ItemDetailsBody, ViewMoreButton, DetailAttributes, DetailAttribute, DetailTextPair, DetailText, ItemDescriptionImage } from './PersonagemPage.style';
+import { PageContainer, TopSection, BottomSection, AvatarWrapper, MetaRow, Sections, CardContent, InfoList, InfoItem, MetaContent, SectionSpacer, AvatarDivController, SatusDivController, StatusList, StatusDiv, HeaderStatusController, StatusController, StatusHeader, StatusBarWrapper, StatusBarFill, InfoControllers, TitleDiv, TagItem, TagList, RelatedLink, HistoryWrapper, HistoryModalOverlay, HistoryModalSheet, HistoryModalHeader, HistoryModalTitle, HistoryModalClose, HistoryModalContent, HistoryModalActions, ItemModalViewButton, InfoSpan, BottomInfoLeft, BottomInfoRight, StoryWithImage, StoryImage, HudCornerEl, HudTopLine, HudBottomLine, HudLeftLine, HudRightLine, StatusTopLine, StatusBottomLine, StatusLeftLine, StatusRightLine, BackgroundVideoContainer, BackgroundVideo, BackgroundOverlay, HexagonHud, HexagonBackground, HexagonBorder, HexagonContent, HexagonValue, PageController, PageLoadingState, SectionRow, InventoryList, LoadBar, LoadProgress, ImplantGrid, ImplantMods, SkillGrid, AbilityDescription, AbilityPair, AbilityCard, CooldownBar, CooldownFill, ItemDescriptionPreview, ItemDescriptionLayout, ItemDetailsBody, ViewMoreButton, DetailAttributes, DetailAttribute, DetailTextPair, DetailText, ItemDescriptionImage, SheetActionPanel, SheetActionGroup, SheetAttributeRollButton, StatusActionButton } from './PersonagemPage.style';
 import { PersonagemRichText, FlexRow, MutedText, BoldLabel, ItemThumb, ItemPlaceholder, GalleryToggle, GalleryContent, MaskIcon, AuthorIcon, ItemRow, FlexFill } from './PersonagemPage.style';
 import { CharacterComparisonButton, CharacterComparisonModal, createCharacterComparisonData } from '../../components/CharacterComparison';
 import glassHeart from '../../assets/svg/glass-heart.svg';
@@ -46,7 +46,7 @@ import { ListModal } from '../../components/Generic/ListModal';
 import { BiChevronDown } from 'react-icons/bi';
 import { resolveCharacterProgression } from '../../utils/characterProgression';
 import { useSistemaRuntimeContexto } from '../../hooks/useSistemaRuntimeContexto';
-import { getRuntimeResourceLabel } from '../../utils/systemRuntimeCharacter';
+import { getRuntimeAttributeFields, getRuntimeResourceLabel, normalizeRuntimeAttributeValues } from '../../utils/systemRuntimeCharacter';
 import { Lightbox } from '../Wiki/components/blocks/shared/Lightbox/Lightbox';
 import { RelatedPageLink, RelatedPages, RelatedPagesTitle } from '../Cidade/CidadePage.style';
 import { detectImageShapeForBackgroundFromUrl } from '../../utils/imageDisplayShape';
@@ -66,6 +66,11 @@ import { atualizarSistemaPersonagemJogador } from '../../services/personagemJoga
 import toast from 'react-hot-toast';
 import { ItemComparisonModal } from '../../components/ItemComparison';
 import { LoadingIndicator } from '../../components/Generic/LoadingIndicator';
+import { GameplayActionCenter, GameplaySheetActionDialog, type GameplayActionCenterInitialAction, type GameplaySheetActionSource } from '../../components/Gameplay';
+import { useGameplayEngine } from '../../hooks/useGameplayEngine';
+import { useGameplayFavorites } from '../../hooks/useGameplayFavorites';
+import CasinoOutlinedIcon from '@mui/icons-material/CasinoOutlined';
+import { getItemGameplayAction, getMagicGameplayAction, getSkillGameplayAction } from '../../utils/gameplaySheetAction';
 import {
   CHARACTER_INFORMATION_BLOCKED,
   characterNumberOrBlocked,
@@ -77,6 +82,15 @@ import type { CampoPersonagemVisibilidade } from '../../models/PersonagemVisibil
 const isObjectRecord = (value: unknown): value is Record<string, unknown> => (
   typeof value === 'object' && value !== null && !Array.isArray(value)
 );
+
+const getCurrentUserId = () => {
+  try {
+    const user = JSON.parse(localStorage.getItem('usuario') || 'null');
+    return Number(user?.id ?? user?.idusuario ?? user?.idUsuario ?? user?.Idusuario ?? 0);
+  } catch {
+    return 0;
+  }
+};
 
 const mergeItemRecords = (
   base: Record<string, unknown>,
@@ -297,7 +311,7 @@ const AbilityItem: React.FC<AbilityItemProps> = ({ ability, index, type, color, 
   const fallbackName = type === 'skills' ? 'Skill' : type === 'magias' ? 'Magia' : 'Proficiência';
 
   return (
-    <ItemRow $clickable={Boolean(onOpenDescription)} $color={color} $clearColor={clearColor} onClick={() => onOpenDescription?.({ ...ability, __detailType: type === 'proficiencias' ? 'proficiency' : 'ability', descricao: type === 'proficiencias' ? ability.descricao : '', tipo: 'outro', quantidade: 1 } as Item)}>
+    <ItemRow $clickable={Boolean(onOpenDescription)} $color={color} $clearColor={clearColor} onClick={() => onOpenDescription?.({ ...ability, __detailType: type === 'proficiencias' ? 'proficiency' : 'ability', __gameplayActionType: type === 'skills' ? 'SKILL' : type === 'magias' ? 'MAGIA' : undefined, descricao: type === 'proficiencias' ? ability.descricao : '', tipo: 'outro', quantidade: 1 } as Item)}>
       {image && <ItemThumb $color={color} $clearColor={clearColor} src={normalizeImagePath(image)} alt={ability.nome ?? fallbackName} />}
       <FlexFill>
       <BoldLabel $color={color}>{ability.nome ?? ability.titulo ?? `${fallbackName} ${index + 1}`}</BoldLabel>
@@ -403,6 +417,7 @@ const PersonagemPage: React.FC = () => {
       skills: sheet.skills, magia: sheet.magia, implantes: undefined };
   }, [basePersonagem, activeVariant]);
   const { theme, neon } = useSelector((state: any) => state.themesReducer);
+  const currentUserId = React.useMemo(getCurrentUserId, []);
   const runtimeRaceId = Number((personagem as any)?.idraca ?? (personagem as any)?.Idraca);
   const embeddedRuntimeContext = (personagem as any)?.sistemaRuntime ?? null;
   const {
@@ -445,6 +460,24 @@ const PersonagemPage: React.FC = () => {
   const [listModal, setListModal] = React.useState<'inventory' | 'implants' | 'abilities' | 'proficiencies' | null>(null);
   const [updatingSystem, setUpdatingSystem] = React.useState(false);
   const [characterComparisonOpen, setCharacterComparisonOpen] = React.useState(false);
+  const [sheetActionSource, setSheetActionSource] = React.useState<GameplaySheetActionSource | null>(null);
+  const [actionCenterOpen, setActionCenterOpen] = React.useState(false);
+  const [actionCenterInitial, setActionCenterInitial] = React.useState<GameplayActionCenterInitialAction | null>(null);
+  const gameplayMesaId = characterSource === 'player' ? Number((personagem as any)?.idmesa) || undefined : undefined;
+  const ownsPlayerCharacter = characterSource === 'player' && currentUserId > 0 &&
+    Number((personagem as any)?.idusuario ?? 0) === currentUserId;
+  const gameplay = useGameplayEngine({
+    idMesa: gameplayMesaId,
+    enabled: ownsPlayerCharacter && Boolean(gameplayMesaId),
+    // A consulta da sessão distingue a rolagem oficial da simulação mesmo
+    // quando a ficha foi aberta fora da tela principal da Mesa.
+    mesaAoVivo: ownsPlayerCharacter && Boolean(gameplayMesaId),
+  });
+  const gameplayCharacterId = ownsPlayerCharacter ? Number((personagem as any)?.idpersonagemJogador) : undefined;
+  const gameplayFavorites = useGameplayFavorites(gameplayCharacterId, ownsPlayerCharacter);
+  const sheetFavoriteType = sheetActionSource?.item?.tipo === 'implante' ? 'PROTESE' : sheetActionSource?.type;
+  const sheetFavorite = gameplayFavorites.favorites.find((item) => item.tipoOrigem === sheetFavoriteType
+    && item.idOrigem === sheetActionSource?.id) ?? null;
 
   const updatePlayerSystem = React.useCallback(async () => {
     if (characterSource !== 'player' || !id) return;
@@ -728,6 +761,22 @@ const PersonagemPage: React.FC = () => {
     : 'Sem descricao registrada.';
   const cooldownValue = Number((personagem as any)?.cooldownUltimate ?? ultimate?.cooldown) || 0;
   const statusAtual = (personagem as any)?.statusJson?.status ?? {};
+  const atributosAtuais = (personagem as any)?.statusJson?.atributos ?? {};
+  const atributosPrincipaisAtuais = normalizeRuntimeAttributeValues(atributosAtuais.principais ?? {});
+  const atributosSecundariosAtuais = normalizeRuntimeAttributeValues(atributosAtuais.secundarios ?? {});
+  const camposPrincipais = getRuntimeAttributeFields(runtimeContext, 'Principal', atributosPrincipaisAtuais);
+  const camposSecundarios = getRuntimeAttributeFields(runtimeContext, 'Secundario', atributosSecundariosAtuais);
+  const podeUsarAcoesDaFicha = ownsPlayerCharacter && Boolean(gameplayMesaId);
+  const abrirTesteAtributo = (attributeCode: string, group: 'Principal' | 'Secundario') => {
+    if (!podeUsarAcoesDaFicha) return;
+    setActionCenterInitial({ type: 'attribute', attributeCode, group });
+    setActionCenterOpen(true);
+  };
+  const abrirAcoesXp = () => {
+    if (!podeUsarAcoesDaFicha) return;
+    setActionCenterInitial({ type: 'xp' });
+    setActionCenterOpen(true);
+  };
   const vidaAtual = Number(statusAtual.vida) || 0;
   const vidaMaxima = Number(statusAtual.vidaMaxima ?? statusAtual.vida) || 0;
   const manaAtual = Number(statusAtual.mana) || 0;
@@ -789,6 +838,19 @@ const PersonagemPage: React.FC = () => {
       : null,
   ].filter((entry): entry is { label: string; value: string } => entry !== null) : [];
   const detailAttributeEntries = [...selectedAttributeEntries, ...selectedAbilityEntries];
+  const selectedGameplaySource: GameplaySheetActionSource | null = (() => {
+    if (!selectedInventoryItem || !ownsPlayerCharacter || !selectedInventoryItem.id) return null;
+    const actionType = (selectedInventoryItem as any).__gameplayActionType as string | undefined;
+    if (actionType === 'SKILL' || actionType === 'MAGIA') {
+      return actionType === 'SKILL'
+        ? getSkillGameplayAction(selectedInventoryItem as any)
+        : getMagicGameplayAction(selectedInventoryItem as any);
+    }
+    return getItemGameplayAction(selectedInventoryItem);
+  })();
+  const gameplayCharacter = ownsPlayerCharacter && personagem
+    ? { personagem: personagem as any }
+    : null;
   const comparisonCurrentCharacter = createCharacterComparisonData({
     id: id ? Number(id) : undefined,
     origem: characterSource === 'player' ? 'Jogador' : 'Npc',
@@ -971,9 +1033,57 @@ const PersonagemPage: React.FC = () => {
                                       <StatusBarFill $color={'var(--neonYellow)'} $pct={xpOculto ? 0 : xpPercentage} />
                                     </StatusBarWrapper>
                                   </div>
+                                  {podeUsarAcoesDaFicha && (
+                                    <StatusActionButton
+                                      type="button"
+                                      onClick={abrirAcoesXp}
+                                      title="Registrar ou rolar XP"
+                                      aria-label="Abrir a\u00e7\u00f5es de experi\u00eancia"
+                                    >
+                                      <CasinoOutlinedIcon />
+                                    </StatusActionButton>
+                                  )}
                                 </StatusDiv>
                             </StatusHeader>
                         </StatusList>
+                        {podeUsarAcoesDaFicha && (camposPrincipais.length > 0 || camposSecundarios.length > 0) && (
+                          <SheetActionPanel aria-label="Testes de atributos da ficha">
+                            <SheetActionGroup>
+                              <h3>Principais</h3>
+                              <div>
+                                {camposPrincipais.map((field) => (
+                                  <SheetAttributeRollButton
+                                    key={`principal-${field.code}`}
+                                    type="button"
+                                    onClick={() => abrirTesteAtributo(field.code, 'Principal')}
+                                    title={`Testar ${field.label}`}
+                                  >
+                                    <span>{field.label}</span>
+                                    <strong>{Number(atributosPrincipaisAtuais[field.key]) || 0}</strong>
+                                    <CasinoOutlinedIcon aria-hidden="true" />
+                                  </SheetAttributeRollButton>
+                                ))}
+                              </div>
+                            </SheetActionGroup>
+                            <SheetActionGroup>
+                              <h3>Secund\u00e1rios</h3>
+                              <div>
+                                {camposSecundarios.map((field) => (
+                                  <SheetAttributeRollButton
+                                    key={`secundario-${field.code}`}
+                                    type="button"
+                                    onClick={() => abrirTesteAtributo(field.code, 'Secundario')}
+                                    title={`Testar ${field.label}`}
+                                  >
+                                    <span>{field.label}</span>
+                                    <strong>{Number(atributosSecundariosAtuais[field.key]) || 0}</strong>
+                                    <CasinoOutlinedIcon aria-hidden="true" />
+                                  </SheetAttributeRollButton>
+                                ))}
+                              </div>
+                            </SheetActionGroup>
+                          </SheetActionPanel>
+                        )}
                         <HexagonHud>
                           <HexagonBackground />
                           <HexagonContent>
@@ -1183,6 +1293,21 @@ const PersonagemPage: React.FC = () => {
                       <VisibilityOutlinedIcon />
                     </ItemModalViewButton>
                   )}
+                  {selectedGameplaySource && (
+                    <ItemModalViewButton
+                      type="button"
+                      theme={theme}
+                      neon={neon}
+                      onClick={() => {
+                        setSheetActionSource(selectedGameplaySource);
+                        setSelectedInventoryItem(null);
+                      }}
+                      title="Rolar ação"
+                      aria-label="Rolar ação deste item, skill ou magia"
+                    >
+                      <CasinoOutlinedIcon />
+                    </ItemModalViewButton>
+                  )}
                   <HistoryModalClose theme={theme} neon={neon} onClick={() => setSelectedInventoryItem(null)} title="Fechar" aria-label="Fechar descrição do item" autoFocus>
                     <CloseIcon />
                   </HistoryModalClose>
@@ -1222,6 +1347,54 @@ const PersonagemPage: React.FC = () => {
           theme={theme}
           neon={neon}
           runtimeContext={runtimeContext}
+        />
+
+        <GameplaySheetActionDialog
+          open={Boolean(sheetActionSource)}
+          source={sheetActionSource}
+          character={gameplayCharacter}
+          theme={theme}
+          neon={neon}
+          submitting={gameplay.submitting}
+          onClose={() => setSheetActionSource(null)}
+          onRoll={gameplay.roll}
+          onApplyEffect={gameplay.applyEffect}
+          onEffectApplied={gameplay.refresh}
+          favorite={sheetFavorite}
+          favoriteSaving={gameplayFavorites.saving}
+          onSaveFavorite={gameplayFavorites.save}
+          onRemoveFavorite={gameplayFavorites.remove}
+        />
+
+        <GameplayActionCenter
+          open={actionCenterOpen}
+          onClose={() => {
+            setActionCenterOpen(false);
+            setActionCenterInitial(null);
+          }}
+          initialCharacterId={gameplayCharacter?.personagem.idpersonagemJogador}
+          initialAction={actionCenterInitial}
+          characters={gameplayCharacter ? [gameplayCharacter] : []}
+          session={gameplay.session}
+          mesaAoVivo={Boolean(gameplayMesaId)}
+          events={gameplay.events}
+          loading={gameplay.loading}
+          loadingMore={gameplay.loadingMore}
+          submitting={gameplay.submitting}
+          error={gameplay.error}
+          hasMore={gameplay.hasMore}
+          theme={theme}
+          neon={neon}
+          onRoll={gameplay.roll}
+          onApplyEffect={gameplay.applyEffect}
+          onGetActionCatalog={gameplay.getActionCatalog}
+          onRecordManual={gameplay.recordManual}
+          onLoadMore={gameplay.loadMore}
+          onRefresh={gameplay.refresh}
+          favorites={gameplayFavorites.favorites}
+          favoriteSaving={gameplayFavorites.saving}
+          onSaveFavorite={gameplayFavorites.save}
+          onRemoveFavorite={gameplayFavorites.remove}
         />
 
         {listModal === 'inventory' && (

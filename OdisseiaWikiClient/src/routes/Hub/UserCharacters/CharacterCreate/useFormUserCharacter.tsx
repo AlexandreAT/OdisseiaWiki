@@ -23,6 +23,7 @@ import { normalizeToJSONContent, prepareForAPI } from '../../../../utils/richTex
 import { CharacterStatusExtras, DEFAULT_CHARACTER_STATUS_EXTRAS, normalizeCharacterStatusExtras } from '../../../../utils/characterStatus';
 import { getApiErrorMessage } from '../../../../utils/apiError';
 import { addOrReplaceEmptyItem } from '../../../../utils/itemInventorySections';
+import { ensureGameplayEntryIds } from '../../../../utils/gameplayIdentity';
 import { useSistemaRuntimeContexto } from '../../../../hooks/useSistemaRuntimeContexto';
 import {
   applyRuntimeInitialAttribute,
@@ -104,13 +105,13 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
   const [level, setLevel] = useState(1);
   const [statusExtras, setStatusExtras] = useState<CharacterStatusExtras>(DEFAULT_CHARACTER_STATUS_EXTRAS);
   const [skills, setSkills] = useState<Skills[]>([
-    { nome: "", tipo: "suporte", elemento: ["normal"], nivel: 1,  }
+    { id: crypto.randomUUID(), nome: "", tipo: "suporte", elemento: ["normal"], nivel: 1,  }
   ])
   const [magias, setMagias] = useState<Magia[]>([
-    { nome: "", tipo: "suporte", elemento: ["fogo"] },
+    { id: crypto.randomUUID(), nome: "", tipo: "suporte", elemento: ["fogo"] },
   ]);
   const [itens, setItens] = useState<Item[]>([
-    { nome: "", descricao: "", quantidade: 0, peso: 0, tipo: "outro" },
+    { id: crypto.randomUUID(), nome: "", descricao: "", quantidade: 0, peso: 0, tipo: "outro" },
   ]);
   const [listPersonagemRelacionado, setListPersonagemRelacionado] = useState<
     { id: number; nome: string }[]
@@ -613,9 +614,9 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
         ...normalizeRuntimeAttributeValues(status.atributos?.secundarios),
     } as Secundarios);
 
-    setSkills(skills);
-    setMagias(magias);
-    setItens(inventario);
+    setSkills(ensureGameplayEntryIds(skills));
+    setMagias(ensureGameplayEntryIds(magias));
+    setItens(ensureGameplayEntryIds(inventario));
     setListPersonagemRelacionado(relacionados);
 
     setXp(status.xp ?? 0);

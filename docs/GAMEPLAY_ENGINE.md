@@ -1,8 +1,8 @@
 # OdisseiaWiki - Guia da Engine de Gameplay
 
 > **Versao do documento:** 1.0  
-> **Ultima revisao:** 20/09/2026  
-> **Estado geral:** planejado e pronto para implementacao incremental  
+> **Ultima revisao:** 26/09/2026
+> **Estado geral:** implementacao incremental em andamento
 > **Escopo:** sessoes, rolagens, acoes, historico, combate e automacoes de regras  
 > **Documento canonico:** qualquer alteracao da engine deve atualizar este arquivo na mesma entrega
 
@@ -138,15 +138,15 @@ Ao final das fases previstas, um participante autorizado deve conseguir:
 | Resolver central de runtime | `Implementado` | `SistemaRpgResolver` com origem, proveniencia, warnings e fallback. |
 | Vinculo de Mesa com versao | `Implementado` | `Mesa.IdSistemaVersao`; Mesa Padrao acompanha a publicacao atual. |
 | Fichas de personagem | `Implementado` | Recursos, atributos, defesas, inventario, proteses, skills e magias. |
-| Armas, modificadores e acessorios | `Implementado parcialmente` | Estrutura tipada no frontend; calculo efetivo em `weaponModifiers.ts`. |
+| Armas, modificadores e acessorios | `Implementado parcialmente` | Estrutura tipada no frontend e resolucao autoritativa no backend para testes de arma: alcance, cadencia, operacao, tiros, modificadores e acessorios compativeis sao lidos da ficha persistida. Dano e custos conhecidos sao propostos e podem ser aplicados por confirmacao; municao e efeitos narrativos continuam assistidos. |
 | Estado compartilhado da Mesa | `Implementado parcialmente` | `Mesa.AoVivo`, snapshot de personagens e presenca SignalR. |
 | Atualizacao rapida de recursos | `Implementado parcialmente` | Patch de recursos regrava o JSON de status com validacao de limites. |
 | Realtime | `Implementado parcialmente` | SignalR notifica invalidacao e presenca; cliente refaz a leitura autorizada. |
-| Catalogos de dados e resultados | `Implementado parcialmente` | `SistemaResultadoDado` descreve dado, quantidade, faixas, natural, resultado e efeito JSON. |
+| Catalogos de dados e resultados | `Implementado parcialmente` | `SistemaResultadoDado` descreve dado, quantidade, faixas, natural, resultado e efeito JSON. O backend publica um catalogo executavel de teste geral, atributos e fontes de XP da versao efetiva; a criacao de item oferece as tabelas publicadas em vez de depender apenas de codigo livre. |
 | Sessao, comando e ledger | `Implementado` | `MesaSessao`, `MesaComando`, `MesaEvento` e `MesaRolagem` mantem inicio/fim, idempotencia, sequencia e imutabilidade. |
-| Rolagem autoritativa | `Implementado parcialmente` | RNG do servidor para teste generico, atributo e fontes de XP; simulacao offline nao persiste. |
-| Contrato de rolagem auditavel | `Implementado parcialmente` | Resultado registra dados, modo, dificuldade/faixas quando existentes, snapshot de origem, revisoes e avisos/fallbacks. Acoes de arma/item/poder ainda aguardam regras estruturadas. |
-| Escritas runtime da ficha | `Implementado parcialmente` | Vida, mana, estamina, XP, defesas e inventario passam por `RevisaoRuntime`; em sessao ativa a escrita gera comando e evento na mesma transacao. Ainda faltam comandos tipados para custo, dano, condicao e equipamentos. |
+| Rolagem autoritativa | `Implementado parcialmente` | RNG do servidor para teste generico, atributos, fontes de XP e acoes referenciadas da ficha, sempre resolvidas pela versao efetiva; simulacao offline nao persiste nem permite aplicar efeitos. |
+| Contrato de rolagem auditavel | `Implementado parcialmente` | Resultado registra dados, modo, dificuldade/faixas, criticos naturais, snapshot de origem, revisoes, parametros escolhidos e avisos/fallbacks. Armas e poderes usam especificacao declarativa validada contra a versao publicada do Sistema. |
+| Escritas runtime da ficha | `Implementado parcialmente` | Vida, mana, estamina, XP, defesas e inventario passam por `RevisaoRuntime`; em sessao ativa a escrita gera comando e evento na mesma transacao. XP, custo de recurso e dano propostos por uma rolagem possuem confirmacao separada, revisao otimista, idempotencia e evento. Ainda faltam condicoes, equipamentos, municao e defesa tipada. |
 
 ## 4.2. O que ainda nao existe
 
@@ -155,11 +155,11 @@ Ainda nao existem no dominio, ou nao estao completos:
 - encontro ou combate persistente;
 - participante de combate independente da entidade Wiki;
 - ordem real de iniciativa, turno e rodada;
-- catalogo versionado e executavel de acoes de arma, item, skill, magia e condicao;
-- aplicacao atomica de custo, dano, defesa, inventario e condicao por comandos tipados;
+- catalogo versionado completo de acoes de arma, item, skill, magia e condicao; a primeira camada executavel ja cobre armas e poderes com `TesteSpec`, mas efeitos e condicoes continuam declarativos;
+- aplicacao atomica de defesa, inventario, municao e condicao por comandos tipados; XP, custo de recurso e dano conhecidos ja possuem aplicacao confirmada;
 - cooldown e duracao executados pela engine;
 - projecoes de estatistica;
-- regras autoritativas de modificadores de arma e acessorio;
+- aplicacao autoritativa de municao, cooldown, duracao e efeitos nao representados como recurso; dano e custo conhecidos ja usam proposta e comando separados;
 - execucao continua, em ambiente MariaDB, da suite de integracao que cobre concorrencia, reconexao e dois usuarios da mesma Mesa.
 
 ## 4.3. Correcoes preparatorias obrigatorias
@@ -711,20 +711,19 @@ Codigos iniciais previstos:
 
 Cada tipo deve possuir DTO de payload proprio ou discriminated union equivalente. Nao aceitar JSON arbitrario sem validacao.
 
-## 12.4. `MesaAplicacaoEfeito`
+## 12.4. `MesaEfeitoAplicado`
 
-Aplicar uma rolagem com outra chave idempotente nao pode repetir XP, dano, custo ou condicao. A fundacao deve possuir um registro relacional equivalente a:
+Aplicar uma rolagem com outra chave idempotente nao pode repetir XP, dano, custo ou condicao. A fundacao possui o registro relacional `MesaEfeitoAplicado`:
 
 | Campo | Funcao |
 |---|---|
-| `IdMesaAplicacaoEfeito` | Identidade da aplicacao. |
+| `IdMesaEfeitoAplicado` | Identidade da aplicacao. |
 | `IdMesaSessao` | Escopo da aplicacao. |
 | `IdEventoOrigem` | Rolagem/calculo que ofereceu o efeito. |
 | `ChaveEfeito` | Identidade estavel do efeito dentro do resultado. |
-| `TipoAlvo` / `IdAlvo` | Alvo efetivamente alterado. |
+| `IdPersonagemAlvo` | Personagem efetivamente alterado nesta fase. |
 | `HashPlano` | Hash canonico do efeito/delta confirmado. |
-| `IdMesaComando` | Comando idempotente que aplicou. |
-| `IdEventoAplicacao` | Evento que registrou a mudanca. |
+| `IdEventoAplicacao` | Evento que registrou a mudanca e referencia o comando idempotente. |
 | `AplicadoEmUtc` | Auditoria temporal. |
 
 Uma constraint unica por sessao + evento de origem + chave do efeito + alvo impede dupla aplicacao inclusive com chaves de comando diferentes. Aplicacao composta registra cada efeito ou um grupo atomico explicitamente identificado; falha parcial nao e permitida por padrao.
@@ -1158,8 +1157,10 @@ O servidor resolve:
 - acessorios compativeis;
 - penalidades de contexto;
 - quantidade de ataques/dados segundo a regra;
-- custo proposto de estamina/mana/municao, sem aplicar no primeiro MVP;
-- dano por distancia como valor proposto, sem aplicar automaticamente.
+- custo proposto de estamina/mana, aplicavel apenas apos confirmacao; municao permanece assistida;
+- dano por distancia como valor proposto, aplicavel em alvo escolhido pelo mestre, nunca automaticamente.
+
+Cada tiro/ataque solicitado gera uma resolucao individual com seus proprios dados. O resultado agregado preserva quantidade, acertos, falhas e cada rolagem individual; dano por acerto e custo por uso sao multiplicados somente depois dessas resolucoes e permanecem propostas confirmaveis.
 
 ## 17.4. Arma corpo a corpo
 
@@ -1221,6 +1222,7 @@ Por isso, a regra inicial "skills e magias sempre possuem dado de acerto" nao e 
 
 - `acerto?: DadoAcerto` continua como fallback legado de leitura;
 - novos poderes devem aceitar `teste?: TesteSpec` tipado;
+- `TesteSpec.codigoTeste` referencia uma tabela publicada; quando o catalogo estiver disponivel, o editor deve oferecer selecao e preservar codigos legados apenas para compatibilidade;
 - `custo` e `cooldown` textuais continuam informativos ate existir estrutura tipada;
 - efeito textual nunca e executado automaticamente;
 - a tela administrativa do Sistema deve permitir configurar regras estruturadas em rascunho;
@@ -1256,6 +1258,8 @@ Uma rolagem retorna:
 - token/identidade do resultado, se uma aplicacao posterior for permitida.
 
 Aplicar exige novo comando explicito, revisao atual e autorizacao. A engine recalcula ou valida o snapshot antes de alterar o estado.
+
+Estado atual: XP, custos de vida/mana/estamina, dano e efeitos estruturados que alteram um recurso publicado podem ser confirmados separadamente durante uma sessao ativa. Simulacoes offline apenas mostram o calculo. O jogador confirma efeitos sobre o proprio personagem; alterar outro personagem exige o mestre e um alvo explicito.
 
 Quando a aplicacao referencia uma rolagem anterior:
 
@@ -1728,6 +1732,17 @@ A pagina de Mesa em jogo deve ganhar uma area de gameplay, sem substituir a fich
 
 Desktop pode usar painel/drawer lateral. Em mobile, usar sheet ou tela cheia e cards empilhados.
 
+### 24.3.1. Rolagens favoritas
+
+- atributos e acoes configuraveis de item, protese, skill ou magia podem salvar uma configuracao por personagem;
+- favoritar persiste somente as escolhas do modal, nunca resultado, revisao, chave de idempotencia ou regra calculada;
+- ao reabrir a acao, o modal usa a configuracao salva como preenchimento inicial e nao executa a rolagem automaticamente;
+- na Mesa, os favoritos de todos os personagens controlados pelo usuario aparecem acima do historico como atalhos pequenos, responsivos e com quebra de linha; quando houver mais de um personagem, os atalhos sao separados e identificados pelo nome da ficha;
+- nenhum atalho executa a rolagem automaticamente: item e protese abrem o modal configuravel ja preenchido, enquanto atributo, skill e magia abrem a etapa pronta para o usuario lancar o dado;
+- somente depois da confirmacao ou lancamento explicito do usuario a mesma rota autoritativa e chamada, com nova chave de idempotencia e revisoes atuais;
+- o servidor sempre relê a ficha e a versao publicada do Sistema. Portanto, alteracoes posteriores de arma, acessorio, poder ou regra valem na proxima rolagem favorita;
+- remover o favorito apaga apenas a preferencia. Nenhum evento ou resultado historico e alterado.
+
 ## 24.4. Estados do modal
 
 O modal deve possuir estados explicitos:
@@ -1799,9 +1814,14 @@ GET  /api/mesas/{mesaId}/personagens/{personagemId}/acoes
 GET  /api/mesas/{mesaId}/sessoes/{sessaoId}/eventos?cursor={cursorOpaco}&limite={n}
 GET  /api/mesas/{mesaId}/sessoes/{sessaoId}/eventos/{eventoId}
 
+GET    /api/personagens-jogador/{personagemId}/rolagens/favoritos
+GET    /api/personagens-jogador/{personagemId}/rolagens/catalogo
+PUT    /api/personagens-jogador/{personagemId}/rolagens/favoritos
+DELETE /api/personagens-jogador/{personagemId}/rolagens/favoritos/{favoritoId}
+
 POST /api/mesas/{mesaId}/sessoes/{sessaoId}/rolagens
 POST /api/mesas/{mesaId}/sessoes/{sessaoId}/registros-manuais
-POST /api/mesas/{mesaId}/sessoes/{sessaoId}/aplicacoes
+POST /api/mesas/{mesaId}/sessoes/{sessaoId}/efeitos/aplicar
 
 POST /api/personagens-jogador/{personagemId}/rolagens/simular
 ```
@@ -2767,20 +2787,20 @@ Antes de adicionar uma acao, responder:
 
 Esta tabela e obrigatoria e deve ser atualizada em cada entrega.
 
-| Area | Estado em 23/09/2026 | Observacao |
+| Area | Estado em 26/09/2026 | Observacao |
 |---|---|---|
 | Estudo do livro e arquitetura | `Concluido` | Regras, riscos, UI e arquitetura alvo documentados. |
-| Fase 0 - Preparacao | `Parcial` | Vida zero permanece na Mesa; revisao otimista e auditoria transacional das escritas atuais da ficha estao implementadas. Dados legados e calculos autoritativos de arma ainda precisam de trabalho. |
+| Fase 0 - Preparacao | `Parcial` | Vida zero permanece na Mesa; revisao otimista e auditoria transacional das escritas atuais da ficha estao implementadas. Identidades estaveis entram gradualmente quando fichas legadas sao salvas; aplicacoes futuras devem continuar usando o mesmo contrato de revisao e ledger. |
 | Fase 1 - Fundacao | `Parcial` | Sessoes, comandos idempotentes, eventos, RNG, visibilidade, historico com cursor que avanca sobre linhas privadas, transacao e adaptador `AoVivo` implementados. A suite MariaDB e opt-in e deve entrar na execucao continua antes de ampliar comandos de estado. |
-| Fase 2 - MVP de rolagens | `Parcial` | Rolagens genericas, atributos Odisseia, fontes de XP calculadas, registro manual, simulacao offline via API, Central com teste de atributo em modal, dado 3D opcional, animacao autorizada das rolagens dos outros participantes e historico em tempo real na Mesa. A UI permite testes offline sem historico; faltam ficha dedicada e aplicacao auditada de XP. |
-| Fase 3 - Acoes de itens/poderes | `Nao iniciada` | Modificadores atuais continuam preview no frontend. |
-| Fase 4 - Engine de estado | `Nao iniciada` | Recursos atuais nao formam engine transacional. |
+| Fase 2 - MVP de rolagens | `Parcial` | Rolagens genericas, atributos e fontes de XP sao obtidos da versao efetiva do Sistema; registro manual, simulacao offline, Central, ficha interativa, dado 3D, realtime e historico estao integrados. XP calculado pode ser aplicado somente por confirmacao em sessao ativa. |
+| Fase 3 - Acoes de itens/poderes | `Parcial` | Armas, proteses, skills e magias com `TesteSpec` podem ser acionadas da ficha. O servidor usa a linha persistida e a versao da sessao, valida alcance, cadencia, operacao e modo de disparo, resolve tiros individualmente, soma modificadores de arma/acessorios e grava snapshot completo. Dano e custos conhecidos viram propostas confirmaveis; municao, cooldown, duracao e efeitos narrativos continuam assistidos. |
+| Fase 4 - Engine de estado | `Parcial` | As escritas atuais usam revisao e auditoria em sessao. O comando de aplicacao altera XP ou recurso publicado a partir de proposta persistida, com permissao, idempotencia, limite, evento e registro relacional unico por origem/efeito/alvo. Ainda faltam defesa, inventario, municao, condicoes, descanso e morte tipados. |
 | Fase 5 - Combate/movimento | `Nao iniciada` | `TurnoAtual = Mestre` continua placeholder. |
 | Fase 6 - Estatisticas | `Nao iniciada` | Nenhum agregado deve ser criado antes do ledger. |
 | Animacao 3D | `PoC integrada` | Poliedros CSS 3D D4/D6/D8/D10/D12/D20 com clique, arremesso por ponteiro ou movimento do celular, impulso proporcional a velocidade e distancia do gesto, colisao nas bordas, dois dados simultaneos em vantagem/desvantagem e pouso continuo nos valores do servidor. Chacoalhadas sucessivas reforcam e prolongam apenas a animacao local; em navegadores que exigem permissao, ela e solicitada por acao explicita. O pouso planeja voltas completas e desacelera monotonicamente ate a face oficial, sem mola, aceleracao corretiva ou troca abrupta no final. Novos eventos autorizados iniciam a mesma animacao nos demais participantes via invalidacao SignalR + leitura REST; abrir o modal sem rolar nao transmite nada. Outros tipos usam fallback textual. Sem biblioteca 3D ou fisica real. |
 | Ambiguidades do livro | `Abertas` | Registro `GE-A001` a `GE-A040`. |
 
-Validacao desta entrega: build do backend e TypeScript, testes direcionados de gameplay (rolagem offline e paginacao/privacidade do ledger). A suite MariaDB opt-in cobre a semantica que testes em memoria nao comprovam: bloqueios `FOR UPDATE`, isolamento serializavel e indices unicos. Ela deve ser executada em ambiente descartavel antes de publicar mudancas de estado. A animacao de dado e visual: apenas o backend determina e devolve o resultado.
+Validacao desta entrega: build do backend e TypeScript; testes de gameplay para regras publicadas, fallback legado identificado, armas/acessorios, tiros independentes, propostas de efeito, aplicacao de XP/recurso, permissao, duplicidade e paginacao/privacidade do ledger. A suite MariaDB opt-in cobre a semantica que testes em memoria nao comprovam: bloqueios `FOR UPDATE`, isolamento serializavel e indices unicos. Ela deve ser executada em ambiente descartavel antes de publicar mudancas de estado. A animacao de dado e visual: apenas o backend determina e devolve o resultado.
 
 ---
 
@@ -2810,6 +2830,8 @@ Validacao desta entrega: build do backend e TypeScript, testes direcionados de g
 | `GE-D020` | 23/09/2026 | Cursor do historico representa a ultima linha inspecionada, nao a ultima linha revelada | Eventos privados continuam invisiveis, mas nunca prendem clientes em paginas repetidas; a leitura percorre o ledger autorizado sem vazar dados | - |
 | `GE-D021` | 23/09/2026 | Escritas atuais da ficha usam revisao e comando/evento na mesma transacao quando a sessao esta ativa | Evita perda silenciosa entre patch rapido e edicao completa e preserva auditoria sem transformar a ficha em event sourcing | `GE-D004` |
 | `GE-D022` | 23/09/2026 | O contrato de rolagem declara modo, dificuldade, faixas, origem e fallbacks | A UI e o historico conseguem explicar a regra aplicada; referencias de arma/item/poder so serao aceitas quando houver resolucao autoritativa publicada | - |
+| `GE-D023` | 25/09/2026 | Favoritos persistem somente a intencao configurada; idempotencia, revisoes, regras e resultado sao sempre novos | Atalhos continuam seguros e refletem a ficha e a versao publicada atuais sem congelar calculos antigos | - |
+| `GE-D024` | 26/09/2026 | Rolagens apenas propoem XP, custo, dano e outros efeitos estruturados; cada mutacao exige confirmacao separada | Preserva a liberdade do RPG de Mesa sem abrir mao de regra publicada, permissao, concorrencia, idempotencia e auditoria | `GE-D003` |
 
 Novas decisoes devem receber ID sequencial, data, justificativa, impacto e referencia a decisao substituida. Nao apagar decisoes antigas.
 

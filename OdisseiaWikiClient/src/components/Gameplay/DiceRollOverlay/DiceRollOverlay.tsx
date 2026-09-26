@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { MdVibration } from 'react-icons/md';
 import type { GameplayRollResult } from '../../../models/Gameplay';
 import { getGameplayRollOutcome } from '../../../utils/gameplayOutcome';
+import { getGameplayModifierSummary, getGameplayRollSummary } from '../../../utils/gameplayRollSummary';
 import { getDieFaces, identity, quaternionAxis, quaternionMatrix, quaternionMultiply,
   quaternionNormalize, quaternionSlerp, quaternionToFace, type Quaternion } from './dieGeometry';
 import { createNaturalLandingPlan, getNaturalLandingAngularSpeed, getNaturalLandingRotation, resolveGestureLaunch,
@@ -18,6 +19,7 @@ export interface DiceRollOverlayProps {
   error?: string | null;
   onClose: () => void;
   onThrow?: () => void;
+  onResultRevealed?: () => void;
   autoThrow?: boolean;
   title?: string;
   neon?: boolean;
@@ -110,7 +112,7 @@ const smoothStep = (amount: number) => {
 };
 
 export const DiceRollOverlay = ({ open, result, error, onClose, title = 'Rolagem de dado',
-  onThrow, autoThrow = false, hasDice = true, requestedFaces, requestedDiceCount = 1 }: DiceRollOverlayProps) => {
+  onThrow, onResultRevealed, autoThrow = false, hasDice = true, requestedFaces, requestedDiceCount = 1 }: DiceRollOverlayProps) => {
   const titleId = useId();
   const overlayRef = useRef<HTMLDivElement | null>(null);
   const resultStripRef = useRef<HTMLDivElement | null>(null);
@@ -119,6 +121,8 @@ export const DiceRollOverlay = ({ open, result, error, onClose, title = 'Rolagem
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const onCloseRef = useRef(onClose);
   const onThrowRef = useRef(onThrow);
+  const onResultRevealedRef = useRef(onResultRevealed);
+  const resultRevealNotifiedRef = useRef(false);
   const dragRef = useRef<DragInteraction | null>(null);
   const throwCommandRef = useRef<ThrowCommand | null>(null);
   const motionImpulseRef = useRef<MotionImpulse | null>(null);
@@ -163,6 +167,7 @@ export const DiceRollOverlay = ({ open, result, error, onClose, title = 'Rolagem
 
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
   useEffect(() => { onThrowRef.current = onThrow; }, [onThrow]);
+  useEffect(() => { onResultRevealedRef.current = onResultRevealed; }, [onResultRevealed]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -174,6 +179,7 @@ export const DiceRollOverlay = ({ open, result, error, onClose, title = 'Rolagem
     setSettled(false);
     setResultDetailsVisible(false);
     setResultStripAtTop(false);
+    resultRevealNotifiedRef.current = false;
     if (autoThrow && visualDie) {
       throwCommandRef.current = { kind: 'random', dieIndex: 0, vx: 0, vy: 0 };
       throwPhaseRef.current = 'rolling';
@@ -214,6 +220,12 @@ export const DiceRollOverlay = ({ open, result, error, onClose, title = 'Rolagem
     const timeout = window.setTimeout(() => setResultDetailsVisible(true), RESULT_REVEAL_DELAY_MS);
     return () => window.clearTimeout(timeout);
   }, [error, open, result, settled, visualDie]);
+
+  useEffect(() => {
+    if (!open || !result || !resultDetailsVisible || resultRevealNotifiedRef.current) return;
+    resultRevealNotifiedRef.current = true;
+    onResultRevealedRef.current?.();
+  }, [open, result, resultDetailsVisible]);
 
   const beginDrag = (event: ReactPointerEvent<HTMLDivElement>, dieIndex: number) => {
     if (throwPhaseRef.current !== 'ready') return;
@@ -556,6 +568,7 @@ export const DiceRollOverlay = ({ open, result, error, onClose, title = 'Rolagem
   const dice = getVisualDiceResults(settledResult);
   const kept = dice.filter((die) => die.kept);
   const hasDiscarded = dice.some((die) => die.discarded);
+  const modifierSummary = visibleResult ? getGameplayModifierSummary(visibleResult) : '';
 
   return createPortal(
     <Overlay ref={overlayRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby={titleId} onClick={onClose}>
@@ -597,7 +610,7 @@ export const DiceRollOverlay = ({ open, result, error, onClose, title = 'Rolagem
         <div>
           <small id={titleId}>{title}</small>
           {error ? <strong>Não foi possível rolar</strong>
-            : visibleResult ? <strong>{visibleResult.nomeResultado || 'Resultado'}: {visibleResult.total}</strong>
+            : visibleResult ? <strong>{getGameplayRollSummary(visibleResult)}</strong>
               : <strong>{visualDie && throwPhase === 'ready' ? 'Lance o dado'
                 : visualDie && throwPhase === 'dragging' ? 'Solte para lançar'
                   : hasDice ? 'Rolando dado…' : 'Calculando…'}</strong>}
@@ -608,6 +621,7 @@ export const DiceRollOverlay = ({ open, result, error, onClose, title = 'Rolagem
               : <span>{visualDie && (throwPhase === 'ready' || throwPhase === 'dragging')
                 ? 'Clique para uma rolagem aleatória ou arraste para definir força e direção.'
                 : 'Aguardando o resultado do teste.'}</span>}
+          {modifierSummary && <span>Modificadores: {modifierSummary}</span>}
           {visualDie && throwPhase === 'ready' && diceShake.status === 'listening' && (
             <MotionHint as="span" $passive>
               <MdVibration aria-hidden="true" />

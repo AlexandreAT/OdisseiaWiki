@@ -272,6 +272,10 @@ namespace OdisseiaWiki.Services
             if (personagem is null)
                 return ResultFail($"PersonagemJogador com id {id} não encontrado.");
 
+            Mesa? mesa = await _mesaRepository.GetByIdAsync(personagem.Idmesa);
+            if (mesa?.IdMesaSessaoAtiva.HasValue == true)
+                return ResultFail("Encerre a sessão ativa antes de trocar a versão do Sistema desta ficha.");
+
             SistemaRuntimeContextoDto contextoMesa = await ResolverContextoAsync(
                 personagem.Idmesa,
                 personagem.Idraca);
@@ -283,8 +287,27 @@ namespace OdisseiaWiki.Services
             if (personagem.IdSistemaVersao == contextoMesa.IdSistemaVersao)
                 return ResultOk(personagem, "O personagem já utiliza a versão atual da Mesa.");
 
+            long revisaoAnterior = personagem.RevisaoRuntime;
             personagem.IdSistemaVersao = contextoMesa.IdSistemaVersao;
-            PersonagemJogador atualizado = await _repository.UpdateAsync(personagem);
+            PersonagemJogador atualizado;
+            try
+            {
+                atualizado = await _repository.UpdateWithRuntimeAuditAsync(
+                    personagem,
+                    revisaoAnterior,
+                    BuildRuntimeWriteAudit(
+                        personagem.Idusuario,
+                        Guid.NewGuid(),
+                        personagem,
+                        revisaoAnterior,
+                        "FICHA_SISTEMA_ATUALIZAR",
+                        "Sistema da ficha atualizado",
+                        "sistema"));
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return ResultFail("A ficha mudou em outra tela. Recarregue antes de atualizar o Sistema.");
+            }
             await _mesaRealtimeNotifier.NotificarPersonagemAlteradoAsync(
                 atualizado.Idmesa,
                 atualizado.IdpersonagemJogador);

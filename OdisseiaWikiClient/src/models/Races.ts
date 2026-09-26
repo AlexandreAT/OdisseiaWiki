@@ -22,6 +22,7 @@ export interface RacaStatus {
 }
 
 export interface RacaPassiva {
+  idpassiva?: number;
   nome: string;
   efeito?: string;
 }

@@ -120,6 +120,17 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
 
     return listRaces.map((r) => ({ value: r.idraca, label: r.nome }));
   }, [listRaces, race, raceChangeMode]);
+  const passiveOptions = React.useMemo(() => (
+    selectedRace?.statusJson?.passivas
+      ?.filter((passive) => passive.idpassiva && passive.nome?.trim())
+      .map((passive) => ({ value: passive.idpassiva!, label: passive.nome })) ?? []
+  ), [selectedRace?.statusJson?.passivas]);
+
+  React.useEffect(() => {
+    if (idpassiva && !passiveOptions.some((option) => option.value === idpassiva)) {
+      setIdpassiva(undefined);
+    }
+  }, [idpassiva, passiveOptions, setIdpassiva]);
 
   return (
     <RoleplayContainer>
@@ -272,14 +283,16 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
           type="number"
         />
 
-          <InputText
+          <Select
             theme={theme}
             neon={neon}
-            label="Idpassiva"
-            value={String(idpassiva ?? '')}
+            label="Passiva"
+            value={idpassiva ?? ''}
             onChange={(e) => setIdpassiva(e.target.value ? Number(e.target.value) : undefined)}
+            options={passiveOptions}
+            allowEmptyOption
+            disabled={passiveOptions.length === 0}
             width="100%"
-            type="number"
           />
 
           <InputText

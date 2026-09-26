@@ -71,7 +71,9 @@ export const CustomSelect = styled.select<Props>`
   font-size: 0.9em;
   padding: 25px 10px 10px;
   font-weight: 600;
-  color: ${({ disabled }) => (disabled ? 'var(--black)' : 'var(--deepgrey)')};
+  color: ${({ theme, disabled }) => disabled
+    ? 'var(--grey)'
+    : theme === 'dark' ? 'var(--whitesmoke)' : 'var(--deepgrey)'};
   transition: background-color 0.2s, border 0.2s;
   box-shadow: 0 0 1px 1px rgba(50, 50, 50, 0.8);
   appearance: none;
@@ -142,7 +144,9 @@ export const SelectControl = styled.button<Props>`
           ? 'var(--clearWhite)'
           : 'var(--clearblack)'};
   box-shadow: 0 0 1px 1px rgba(50, 50, 50, 0.8);
-  color: ${({ disabled }) => (disabled ? 'var(--black)' : 'var(--deepgrey)')};
+  color: ${({ theme, disabled }) => disabled
+    ? 'var(--grey)'
+    : theme === 'dark' ? 'var(--whitesmoke)' : 'var(--deepgrey)'};
   font-size: 0.9em;
   font-weight: 600;
   text-align: left;

@@ -33,6 +33,7 @@ import {
   type UsuarioPerfil,
 } from '../../services/usuarioService';
 import { getApiErrorMessage } from '../../utils/apiError';
+import { normalizeImagePath } from '../Wiki/utils/imagePathHelper';
 import {
   forgetRememberedManualLogin,
   getRememberedManualLogin,
@@ -203,7 +204,7 @@ export const Profile = () => {
               theme={theme}
               neon={neon}
               cropPreset={{ mode: 'single', aspectRatio: 1, shape: 'circle', displayShape: 'circle' }}
-              initialImage={avatarRemoved ? undefined : profile.imagemUrl ?? undefined}
+              initialImage={avatarRemoved ? undefined : normalizeImagePath(profile.imagemUrl ?? undefined)}
               onImageCropped={handleAvatarCrop}
               onRemove={() => {
                 setAvatarFile(null);

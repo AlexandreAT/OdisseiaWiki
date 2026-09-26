@@ -1,12 +1,62 @@
 import api from '../axios/api';
 import type {
   GameplayCommandResponse,
+  GameplayActionCatalog,
+  GameplayEffectApplyRequest,
   GameplayEventPage,
+  GameplayFavoriteRoll,
+  GameplayFavoriteRollUpsert,
   GameplayManualRecordRequest,
   GameplayRollRequest,
   GameplaySimulationResponse,
   GameplaySession,
 } from '../models/Gameplay';
+
+export const obterCatalogoAcoesGameplay = async (
+  idPersonagemJogador: number,
+): Promise<GameplayActionCatalog> => {
+  const response = await api.get<GameplayActionCatalog>(
+    `/personagens-jogador/${idPersonagemJogador}/rolagens/catalogo`,
+  );
+  return response.data;
+};
+
+export const aplicarEfeitoGameplay = async (
+  idMesa: number,
+  idMesaSessao: number,
+  payload: GameplayEffectApplyRequest,
+): Promise<GameplayCommandResponse> => {
+  const response = await api.post<GameplayCommandResponse>(
+    `/mesas/${idMesa}/sessoes/${idMesaSessao}/efeitos/aplicar`,
+    payload,
+  );
+  return response.data;
+};
+
+export const listarRolagensFavoritas = async (idPersonagemJogador: number): Promise<GameplayFavoriteRoll[]> => {
+  const response = await api.get<GameplayFavoriteRoll[]>(
+    `/personagens-jogador/${idPersonagemJogador}/rolagens/favoritos`,
+  );
+  return response.data;
+};
+
+export const salvarRolagemFavorita = async (
+  idPersonagemJogador: number,
+  payload: GameplayFavoriteRollUpsert,
+): Promise<GameplayFavoriteRoll> => {
+  const response = await api.put<GameplayFavoriteRoll>(
+    `/personagens-jogador/${idPersonagemJogador}/rolagens/favoritos`,
+    payload,
+  );
+  return response.data;
+};
+
+export const excluirRolagemFavorita = async (
+  idPersonagemJogador: number,
+  idFavorito: string,
+): Promise<void> => {
+  await api.delete(`/personagens-jogador/${idPersonagemJogador}/rolagens/favoritos/${idFavorito}`);
+};
 
 export const obterSessaoGameplayAtual = async (
   idMesa: number,

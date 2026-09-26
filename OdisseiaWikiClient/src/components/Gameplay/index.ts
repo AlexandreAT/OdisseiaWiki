@@ -1,3 +1,4 @@
 export { GameplayActionCenter } from './GameplayActionCenter';
-export type { GameplayActionCenterProps } from './GameplayActionCenter.types';
-
+export { GameplaySheetActionDialog } from './GameplaySheetActionDialog';
+export type { GameplaySheetActionSource } from './GameplaySheetActionDialog';
+export type { GameplayActionCenterInitialAction, GameplayActionCenterProps } from './GameplayActionCenter.types';

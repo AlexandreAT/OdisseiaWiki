@@ -3,6 +3,7 @@ import { SpanOption, AvatarCotroller, Avatar, NavbarAvatarImage, NavigationLinks
 import { PerfilList } from '../PerfilList/PerfilList';
 import { useRef, useState } from 'react';
 import type { StoredAuthUser } from '../../../../services/authSession';
+import { normalizeImagePath } from '../../../../routes/Wiki/utils/imagePathHelper';
 
 interface Props {
   theme: 'dark' | 'light';
@@ -31,7 +32,7 @@ export  const NavbarLinks = ({ theme, neon, usuario }: Props) => {
                         neon={neon}
                         onClick={() => setShowPerfil(!showPerfil)}
                     >
-                        <NavbarAvatarImage src={usuario.imagemUrl} alt="Avatar do usuário" />
+                        <NavbarAvatarImage src={normalizeImagePath(usuario.imagemUrl)} alt="Avatar do usuário" />
                     </Avatar>
                     {showPerfil && (
                         <PerfilList

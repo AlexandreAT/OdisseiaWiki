@@ -21,6 +21,7 @@ export interface RacaStatus {
 }
 
 export interface RacaPassiva {
+  idpassiva?: number;
   nome: string;
   efeito?: string;
 }
@@ -90,11 +91,12 @@ const normalizeRacaPassivas = (value: unknown): RacaPassiva[] => {
 
     if (!item || typeof item !== 'object' || Array.isArray(item)) return [];
     const passiva = item as Record<string, unknown>;
+    const idpassiva = Number(passiva.idpassiva ?? passiva.idPassiva ?? passiva.Idpassiva ?? passiva.IdPassiva) || undefined;
     const nome = String(passiva.nome ?? passiva.Nome ?? '').trim();
     const efeito = String(passiva.efeito ?? passiva.Efeito ?? passiva.descricao ?? passiva.Descricao ?? '').trim();
     if (!nome && !efeito) return [];
 
-    return [{ nome, ...(efeito ? { efeito } : {}) }];
+    return [{ ...(idpassiva ? { idpassiva } : {}), nome, ...(efeito ? { efeito } : {}) }];
   });
 };
 

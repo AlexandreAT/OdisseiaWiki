@@ -94,6 +94,11 @@ export const mapToItem = (payload: ItemPayload): Item => {
     tags: payload.tags ?? undefined,
     visivel: payload.visivel ?? undefined,
     dataCriacao: payload.dataCriacao ?? undefined,
+    aplicaTeste: typeof payload.aplicaTeste === 'boolean'
+      ? payload.aplicaTeste
+      : typeof atributos.aplicaTeste === 'boolean'
+        ? atributos.aplicaTeste
+        : undefined,
     idPersonagem: payload.idpersonagem ?? undefined,
     idSistemaRpg: payload.idSistemaRpg ?? null,
     idSistemaVersao: payload.idSistemaVersao ?? null,
@@ -119,6 +124,7 @@ export const mapToPayload = (item: Item): ItemPayload => {
     tags: item.tags,
     visivel: item.visivel,
     dataCriacao: item.dataCriacao,
+    aplicaTeste: item.aplicaTeste,
     idpersonagem: item.idPersonagem,
     idSistemaRpg: item.idSistemaRpg,
     idSistemaVersao: item.idSistemaVersao,

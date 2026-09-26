@@ -9,6 +9,7 @@ interface Props {
 export const BoxContainer = styled.div<Props>`
     ${({ width }) => width && `width: ${width};`};
     display: flex;
+    align-items: center;
     padding: 2px 16px 2px 8px;
     border-left: 2px solid ${({ theme, neon }) =>
         theme === "dark" 

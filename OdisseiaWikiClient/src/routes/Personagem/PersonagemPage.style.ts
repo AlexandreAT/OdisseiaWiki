@@ -887,6 +887,83 @@ export const StatusController = styled.div`
     min-width: 0;
 `
 
+export const SheetActionPanel = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  padding: 12px;
+  box-sizing: border-box;
+  border: 1px solid color-mix(in srgb, var(--neonBlue) 54%, transparent);
+  background: rgba(0, 10, 24, 0.5);
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    padding: 10px;
+  }
+`;
+
+export const SheetActionGroup = styled.section`
+  min-width: 0;
+
+  h3 {
+    margin: 0 0 7px;
+    color: var(--clearneonBlue);
+    font-family: 'DO Futuristic', sans-serif;
+    font-size: 13px;
+    font-weight: 400;
+    letter-spacing: 1px;
+  }
+
+  > div {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+`;
+
+export const SheetAttributeRollButton = styled.button`
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  min-height: 34px;
+  padding: 6px 7px;
+  border: 1px solid rgba(0, 179, 255, 0.48);
+  background: rgba(0, 4, 14, 0.7);
+  color: var(--whitesmoke);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12px;
+  }
+
+  strong {
+    color: var(--clearneonBlue);
+    font-size: 14px;
+  }
+
+  svg {
+    color: var(--clearneonBlue);
+    font-size: 16px;
+  }
+
+  &:hover,
+  &:focus-visible {
+    border-color: var(--clearneonBlue);
+    background: rgba(0, 46, 75, 0.48);
+    box-shadow: 0 0 8px rgba(0, 204, 255, 0.36);
+    outline: none;
+  }
+`;
+
 export const StatusList = styled.div`
     display: flex;
     flex-direction: column;
@@ -970,6 +1047,33 @@ export const StatusDiv = styled.div`
     -webkit-mask-composite: xor;
     mask-composite: exclude;
     padding: 3px;
+  }
+`;
+
+export const StatusActionButton = styled.button`
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--neonYellow);
+  background: rgba(12, 12, 0, 0.7);
+  color: var(--neonYellow);
+  cursor: pointer;
+
+  svg { font-size: 17px; }
+
+  &:hover,
+  &:focus-visible {
+    color: var(--clearneonYellow);
+    border-color: var(--clearneonYellow);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--clearneonYellow) 65%, transparent);
+    outline: none;
   }
 `;
 

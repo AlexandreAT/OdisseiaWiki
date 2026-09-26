@@ -20,6 +20,7 @@ export interface ItemPayload {
   visivel?: boolean;
   destaque?: boolean;
   dataCriacao?: string;
+  aplicaTeste?: boolean;
   idSistemaRpg?: number | null;
   idSistemaVersao?: number | null;
   acompanharPublicacaoAtual?: boolean;

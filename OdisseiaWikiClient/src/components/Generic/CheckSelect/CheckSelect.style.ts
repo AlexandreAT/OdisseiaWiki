@@ -34,11 +34,6 @@ export const CheckListDropdown = styled.div<DropdownProps>`
   max-width: calc(100vw - 24px);
   box-sizing: border-box;
 
-  ${({ theme, neon }) =>
-    neon === 'on' &&
-    css`
-      border-color: ${theme === 'dark' ? 'var(--clearneonBlue)' : 'var(--clearneonPink)'};
-    `}
 `;
 
 export const CheckListContainer = styled.div`
@@ -70,15 +65,11 @@ export const CheckDisplay = styled.div<DisplayProps & { height?: string }>`
   box-sizing: border-box;
   overflow-wrap: anywhere;
 
-  ${({ focus, theme, neon }) =>
+  ${({ focus }) =>
     focus &&
     css`
-      border-color: ${neon === 'on' ? (theme === 'dark' ? 'var(--clearneonBlue)' : 'var(--clearneonPink)') : 'var(--black-blue)'};
-      box-shadow: ${neon === 'on'
-        ? theme === 'dark'
-          ? '0 0 10px 1px var(--clearneonBlue), inset 0 0 10px 1px var(--clearneonBlue)'
-          : '0 0 10px 1px var(--clearneonPink), inset 0 0 10px 1px var(--clearneonPink)'
-        : '0 0 1px 1px rgba(50,50,50,0.8)'};
+      border-color: var(--black-blue);
+      box-shadow: 0 0 1px 1px rgba(50,50,50,0.8);
     `}
 
   ${({ error }) =>

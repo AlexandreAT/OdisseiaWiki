@@ -4,18 +4,23 @@ import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import MilitaryTechOutlinedIcon from '@mui/icons-material/MilitaryTechOutlined';
 import NoteAddOutlinedIcon from '@mui/icons-material/NoteAddOutlined';
 import RefreshOutlinedIcon from '@mui/icons-material/RefreshOutlined';
+import StarBorderOutlinedIcon from '@mui/icons-material/StarBorderOutlined';
+import StarOutlinedIcon from '@mui/icons-material/StarOutlined';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useSistemaRuntimeContexto } from '../../hooks/useSistemaRuntimeContexto';
 import type {
+  GameplayActionCatalog,
   GameplayCommandResponse,
   GameplayDiceGroupRequest,
+  GameplayEffectProposal,
   GameplayRollMode,
   GameplayVisibility,
 } from '../../models/Gameplay';
 import type { PersonagemStatus } from '../../models/PersonagemJogador';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { getGameplayEventOutcome, getGameplayRollOutcome } from '../../utils/gameplayOutcome';
+import { getGameplayModifierSummary, getGameplayRollSummary } from '../../utils/gameplayRollSummary';
 import {
   getRuntimeAttributeFields,
   normalizeRuntimeAttributeValues,
@@ -41,6 +46,7 @@ import {
   ContextRow,
   FieldHint,
   FormulaPreview,
+  FavoriteRollButton,
   GameplayBackdrop,
   GameplayBody,
   GameplayHeader,
@@ -58,6 +64,7 @@ import {
   RollDialogBackdrop,
   RollDialogBody,
   RollDialogHeader,
+  RollDialogHeaderActions,
   RollDialogPanel,
   RollDialogResult,
   SessionState,
@@ -151,12 +158,22 @@ const rollValues = (response: GameplayCommandResponse | null) => (
   response?.rolagem?.grupos.flatMap((group) => group.valores) ?? []
 );
 
+const diceGroupsFromExpression = (expression?: string | null): GameplayDiceGroupRequest[] => {
+  const match = String(expression ?? '').match(/(\d*)\s*[dD]\s*(\d+)/);
+  if (!match) return [];
+  return [{ quantidade: Number(match[1] || 1), faces: Number(match[2]) }];
+};
+
 export const GameplayActionCenter = ({
   open,
   onClose,
   onDiceVisualOpenChange,
+  onCharacterChange,
   initialCharacterId,
+  initialAction,
+  directInitialAction = false,
   characters,
+  effectTargets = [],
   mesaAoVivo,
   session,
   events,
@@ -168,9 +185,15 @@ export const GameplayActionCenter = ({
   theme,
   neon,
   onRoll,
+  onApplyEffect,
+  onGetActionCatalog,
   onRecordManual,
   onLoadMore,
   onRefresh,
+  favorites = [],
+  favoriteSaving = false,
+  onSaveFavorite,
+  onRemoveFavorite,
 }: GameplayActionCenterProps) => {
   const panelRef = useRef<HTMLDivElement | null>(null);
   const rollDialogRef = useRef<HTMLDivElement | null>(null);
@@ -178,6 +201,7 @@ export const GameplayActionCenter = ({
   const commandKeysRef = useRef(new Map<string, string>());
   const initializedOpenRef = useRef(false);
   const requestedCharacterRef = useRef<number | null>(null);
+  const requestedInitialActionRef = useRef<string | null>(null);
   const [tab, setTab] = useState<GameplayTab>('attributes');
   const [selectedCharacterId, setSelectedCharacterId] = useState<number | ''>('');
   const [selectedAttribute, setSelectedAttribute] = useState<SelectedAttribute | null>(null);
@@ -197,6 +221,12 @@ export const GameplayActionCenter = ({
   const [submitErrorTarget, setSubmitErrorTarget] = useState<ResultTarget | null>(null);
   const [lastResult, setLastResult] = useState<GameplayCommandResponse | null>(null);
   const [lastResultTarget, setLastResultTarget] = useState<ResultTarget | null>(null);
+  const [actionCatalog, setActionCatalog] = useState<GameplayActionCatalog | null>(null);
+  const [applyingEffect, setApplyingEffect] = useState<string | null>(null);
+  const [appliedEffects, setAppliedEffects] = useState<string[]>([]);
+  const [effectTargetIds, setEffectTargetIds] = useState<Record<string, number | ''>>({});
+  const effectRevisionRef = useRef(0);
+  const effectTargetRevisionsRef = useRef(new Map<number, number>());
   const [diceVisual, setDiceVisual] = useState<{
     open: boolean;
     result: GameplayCommandResponse['rolagem'];
@@ -225,6 +255,40 @@ export const GameplayActionCenter = ({
     () => characters.find((entry) => entry.personagem.idpersonagemJogador === Number(selectedCharacterId)) ?? null,
     [characters, selectedCharacterId],
   );
+
+  useEffect(() => {
+    const characterId = selectedCharacter?.personagem.idpersonagemJogador;
+    if (!open || !characterId || !onGetActionCatalog) {
+      setActionCatalog(null);
+      return;
+    }
+    let disposed = false;
+    void onGetActionCatalog(characterId)
+      .then((catalog) => {
+        if (disposed) return;
+        setActionCatalog(catalog);
+        const faces = diceGroupsFromExpression(catalog.dadoTesteGeral)[0]?.faces;
+        if (faces && DICE_OPTIONS.some((option) => option.value === faces)) setDiceFaces(faces);
+      })
+      .catch(() => { if (!disposed) setActionCatalog(null); });
+    return () => { disposed = true; };
+  }, [onGetActionCatalog, open, selectedCharacter?.personagem.idpersonagemJogador]);
+
+  useEffect(() => {
+    if (selectedCharacterId !== '') onCharacterChange?.(Number(selectedCharacterId));
+  }, [onCharacterChange, selectedCharacterId]);
+  useEffect(() => {
+    effectRevisionRef.current = selectedCharacter?.personagem.revisaoRuntime ?? 0;
+    setAppliedEffects([]);
+    setApplyingEffect(null);
+    setEffectTargetIds({});
+  }, [selectedCharacter?.personagem.idpersonagemJogador, selectedCharacter?.personagem.revisaoRuntime]);
+  useEffect(() => {
+    effectTargetRevisionsRef.current = new Map(effectTargets.map((target) => [
+      target.personagem.idpersonagemJogador,
+      target.personagem.revisaoRuntime ?? 0,
+    ]));
+  }, [effectTargets]);
   const embeddedRuntime = selectedCharacter?.personagem.sistemaRuntime;
   const runtime = useSistemaRuntimeContexto({
     idMesa: selectedCharacter?.personagem.idmesa,
@@ -254,6 +318,18 @@ export const GameplayActionCenter = ({
     [runtimeContext, secondaryValues],
   );
   const xpActions = useMemo(() => {
+    const catalogSources = actionCatalog?.acoes.filter((action) => action.tipo === 'XP' && action.executavel) ?? [];
+    if (catalogSources.length > 0) {
+      return catalogSources.map((source) => ({
+        code: source.codigo,
+        actionCode: source.codigo,
+        label: source.nome,
+        description: 'Regra publicada pelo Sistema da Mesa.',
+        formula: source.expressao || 'Valor fixo',
+        groups: diceGroupsFromExpression(source.expressao),
+        mode: source.modoPadrao,
+      }));
+    }
     const configured = runtimeContext?.progressao?.fontesExperiencia ?? [];
     if (configured.length > 0) {
       return configured.flatMap((source) => {
@@ -269,8 +345,27 @@ export const GameplayActionCenter = ({
       || runtimeContext?.usaFallbackLegado
       ? XP_ACTIONS
       : [];
-  }, [runtimeContext]);
+  }, [actionCatalog, runtimeContext]);
   const selectedXp = xpActions.find((action) => action.code === selectedXpCode) ?? null;
+  const attributeFavoriteId = selectedAttribute
+    ? `${selectedAttribute.group.toUpperCase()}:${normalizeRuntimeCode(selectedAttribute.code || selectedAttribute.key)}`
+    : '';
+  const selectedAttributeFavorite = favorites.find((item) => item.tipoOrigem === 'ATRIBUTO'
+    && item.idOrigem === attributeFavoriteId) ?? null;
+  const selectedAttributeAction = selectedAttribute ? actionCatalog?.acoes.find((action) => (
+    action.tipo === 'ATRIBUTO'
+      && normalizeRuntimeCode(action.codigoAtributo ?? '') === normalizeRuntimeCode(selectedAttribute.code || selectedAttribute.key)
+      && normalizeRuntimeCode(action.grupoAtributo ?? '') === normalizeRuntimeCode(selectedAttribute.group)
+  )) ?? null : null;
+  const selectedAttributeGroups = diceGroupsFromExpression(selectedAttributeAction?.expressao).length > 0
+    ? diceGroupsFromExpression(selectedAttributeAction?.expressao)
+    : [{ quantidade: 1, faces: 6 }];
+
+  useEffect(() => {
+    if (!attributeDialogOpen || !selectedAttribute) return;
+    setMode(selectedAttributeFavorite?.configuracao.modo ?? 'Normal');
+    setVisibility(selectedAttributeFavorite?.configuracao.visibilidade ?? 'PublicaMesa');
+  }, [attributeDialogOpen, selectedAttribute, selectedAttributeFavorite]);
 
   useEffect(() => {
     if (!open) {
@@ -278,6 +373,7 @@ export const GameplayActionCenter = ({
       diceThrowResolverRef.current = null;
       initializedOpenRef.current = false;
       requestedCharacterRef.current = null;
+      requestedInitialActionRef.current = null;
       return;
     }
     const validInitial = characters.some((entry) => entry.personagem.idpersonagemJogador === initialCharacterId);
@@ -311,7 +407,10 @@ export const GameplayActionCenter = ({
       if (event.key === 'Escape') {
         if (diceVisualOpenRef.current) return;
         event.preventDefault();
-        if (attributeDialogOpenRef.current) setAttributeDialogOpen(false);
+        if (attributeDialogOpenRef.current) {
+          setAttributeDialogOpen(false);
+          if (directInitialAction) onClose();
+        }
         else onClose();
         return;
       }
@@ -339,7 +438,7 @@ export const GameplayActionCenter = ({
       document.body.style.overflow = previousOverflow;
       previousFocusRef.current?.focus();
     };
-  }, [onClose, open]);
+  }, [directInitialAction, onClose, open]);
 
   useEffect(() => {
     if (attributeDialogOpen) window.requestAnimationFrame(() => rollDialogRef.current?.focus());
@@ -356,7 +455,84 @@ export const GameplayActionCenter = ({
     setSubmitErrorTarget(null);
   }, [selectedCharacterId]);
 
+  useEffect(() => {
+    if (!open) requestedInitialActionRef.current = null;
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || !initialAction || !selectedCharacter) return;
+    const actionKey = initialAction.type === 'attribute'
+      ? `attribute:${initialAction.group}:${normalizeRuntimeCode(initialAction.attributeCode)}`
+      : 'xp';
+    if (requestedInitialActionRef.current === actionKey) return;
+
+    if (initialAction.type === 'xp') {
+      requestedInitialActionRef.current = actionKey;
+      setTab('xp');
+      return;
+    }
+
+    const fields = initialAction.group === 'Principal' ? primaryFields : secondaryFields;
+    const values = initialAction.group === 'Principal' ? primaryValues : secondaryValues;
+    const code = normalizeRuntimeCode(initialAction.attributeCode);
+    const field = fields.find((entry) => normalizeRuntimeCode(entry.code) === code
+      || normalizeRuntimeCode(entry.key) === code);
+    if (!field) return;
+
+    requestedInitialActionRef.current = actionKey;
+    setTab('attributes');
+    setSelectedAttribute({
+      ...field,
+      group: initialAction.group,
+      value: Number(values[field.key]) || 0,
+    });
+    setAttributeDialogOpen(true);
+    setSubmitError(null);
+    setSubmitErrorTarget(null);
+    setLastResult(null);
+    setLastResultTarget(null);
+  }, [
+    initialAction,
+    open,
+    primaryFields,
+    primaryValues,
+    secondaryFields,
+    secondaryValues,
+    selectedCharacter,
+  ]);
+
   if (!open) return null;
+
+  const closeAttributeDialog = () => {
+    setAttributeDialogOpen(false);
+    if (directInitialAction) onClose();
+  };
+
+  const handleAttributeFavorite = async () => {
+    if (!selectedAttribute || !selectedCharacter) return;
+    setSubmitError(null);
+    try {
+      if (selectedAttributeFavorite) {
+        await onRemoveFavorite?.(selectedAttributeFavorite.idFavorito);
+        return;
+      }
+      await onSaveFavorite?.({
+        tipoOrigem: 'ATRIBUTO',
+        idOrigem: attributeFavoriteId,
+        nome: selectedAttribute.label,
+        configuracao: {
+          codigoAcao: selectedAttribute.group === 'Principal' ? 'ATRIBUTO_PRINCIPAL' : 'ATRIBUTO_SECUNDARIO',
+          codigoAtributo: selectedAttribute.key,
+          grupos: selectedAttributeGroups,
+          modo: mode,
+          visibilidade: visibility,
+        },
+      });
+    } catch (favoriteError) {
+      setSubmitError(getApiErrorMessage(favoriteError, 'Não foi possível atualizar o favorito.'));
+      setSubmitErrorTarget('attribute');
+    }
+  };
 
   const requestKeyFor = (fingerprint: string) => {
     const existing = commandKeysRef.current.get(fingerprint);
@@ -369,6 +545,9 @@ export const GameplayActionCenter = ({
   const presentRollResult = (response: GameplayCommandResponse, target: ResultTarget) => {
     setLastResult(response);
     setLastResultTarget(target);
+    setAppliedEffects([]);
+    setApplyingEffect(null);
+    setEffectTargetIds({});
     setSubmitError(null);
     setSubmitErrorTarget(null);
   };
@@ -419,7 +598,6 @@ export const GameplayActionCenter = ({
       modo: rollMode,
       visibilidade: visibility,
       revisaoSessaoEsperada: session?.revisaoEstado,
-      revisaoPersonagemEsperada: selectedCharacter.personagem.revisaoRuntime,
     };
     const fingerprint = JSON.stringify(basePayload);
     const requestedFaces = groups[0]?.faces ?? 6;
@@ -518,29 +696,104 @@ export const GameplayActionCenter = ({
     }
   };
 
+  const applyEffect = async (effect: GameplayEffectProposal) => {
+    const sourceEventId = lastResult?.evento?.idEvento;
+    if (!onApplyEffect || !sourceEventId) return;
+    const targetId = effect.exigeAlvo ? effectTargetIds[effect.codigo] : undefined;
+    if (effect.exigeAlvo && !targetId) {
+      setSubmitError('Selecione o personagem que receberá o efeito.');
+      setSubmitErrorTarget(lastResultTarget);
+      return;
+    }
+    const expectedRevision = targetId
+      ? effectTargetRevisionsRef.current.get(Number(targetId)) ?? 0
+      : effectRevisionRef.current;
+    setApplyingEffect(effect.codigo);
+    setSubmitError(null);
+    try {
+      const applied = await onApplyEffect({
+        chaveIdempotencia: createRequestKey(),
+        idEventoOrigem: sourceEventId,
+        codigoEfeito: effect.codigo,
+        idPersonagemAlvo: targetId ? Number(targetId) : undefined,
+        revisaoPersonagemEsperada: expectedRevision,
+      });
+      if (applied.aplicacao) {
+        if (targetId) effectTargetRevisionsRef.current.set(Number(targetId), applied.aplicacao.revisaoPersonagem);
+        else effectRevisionRef.current = applied.aplicacao.revisaoPersonagem;
+      }
+      setAppliedEffects((current) => [...new Set([...current, effect.codigo])]);
+      await onRefresh();
+    } catch (requestError) {
+      setSubmitError(getApiErrorMessage(requestError, 'Não foi possível aplicar o efeito.'));
+      setSubmitErrorTarget(lastResultTarget);
+    } finally {
+      setApplyingEffect(null);
+    }
+  };
+
   const renderResult = (target: ResultTarget) => {
     if (!lastResult || lastResultTarget !== target) return null;
     const roll = lastResult.rolagem;
     const values = rollValues(lastResult);
+    const modifierSummary = roll ? getGameplayModifierSummary(roll) : '';
     const outcome = getGameplayRollOutcome(lastResult.rolagem, lastResult.evento?.codigoAcao);
     const ResultContainer = target === 'attribute' ? RollDialogResult : ResultCard;
     return (
       <ResultContainer $outcome={outcome} aria-live="polite">
         <header>
-          <h3>{roll?.nomeResultado || lastResult.evento?.resultadoSemantico || lastResult.evento?.titulo || 'Resultado do teste'}</h3>
+          <h3>{lastResult.evento?.titulo || 'Resultado do teste'}</h3>
           <Badge $tone={lastResult.simulacao ? 'yellow' : lastResult.evento?.manual ? 'pink' : 'blue'}>
             {lastResult.simulacao ? 'Simulação' : lastResult.evento?.manual ? 'Manual' : 'Registrado'}
           </Badge>
         </header>
-        {roll && <strong>{roll.total}</strong>}
+        {roll && <strong>{getGameplayRollSummary(roll)}</strong>}
         {roll?.expressao && <p>{roll.expressao}</p>}
         {values.length > 0 && <p>Dados: {values.join(', ')}</p>}
-        {roll && roll.modificador !== 0 && <p>Modificador: {roll.modificador > 0 ? '+' : ''}{roll.modificador}</p>}
+        {modifierSummary && <p>Modificadores: {modifierSummary}</p>}
+        {roll?.rolagensIndividuais?.map((individual, index) => (
+          <p key={`roll-${index + 1}`}>Ação {index + 1}: {getGameplayRollSummary(individual)}</p>
+        ))}
         {roll?.valorAssociado != null && <p>Valor associado: {roll.valorAssociado}</p>}
         {lastResult.evento?.valorAssociado != null && !roll && <p>Valor associado: {lastResult.evento.valorAssociado}</p>}
         {lastResult.evento?.observacao && <p>{lastResult.evento.observacao}</p>}
         {lastResult.simulacao && <p>{lastResult.aviso || 'Este resultado não foi salvo.'}</p>}
         {lastResult.replay && <p>Resposta recuperada sem repetir a rolagem.</p>}
+        {roll?.efeitosPropostos?.map((effect) => (
+          <div key={effect.codigo}>
+            {!effect.podeAplicar && <p>{effect.nome} · {effect.motivoIndisponivel || 'efeito indisponível'}</p>}
+            {effect.podeAplicar && effect.exigeAlvo && effectTargets.length > 0 && (
+              <Select
+                theme={theme}
+                neon={neon}
+                portal
+                label="Personagem alvo"
+                value={effectTargetIds[effect.codigo] ?? ''}
+                options={effectTargets.map((target) => ({
+                  value: target.personagem.idpersonagemJogador,
+                  label: target.personagem.nome,
+                }))}
+                onChange={(event) => setEffectTargetIds((current) => ({
+                  ...current,
+                  [effect.codigo]: Number(event.target.value) || '',
+                }))}
+              />
+            )}
+            {effect.podeAplicar && effect.exigeAlvo && effectTargets.length === 0 ? (
+              <p>{effect.nome} · o mestre escolhe o alvo na tela da Mesa.</p>
+            ) : effect.podeAplicar ? (
+            <SubmitButton
+              type="button"
+              disabled={!onApplyEffect || Boolean(lastResult.simulacao) || appliedEffects.includes(effect.codigo) || Boolean(applyingEffect)}
+              onClick={() => void applyEffect(effect)}
+            >
+              {applyingEffect === effect.codigo
+                ? 'Aplicando…'
+                : appliedEffects.includes(effect.codigo) ? 'Aplicado' : effect.nome}
+            </SubmitButton>
+            ) : null}
+          </div>
+        ))}
       </ResultContainer>
     );
   };
@@ -602,7 +855,7 @@ export const GameplayActionCenter = ({
             ['Secundario', 'Secundários', secondaryFields, secondaryValues],
           ] as const).map(([group, label, fields, values]) => (
             <div key={group}>
-              <GroupTitle><h3>{label}</h3><small>1D6 + atributo</small></GroupTitle>
+              <GroupTitle><h3>{label}</h3><small>Regra do Sistema</small></GroupTitle>
               <AttributeGrid>
                 {fields.map((field) => {
                   const value = Number(values[field.key]) || 0;
@@ -754,7 +1007,7 @@ export const GameplayActionCenter = ({
   );
 
   return <>
-    {createPortal(
+    {!directInitialAction && createPortal(
     <GameplayBackdrop $concealed={attributeDialogOpen} onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <GameplayPanelShell
         ref={panelRef}
@@ -829,6 +1082,7 @@ export const GameplayActionCenter = ({
                       : session ? 'Nenhuma ação registrada nesta sessão.' : 'Sem histórico nesta Mesa.'}</InlineMessage>
                   ) : events.map((event) => {
                     const eventValues = event.rolagem?.grupos.flatMap((group) => group.valores) ?? [];
+                    const eventModifiers = event.rolagem ? getGameplayModifierSummary(event.rolagem) : '';
                     return (
                       <HistoryCard key={event.idEvento} $manual={event.manual}>
                         <header><h4>{event.titulo || event.codigoAcao}</h4><time dateTime={event.criadoEmUtc}>{formatDate(event.criadoEmUtc)}</time></header>
@@ -837,8 +1091,9 @@ export const GameplayActionCenter = ({
                           <Badge $tone="grey">{visibilityLabel(event.visibilidade)}</Badge>
                         </CardBadges>
                         {event.idPersonagemJogador && <p><strong>{characters.find((entry) => entry.personagem.idpersonagemJogador === event.idPersonagemJogador)?.personagem.nome || 'Personagem'}</strong></p>}
-                        {event.rolagem && <p>{event.rolagem.expressao}: {eventValues.join(', ')} → <GameplayOutcomeValue $tone={getGameplayEventOutcome(event)}>{event.rolagem.total}</GameplayOutcomeValue></p>}
-                        {event.resultadoSemantico && <p>{event.resultadoSemantico}</p>}
+                        {event.rolagem && <p><GameplayOutcomeValue $tone={getGameplayEventOutcome(event)}>{getGameplayRollSummary(event.rolagem)}</GameplayOutcomeValue>{` · ${event.rolagem.expressao}`}{eventValues.length > 1 ? ` · dados: ${eventValues.join(', ')}` : ''}</p>}
+                        {eventModifiers && <p>Modificadores: {eventModifiers}</p>}
+                        {!event.rolagem && event.resultadoSemantico && <p>{event.resultadoSemantico}</p>}
                         {event.observacao && <p>{event.observacao}</p>}
                       </HistoryCard>
                     );
@@ -863,7 +1118,7 @@ export const GameplayActionCenter = ({
         aria-labelledby="attribute-roll-title"
         aria-hidden={diceVisual.open}
         onMouseDown={(event) => {
-          if (event.target === event.currentTarget) setAttributeDialogOpen(false);
+          if (event.target === event.currentTarget) closeAttributeDialog();
         }}
       >
         <RollDialogPanel neon={neon === 'on'}>
@@ -872,11 +1127,29 @@ export const GameplayActionCenter = ({
               <h2 id="attribute-roll-title">Teste de {selectedAttribute.label}</h2>
               <p>{selectedCharacter?.personagem.nome}</p>
             </div>
-            <CloseButton type="button" aria-label="Fechar teste" onClick={() => setAttributeDialogOpen(false)}><CloseIcon /></CloseButton>
+            <RollDialogHeaderActions>
+              {(onSaveFavorite || onRemoveFavorite) && (
+                <FavoriteRollButton
+                  type="button"
+                  $active={Boolean(selectedAttributeFavorite)}
+                  disabled={favoriteSaving}
+                  title={selectedAttributeFavorite ? 'Remover dos favoritos' : 'Favoritar esta configuração'}
+                  aria-label={selectedAttributeFavorite ? 'Remover dos favoritos' : 'Favoritar esta configuração'}
+                  aria-pressed={Boolean(selectedAttributeFavorite)}
+                  onClick={() => void handleAttributeFavorite()}
+                >
+                  {selectedAttributeFavorite ? <StarOutlinedIcon /> : <StarBorderOutlinedIcon />}
+                </FavoriteRollButton>
+              )}
+              <CloseButton type="button" aria-label="Fechar teste" onClick={closeAttributeDialog}><CloseIcon /></CloseButton>
+            </RollDialogHeaderActions>
           </RollDialogHeader>
           <RollDialogBody>
             <p>{selectedAttribute.description || 'Escolha o modo e faça o teste.'}</p>
-            <FormulaPreview><span>Fórmula</span><strong>1D6 + {selectedAttribute.value}</strong></FormulaPreview>
+            <FormulaPreview>
+              <span>Fórmula</span>
+              <strong>{selectedAttributeAction?.expressao || `Atributo + ${selectedAttribute.value}`}</strong>
+            </FormulaPreview>
             <ComposerGrid>
               <Select theme={theme} neon={neon} portal label="Modo" value={mode} options={MODE_OPTIONS}
                 allowEmptyOption={false} onChange={(event) => setMode(event.target.value as GameplayRollMode)} />
@@ -888,7 +1161,7 @@ export const GameplayActionCenter = ({
               disabled={submitting}
               onClick={() => void submitRoll(
                 selectedAttribute.group === 'Principal' ? 'ATRIBUTO_PRINCIPAL' : 'ATRIBUTO_SECUNDARIO',
-                [{ quantidade: 1, faces: 6 }],
+                selectedAttributeGroups,
                 mode,
                 'attribute',
                 `Teste de ${selectedAttribute.label}`,

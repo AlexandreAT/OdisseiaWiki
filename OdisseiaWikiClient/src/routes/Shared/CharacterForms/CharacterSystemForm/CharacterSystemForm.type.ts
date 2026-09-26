@@ -6,6 +6,7 @@ import { RacaPayload } from '../../../../services/racasService';
 import { Defesas, StatusBase } from '../../../../models/Characters';
 import { SistemaRuntimeContexto } from '../../../../models/SistemaRpg';
 import { CharacterComparisonSource, CharacterComparisonVariant } from '../../../../components/CharacterComparison';
+import type { GameplaySheetActionSource } from '../../../../components/Gameplay';
 
 export interface CharacterSystemFormProps {
   theme: 'dark' | 'light';
@@ -46,4 +47,9 @@ export interface CharacterSystemFormProps {
   comparisonTableId?: number | null;
   comparisonTableName?: string | null;
   comparisonVariant?: CharacterComparisonVariant;
+  /** Available only for a saved player sheet. Draft changes must be saved first. */
+  onGameplayAction?: (source: GameplaySheetActionSource) => void;
+  onGameplayAttributeAction?: (attributeCode: string, group: 'Principal' | 'Secundario') => void;
+  onGameplayXpAction?: () => void;
+  onGameplayGeneralAction?: () => void;
 }

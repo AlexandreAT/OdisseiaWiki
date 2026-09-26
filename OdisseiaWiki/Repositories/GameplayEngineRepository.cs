@@ -85,12 +85,45 @@ public sealed class GameplayEngineRepository : IGameplayEngineRepository
             item => item.IdpersonagemJogador == idPersonagemJogador,
             cancellationToken);
 
+    public Task<PersonagemJogador?> GetCharacterForUpdateAsync(
+        int idPersonagemJogador,
+        CancellationToken cancellationToken = default)
+        => _context.PersonagemJogadores.FirstOrDefaultAsync(
+            item => item.IdpersonagemJogador == idPersonagemJogador,
+            cancellationToken);
+
+    public Task<MesaEvento?> GetEventAsync(
+        long idMesaEvento,
+        CancellationToken cancellationToken = default)
+        => _context.MesaEventos.AsNoTracking()
+            .FirstOrDefaultAsync(item => item.IdMesaEvento == idMesaEvento, cancellationToken);
+
+    public Task<bool> HasEffectApplicationAsync(
+        long idMesaSessao,
+        long idEventoOrigem,
+        string codigoEfeito,
+        int idPersonagemAlvo,
+        CancellationToken cancellationToken = default)
+    {
+        return _context.MesaEfeitosAplicados.AsNoTracking().AnyAsync(item =>
+            item.IdMesaSessao == idMesaSessao &&
+            item.IdEventoOrigem == idEventoOrigem &&
+            item.ChaveEfeito == codigoEfeito &&
+            item.IdPersonagemAlvo == idPersonagemAlvo,
+            cancellationToken);
+    }
+
     public Task<SistemaVersao?> GetSystemVersionAsync(
         int idSistemaVersao,
         CancellationToken cancellationToken = default)
         => _context.SistemaVersoes.AsNoTracking()
             .Include(item => item.SistemaRpg)
+            .Include(item => item.Modulos)
             .Include(item => item.FontesExperiencia)
+            .Include(item => item.Atributos)
+            .Include(item => item.Recursos)
+            .Include(item => item.Acoes)
+            .Include(item => item.ResultadosDado)
             .FirstOrDefaultAsync(
             item => item.IdSistemaVersao == idSistemaVersao,
             cancellationToken);
@@ -125,6 +158,8 @@ public sealed class GameplayEngineRepository : IGameplayEngineRepository
     public void AddCommand(MesaComando command) => _context.MesaComandos.Add(command);
     public void AddEvent(MesaEvento gameplayEvent) => _context.MesaEventos.Add(gameplayEvent);
     public void AddRoll(MesaRolagem roll) => _context.MesaRolagens.Add(roll);
+    public void AddEffectApplication(MesaEfeitoAplicado effectApplication) =>
+        _context.MesaEfeitosAplicados.Add(effectApplication);
 
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         => _context.SaveChangesAsync(cancellationToken);

@@ -1,5 +1,6 @@
 import { DadoAcerto } from './Dados';
 import { JSONContent } from './Characters';
+import type { GameplayTestSpec } from './Gameplay';
 
 export type SkillTipoString = "ataque" | "suporte" | "buff" | "debuff";
 export type SkillElemento = "normal" | "fogo" | "agua" | "ar" | "terra" | "luz" | "escuridao" | "espacial" | "transfiguracao" | "invocacao";
@@ -31,6 +32,7 @@ export interface AtaqueAtributos {
     cooldown: string;
     bonus: string;
     acerto?: DadoAcerto;
+    teste?: GameplayTestSpec;
 }
 
 export interface SuporteAtributos {
@@ -38,6 +40,7 @@ export interface SuporteAtributos {
     cooldown: string;
     bonus: string;
     acerto?: DadoAcerto;
+    teste?: GameplayTestSpec;
 }
 
 export interface BuffAtributos {
@@ -45,6 +48,7 @@ export interface BuffAtributos {
     cooldown: string;
     bonus: string;
     acerto?: DadoAcerto;
+    teste?: GameplayTestSpec;
 }
 
 export interface DebuffAtributos {
@@ -52,4 +56,5 @@ export interface DebuffAtributos {
     cooldown: string;
     bonus: string;
     acerto?: DadoAcerto;
+    teste?: GameplayTestSpec;
 }

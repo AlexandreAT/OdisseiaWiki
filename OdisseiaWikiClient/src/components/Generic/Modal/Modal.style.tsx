@@ -86,6 +86,12 @@ export const ModalHeaderContainer = styled.div<ThemeProps>`
         : "var(--lightGrey)"
   };
 
+  .modal-header-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
   button {
     background: none;
     border: none;

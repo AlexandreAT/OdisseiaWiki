@@ -33,6 +33,8 @@ export interface RawPersonagemApi {
   idpersonagemJogador: number;
   idusuario?: number;
   idmesa?: number;
+  idSistemaVersao?: number | null;
+  revisaoRuntime?: number;
   nome: string;
   idraca?: number;
   idcidade?: number;
@@ -126,6 +128,8 @@ export function normalizePersonagem(raw: RawPersonagemApi) {
     idpersonagemJogador: raw.idpersonagemJogador,
     idusuario: raw.idusuario,
     idmesa: raw.idmesa,
+    idSistemaVersao: raw.idSistemaVersao ?? null,
+    revisaoRuntime: raw.revisaoRuntime,
     nome: raw.nome,
     idraca: raw.idraca,
     idcidade: raw.idcidade,

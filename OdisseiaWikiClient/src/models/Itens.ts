@@ -1,5 +1,6 @@
 import { DadoAcerto } from './Dados';
 import type { SistemaRuntimeContexto } from './SistemaRpg';
+import type { GameplayTestSpec } from './Gameplay';
 
 export type ItemTipo = "arma" | "traje" | "consumiveis" | "acessorio" | "implante" | "outro";
 
@@ -74,6 +75,8 @@ export interface Item {
   idSistemaRpg?: number | null;
   idSistemaVersao?: number | null;
   acompanharPublicacaoAtual?: boolean;
+  /** Armas aplicam teste por padrão; demais itens só quando este campo for verdadeiro. */
+  aplicaTeste?: boolean;
   sistemaRuntime?: SistemaRuntimeContexto | null;
 }
 
@@ -102,6 +105,9 @@ export type ItemAtributos =
   | OutrosAtributos;
 
 export interface ArmaAtributos {
+  /** Configuração declarativa ligada à tabela de resultados do Sistema. */
+  teste?: GameplayTestSpec;
+  aplicaTeste?: boolean;
   modificadores?: ModificadoresArma;
   /** Override para arquétipos personalizados; ausente usa a classificação existente. */
   modoModificadores?: ModoModificadoresArma | null;
@@ -135,6 +141,8 @@ export interface ArmaAtributos {
 }
 
 export interface TrajeAtributos {
+  aplicaTeste?: boolean;
+  teste?: GameplayTestSpec;
   efeito?: string;
   tipoTraje?: TrajeTipo;
   armaduraBase: number;
@@ -146,6 +154,8 @@ export interface TrajeAtributos {
 }
 
 export interface ConsumiveisAtributos {
+  aplicaTeste?: boolean;
+  teste?: GameplayTestSpec;
   efeito?: string;
   especial?: string;
   restaura?: {
@@ -157,6 +167,8 @@ export interface ConsumiveisAtributos {
 }
 
 export interface AcessorioAtributos {
+  aplicaTeste?: boolean;
+  teste?: GameplayTestSpec;
   modificadores?: ModificadoresArma;
   compatibilidade?: 'todas' | ModoModificadoresArma;
   efeito?: string;
@@ -187,12 +199,16 @@ export interface AcessorioAnexado {
 }
 
 export interface OutrosAtributos {
+  aplicaTeste?: boolean;
+  teste?: GameplayTestSpec;
   efeito?: string;
   especial?: string;
   duracao?: string;
 }
 
 export interface ImplanteAtributos {
+  aplicaTeste?: boolean;
+  teste?: GameplayTestSpec;
   efeito?: string;
   parteCorpo?: 'mao' | 'braco' | 'pe' | 'perna' | 'corpo' | 'ocular' | 'outro';
   lado?: 'direito' | 'esquerdo' | 'ambos' | 'nao-se-aplica';

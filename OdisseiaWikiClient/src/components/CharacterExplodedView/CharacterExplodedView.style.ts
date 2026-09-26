@@ -51,7 +51,12 @@ export const LauncherButton = styled.button<ThemeProps & { $opening: boolean }>`
     svg { animation: ${pulse} .26s ease; }
   `}
 
-  &:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 0 10px var(--clearneonBlue); }
+  &:hover:not(:disabled) {
+    box-shadow: 0 0 10px var(--clearneonBlue);
+    svg { transform: scale(1.08); }
+  }
+
+  svg { transition: transform .18s ease; }
 `;
 
 export const Overlay = styled(motion.div)`

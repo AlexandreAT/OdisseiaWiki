@@ -15,6 +15,7 @@ interface ModalProps {
   onSubmit?: () => void;
   width?: string;
   mobileInset?: boolean;
+  headerActions?: React.ReactNode;
 }
 
 const ModalComponent = ({
@@ -27,7 +28,8 @@ const ModalComponent = ({
     onClose,
     onSubmit,
     width,
-    mobileInset = false
+    mobileInset = false,
+    headerActions,
 }: ModalProps) => {
     const [modalRoot, setModalRoot] = useState<HTMLElement | null>(null);
     const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -79,7 +81,10 @@ const ModalComponent = ({
             <ModalContainer theme={theme} neon={neon} $width={width} $mobileInset={mobileInset} role="dialog" aria-modal="true" aria-label={typeof title === 'string' ? title : undefined}>
                 <ModalHeaderContainer theme={theme} neon={neon}>
                     <span>{title}</span>
-                    <button ref={closeButtonRef} onClick={handleDefaultClose} title="Fechar" aria-label="Fechar modal"><CloseIcon /></button>
+                    <div className="modal-header-actions">
+                        {headerActions}
+                        <button ref={closeButtonRef} onClick={handleDefaultClose} title="Fechar" aria-label="Fechar modal"><CloseIcon /></button>
+                    </div>
                 </ModalHeaderContainer>
 
                 <ModalContentContainer>

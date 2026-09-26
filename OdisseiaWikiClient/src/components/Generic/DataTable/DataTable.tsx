@@ -1,7 +1,7 @@
 import React, { useState, memo, useCallback, useMemo, useRef, useEffect } from "react";
 import MUIDataTable from "mui-datatables";
 import { TextField, IconButton } from "@mui/material";
-import { Add, CompareArrows, Delete, Visibility } from "@mui/icons-material";
+import { Add, CasinoOutlined, CompareArrows, Delete, Visibility } from "@mui/icons-material";
 import { Search } from "../Search/Search";
 import { BiSearchAlt } from "react-icons/bi";
 import {
@@ -36,6 +36,9 @@ interface DataTableProps<T> {
   canViewRow?: (row: T) => boolean;
   onCompareRow?: (row: T) => void;
   canCompareRow?: (row: T) => boolean;
+  onActionRow?: (row: T) => void;
+  canActionRow?: (row: T) => boolean;
+  actionRowLabel?: string;
 }
 
 interface ColumnConfig<T> {
@@ -157,6 +160,9 @@ function DataTableComponent<T extends { [key: string]: any }>({
   canViewRow,
   onCompareRow,
   canCompareRow,
+  onActionRow,
+  canActionRow,
+  actionRowLabel = 'Rolar a\u00e7\u00e3o',
 }: DataTableProps<T>) {
   const [search, setSearch] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
@@ -322,8 +328,19 @@ function DataTableComponent<T extends { [key: string]: any }>({
         const isPersistedRow = dataIndex < data.length;
         const showView = Boolean(row && onViewRow && !isEmpty && (canViewRow?.(row) ?? true));
         const showCompare = Boolean(row && onCompareRow && !isEmpty && (canCompareRow?.(row) ?? true));
+        const showAction = Boolean(row && onActionRow && !isEmpty && (canActionRow?.(row) ?? true));
         return (
           <RowActions>
+            {showAction && (
+              <IconButton
+                type="button"
+                onClick={() => onActionRow?.(row)}
+                title={actionRowLabel}
+                aria-label={actionRowLabel}
+              >
+                <CasinoOutlined className="icon" />
+              </IconButton>
+            )}
             {showCompare && (
               <IconButton
                 type="button"
@@ -368,7 +385,7 @@ function DataTableComponent<T extends { [key: string]: any }>({
         );
       },
     },
-  }), [tableData, data.length, rowIsEmpty, onCompareRow, canCompareRow, onViewRow, canViewRow, handleAddRow, handleRemoveRow]);
+  }), [tableData, data.length, rowIsEmpty, onActionRow, canActionRow, actionRowLabel, onCompareRow, canCompareRow, onViewRow, canViewRow, handleAddRow, handleRemoveRow]);
 
   return (
     <DataTableContainer

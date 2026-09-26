@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using MySqlConnector;
 using OdisseiaWiki.Data;
@@ -226,6 +227,89 @@ public sealed class GameplayMariaDbIntegrationTests
         Assert.Equal(1, await verification.MesaSessoes.CountAsync(item => item.IdMesa == seed.Mesa.Idmesa));
     }
 
+    [Fact]
+    public async Task EffectApplication_IsAtomicAndCannotBeConsumedTwiceWithAnotherCommandKey()
+    {
+        if (!TestDatabase.Enabled) return;
+        await using TestDatabase database = await TestDatabase.CreateAsync();
+        Seed seed = await database.SeedAsync(includeCharacter: true);
+        long sourceEventId;
+
+        await using (OdisseiaContext setup = database.CreateContext())
+        {
+            MesaSessao session = await setup.MesaSessoes.SingleAsync(item =>
+                item.IdMesaSessao == seed.Session!.IdMesaSessao);
+            PersonagemJogador character = await setup.PersonagemJogadores.SingleAsync(item =>
+                item.IdpersonagemJogador == seed.Character!.IdpersonagemJogador);
+            character.StatusJson = """{"xp":2,"status":{"vida":10,"vidaMaxima":10}}""";
+            session.UltimaSequenciaEvento = 4;
+            var sourceEvent = new MesaEvento
+            {
+                IdMesaSessao = session.IdMesaSessao,
+                Sequencia = 4,
+                Tipo = "ROLAGEM_REALIZADA",
+                Origem = GameplayEventOrigin.Automatica,
+                Visibilidade = GameplayEventVisibility.PublicaMesa,
+                IdUsuarioAtor = seed.Player.Idusuario,
+                IdPersonagemJogador = character.IdpersonagemJogador,
+                IdSistemaVersaoEfetiva = session.IdSistemaVersao,
+                CodigoRegra = "XP_TESTE",
+                DadosJson = """{"rolagem":{"expressao":"1D4","grupos":[],"modificadores":[],"subtotal":3,"total":3,"manual":false,"modo":"Normal","avisos":[],"efeitosPropostos":[{"codigo":"APLICAR_XP","tipo":"XP","nome":"Aplicar 3 XP","alvo":"AUTOR","codigoRecurso":"XP","operacao":"SOMAR","valor":3,"exigeAlvo":false,"podeAplicar":true}],"rolagensIndividuais":[]}}""",
+                OcorreuEmUtc = DateTime.UtcNow,
+            };
+            setup.MesaEventos.Add(sourceEvent);
+            await setup.SaveChangesAsync();
+            sourceEventId = sourceEvent.IdMesaEvento;
+        }
+
+        await using (OdisseiaContext firstContext = database.CreateContext())
+        {
+            GameplayEngineService service = CreateGameplayService(firstContext);
+            GameplayOperationResult<GameplayCommandResponseDto> applied = await service.ApplyEffectAsync(
+                seed.Mesa.Idmesa,
+                seed.Session!.IdMesaSessao,
+                seed.Player.Idusuario,
+                new GameplayEffectApplyRequestDto
+                {
+                    ChaveIdempotencia = Guid.NewGuid(),
+                    IdEventoOrigem = sourceEventId,
+                    CodigoEfeito = "APLICAR_XP",
+                    RevisaoSessaoEsperada = 1,
+                    RevisaoPersonagemEsperada = 0,
+                });
+            Assert.True(applied.Sucesso);
+            Assert.Equal(3, applied.Dados!.Aplicacao!.ValorAplicado);
+        }
+
+        await using (OdisseiaContext duplicateContext = database.CreateContext())
+        {
+            GameplayEngineService service = CreateGameplayService(duplicateContext);
+            GameplayOperationResult<GameplayCommandResponseDto> duplicate = await service.ApplyEffectAsync(
+                seed.Mesa.Idmesa,
+                seed.Session!.IdMesaSessao,
+                seed.Player.Idusuario,
+                new GameplayEffectApplyRequestDto
+                {
+                    ChaveIdempotencia = Guid.NewGuid(),
+                    IdEventoOrigem = sourceEventId,
+                    CodigoEfeito = "APLICAR_XP",
+                    RevisaoSessaoEsperada = 2,
+                    RevisaoPersonagemEsperada = 1,
+                });
+            Assert.False(duplicate.Sucesso);
+            Assert.Equal("EFEITO_JA_APLICADO", duplicate.Codigo);
+        }
+
+        await using OdisseiaContext verification = database.CreateContext();
+        PersonagemJogador savedCharacter = await verification.PersonagemJogadores.SingleAsync(item =>
+            item.IdpersonagemJogador == seed.Character!.IdpersonagemJogador);
+        using JsonDocument status = JsonDocument.Parse(savedCharacter.StatusJson);
+        Assert.Equal(5, status.RootElement.GetProperty("xp").GetInt32());
+        Assert.Equal(1, savedCharacter.RevisaoRuntime);
+        Assert.Equal(1, await verification.MesaEventos.CountAsync(item =>
+            item.IdMesaSessao == seed.Session!.IdMesaSessao && item.Tipo == "EFEITO_APLICADO"));
+    }
+
     private static PersonagemRuntimeWriteAudit Audit(int idUser, Guid key, string fingerprint) => new(
         idUser,
         key,
@@ -236,6 +320,7 @@ public sealed class GameplayMariaDbIntegrationTests
     private static GameplayEngineService CreateGameplayService(OdisseiaContext context) => new(
         new GameplayEngineRepository(context),
         new GameplayRollEvaluator(new FixedDiceRoller()),
+        new GameplayActionResolver(),
         new NumericCursorCodec(),
         new AllowAllRateLimiter(),
         new NullMesaRealtimeNotifier());

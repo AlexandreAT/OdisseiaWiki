@@ -600,6 +600,77 @@ export const LabelStatus = styled.h2<{ width?: string }>`
     }
 `
 
+export const GameplayLabelRow = styled.div`
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    min-width: 0;
+
+    > h2 {
+      margin: 0;
+      min-width: 0;
+    }
+
+    @media (max-width: 768px) {
+      gap: 2px;
+    }
+`
+
+export const GameplayRollButton = styled.button<Props & { $matchComparison?: boolean }>`
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: ${({ $matchComparison }) => $matchComparison ? '34px' : '28px'};
+    height: ${({ $matchComparison }) => $matchComparison ? '34px' : '28px'};
+    padding: 0;
+    border: 1px solid ${({ theme, neon }) =>
+      theme === 'dark'
+        ? neon === 'on' ? 'var(--clearneonBlue)' : 'var(--grey)'
+        : neon === 'on' ? 'var(--neonViolet)' : 'var(--lightBlack)'};
+    border-radius: 5px;
+    background: var(--clearblack);
+    color: ${({ theme, neon }) =>
+      theme === 'dark'
+        ? neon === 'on' ? 'var(--clearneonBlue)' : 'var(--whitesmoke)'
+        : neon === 'on' ? 'var(--neonViolet)' : 'var(--lightBlack)'};
+    cursor: pointer;
+    transition: transform 160ms ease, color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+
+    svg {
+      width: 17px;
+      height: 17px;
+    }
+
+    &:hover,
+    &:focus-visible {
+      border-color: var(--clearneonPink);
+      color: var(--clearneonPink);
+      transform: translateY(-1px) scale(1.06);
+      box-shadow: 0 0 8px color-mix(in srgb, var(--clearneonPink) 48%, transparent);
+      outline: none;
+    }
+
+    @media (max-width: 768px) {
+      width: ${({ $matchComparison }) => $matchComparison ? '34px' : '22px'};
+      height: ${({ $matchComparison }) => $matchComparison ? '34px' : '22px'};
+
+      svg {
+        width: 14px;
+        height: 14px;
+      }
+    }
+`
+
+export const GameplayHeaderActions = styled.div`
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+`;
+
 export const MinimalInput = styled.input.attrs({ type: "number", onFocus: handleNumericInputFocus })`
   width: 30px;
   max-width: 60px;

@@ -7,6 +7,8 @@ namespace OdisseiaWiki.Dtos;
 [JsonConverter(typeof(RacaPassivaDtoConverter))]
 public sealed class RacaPassivaDto
 {
+    public int? IdPassiva { get; set; }
+
     [MaxLength(100)]
     public string? Nome { get; set; }
 
@@ -27,6 +29,7 @@ public sealed class RacaPassivaDtoConverter : JsonConverter<RacaPassivaDto>
         if (reader.TokenType != JsonTokenType.StartObject)
             throw new JsonException("Passiva de raca deve ser um texto ou um objeto.");
 
+        int? idPassiva = null;
         string? nome = null;
         string? efeito = null;
 
@@ -38,7 +41,10 @@ public sealed class RacaPassivaDtoConverter : JsonConverter<RacaPassivaDto>
             string propertyName = reader.GetString() ?? string.Empty;
             reader.Read();
 
-            if (propertyName.Equals("nome", StringComparison.OrdinalIgnoreCase))
+            if (propertyName.Equals("idPassiva", StringComparison.OrdinalIgnoreCase) ||
+                propertyName.Equals("idpassiva", StringComparison.OrdinalIgnoreCase))
+                idPassiva = reader.TokenType == JsonTokenType.Number && reader.TryGetInt32(out int id) ? id : null;
+            else if (propertyName.Equals("nome", StringComparison.OrdinalIgnoreCase))
                 nome = reader.TokenType == JsonTokenType.String ? reader.GetString() : null;
             else if (propertyName.Equals("efeito", StringComparison.OrdinalIgnoreCase) ||
                      propertyName.Equals("descricao", StringComparison.OrdinalIgnoreCase))
@@ -47,12 +53,14 @@ public sealed class RacaPassivaDtoConverter : JsonConverter<RacaPassivaDto>
                 reader.Skip();
         }
 
-        return new RacaPassivaDto { Nome = nome, Efeito = efeito };
+        return new RacaPassivaDto { IdPassiva = idPassiva, Nome = nome, Efeito = efeito };
     }
 
     public override void Write(Utf8JsonWriter writer, RacaPassivaDto value, JsonSerializerOptions options)
     {
         writer.WriteStartObject();
+        if (value.IdPassiva.HasValue)
+            writer.WriteNumber("idPassiva", value.IdPassiva.Value);
         writer.WriteString("nome", value.Nome);
         if (!string.IsNullOrWhiteSpace(value.Efeito))
             writer.WriteString("efeito", value.Efeito.Trim());

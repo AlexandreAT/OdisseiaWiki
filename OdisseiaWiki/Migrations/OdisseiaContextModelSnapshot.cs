@@ -368,6 +368,62 @@ namespace OdisseiaWiki.Migrations
                     b.ToTable("mesacomandos", (string)null);
                 });
 
+            modelBuilder.Entity("OdisseiaWiki.Models.MesaEfeitoAplicado", b =>
+                {
+                    b.Property<long>("IdMesaEfeitoAplicado")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("IDMesaEfeitoAplicado");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("IdMesaEfeitoAplicado"));
+
+                    b.Property<DateTime>("AplicadoEmUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("ChaveEfeito")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<string>("HashPlano")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<long>("IdEventoAplicacao")
+                        .HasColumnType("bigint")
+                        .HasColumnName("IDEventoAplicacao");
+
+                    b.Property<long>("IdEventoOrigem")
+                        .HasColumnType("bigint")
+                        .HasColumnName("IDEventoOrigem");
+
+                    b.Property<long>("IdMesaSessao")
+                        .HasColumnType("bigint")
+                        .HasColumnName("IDMesaSessao");
+
+                    b.Property<int?>("IdPersonagemAlvo")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("IDPersonagemAlvo");
+
+                    b.HasKey("IdMesaEfeitoAplicado");
+
+                    b.HasIndex("IdEventoAplicacao")
+                        .IsUnique()
+                        .HasDatabaseName("UX_MesaEfeito_EventoAplicacao");
+
+                    b.HasIndex("IdEventoOrigem");
+
+                    b.HasIndex("IdPersonagemAlvo", "AplicadoEmUtc")
+                        .HasDatabaseName("IX_MesaEfeito_Alvo_Data");
+
+                    b.HasIndex("IdMesaSessao", "IdEventoOrigem", "ChaveEfeito", "IdPersonagemAlvo")
+                        .IsUnique()
+                        .HasDatabaseName("UX_MesaEfeito_Sessao_Origem_Chave_Alvo");
+
+                    b.ToTable("mesaefeitosaplicados", (string)null);
+                });
+
             modelBuilder.Entity("OdisseiaWiki.Models.MesaEntidadeConfig", b =>
                 {
                     b.Property<int>("IdmesaEntidadeConfig")
@@ -961,6 +1017,9 @@ namespace OdisseiaWiki.Migrations
                     b.Property<long>("RevisaoRuntime")
                         .IsConcurrencyToken()
                         .HasColumnType("bigint");
+
+                    b.Property<string>("RolagensFavoritasJson")
+                        .HasColumnType("json");
 
                     b.Property<string>("Skills")
                         .HasColumnType("longtext");
@@ -3023,6 +3082,44 @@ namespace OdisseiaWiki.Migrations
                     b.Navigation("UsuarioAtor");
                 });
 
+            modelBuilder.Entity("OdisseiaWiki.Models.MesaEfeitoAplicado", b =>
+                {
+                    b.HasOne("OdisseiaWiki.Models.MesaEvento", "EventoAplicacao")
+                        .WithMany()
+                        .HasForeignKey("IdEventoAplicacao")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_MesaEfeito_EventoAplicacao");
+
+                    b.HasOne("OdisseiaWiki.Models.MesaEvento", "EventoOrigem")
+                        .WithMany()
+                        .HasForeignKey("IdEventoOrigem")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_MesaEfeito_EventoOrigem");
+
+                    b.HasOne("OdisseiaWiki.Models.MesaSessao", "Sessao")
+                        .WithMany("EfeitosAplicados")
+                        .HasForeignKey("IdMesaSessao")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_MesaEfeito_Sessao");
+
+                    b.HasOne("OdisseiaWiki.Models.PersonagemJogador", "PersonagemAlvo")
+                        .WithMany()
+                        .HasForeignKey("IdPersonagemAlvo")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("FK_MesaEfeito_PersonagemAlvo");
+
+                    b.Navigation("EventoAplicacao");
+
+                    b.Navigation("EventoOrigem");
+
+                    b.Navigation("PersonagemAlvo");
+
+                    b.Navigation("Sessao");
+                });
+
             modelBuilder.Entity("OdisseiaWiki.Models.MesaEntidadeConfig", b =>
                 {
                     b.HasOne("OdisseiaWiki.Models.Mesa", "IdmesaNavigation")
@@ -3769,6 +3866,8 @@ namespace OdisseiaWiki.Migrations
             modelBuilder.Entity("OdisseiaWiki.Models.MesaSessao", b =>
                 {
                     b.Navigation("Comandos");
+
+                    b.Navigation("EfeitosAplicados");
 
                     b.Navigation("Eventos");
                 });

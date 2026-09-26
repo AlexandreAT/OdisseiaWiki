@@ -88,7 +88,11 @@ public sealed class RuntimeConsumerIntegrationTests
             StatusJson = "{\"nivel\":5}",
         };
         personagens.Setup(item => item.GetByIdAsync(8)).ReturnsAsync(personagem);
-        personagens.Setup(item => item.UpdateAsync(personagem)).ReturnsAsync(personagem);
+        personagens.Setup(item => item.UpdateWithRuntimeAuditAsync(
+                personagem,
+                personagem.RevisaoRuntime,
+                It.IsAny<PersonagemRuntimeWriteAudit>()))
+            .ReturnsAsync(personagem);
         resolver.Setup(item => item.ResolverContextoAsync(It.IsAny<SistemaRuntimeConsultaDto>()))
             .ReturnsAsync(new SistemaRuntimeContextoDto
             {
@@ -119,7 +123,12 @@ public sealed class RuntimeConsumerIntegrationTests
         Assert.True(result.Sucesso);
         Assert.Equal(3, personagem.IdSistemaVersao);
         Assert.Equal("{\"nivel\":5}", personagem.StatusJson);
-        personagens.Verify(item => item.UpdateAsync(personagem), Times.Once);
+        personagens.Verify(item => item.UpdateWithRuntimeAuditAsync(
+            personagem,
+            0,
+            It.Is<PersonagemRuntimeWriteAudit>(audit =>
+                audit.TipoComando == "FICHA_SISTEMA_ATUALIZAR" &&
+                audit.DadosEventoJson.Contains("sistema", StringComparison.Ordinal))), Times.Once);
     }
 
     [Fact]

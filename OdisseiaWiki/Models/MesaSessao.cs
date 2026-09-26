@@ -28,4 +28,5 @@ public sealed class MesaSessao
     public Usuario? UsuarioEncerramento { get; set; }
     public ICollection<MesaComando> Comandos { get; set; } = new List<MesaComando>();
     public ICollection<MesaEvento> Eventos { get; set; } = new List<MesaEvento>();
+    public ICollection<MesaEfeitoAplicado> EfeitosAplicados { get; set; } = new List<MesaEfeitoAplicado>();
 }

@@ -9,6 +9,22 @@ export type GameplayVisibility =
 
 export type GameplayRollMode = 'Normal' | 'Vantagem' | 'Desvantagem';
 
+/**
+ * Regra declarativa de uma ação da ficha. O código sempre aponta para uma
+ * tabela de resultados da versão do Sistema usada pela Mesa; o cliente nunca
+ * executa a fórmula nem escolhe as faixas de resultado.
+ */
+export interface GameplayTestSpec {
+  codigoTeste: string;
+  codigoAtributo?: string;
+  grupoAtributo?: 'Principal' | 'Secundario' | string;
+  modo?: GameplayRollMode;
+  usaTotalParaFaixas?: boolean;
+  operacoes?: Array<'ATACAR' | 'DEFENDER' | 'REVIDAR' | string>;
+  alcances?: string[];
+  modosDisparo?: string[];
+}
+
 export interface GameplaySession {
   idMesaSessao: number;
   idMesa: number;
@@ -62,6 +78,7 @@ export interface GameplayRollResult {
     maximo?: number | null;
     critico?: boolean | null;
     falhaCritica?: boolean | null;
+    exigeNatural?: boolean;
   }>;
   criticoNatural?: boolean | null;
   falhaCriticaNatural?: boolean | null;
@@ -82,6 +99,59 @@ export interface GameplayRollResult {
     mensagem: string;
     fallback: boolean;
   }>;
+  efeitosPropostos?: GameplayEffectProposal[];
+  rolagensIndividuais?: GameplayRollResult[];
+}
+
+export interface GameplayEffectProposal {
+  codigo: string;
+  tipo: string;
+  nome: string;
+  alvo: 'AUTOR' | 'ALVO' | string;
+  codigoRecurso?: string | null;
+  operacao: 'SOMAR' | 'SUBTRAIR' | string;
+  valor: number;
+  exigeAlvo: boolean;
+  podeAplicar: boolean;
+  motivoIndisponivel?: string | null;
+}
+
+export interface GameplayActionCatalogItem {
+  codigo: string;
+  nome: string;
+  tipo: 'GERAL' | 'ATRIBUTO' | 'XP' | string;
+  codigoAtributo?: string | null;
+  grupoAtributo?: string | null;
+  expressao: string;
+  modoPadrao: GameplayRollMode;
+  executavel: boolean;
+  motivoIndisponivel?: string | null;
+}
+
+export interface GameplayActionCatalog {
+  idSistemaVersao: number;
+  dadoTesteGeral: string;
+  acoes: GameplayActionCatalogItem[];
+}
+
+export interface GameplayEffectApplyRequest {
+  chaveIdempotencia: string;
+  idEventoOrigem: number;
+  codigoEfeito: string;
+  idPersonagemAlvo?: number;
+  revisaoSessaoEsperada?: number;
+  revisaoPersonagemEsperada: number;
+}
+
+export interface GameplayEffectApplication {
+  idEventoOrigem: number;
+  codigoEfeito: string;
+  idPersonagemAlvo: number;
+  revisaoPersonagem: number;
+  campo: string;
+  valorAnterior: number;
+  valorAplicado: number;
+  valorAtual: number;
 }
 
 export interface GameplayEvent {
@@ -135,6 +205,36 @@ export interface GameplayRollRequest {
     idItemSistema?: number;
     idPoderSistema?: number;
   };
+  parametrosAcao?: {
+    operacao?: string;
+    alcance?: string;
+    modoDisparo?: string;
+    quantidade?: number;
+  };
+}
+
+export type GameplayFavoriteSourceType = 'ATRIBUTO' | 'ITEM' | 'SKILL' | 'MAGIA' | 'PROTESE';
+
+export type GameplayFavoriteRollConfiguration = Omit<
+  GameplayRollRequest,
+  'chaveIdempotencia' | 'idPersonagemJogador' | 'revisaoSessaoEsperada' | 'revisaoPersonagemEsperada'
+>;
+
+export interface GameplayFavoriteRoll {
+  idFavorito: string;
+  idPersonagemJogador: number;
+  tipoOrigem: GameplayFavoriteSourceType;
+  idOrigem: string;
+  nome: string;
+  configuracao: GameplayFavoriteRollConfiguration;
+  atualizadoEmUtc: string;
+}
+
+export interface GameplayFavoriteRollUpsert {
+  tipoOrigem: GameplayFavoriteSourceType;
+  idOrigem: string;
+  nome: string;
+  configuracao: GameplayFavoriteRollConfiguration;
 }
 
 export interface GameplayManualRecordRequest {
@@ -164,6 +264,7 @@ export interface GameplayCommandResponse {
   rolagem?: GameplayRollResult | null;
   simulacao?: boolean;
   aviso?: string;
+  aplicacao?: GameplayEffectApplication | null;
 }
 
 export interface GameplaySimulationResponse {
