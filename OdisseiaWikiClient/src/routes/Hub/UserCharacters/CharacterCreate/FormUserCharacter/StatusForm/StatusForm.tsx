@@ -1,5 +1,6 @@
 import React from 'react'
-import { AtributeController, AtributoBox, AtributoDiv, AvatarController, HeaderInfo, HeaderNameField, InfoImage, LabelStatus, MinimalInput, SectionStatus, StatusAtributosDiv, StatusContent, StatusContentCenter, StatusDefesaController, StatusDefesaDiv, StatusHeader, StatusImageDiv } from '../FormUserCharacter.style';
+import CasinoOutlinedIcon from '@mui/icons-material/CasinoOutlined';
+import { AtributeController, AtributoBox, AtributoDiv, AvatarController, GameplayHeaderActions, GameplayLabelRow, GameplayRollButton, HeaderInfo, HeaderNameField, InfoImage, LabelStatus, MinimalInput, SectionStatus, StatusAtributosDiv, StatusContent, StatusContentCenter, StatusDefesaController, StatusDefesaDiv, StatusHeader, StatusImageDiv } from '../FormUserCharacter.style';
 import { LabelInfoBox } from '../../../../../../components/Generic/LabelInfoBox/LabelInfoBox';
 import { StatusInput } from '../../../../../../components/Generic/StatusInput/StatusInput';
 import { AvatarIcon } from '../../../../../../components/Generic/AvatarIcon/AvatarIcon';
@@ -45,6 +46,9 @@ export const StatusForm: React.FC<StatusFormProps> = ({
   comparisonTableName,
   comparisonSkillCount = 0,
   comparisonVariant,
+  onGameplayAttributeAction,
+  onGameplayXpAction,
+  onGameplayGeneralAction,
 }) => {
   const [comparisonOpen, setComparisonOpen] = React.useState(false);
   const primaryFields = React.useMemo(
@@ -131,6 +135,18 @@ export const StatusForm: React.FC<StatusFormProps> = ({
             <>
               <LabelStatus>Xp: </LabelStatus>
               <MinimalInput min={0} value={xp} onChange={(e) => setXp(Number(e.target.value))} />
+              {onGameplayXpAction && (
+                <GameplayRollButton
+                  type="button"
+                  theme={theme}
+                  neon={neon}
+                  onClick={onGameplayXpAction}
+                  title="Abrir rolagens de XP"
+                  aria-label="Abrir rolagens de XP"
+                >
+                  <CasinoOutlinedIcon aria-hidden="true" />
+                </GameplayRollButton>
+              )}
             </>
           </LabelInfoBox>
           <LabelInfoBox theme={theme} neon={neon}>
@@ -176,12 +192,29 @@ export const StatusForm: React.FC<StatusFormProps> = ({
               </>
             </LabelInfoBox>
           ))}
-          {comparisonSource && (
-            <CharacterComparisonButton
-              theme={theme}
-              neon={neon}
-              onClick={() => setComparisonOpen(true)}
-            />
+          {(comparisonSource || onGameplayGeneralAction) && (
+            <GameplayHeaderActions>
+              {comparisonSource && (
+                <CharacterComparisonButton
+                  theme={theme}
+                  neon={neon}
+                  onClick={() => setComparisonOpen(true)}
+                />
+              )}
+              {onGameplayGeneralAction && (
+                <GameplayRollButton
+                  type="button"
+                  $matchComparison
+                  theme={theme}
+                  neon={neon}
+                  onClick={onGameplayGeneralAction}
+                  title="Abrir Central de ações"
+                  aria-label="Abrir Central de ações"
+                >
+                  <CasinoOutlinedIcon aria-hidden="true" />
+                </GameplayRollButton>
+              )}
+            </GameplayHeaderActions>
           )}
         </HeaderInfo>
         <SectionStatus theme={theme} neon={neon}>
@@ -255,7 +288,21 @@ export const StatusForm: React.FC<StatusFormProps> = ({
             <LabelStatus width='16px'>Principais</LabelStatus>
             {primaryFields.map((field) => (
               <AtributoDiv key={field.key} title={field.description}>
-                <LabelStatus width='13px'>{field.label}</LabelStatus>
+                <GameplayLabelRow>
+                  <LabelStatus width='13px'>{field.label}</LabelStatus>
+                  {onGameplayAttributeAction && (
+                    <GameplayRollButton
+                      type="button"
+                      theme={theme}
+                      neon={neon}
+                      onClick={() => onGameplayAttributeAction(field.code, 'Principal')}
+                      title={`Rolar teste de ${field.label}`}
+                      aria-label={`Rolar teste de ${field.label}`}
+                    >
+                      <CasinoOutlinedIcon aria-hidden="true" />
+                    </GameplayRollButton>
+                  )}
+                </GameplayLabelRow>
                 <AtributoBox theme={theme} neon={neon}>
                   <MinimalInput
                     type="number"
@@ -325,7 +372,21 @@ export const StatusForm: React.FC<StatusFormProps> = ({
           <LabelStatus width='16px'>Secundários</LabelStatus>
           {secondaryFields.map((field) => (
             <AtributoDiv key={field.key} title={field.description}>
-              <LabelStatus width='13px'>{field.label}</LabelStatus>
+              <GameplayLabelRow>
+                <LabelStatus width='13px'>{field.label}</LabelStatus>
+                {onGameplayAttributeAction && (
+                  <GameplayRollButton
+                    type="button"
+                    theme={theme}
+                    neon={neon}
+                    onClick={() => onGameplayAttributeAction(field.code, 'Secundario')}
+                    title={`Rolar teste de ${field.label}`}
+                    aria-label={`Rolar teste de ${field.label}`}
+                  >
+                    <CasinoOutlinedIcon aria-hidden="true" />
+                  </GameplayRollButton>
+                )}
+              </GameplayLabelRow>
               <AtributoBox theme={theme} neon={neon}>
                 <MinimalInput
                   type="number"

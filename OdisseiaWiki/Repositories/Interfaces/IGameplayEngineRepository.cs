@@ -15,6 +15,16 @@ public interface IGameplayEngineRepository
         int idMesa, int idUsuarioAtor, string key, CancellationToken cancellationToken = default);
     Task<PersonagemJogador?> GetCharacterAsync(
         int idPersonagemJogador, CancellationToken cancellationToken = default);
+    Task<PersonagemJogador?> GetCharacterForUpdateAsync(
+        int idPersonagemJogador, CancellationToken cancellationToken = default);
+    Task<MesaEvento?> GetEventAsync(
+        long idMesaEvento, CancellationToken cancellationToken = default);
+    Task<bool> HasEffectApplicationAsync(
+        long idMesaSessao,
+        long idEventoOrigem,
+        string codigoEfeito,
+        int idPersonagemAlvo,
+        CancellationToken cancellationToken = default);
     Task<SistemaVersao?> GetSystemVersionAsync(
         int idSistemaVersao, CancellationToken cancellationToken = default);
     Task<bool> CanAccessTableAsync(
@@ -33,5 +43,6 @@ public interface IGameplayEngineRepository
     void AddCommand(MesaComando command);
     void AddEvent(MesaEvento gameplayEvent);
     void AddRoll(MesaRolagem roll);
+    void AddEffectApplication(MesaEfeitoAplicado effectApplication);
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

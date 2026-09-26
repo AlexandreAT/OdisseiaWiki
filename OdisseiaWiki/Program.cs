@@ -614,6 +614,7 @@ public class Program
         services.AddScoped<IGameplayEngineService, GameplayEngineService>();
         services.AddSingleton<IGameplayCommandRateLimiter, GameplayCommandRateLimiter>();
         services.AddScoped<GameplayRollEvaluator>();
+        services.AddScoped<GameplayActionResolver>();
         services.AddSingleton<IDiceRandomSource, CryptoDiceRandomSource>();
         services.AddScoped<IDiceRoller, DiceRoller>();
         services.AddSingleton<IGameplayCursorCodec, GameplayCursorCodec>();

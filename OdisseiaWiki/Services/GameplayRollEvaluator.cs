@@ -11,7 +11,8 @@ public sealed record GameplayRollPlan(
     IReadOnlyList<GameplayDiceGroupSpec> Groups,
     GameplayRollMode Mode,
     int Modifier,
-    GameplayModifierDto? ModifierDetail = null);
+    GameplayModifierDto? ModifierDetail = null,
+    IReadOnlyList<GameplayModifierDto>? ModifierDetails = null);
 
 public sealed class GameplayRollEvaluator
 {
@@ -84,9 +85,9 @@ public sealed class GameplayRollEvaluator
         {
             Expressao = plan.Expression,
             Grupos = groups,
-            Modificadores = plan.ModifierDetail is null
+            Modificadores = plan.ModifierDetails ?? (plan.ModifierDetail is null
                 ? Array.Empty<GameplayModifierDto>()
-                : new[] { plan.ModifierDetail },
+                : new[] { plan.ModifierDetail }),
             ValorNatural = natural,
             Modificador = plan.Modifier,
             Subtotal = subtotal,

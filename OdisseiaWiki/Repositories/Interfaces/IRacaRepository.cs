@@ -1,5 +1,6 @@
 ﻿using OdisseiaWiki.Models;
 using System.Collections.Generic;
+using OdisseiaWiki.Dtos;
 using System.Threading.Tasks;
 
 namespace OdisseiaWiki.Repositories.Interfaces
@@ -13,5 +14,6 @@ namespace OdisseiaWiki.Repositories.Interfaces
         Task<bool> DeleteAsync(int id);
         Task<List<Raca>> SearchAsync(string termo);
         Task<List<Raca>> GetBatchAsync(List<int> ids);
+        Task<List<RacaPassivaDto>> SyncPassivasAsync(int idRaca, IReadOnlyCollection<RacaPassivaDto> passivas);
     }
 }

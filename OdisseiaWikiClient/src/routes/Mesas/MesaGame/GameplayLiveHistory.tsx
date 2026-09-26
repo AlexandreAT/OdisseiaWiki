@@ -3,6 +3,7 @@ import RefreshOutlinedIcon from '@mui/icons-material/RefreshOutlined';
 import type { GameplayEvent, GameplaySession } from '../../../models/Gameplay';
 import type { MesaPersonagemResumo } from '../../../models/Mesa';
 import { getGameplayEventOutcome } from '../../../utils/gameplayOutcome';
+import { getGameplayModifierSummary, getGameplayRollSummary } from '../../../utils/gameplayRollSummary';
 import { GameplayOutcomeValue } from '../../../components/Gameplay/GameplayOutcomeValue.style';
 import { MesaHudDecor } from '../components/MesaHudDecor/MesaHudDecor';
 import {
@@ -91,6 +92,7 @@ export const GameplayLiveHistory = ({
         )}
         {[...events].reverse().map((event) => {
           const values = event.oculto ? [] : event.rolagem?.grupos.flatMap((group) => group.valores) ?? [];
+          const modifierSummary = event.rolagem ? getGameplayModifierSummary(event.rolagem) : '';
           const characterName = event.oculto || !event.idPersonagemJogador
             ? null
             : names.get(event.idPersonagemJogador);
@@ -107,13 +109,16 @@ export const GameplayLiveHistory = ({
                   {characterName && <small>{characterName}</small>}
                   {event.rolagem && (
                     <p>
-                      {event.rolagem.expressao}
-                      {values.length > 0 && ` · ${values.join(', ')}`}
-                      {' → '}<GameplayOutcomeValue $tone={getGameplayEventOutcome(event)}>{event.rolagem.total}</GameplayOutcomeValue>
+                      <GameplayOutcomeValue $tone={getGameplayEventOutcome(event)}>
+                        {getGameplayRollSummary(event.rolagem)}
+                      </GameplayOutcomeValue>
+                      {` · ${event.rolagem.expressao}`}
+                      {values.length > 1 && ` · dados: ${values.join(', ')}`}
                     </p>
                   )}
-                  {event.resultadoSemantico && <p>{event.resultadoSemantico}</p>}
-                  {event.descricao && <p>{event.descricao}</p>}
+                  {modifierSummary && <p>Modificadores: {modifierSummary}</p>}
+                  {!event.rolagem && event.resultadoSemantico && <p>{event.resultadoSemantico}</p>}
+                  {!event.rolagem && event.descricao && <p>{event.descricao}</p>}
                   {event.observacao && <p>{event.observacao}</p>}
                 </>
               )}

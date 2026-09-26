@@ -76,6 +76,12 @@ namespace OdisseiaWiki.Services
             };
 
             var criada = await _repository.CreateAsync(raca);
+            if (status?.passivas is { Count: > 0 })
+            {
+                status.passivas = await _repository.SyncPassivasAsync(criada.Idraca, status.passivas);
+                criada.StatusJson = JsonSerializer.Serialize(status);
+                criada = await _repository.UpdateAsync(criada);
+            }
             return ResultRaca.Ok(MapToDto(criada));
         }
 
@@ -171,6 +177,14 @@ namespace OdisseiaWiki.Services
             raca.Destaque = dto.Destaque;
 
             var atualizada = await _repository.UpdateAsync(raca);
+            if (dto.StatusJson is not null && DeserializeStatus(atualizada.StatusJson) is { } updatedStatus)
+            {
+                updatedStatus.passivas = await _repository.SyncPassivasAsync(
+                    atualizada.Idraca,
+                    updatedStatus.passivas ?? new List<RacaPassivaDto>());
+                atualizada.StatusJson = JsonSerializer.Serialize(updatedStatus);
+                atualizada = await _repository.UpdateAsync(atualizada);
+            }
             await AssetReferenceHelper.DeleteRemovedAsync(
                 _assetService,
                 oldAssets,
@@ -279,6 +293,7 @@ namespace OdisseiaWiki.Services
                 ? passivasLegadas
                 : configuracao.PassivasVinculadas.Select(passiva => new RacaPassivaDto
                 {
+                    IdPassiva = passiva.IdPassiva,
                     Nome = passiva.NomeExibicao,
                     Efeito = passivasLegadas?.FirstOrDefault(legada =>
                         string.Equals(
@@ -394,7 +409,7 @@ namespace OdisseiaWiki.Services
                     return false;
                 }
 
-                passivas.Add(new RacaPassivaDto { Nome = nome, Efeito = efeito });
+                passivas.Add(new RacaPassivaDto { IdPassiva = passiva.IdPassiva, Nome = nome, Efeito = efeito });
             }
 
             normalized = new RacaStatusDto

@@ -28,6 +28,14 @@ import {
 import { SystemRuntimeIndicator } from '../../../../components/Generic/SystemRuntimeIndicator';
 import { CharacterVisibilityModal } from '../../../../components/CharacterVisibility';
 import { atualizarVisibilidadeGeralPersonagem } from '../../../../services/personagemVisibilidadeService';
+import {
+  GameplayActionCenter,
+  GameplaySheetActionDialog,
+  type GameplayActionCenterInitialAction,
+  type GameplaySheetActionSource,
+} from '../../../../components/Gameplay';
+import { useGameplayEngine } from '../../../../hooks/useGameplayEngine';
+import { useGameplayFavorites } from '../../../../hooks/useGameplayFavorites';
 
 interface UserCharactersProps {
   theme: 'dark' | 'light';
@@ -39,6 +47,27 @@ interface UserCharactersProps {
   onBack: () => void;
 }
 
+const persistedGameplayIds = (value: unknown) => {
+  let entries: unknown = value;
+  if (typeof value === 'string') {
+    try {
+      entries = JSON.parse(value);
+    } catch {
+      entries = [];
+    }
+  }
+
+  return new Set(
+    (Array.isArray(entries) ? entries : [])
+      .map((entry) => (
+        entry && typeof entry === 'object' && typeof (entry as { id?: unknown }).id === 'string'
+          ? (entry as { id: string }).id.trim()
+          : ''
+      ))
+      .filter(Boolean),
+  );
+};
+
 export const CharacterEdit = ({ theme, neon, personagem, userId, initialStep = 1, onSave, onBack }: UserCharactersProps) => {
   const [editStep, setEditStep] = React.useState<1 | 2>(initialStep);
   const [lastSavedSnapshot, setLastSavedSnapshot] = React.useState('');
@@ -48,6 +77,9 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, initialStep = 1
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [visibilityModalOpen, setVisibilityModalOpen] = React.useState(false);
   const [isUpdatingGlobalVisibility, setIsUpdatingGlobalVisibility] = React.useState(false);
+  const [sheetActionSource, setSheetActionSource] = React.useState<GameplaySheetActionSource | null>(null);
+  const [actionCenterOpen, setActionCenterOpen] = React.useState(false);
+  const [actionCenterInitial, setActionCenterInitial] = React.useState<GameplayActionCenterInitialAction | null>(null);
   const hasSnapshotInitializedRef = React.useRef(false);
   const saveInFlightRef = React.useRef(false);
 
@@ -110,6 +142,18 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, initialStep = 1
         visivel,
         setVisivel,
     } = useFormUserCharacter(userId, onSave, personagem);
+
+    const gameplay = useGameplayEngine({
+      idMesa: Number(personagem.idmesa) || undefined,
+      enabled: Boolean(personagem.idmesa),
+      // A ficha pode ser aberta fora da Mesa: a engine decide entre evento
+      // oficial e simula\u00e7\u00e3o ao consultar a sess\u00e3o ativa.
+      mesaAoVivo: Boolean(personagem.idmesa),
+    });
+    const gameplayFavorites = useGameplayFavorites(personagem.idpersonagemJogador, Boolean(personagem.idmesa));
+    const sheetFavoriteType = sheetActionSource?.item?.tipo === 'implante' ? 'PROTESE' : sheetActionSource?.type;
+    const sheetFavorite = gameplayFavorites.favorites.find((item) => item.tipoOrigem === sheetFavoriteType
+      && item.idOrigem === sheetActionSource?.id) ?? null;
 
     // Debug logs and temporary race-filter removed
 
@@ -212,8 +256,8 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, initialStep = 1
     }, [userName, race]);
 
     const handleSave = React.useCallback(async (goBackAfterSave = false) => {
-      if (!validateEdit()) return;
-      if (saveInFlightRef.current) return;
+      if (!validateEdit()) return false;
+      if (saveInFlightRef.current) return false;
       saveInFlightRef.current = true;
 
       try {
@@ -222,10 +266,47 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, initialStep = 1
           setLastSavedSnapshot(snapshot);
           if (goBackAfterSave) onBack();
         }
+        return success;
       } finally {
         saveInFlightRef.current = false;
       }
     }, [handleUpdate, onBack, snapshot, validateEdit]);
+
+    const persistedSourceIds = React.useMemo(() => {
+      const inventoryIds = persistedGameplayIds(personagem.inventarioJson);
+      return {
+        ITEM: inventoryIds,
+        PROTESE: inventoryIds,
+        SKILL: persistedGameplayIds(personagem.skills),
+        MAGIA: persistedGameplayIds(personagem.magia),
+      };
+    }, [personagem.inventarioJson, personagem.magia, personagem.skills]);
+
+    const openGameplayAction = React.useCallback(async (source: GameplaySheetActionSource) => {
+      if (!isSynced) {
+        toast.error('Salve as alterações da ficha antes de rolar uma ação.');
+        return;
+      }
+
+      // Fichas antigas não possuíam IDs estáveis. O formulário os prepara
+      // ao carregar; salve-os antes da primeira ação para o backend resolver
+      // exatamente o item, skill ou magia selecionado.
+      if (!persistedSourceIds[source.type].has(source.id)) {
+        const saved = await handleSave(false);
+        if (!saved) return;
+      }
+
+      setSheetActionSource(source);
+    }, [handleSave, isSynced, persistedSourceIds]);
+
+    const openGameplayCenter = React.useCallback((action: GameplayActionCenterInitialAction | null = null) => {
+      if (!isSynced) {
+        toast.error('Salve as alterações da ficha antes de fazer uma rolagem.');
+        return;
+      }
+      setActionCenterInitial(action);
+      setActionCenterOpen(true);
+    }, [isSynced]);
 
     const handleStepDotClick = React.useCallback((targetStep: 1 | 2) => {
       if (targetStep === editStep) return;
@@ -332,16 +413,9 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, initialStep = 1
                 loading: isSubmitting,
               }}
               next={{
-                label: isLastStep ? 'Atualizar' : 'Próximo',
-                onClick: () => {
-                  if (isLastStep) {
-                    void handleSave(false);
-                    return;
-                  }
-                  setEditStep(2);
-                },
-                disabled: isSubmitting,
-                loading: isLastStep && isSubmitting,
+                label: 'Próximo',
+                onClick: () => setEditStep(2),
+                disabled: isSubmitting || isLastStep,
               }}
             />
 
@@ -350,6 +424,8 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, initialStep = 1
                 contexto={runtimeContext}
                 loading={runtimeLoading}
                 error={runtimeError}
+                mesaNome={personagem.mesaNome}
+                mesaAoVivo={Boolean(gameplay.session)}
               />
             )}
 
@@ -391,6 +467,14 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, initialStep = 1
                   comparisonId={personagem.idpersonagemJogador}
                   comparisonTableId={selectedMesa}
                   comparisonTableName={personagem.mesaNome}
+                  onGameplayAction={(source) => void openGameplayAction(source)}
+                  onGameplayAttributeAction={(attributeCode, group) => openGameplayCenter({
+                    type: 'attribute',
+                    attributeCode,
+                    group,
+                  })}
+                  onGameplayXpAction={() => openGameplayCenter({ type: 'xp' })}
+                  onGameplayGeneralAction={() => openGameplayCenter()}
                 />
               )}
 
@@ -467,16 +551,9 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, initialStep = 1
                 loading: isSubmitting,
               }}
               next={{
-                label: isLastStep ? 'Atualizar' : 'Próximo',
-                onClick: () => {
-                  if (isLastStep) {
-                    void handleSave(false);
-                    return;
-                  }
-                  setEditStep(2);
-                },
-                disabled: isSubmitting,
-                loading: isLastStep && isSubmitting,
+                label: 'Próximo',
+                onClick: () => setEditStep(2),
+                disabled: isSubmitting || isLastStep,
               }}
             />
 
@@ -517,6 +594,53 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, initialStep = 1
               theme={theme}
               neon={neon}
               onClose={() => setVisibilityModalOpen(false)}
+            />
+            <GameplaySheetActionDialog
+              open={Boolean(sheetActionSource)}
+              source={sheetActionSource}
+              character={{ personagem }}
+              theme={theme}
+              neon={neon}
+              submitting={gameplay.submitting}
+              onClose={() => setSheetActionSource(null)}
+              onRoll={gameplay.roll}
+              onApplyEffect={gameplay.applyEffect}
+              onEffectApplied={gameplay.refresh}
+              favorite={sheetFavorite}
+              favoriteSaving={gameplayFavorites.saving}
+              onSaveFavorite={gameplayFavorites.save}
+              onRemoveFavorite={gameplayFavorites.remove}
+            />
+            <GameplayActionCenter
+              open={actionCenterOpen}
+              onClose={() => {
+                setActionCenterOpen(false);
+                setActionCenterInitial(null);
+              }}
+              initialCharacterId={personagem.idpersonagemJogador}
+              initialAction={actionCenterInitial}
+              directInitialAction={actionCenterInitial?.type === 'attribute'}
+              characters={[{ personagem }]}
+              session={gameplay.session}
+              mesaAoVivo={Boolean(personagem.idmesa)}
+              events={gameplay.events}
+              loading={gameplay.loading}
+              loadingMore={gameplay.loadingMore}
+              submitting={gameplay.submitting}
+              error={gameplay.error}
+              hasMore={gameplay.hasMore}
+              theme={theme}
+              neon={neon}
+              onRoll={gameplay.roll}
+              onApplyEffect={gameplay.applyEffect}
+              onGetActionCatalog={gameplay.getActionCatalog}
+              onRecordManual={gameplay.recordManual}
+              onLoadMore={gameplay.loadMore}
+              onRefresh={gameplay.refresh}
+              favorites={gameplayFavorites.favorites}
+              favoriteSaving={gameplayFavorites.saving}
+              onSaveFavorite={gameplayFavorites.save}
+              onRemoveFavorite={gameplayFavorites.remove}
             />
         </FormController>
     )

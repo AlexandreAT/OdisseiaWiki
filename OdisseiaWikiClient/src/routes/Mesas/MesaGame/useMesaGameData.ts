@@ -10,6 +10,11 @@ import { getApiErrorMessage } from '../../../utils/apiError';
 
 const FALLBACK_REFRESH_MS = 30_000;
 
+const snapshotContent = (snapshot: MesaAoVivoSnapshot) => JSON.stringify(
+  snapshot,
+  (key, value) => (key === 'atualizadoEm' ? undefined : value),
+);
+
 /**
  * Fonte REST da Mesa em jogo. O refresh público é intencional: eventos do hub
  * apenas invalidam o snapshot, sem duplicar regras de autorização no cliente.
@@ -22,7 +27,11 @@ export const useMesaGameData = (idMesa?: number) => {
     if (!idMesa || idMesa <= 0) return;
     try {
       const data = await obterMesaAoVivo(idMesa);
-      setSnapshot(data);
+      setSnapshot((current) => (
+        current && snapshotContent(current) === snapshotContent(data)
+          ? current
+          : data
+      ));
     } catch (error) {
       if (showError) {
         toast.error(getApiErrorMessage(error, 'Não foi possível atualizar a Mesa em jogo.'));

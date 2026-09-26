@@ -34,4 +34,7 @@ export interface StatusFormProps {
   comparisonTableName?: string | null;
   comparisonSkillCount?: number;
   comparisonVariant?: CharacterComparisonVariant;
+  onGameplayAttributeAction?: (attributeCode: string, group: 'Principal' | 'Secundario') => void;
+  onGameplayXpAction?: () => void;
+  onGameplayGeneralAction?: () => void;
 }

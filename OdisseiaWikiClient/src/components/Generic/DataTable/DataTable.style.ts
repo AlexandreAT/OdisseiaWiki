@@ -106,6 +106,21 @@ export const DataTableContainer = styled.div<Props>`
         theme === "dark" ? "var(--lightBlue)" : "var(--lightGrey)"};
     padding-right: 20px;
     text-align: center !important;
+    color: ${({ theme }) =>
+      theme === "dark" ? "var(--lightGrey)" : "var(--whitesmoke)"} !important;
+    font-family: 'Lato', sans-serif !important;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: .35px;
+    text-transform: none !important;
+
+    ${({ neon, theme }) =>
+      neon === "on" &&
+      css`
+        color: #fff !important;
+        text-shadow: 0 0 6px
+          ${theme === "dark" ? "var(--neonBlue)" : "var(--neonViolet)"};
+      `}
   }
 
   && thead .MuiTableRow-root .MuiTableCell-head > div,
@@ -115,21 +130,18 @@ export const DataTableContainer = styled.div<Props>`
     text-align: center !important;
   }
 
-  && thead .MuiTableRow-root .MuiTableCell-head [class*='MUIDataTableHeadCell-data'] {
+  && thead .MuiTableRow-root .MuiTableCell-head [class*='MUIDataTableHeadCell-data'],
+  && thead .MuiTableRow-root .MuiTableCell-head [class*='MUIDataTableHeadCell-contentWrapper'] {
     display: block;
     width: 100%;
     text-align: center !important;
-  }
-
-  && thead .MuiTableRow-root .MuiTableCell-head .tss-1akey0g-MUIDataTableHeadCell-data {
     text-transform: none !important;
-    font-weight: 600;
-    font-size: 0.85em;
-
     color: ${({ theme }) =>
       theme === "dark" ? "var(--lightGrey)" : "var(--whitesmoke)"} !important;
     font-size: 14px;
     font-weight: 600;
+    font-family: 'Lato', sans-serif !important;
+    letter-spacing: .35px;
 
     ${({ neon, theme }) =>
       neon === "on" &&
@@ -193,7 +205,8 @@ export const DataTableContainer = styled.div<Props>`
       white-space: nowrap;
     }
 
-    && thead .MuiTableRow-root .MuiTableCell-head .tss-1akey0g-MUIDataTableHeadCell-data,
+    && thead .MuiTableRow-root .MuiTableCell-head [class*='MUIDataTableHeadCell-data'],
+    && thead .MuiTableRow-root .MuiTableCell-head [class*='MUIDataTableHeadCell-contentWrapper'],
     && .MuiInputBase-input {
       font-size: 11px;
     }
@@ -249,6 +262,19 @@ export const TableScrollContainer = styled.div`
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--clearneonBlue) rgba(0, 10, 20, 0.68);
+
+  &::-webkit-scrollbar { height: 8px; }
+  &::-webkit-scrollbar-track {
+    border-radius: 8px;
+    background: rgba(0, 10, 20, 0.68);
+  }
+  &::-webkit-scrollbar-thumb {
+    border: 1px solid rgba(0, 210, 255, 0.35);
+    border-radius: 8px;
+    background: linear-gradient(90deg, var(--neonBlue), var(--clearneonBlue));
+  }
 
   > .MuiPaper-root {
     width: max-content;

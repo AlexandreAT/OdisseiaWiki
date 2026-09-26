@@ -21,6 +21,8 @@ namespace OdisseiaWiki.Models
 
         public long RevisaoRuntime { get; set; }
 
+        public string? RolagensFavoritasJson { get; set; }
+
         public virtual Mesa Mesa { get; set; } = null!;
         public virtual Usuario Usuario { get; set; } = null!;
 

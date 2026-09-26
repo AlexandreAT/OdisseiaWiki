@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type {
   GameplayCommandResponse,
+  GameplayEffectApplyRequest,
   GameplayEvent,
   GameplayManualRecordRequest,
   GameplayRollRequest,
@@ -9,7 +10,9 @@ import type {
 import {
   criarRegistroManualGameplay,
   criarRolagemGameplay,
+  aplicarEfeitoGameplay,
   listarEventosGameplay,
+  obterCatalogoAcoesGameplay,
   obterSessaoGameplayAtual,
   simularRolagemGameplay,
 } from '../services/gameplayService';
@@ -26,6 +29,19 @@ const mergeEvents = (current: GameplayEvent[], incoming: GameplayEvent[]) => {
   [...current, ...incoming].forEach((event) => byId.set(event.idEvento, event));
   return [...byId.values()].sort((left, right) => left.sequencia - right.sequencia);
 };
+
+const sameSession = (current: GameplaySession | null, incoming: GameplaySession | null) => (
+  current === incoming || Boolean(current && incoming
+    && current.idMesaSessao === incoming.idMesaSessao
+    && current.idMesa === incoming.idMesa
+    && current.status === incoming.status
+    && current.idSistemaVersao === incoming.idSistemaVersao
+    && current.iniciadaEmUtc === incoming.iniciadaEmUtc
+    && current.encerradaEmUtc === incoming.encerradaEmUtc
+    && current.revisaoEstado === incoming.revisaoEstado
+    && current.ultimaSequenciaEvento === incoming.ultimaSequenciaEvento
+    && current.versaoSchema === incoming.versaoSchema)
+);
 
 export const useGameplayEngine = ({
   idMesa,
@@ -49,7 +65,9 @@ export const useGameplayEngine = ({
     const items = page.itens ?? [];
     const fresh = items.filter((event) => !eventIdsRef.current.has(event.idEvento));
     items.forEach((event) => eventIdsRef.current.add(event.idEvento));
-    setEvents((current) => mergeEvents(current, items));
+    if (fresh.length > 0) {
+      setEvents((current) => mergeEvents(current, fresh));
+    }
     cursorRef.current = page.proximoCursor ?? cursorRef.current;
     setHasMore(Boolean(page.haMais));
     return fresh;
@@ -87,7 +105,7 @@ export const useGameplayEngine = ({
     const currentSession = await obterSessaoGameplayAtual(idMesa);
     if (sequence !== sessionLoadSequenceRef.current) return { session: null, loadedHistory: false };
     const changedSession = currentSession?.idMesaSessao !== sessionIdRef.current;
-    setSession(currentSession);
+    setSession((current) => sameSession(current, currentSession) ? current : currentSession);
 
     if (!currentSession) {
       sessionIdRef.current = null;
@@ -249,6 +267,26 @@ export const useGameplayEngine = ({
     }
   }, [consumeCommand, idMesa, resolveSessionForWrite]);
 
+  const applyEffect = useCallback(async (payload: GameplayEffectApplyRequest) => {
+    if (!idMesa) throw new Error('Mesa inválida.');
+    const activeSession = await resolveSessionForWrite();
+    if (!activeSession) throw new Error('Efeitos só podem ser aplicados durante uma sessão ativa.');
+    setSubmitting(true);
+    try {
+      const response = await aplicarEfeitoGameplay(idMesa, activeSession.idMesaSessao, {
+        ...payload,
+        revisaoSessaoEsperada: activeSession.revisaoEstado,
+      });
+      return consumeCommand(response);
+    } finally {
+      setSubmitting(false);
+    }
+  }, [consumeCommand, idMesa, resolveSessionForWrite]);
+
+  const getActionCatalog = useCallback((idPersonagemJogador: number) => (
+    obterCatalogoAcoesGameplay(idPersonagemJogador)
+  ), []);
+
   const loadMore = useCallback(async () => {
     if (!idMesa || !session || !hasMore || loadingMore) return;
     setLoadingMore(true);
@@ -277,6 +315,8 @@ export const useGameplayEngine = ({
     hasMore,
     refresh,
     roll,
+    applyEffect,
+    getActionCatalog,
     recordManual,
     loadMore,
   };

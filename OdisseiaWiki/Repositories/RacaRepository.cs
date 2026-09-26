@@ -4,6 +4,7 @@ using OdisseiaWiki.Models;
 using OdisseiaWiki.Repositories.Interfaces;
 using OdisseiaWiki.Services.Helpers;
 using System.Collections.Generic;
+using OdisseiaWiki.Dtos;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -76,6 +77,52 @@ namespace OdisseiaWiki.Repositories
                 .AsNoTracking()
                 .Where(r => ids.Contains(r.Idraca))
                 .ToListAsync();
+        }
+
+        public async Task<List<RacaPassivaDto>> SyncPassivasAsync(
+            int idRaca,
+            IReadOnlyCollection<RacaPassivaDto> passivas)
+        {
+            List<Passivaraca> links = await _context.Passivaracas
+                .Include(link => link.Passiva)
+                .Where(link => link.Idraca == idRaca)
+                .ToListAsync();
+            var retainedPassives = new List<Passiva>();
+
+            foreach (RacaPassivaDto dto in passivas)
+            {
+                string nome = dto.Nome!.Trim();
+                Passiva? passive = dto.IdPassiva.HasValue
+                    ? links.FirstOrDefault(link => link.Idpassiva == dto.IdPassiva.Value)?.Passiva
+                    : links.Select(link => link.Passiva).FirstOrDefault(entry =>
+                        string.Equals(entry.Nome, nome, StringComparison.OrdinalIgnoreCase));
+                passive ??= new Passiva { Nome = nome, DataCriacao = DateTime.UtcNow };
+                passive.Nome = nome;
+                passive.Descricao = dto.Efeito;
+                passive.Visivel = true;
+                if (passive.Idpassiva == 0) _context.Passivas.Add(passive);
+
+                Passivaraca? link = links.FirstOrDefault(entry => entry.Passiva == passive ||
+                    (passive.Idpassiva != 0 && entry.Idpassiva == passive.Idpassiva));
+                if (link is null)
+                {
+                    link = new Passivaraca { Idraca = idRaca, Passiva = passive };
+                    _context.Passivaracas.Add(link);
+                    links.Add(link);
+                }
+
+                if (!retainedPassives.Contains(passive)) retainedPassives.Add(passive);
+            }
+
+            _context.Passivaracas.RemoveRange(links.Where(link =>
+                !retainedPassives.Contains(link.Passiva)));
+            await _context.SaveChangesAsync();
+            return retainedPassives.Select(passive => new RacaPassivaDto
+            {
+                IdPassiva = passive.Idpassiva,
+                Nome = passive.Nome,
+                Efeito = passive.Descricao,
+            }).ToList();
         }
     }
 }

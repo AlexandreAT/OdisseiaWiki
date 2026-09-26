@@ -7,11 +7,12 @@ import { AttributeRow, AttributeSubsection, AttributeSubsectionTitle, FormItemAt
 import { ArmaAtributos, ArmaTipo, ArmaTipoDano, ImplanteAtributos, TrajeAtributos } from '../../../../../../models/Itens';
 import { ACERTO_DADO_OPTIONS, ARMA_TIPO_DANO_OPTIONS, ARMA_TIPO_OPTIONS, getPrimeiroAtaqueComGastoEstamina, normalizeDadoAcerto, TRAJE_TIPO_OPTIONS } from '../../../../../../constants';
 import { DadoAcerto } from '../../../../../../models/Dados';
-import { catalogReferenceOptions, SistemaItemFormCatalog } from '../../../../../../utils/systemItemFormCatalog';
+import { catalogReferenceOptions, ItemFormOption, SistemaItemFormCatalog } from '../../../../../../utils/systemItemFormCatalog';
 import { WeaponModifiers } from '../../../../../../components/WeaponModifiers/WeaponModifiers';
 import { WeaponAccessories } from '../../../../../../components/WeaponAccessories/WeaponAccessories';
 import { getWeaponModifierMode } from '../../../../../../utils/weaponModifiers';
 import type { AcessorioAtributos } from '../../../../../../models/Itens';
+import type { GameplayTestSpec } from '../../../../../../models/Gameplay';
 
 interface BaseProps {
   theme: 'dark' | 'light';
@@ -68,6 +69,129 @@ const withNormalizedAcerto = (value: any, defaults: Record<string, unknown>) => 
   ...(value ?? {}),
   acerto: normalizeDadoAcerto(value?.acerto) || undefined,
 });
+
+/**
+ * Declarative rule only: the selected code is resolved against the published
+ * System table by the backend when the character uses the item or power.
+ */
+const TestSpecificationFields = ({
+  value,
+  onChange,
+  theme,
+  neon,
+  weapon = false,
+  testOptions = [],
+}: {
+  value: GameplayTestSpec | undefined;
+  onChange: (value: GameplayTestSpec | undefined) => void;
+  theme: 'dark' | 'light';
+  neon: 'on' | 'off';
+  weapon?: boolean;
+  testOptions?: ItemFormOption[];
+}) => {
+  const enabled = Boolean(value);
+  const defaultTestCode = testOptions[0]?.value ?? (weapon ? 'ATAQUE_COMUM' : '');
+  const availableTestOptions = value?.codigoTeste && !testOptions.some((option) => option.value === value.codigoTeste)
+    ? [...testOptions, { value: value.codigoTeste, label: `${value.codigoTeste} (configuração existente)` }]
+    : testOptions;
+  const configuredOperations = (value?.operacoes ?? []).map((operation) => String(operation).toUpperCase());
+  const configuredRanges = (value?.alcances ?? []).map((range) => String(range).toUpperCase());
+  const configuredFireModes = (value?.modosDisparo ?? []).map((mode) => String(mode).toUpperCase());
+  const update = (changes: Partial<GameplayTestSpec>) => onChange({
+    codigoTeste: value?.codigoTeste ?? defaultTestCode,
+    usaTotalParaFaixas: value?.usaTotalParaFaixas ?? true,
+    ...value,
+    ...changes,
+  });
+  const toggleOperation = (operation: 'ATACAR' | 'DEFENDER' | 'REVIDAR', checked: boolean) => {
+    const next = checked
+      ? [...new Set([...configuredOperations, operation])]
+      : configuredOperations.filter((current) => current !== operation);
+    update({ operacoes: next.length > 0 ? next : undefined });
+  };
+  const toggleChoice = (
+    key: 'alcances' | 'modosDisparo',
+    current: string[],
+    choice: string,
+    checked: boolean,
+  ) => {
+    const next = checked
+      ? [...new Set([...current, choice])]
+      : current.filter((entry) => entry !== choice);
+    update({ [key]: next.length > 0 ? next : undefined });
+  };
+
+  return (
+    <AttributeSubsection theme={theme} neon={neon}>
+      <AttributeSubsectionTitle theme={theme} neon={neon}>Teste na engine</AttributeSubsectionTitle>
+      <CheckBox
+        neon={neon}
+        label={weapon ? 'Usar especificação de teste desta arma' : 'Esta ação exige teste'}
+        checked={enabled}
+        onChange={(checked) => onChange(checked ? {
+          codigoTeste: defaultTestCode,
+          usaTotalParaFaixas: true,
+        } : undefined)}
+      />
+      {enabled && (
+        <>
+          <p>Use o código de teste publicado no Sistema da Mesa. A engine valida o código e as faixas ao rolar.</p>
+          <AttributeRow $columns={2}>
+            {availableTestOptions.length > 0 ? (
+              <Select
+                label="Teste publicado"
+                theme={theme}
+                neon={neon}
+                value={value?.codigoTeste ?? defaultTestCode}
+                options={availableTestOptions}
+                onChange={(event) => update({ codigoTeste: event.target.value })}
+                width="100%"
+              />
+            ) : (
+              <InputText label="Código do teste" theme={theme} neon={neon} value={value?.codigoTeste ?? ''} onChange={(event) => update({ codigoTeste: event.target.value })} />
+            )}
+            <InputText label="Atributo (opcional)" theme={theme} neon={neon} value={value?.codigoAtributo ?? ''} onChange={(event) => update({ codigoAtributo: event.target.value || undefined })} />
+          </AttributeRow>
+          <AttributeRow $columns={2}>
+            <Select label="Modo fixo" theme={theme} neon={neon} value={value?.modo ?? ''} allowEmptyOption options={[
+              { value: '', label: 'Escolhido na rolagem' },
+              { value: 'Normal', label: 'Normal' },
+              { value: 'Vantagem', label: 'Vantagem' },
+              { value: 'Desvantagem', label: 'Desvantagem' },
+            ]} onChange={(event) => update({ modo: event.target.value as GameplayTestSpec['modo'] || undefined })} width="100%" />
+            <Select label="Grupo do atributo" theme={theme} neon={neon} value={value?.grupoAtributo ?? ''} allowEmptyOption options={[
+              { value: '', label: 'Detectar na ficha' },
+              { value: 'Principal', label: 'Principal' },
+              { value: 'Secundario', label: 'Secundário' },
+            ]} onChange={(event) => update({ grupoAtributo: event.target.value || undefined })} width="100%" />
+          </AttributeRow>
+          <CheckBox neon={neon} label="Usar o total nas faixas de resultado" checked={value?.usaTotalParaFaixas !== false} onChange={(usaTotalParaFaixas) => update({ usaTotalParaFaixas })} />
+          {weapon && (
+            <>
+              <p>Operações permitidas: sem seleção, a engine usa o padrão da arma; marque para limitar ou habilitar a defesa.</p>
+              <AttributeRow $columns={3}>
+                <CheckBox neon={neon} label="Atacar" checked={configuredOperations.includes('ATACAR')} onChange={(checked) => toggleOperation('ATACAR', checked)} />
+                <CheckBox neon={neon} label="Defender" checked={configuredOperations.includes('DEFENDER')} onChange={(checked) => toggleOperation('DEFENDER', checked)} />
+                <CheckBox neon={neon} label="Revidar" checked={configuredOperations.includes('REVIDAR')} onChange={(checked) => toggleOperation('REVIDAR', checked)} />
+              </AttributeRow>
+              <p>Faixas permitidas: sem seleção, a engine usa as faixas compatíveis com o tipo da arma.</p>
+              <AttributeRow $columns={3}>
+                <CheckBox neon={neon} label="Curta distância" checked={configuredRanges.includes('CURTA')} onChange={(checked) => toggleChoice('alcances', configuredRanges, 'CURTA', checked)} />
+                <CheckBox neon={neon} label="Média distância" checked={configuredRanges.includes('MEDIA')} onChange={(checked) => toggleChoice('alcances', configuredRanges, 'MEDIA', checked)} />
+                <CheckBox neon={neon} label="Longa distância" checked={configuredRanges.includes('LONGA')} onChange={(checked) => toggleChoice('alcances', configuredRanges, 'LONGA', checked)} />
+              </AttributeRow>
+              <p>Modos de disparo: sem seleção, a engine usa os modos compatíveis com a arma.</p>
+              <AttributeRow $columns={2}>
+                <CheckBox neon={neon} label="Tiro" checked={configuredFireModes.includes('TIRO')} onChange={(checked) => toggleChoice('modosDisparo', configuredFireModes, 'TIRO', checked)} />
+                <CheckBox neon={neon} label="Rajada" checked={configuredFireModes.includes('RAJADA')} onChange={(checked) => toggleChoice('modosDisparo', configuredFireModes, 'RAJADA', checked)} />
+              </AttributeRow>
+            </>
+          )}
+        </>
+      )}
+    </AttributeSubsection>
+  );
+};
 
 export const ArmaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon, managementLayout = false, sistemaItemCatalogo }) => {
   const initialValue = (value ?? {}) as ArmaAtributos;
@@ -146,6 +270,15 @@ export const ArmaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme,
         onChange={(event) => handleChange('modoModificadores', (event.target.value || null) as ArmaAtributos['modoModificadores'])} />
       {!getWeaponModifierMode(local) && <p>Selecione o tipo de arma ou o modo de combate para aplicar os modificadores de distância, ataque e revide.</p>}
       <WeaponModifiers value={local.modificadores} onChange={(modifiers) => handleChange('modificadores', modifiers)} mode={getWeaponModifierMode(local)} theme={theme} neon={neon} />
+      <CheckBox
+        neon={neon}
+        label="Esta arma aplica teste"
+        checked={local.aplicaTeste !== false}
+        onChange={(aplicaTeste) => handleChange('aplicaTeste', aplicaTeste)}
+      />
+      {local.aplicaTeste !== false && (
+        <TestSpecificationFields value={local.teste} onChange={(teste) => handleChange('teste', teste)} theme={theme} neon={neon} weapon testOptions={sistemaItemCatalogo?.testOptions} />
+      )}
 
       <ManagementAttributeGroup enabled={managementLayout} title="Efeitos e propriedades" theme={theme} neon={neon}>
         <AttributeRow>
@@ -173,6 +306,7 @@ export const TrajeAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme
       ...local,
       [key]: val,
       ...(key === 'tipoTraje' ? { codigoArquetipo: String(val ?? '').toUpperCase() } : {}),
+      ...(key === 'teste' ? { aplicaTeste: Boolean(val) } : {}),
     };
     setLocal(updated);
     onChange(updated);
@@ -202,6 +336,7 @@ export const TrajeAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme
       <AttributeRow>
         <InputText label="Efeito" theme={theme} neon={neon} value={local.efeito ?? ''} onChange={e => handleChange('efeito', e.target.value)} />
       </AttributeRow>
+      <TestSpecificationFields value={local.teste} onChange={(teste) => handleChange('teste', teste)} theme={theme} neon={neon} testOptions={sistemaItemCatalogo?.testOptions} />
     </FormItemAtributos>
   );
 };
@@ -310,10 +445,17 @@ export const ImplanteAtributosForm: React.FC<BaseProps> = ({ value, onChange, th
       {effectField}
       {enhancementFields}
     </>}
+    <TestSpecificationFields
+      value={atributos.teste}
+      onChange={(teste) => update({ teste, aplicaTeste: Boolean(teste) })}
+      theme={theme}
+      neon={neon}
+      testOptions={sistemaItemCatalogo?.testOptions}
+    />
   </FormItemAtributos>;
 };
 
-export const ConsumiveisAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon }) => (
+export const ConsumiveisAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon, sistemaItemCatalogo }) => (
   <FormItemAtributos>
     <AttributeRow $columns={3}>
       <InputText label="Restaura Vida" type="number" theme={theme} neon={neon} value={value?.restaura?.vida ?? ''} onChange={e => onChange({ ...value, restaura: { ...value?.restaura, vida: Number(e.target.value) } })} />
@@ -329,10 +471,11 @@ export const ConsumiveisAtributosForm: React.FC<BaseProps> = ({ value, onChange,
     <AttributeRow>
       <InputText label="Efeito" theme={theme} neon={neon} value={value?.efeito || ""} onChange={e => onChange({ ...value, efeito: e.target.value })} />
     </AttributeRow>
+    <TestSpecificationFields value={value?.teste} onChange={(teste) => onChange({ ...value, teste, aplicaTeste: Boolean(teste) })} theme={theme} neon={neon} testOptions={sistemaItemCatalogo?.testOptions} />
   </FormItemAtributos>
 );
 
-export const AcessorioAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon }) => (
+export const AcessorioAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon, sistemaItemCatalogo }) => (
   <FormItemAtributos>
     <Select label="Compatibilidade com armas" theme={theme} neon={neon} width="100%" value={value?.compatibilidade ?? 'todas'}
       allowEmptyOption={false}
@@ -347,10 +490,11 @@ export const AcessorioAtributosForm: React.FC<BaseProps> = ({ value, onChange, t
     <AttributeRow>
       <InputText label="Efeito" theme={theme} neon={neon} value={value?.efeito || ""} onChange={e => onChange({ ...value, efeito: e.target.value })} />
     </AttributeRow>
+    <TestSpecificationFields value={value?.teste} onChange={(teste) => onChange({ ...value, teste, aplicaTeste: Boolean(teste) })} theme={theme} neon={neon} testOptions={sistemaItemCatalogo?.testOptions} />
   </FormItemAtributos>
 );
 
-export const OutrosAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon }) => (
+export const OutrosAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon, sistemaItemCatalogo }) => (
   <FormItemAtributos>
     <AttributeRow>
       <InputText label="Duração" theme={theme} neon={neon} value={value?.duracao || ""} onChange={e => onChange({ ...value, duracao: e.target.value })} />
@@ -361,6 +505,7 @@ export const OutrosAtributosForm: React.FC<BaseProps> = ({ value, onChange, them
     <AttributeRow>
       <InputText label="Efeito" theme={theme} neon={neon} value={value?.efeito || ""} onChange={e => onChange({ ...value, efeito: e.target.value })} />
     </AttributeRow>
+    <TestSpecificationFields value={value?.teste} onChange={(teste) => onChange({ ...value, teste, aplicaTeste: Boolean(teste) })} theme={theme} neon={neon} testOptions={sistemaItemCatalogo?.testOptions} />
   </FormItemAtributos>
 );
 
@@ -418,6 +563,7 @@ export const AtaqueAtributosForm: React.FC<BaseProps> = ({ value, onChange, them
         onChange={e => handleChange('bonus', e.target.value)}
       />
       <AcertoDadoSelect value={local.acerto} onChange={(acerto) => handleChange('acerto', acerto)} theme={theme} neon={neon} />
+      <TestSpecificationFields value={local.teste} onChange={(teste) => handleChange('teste', teste)} theme={theme} neon={neon} />
     </FormItemAtributos>
   );
 };
@@ -457,6 +603,7 @@ export const SuporteAtributosForm: React.FC<BaseProps> = ({ value, onChange, the
         onChange={e => handleChange('bonus', e.target.value)}
       />
       <AcertoDadoSelect value={local.acerto} onChange={(acerto) => handleChange('acerto', acerto)} theme={theme} neon={neon} />
+      <TestSpecificationFields value={local.teste} onChange={(teste) => handleChange('teste', teste)} theme={theme} neon={neon} />
     </FormItemAtributos>
   );
 };
@@ -496,6 +643,7 @@ export const BuffAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme,
         onChange={e => handleChange('bonus', e.target.value)}
       />
       <AcertoDadoSelect value={local.acerto} onChange={(acerto) => handleChange('acerto', acerto)} theme={theme} neon={neon} />
+      <TestSpecificationFields value={local.teste} onChange={(teste) => handleChange('teste', teste)} theme={theme} neon={neon} />
     </FormItemAtributos>
   );
 };
@@ -535,6 +683,7 @@ export const DebuffAtributosForm: React.FC<BaseProps> = ({ value, onChange, them
         onChange={e => handleChange('bonus', e.target.value)}
       />
       <AcertoDadoSelect value={local.acerto} onChange={(acerto) => handleChange('acerto', acerto)} theme={theme} neon={neon} />
+      <TestSpecificationFields value={local.teste} onChange={(teste) => handleChange('teste', teste)} theme={theme} neon={neon} />
     </FormItemAtributos>
   );
 };
@@ -583,6 +732,7 @@ export const AtaqueMagiaAtributosForm: React.FC<BaseProps> = ({ value, onChange,
         onChange={e => handleChange('bonus', e.target.value)}
       />
       <AcertoDadoSelect value={local.acerto} onChange={(acerto) => handleChange('acerto', acerto)} theme={theme} neon={neon} />
+      <TestSpecificationFields value={local.teste} onChange={(teste) => handleChange('teste', teste)} theme={theme} neon={neon} />
     </FormItemAtributos>
   );
 };
@@ -615,6 +765,7 @@ export const SuporteMagiaAtributosForm: React.FC<BaseProps> = ({ value, onChange
         onChange={e => handleChange('bonus', e.target.value)}
       />
       <AcertoDadoSelect value={local.acerto} onChange={(acerto) => handleChange('acerto', acerto)} theme={theme} neon={neon} />
+      <TestSpecificationFields value={local.teste} onChange={(teste) => handleChange('teste', teste)} theme={theme} neon={neon} />
     </FormItemAtributos>
   );
 };
@@ -647,6 +798,7 @@ export const BuffMagiaAtributosForm: React.FC<BaseProps> = ({ value, onChange, t
         onChange={e => handleChange('bonus', e.target.value)}
       />
       <AcertoDadoSelect value={local.acerto} onChange={(acerto) => handleChange('acerto', acerto)} theme={theme} neon={neon} />
+      <TestSpecificationFields value={local.teste} onChange={(teste) => handleChange('teste', teste)} theme={theme} neon={neon} />
     </FormItemAtributos>
   );
 };
@@ -679,6 +831,7 @@ export const DebuffMagiaAtributosForm: React.FC<BaseProps> = ({ value, onChange,
         onChange={e => handleChange('bonus', e.target.value)}
       />
       <AcertoDadoSelect value={local.acerto} onChange={(acerto) => handleChange('acerto', acerto)} theme={theme} neon={neon} />
+      <TestSpecificationFields value={local.teste} onChange={(teste) => handleChange('teste', teste)} theme={theme} neon={neon} />
     </FormItemAtributos>
   );
 };

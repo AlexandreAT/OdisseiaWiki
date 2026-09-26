@@ -95,6 +95,26 @@ public sealed class GameplaySessionsController : ControllerBase
         return result.Sucesso ? Ok(result.Dados) : MapFailure(result);
     }
 
+    [HttpPost("{idMesaSessao:long}/efeitos/aplicar")]
+    [RequestSizeLimit(32 * 1024)]
+    public async Task<IActionResult> ApplyEffect(
+        int idMesa,
+        long idMesaSessao,
+        [FromBody] GameplayEffectApplyRequestDto request,
+        CancellationToken cancellationToken)
+    {
+        int? idUsuario = User.GetUserId();
+        if (!idUsuario.HasValue)
+            return Unauthorized();
+        GameplayOperationResult<GameplayCommandResponseDto> result = await _service.ApplyEffectAsync(
+            idMesa,
+            idMesaSessao,
+            idUsuario.Value,
+            request,
+            cancellationToken);
+        return result.Sucesso ? Ok(result.Dados) : MapFailure(result);
+    }
+
     [HttpPost("{idMesaSessao:long}/registros-manuais")]
     [RequestSizeLimit(32 * 1024)]
     public async Task<IActionResult> RegisterManual(
@@ -220,6 +240,94 @@ public sealed class GameplaySimulationsController : ControllerBase
             Response.Headers.RetryAfter = retryAfter.ToString();
             problem.Extensions["retryAfter"] = retryAfter;
         }
+        return StatusCode(status, problem);
+    }
+
+    [HttpGet("catalogo")]
+    [EnableRateLimiting("gameplay-read")]
+    public async Task<IActionResult> GetCatalog(
+        int idPersonagemJogador,
+        CancellationToken cancellationToken)
+    {
+        int? idUsuario = User.GetUserId();
+        if (!idUsuario.HasValue)
+            return Unauthorized();
+        GameplayOperationResult<GameplayActionCatalogDto> result =
+            await _service.GetActionCatalogAsync(idPersonagemJogador, idUsuario.Value, cancellationToken);
+        return result.Sucesso ? Ok(result.Dados) : MapFailure(result);
+    }
+
+    [HttpGet("favoritos")]
+    [EnableRateLimiting("gameplay-read")]
+    public async Task<IActionResult> GetFavorites(
+        int idPersonagemJogador,
+        CancellationToken cancellationToken)
+    {
+        int? idUsuario = User.GetUserId();
+        if (!idUsuario.HasValue)
+            return Unauthorized();
+        GameplayOperationResult<IReadOnlyCollection<GameplayFavoriteRollDto>> result =
+            await _service.GetFavoriteRollsAsync(idPersonagemJogador, idUsuario.Value, cancellationToken);
+        return result.Sucesso ? Ok(result.Dados) : MapFailure(result);
+    }
+
+    [HttpPut("favoritos")]
+    [EnableRateLimiting("gameplay-simulation")]
+    [RequestSizeLimit(32 * 1024)]
+    public async Task<IActionResult> UpsertFavorite(
+        int idPersonagemJogador,
+        [FromBody] GameplayFavoriteRollUpsertDto request,
+        CancellationToken cancellationToken)
+    {
+        int? idUsuario = User.GetUserId();
+        if (!idUsuario.HasValue)
+            return Unauthorized();
+        GameplayOperationResult<GameplayFavoriteRollDto> result = await _service.UpsertFavoriteRollAsync(
+            idPersonagemJogador,
+            idUsuario.Value,
+            request,
+            cancellationToken);
+        return result.Sucesso ? Ok(result.Dados) : MapFailure(result);
+    }
+
+    [HttpDelete("favoritos/{idFavorito:guid}")]
+    [EnableRateLimiting("gameplay-simulation")]
+    public async Task<IActionResult> DeleteFavorite(
+        int idPersonagemJogador,
+        Guid idFavorito,
+        CancellationToken cancellationToken)
+    {
+        int? idUsuario = User.GetUserId();
+        if (!idUsuario.HasValue)
+            return Unauthorized();
+        GameplayOperationResult<bool> result = await _service.DeleteFavoriteRollAsync(
+            idPersonagemJogador,
+            idFavorito,
+            idUsuario.Value,
+            cancellationToken);
+        return result.Sucesso ? NoContent() : MapFailure(result);
+    }
+
+    private ObjectResult MapFailure<T>(GameplayOperationResult<T> result)
+    {
+        int status = result.Erro switch
+        {
+            GameplayOperationError.NaoEncontrado => StatusCodes.Status404NotFound,
+            GameplayOperationError.Proibido => StatusCodes.Status403Forbidden,
+            GameplayOperationError.Conflito => StatusCodes.Status409Conflict,
+            GameplayOperationError.RegraNaoPermitida => StatusCodes.Status422UnprocessableEntity,
+            GameplayOperationError.LimiteTaxa => StatusCodes.Status429TooManyRequests,
+            _ => StatusCodes.Status400BadRequest,
+        };
+        ProblemDetails problem = new()
+        {
+            Status = status,
+            Title = "Rolagem favorita inválida",
+            Detail = result.Mensagem,
+            Instance = HttpContext.Request.Path,
+        };
+        problem.Extensions["code"] = result.Codigo;
+        problem.Extensions["traceId"] = HttpContext.TraceIdentifier;
         return StatusCode(status, problem);
     }
 }

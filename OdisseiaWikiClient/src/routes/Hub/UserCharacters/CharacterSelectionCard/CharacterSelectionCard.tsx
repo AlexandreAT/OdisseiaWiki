@@ -60,6 +60,7 @@ import {
   ProficiencyValue,
   QuickResourceButton,
   QuickResourceInput,
+  QuickSaveIndicator,
   QuickXpButton,
   QuickXpInput,
   SelectionMarker,
@@ -162,6 +163,12 @@ const countSkills = (raw?: string) => {
 };
 
 type QuickField = 'vida' | 'mana' | 'estamina' | 'xp';
+const QUICK_SAVE_FEEDBACK_MS = 320;
+
+const waitForQuickSaveFeedback = async (startedAt: number) => {
+  const remaining = QUICK_SAVE_FEEDBACK_MS - (performance.now() - startedAt);
+  if (remaining > 0) await new Promise((resolve) => window.setTimeout(resolve, remaining));
+};
 
 interface EditableResourceProps {
   field: Exclude<QuickField, 'xp'>;
@@ -185,6 +192,7 @@ const EditableResource = ({
   compact = false,
 }: EditableResourceProps) => {
   const [editing, setEditing] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
   const [draft, setDraft] = React.useState(String(value));
   const inputRef = React.useRef<HTMLInputElement | null>(null);
   const committed = React.useRef(false);
@@ -196,14 +204,23 @@ const EditableResource = ({
     inputRef.current?.select();
   }, [editing]);
 
-  const commit = () => {
+  const commit = async () => {
     if (committed.current) return;
     committed.current = true;
     setEditing(false);
     const parsed = Number(draft);
     if (!Number.isFinite(parsed)) return;
     const next = Math.max(0, Math.round(parsed));
-    if (next !== value) void onUpdate?.({ [field]: next });
+    if (next !== value && onUpdate) {
+      setSaving(true);
+      const startedAt = performance.now();
+      try {
+        await onUpdate({ [field]: next });
+      } finally {
+        await waitForQuickSaveFeedback(startedAt);
+        setSaving(false);
+      }
+    }
   };
 
   if (!onUpdate) {
@@ -218,11 +235,11 @@ const EditableResource = ({
       value={draft}
       aria-label={`Editar ${field}`}
       onChange={(event) => setDraft(event.target.value)}
-      onBlur={commit}
+      onBlur={() => void commit()}
       onKeyDown={(event) => {
         if (event.key === 'Enter') {
           event.preventDefault();
-          commit();
+          void commit();
         }
         if (event.key === 'Escape') {
           committed.current = true;
@@ -234,7 +251,9 @@ const EditableResource = ({
   ) : (
     <QuickResourceButton
       type="button"
-      aria-label={`Editar ${field}. Valor atual ${value}`}
+      $saving={saving}
+      disabled={saving}
+      aria-label={saving ? `Salvando ${field}` : `Editar ${field}. Valor atual ${value}`}
       onClick={() => {
         committed.current = false;
         setDraft(String(value));
@@ -242,6 +261,7 @@ const EditableResource = ({
       }}
     >
       <StatusBar theme={theme} neon={neon} type={type} value={value} maxValue={maxValue} height="15px" />
+      {saving && <QuickSaveIndicator role="status" aria-label={`Salvando ${field}`} />}
     </QuickResourceButton>
   );
 };
@@ -280,6 +300,7 @@ export const CharacterSelectionCard = ({
   const navigate = useNavigate();
   const [comparisonOpen, setComparisonOpen] = React.useState(false);
   const [editingXp, setEditingXp] = React.useState(false);
+  const [savingXp, setSavingXp] = React.useState(false);
   const [xpDraft, setXpDraft] = React.useState(String(xp));
   const xpInputRef = React.useRef<HTMLInputElement | null>(null);
   const xpCommitted = React.useRef(false);
@@ -335,14 +356,23 @@ export const CharacterSelectionCard = ({
     xpInputRef.current?.focus();
     xpInputRef.current?.select();
   }, [editingXp]);
-  const commitXp = () => {
+  const commitXp = async () => {
     if (xpCommitted.current) return;
     xpCommitted.current = true;
     setEditingXp(false);
     const parsed = Number(xpDraft);
     if (!Number.isFinite(parsed)) return;
     const next = Math.max(0, Math.round(parsed));
-    if (next !== xp) void onQuickStatusUpdate?.({ xp: next });
+    if (next !== xp && onQuickStatusUpdate) {
+      setSavingXp(true);
+      const startedAt = performance.now();
+      try {
+        await onQuickStatusUpdate({ xp: next });
+      } finally {
+        await waitForQuickSaveFeedback(startedAt);
+        setSavingXp(false);
+      }
+    }
   };
   const openDevelopmentPage = (path: string, title: string, description: string) => {
     navigate(path, {
@@ -464,11 +494,11 @@ export const CharacterSelectionCard = ({
                 value={xpDraft}
                 aria-label="Editar XP atual"
                 onChange={(event) => setXpDraft(event.target.value)}
-                onBlur={commitXp}
+                onBlur={() => void commitXp()}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter') {
                     event.preventDefault();
-                    commitXp();
+                    void commitXp();
                   }
                   if (event.key === 'Escape') {
                     xpCommitted.current = true;
@@ -480,13 +510,16 @@ export const CharacterSelectionCard = ({
             ) : onQuickStatusUpdate ? (
               <QuickXpButton
                 type="button"
-                aria-label={`Editar XP. Valor atual ${normalizedXp}`}
+                $saving={savingXp}
+                disabled={savingXp}
+                aria-label={savingXp ? 'Salvando XP' : `Editar XP. Valor atual ${normalizedXp}`}
                 onClick={() => {
                   xpCommitted.current = false;
                   setXpDraft(String(xp));
                   setEditingXp(true);
                 }}
               >
+                {savingXp && <QuickSaveIndicator $tone="xp" role="status" aria-label="Salvando XP" />}
                 {isMaximumLevel ? `${normalizedXp} XP · nível máximo` : `${normalizedXp} / ${requiredXp} XP`}
               </QuickXpButton>
             ) : (

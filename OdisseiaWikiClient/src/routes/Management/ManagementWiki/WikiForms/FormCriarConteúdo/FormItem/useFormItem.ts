@@ -164,8 +164,13 @@ export const useFormItem = (initialItem?: ItemPayload, contentType?: string) => 
     codigoArquetipoItem: initialScope.archetypeCode || undefined,
   });
   const sistemaItemCatalogo = useMemo(
-    () => buildSistemaItemFormCatalog(tipo, atributos, sistema.catalogTypes),
-    [atributos, sistema.catalogTypes, tipo],
+    () => buildSistemaItemFormCatalog(
+      tipo,
+      atributos,
+      sistema.catalogTypes,
+      sistema.contexto?.combate?.resultadosDado ?? [],
+    ),
+    [atributos, sistema.catalogTypes, sistema.contexto?.combate?.resultadosDado, tipo],
   );
 
   const handleAtributosChange = useCallback((nextAttributes: Record<string, unknown>) => {

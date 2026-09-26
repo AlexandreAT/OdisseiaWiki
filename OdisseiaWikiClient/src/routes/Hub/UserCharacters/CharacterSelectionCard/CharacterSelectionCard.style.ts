@@ -1,4 +1,4 @@
-import styled, { css } from 'styled-components';
+import styled, { css, keyframes } from 'styled-components';
 import {
   HudBottomLine,
   HudCornerEl,
@@ -14,6 +14,10 @@ interface ThemeProps {
   $neon: 'on' | 'off';
   $mesaGame?: boolean;
 }
+
+const quickSaveSpin = keyframes`
+  to { transform: rotate(360deg); }
+`;
 
 export const HudCard = styled.article<ThemeProps>`
   position: relative;
@@ -264,18 +268,48 @@ export const MesaGameStatusItem = styled(StatusItem)`
   }
 `;
 
-export const QuickResourceButton = styled.button`
+export const QuickResourceButton = styled.button<{ $saving?: boolean }>`
+  position: relative;
   display: block;
   width: 100%;
   min-width: 0;
   padding: 0;
   border: 0;
   background: transparent;
-  cursor: text;
+  cursor: ${({ $saving }) => $saving ? 'wait' : 'text'};
+
+  > :first-child {
+    opacity: ${({ $saving }) => $saving ? .48 : 1};
+    transition: opacity 140ms ease;
+  }
 
   &:focus-visible {
     outline: 1px solid var(--clearneonBlue);
     outline-offset: 2px;
+  }
+`;
+
+export const QuickSaveIndicator = styled.span<{ $tone?: 'resource' | 'xp' }>`
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  flex: 0 0 12px;
+  border: 2px solid ${({ $tone }) => $tone === 'xp'
+    ? 'rgba(229, 236, 26, .28)'
+    : 'rgba(77, 238, 234, .28)'};
+  border-top-color: ${({ $tone }) => $tone === 'xp'
+    ? 'var(--clearneonYellow)'
+    : 'var(--clearneonBlue)'};
+  border-radius: 50%;
+  animation: ${quickSaveSpin} .65s linear infinite;
+
+  ${QuickResourceButton} & {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    z-index: 2;
+    transform-origin: center;
+    margin: -6px 0 0 -6px;
   }
 `;
 
@@ -489,14 +523,18 @@ export const ProgressHeader = styled.div`
   }
 `;
 
-export const QuickXpButton = styled.button`
+export const QuickXpButton = styled.button<{ $saving?: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   width: 100%;
   padding: 0;
   border: 0;
   color: inherit;
   background: transparent;
   font: inherit;
-  cursor: text;
+  cursor: ${({ $saving }) => $saving ? 'wait' : 'text'};
 
   &:focus-visible {
     outline: 1px solid var(--clearneonYellow);

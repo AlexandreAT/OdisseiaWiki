@@ -138,6 +138,7 @@ public sealed class GameplayEventPagingTests
             Service = new GameplayEngineService(
                 Repository.Object,
                 new GameplayRollEvaluator(Mock.Of<IDiceRoller>()),
+                new GameplayActionResolver(),
                 cursor.Object,
                 Mock.Of<IGameplayCommandRateLimiter>(),
                 Mock.Of<IMesaRealtimeNotifier>());

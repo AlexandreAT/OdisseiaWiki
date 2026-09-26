@@ -1,5 +1,6 @@
 import { DadoAcerto } from './Dados';
 import { JSONContent } from './Characters';
+import type { GameplayTestSpec } from './Gameplay';
 
 export type MagiaTipoString = "ataque" | "suporte" | "buff" | "debuff";
 export type MagiaElemento = "fogo" | "agua" | "ar" | "terra" | "luz" | "escuridao" | "espacial" | "transfiguracao" | "invocacao";
@@ -29,22 +30,26 @@ export interface AtaqueAtributos {
     especial: string;
     bonus: string;
     acerto?: DadoAcerto;
+    teste?: GameplayTestSpec;
 }
 
 export interface SuporteAtributos {
     especial: string;
     bonus: string;
     acerto?: DadoAcerto;
+    teste?: GameplayTestSpec;
 }
 
 export interface BuffAtributos {
     especial: string;
     bonus: string;
     acerto?: DadoAcerto;
+    teste?: GameplayTestSpec;
 }
 
 export interface DebuffAtributos {
     especial: string;
     bonus: string;
     acerto?: DadoAcerto;
+    teste?: GameplayTestSpec;
 }

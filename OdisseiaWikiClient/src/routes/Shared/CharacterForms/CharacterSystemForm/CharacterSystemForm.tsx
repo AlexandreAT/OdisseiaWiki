@@ -11,6 +11,11 @@ import { openItemPreview } from '../../../../utils/itemPreview';
 import { ItemComparisonModal } from '../../../../components/ItemComparison';
 import { CharacterExplodedView, CharacterExplodedViewLauncher, ExplodedViewTab } from '../../../../components/CharacterExplodedView';
 import { TableHeading } from '../../../../components/CharacterExplodedView/CharacterExplodedView.style';
+import {
+  getItemGameplayAction,
+  getMagicGameplayAction,
+  getSkillGameplayAction,
+} from '../../../../utils/gameplaySheetAction';
 
 export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
   theme,
@@ -51,6 +56,10 @@ export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
   comparisonTableId,
   comparisonTableName,
   comparisonVariant,
+  onGameplayAction,
+  onGameplayAttributeAction,
+  onGameplayXpAction,
+  onGameplayGeneralAction,
 }) => {
   const [comparisonItem, setComparisonItem] = React.useState<Item | null>(null);
   const [explodedTab, setExplodedTab] = React.useState<ExplodedViewTab | null>(null);
@@ -103,6 +112,9 @@ export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
         comparisonTableName={comparisonTableName}
         comparisonSkillCount={filledSkillCount}
         comparisonVariant={comparisonVariant}
+        onGameplayAttributeAction={onGameplayAttributeAction}
+        onGameplayXpAction={onGameplayXpAction}
+        onGameplayGeneralAction={onGameplayGeneralAction}
       />
 
       <BottomContentController>
@@ -123,6 +135,14 @@ export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
             isRowEmpty={isEmptyItemRow}
             onViewRow={(item) => openItemPreview(item, runtimeContext)}
             onCompareRow={setComparisonItem}
+            onActionRow={onGameplayAction
+              ? (item) => {
+                  const action = getItemGameplayAction(item);
+                  if (action) onGameplayAction(action);
+                }
+              : undefined}
+            canActionRow={(item) => Boolean(getItemGameplayAction(item))}
+            actionRowLabel="Rolar ação do item"
             theme={theme}
             neon={neon}
           />
@@ -145,6 +165,14 @@ export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
             isRowEmpty={isEmptyItemRow}
             onViewRow={(item) => openItemPreview(item, runtimeContext)}
             onCompareRow={setComparisonItem}
+            onActionRow={onGameplayAction
+              ? (item) => {
+                  const action = getItemGameplayAction(item);
+                  if (action) onGameplayAction(action);
+                }
+              : undefined}
+            canActionRow={(item) => Boolean(getItemGameplayAction(item))}
+            actionRowLabel="Rolar ação da prótese"
             theme={theme}
             neon={neon}
           />
@@ -162,6 +190,14 @@ export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
             onChange={setMagias}
             columns={magiasColumns}
             showEmptyRow
+            onActionRow={onGameplayAction
+              ? (magia) => {
+                  const action = getMagicGameplayAction(magia);
+                  if (action) onGameplayAction(action);
+                }
+              : undefined}
+            canActionRow={(magia) => Boolean(getMagicGameplayAction(magia))}
+            actionRowLabel="Rolar teste da magia"
             theme={theme}
             neon={neon}
           />
@@ -179,6 +215,14 @@ export const CharacterSystemForm: React.FC<CharacterSystemFormProps> = ({
             onChange={setSkills}
             columns={skillsColumns}
             showEmptyRow
+            onActionRow={onGameplayAction
+              ? (skill) => {
+                  const action = getSkillGameplayAction(skill);
+                  if (action) onGameplayAction(action);
+                }
+              : undefined}
+            canActionRow={(skill) => Boolean(getSkillGameplayAction(skill))}
+            actionRowLabel="Rolar teste da skill"
             theme={theme}
             neon={neon}
           />

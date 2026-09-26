@@ -1,5 +1,5 @@
 import { ItemTipo } from '../models/Itens';
-import { SistemaItemEscopoRuntime, SistemaItemReferenciaRuntime } from '../models/SistemaRpg';
+import { SistemaItemEscopoRuntime, SistemaItemReferenciaRuntime, SistemaResultadoDado } from '../models/SistemaRpg';
 
 export interface ItemFormOption {
   value: string;
@@ -10,6 +10,7 @@ export interface SistemaItemFormCatalog {
   typeOptions: Array<{ value: ItemTipo; label: string }>;
   categoryOptions: ItemFormOption[];
   archetypeOptions: ItemFormOption[];
+  testOptions: ItemFormOption[];
   references: SistemaItemReferenciaRuntime[];
   categoryCode?: string;
   archetypeCode?: string;
@@ -85,6 +86,7 @@ export const buildSistemaItemFormCatalog = (
   type: ItemTipo,
   attributes: unknown,
   types: SistemaItemEscopoRuntime[],
+  resultRows: SistemaResultadoDado[] = [],
 ): SistemaItemFormCatalog => {
   const { typeScope, categoryCode, archetypeCode } = resolveItemSystemScope(type, attributes, types);
   const categories = (typeScope?.filhos ?? []).filter((item) => item.ativo !== false);
@@ -93,6 +95,16 @@ export const buildSistemaItemFormCatalog = (
     ? category.filhos
     : categories.flatMap((item) => item.filhos ?? []);
   const archetype = availableArchetypes.find((item) => normalizeSystemItemCode(item.codigo) === archetypeCode);
+  const testsByCode = new Map<string, ItemFormOption>();
+  resultRows.forEach((row) => {
+    const code = normalizeSystemItemCode(row.codigoTeste);
+    if (!code || testsByCode.has(code)) return;
+    const expression = `${Math.max(1, Number(row.quantidadeDados) || 1)}${String(row.dado || '').toUpperCase()}`;
+    testsByCode.set(code, {
+      value: code,
+      label: `${row.nomeTeste || code} (${expression})`,
+    });
+  });
 
   return {
     typeOptions: types
@@ -111,6 +123,7 @@ export const buildSistemaItemFormCatalog = (
         value: normalizeSystemItemCode(item.codigo).toLocaleLowerCase('pt-BR'),
         label: item.nome,
       })),
+    testOptions: [...testsByCode.values()],
     references: [
       ...(typeScope?.referencias ?? []),
       ...(category?.referencias ?? []),

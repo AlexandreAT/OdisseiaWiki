@@ -63,6 +63,44 @@ public sealed class GameplayRollRequestDto
     [Range(0, long.MaxValue)]
     public long? RevisaoPersonagemEsperada { get; set; }
     public GameplayActionReferenceDto? ReferenciaAcao { get; set; }
+    public GameplayActionParametersDto? ParametrosAcao { get; set; }
+}
+
+public sealed class GameplayFavoriteRollConfigurationDto
+{
+    [Required, MaxLength(80)]
+    public string CodigoAcao { get; set; } = string.Empty;
+    [MaxLength(80)]
+    public string? CodigoAtributo { get; set; }
+    [Required]
+    public List<GameplayDiceGroupRequestDto> Grupos { get; set; } = new();
+    public GameplayRollMode Modo { get; set; }
+    public GameplayEventVisibility Visibilidade { get; set; } = GameplayEventVisibility.PublicaMesa;
+    public GameplayActionReferenceDto? ReferenciaAcao { get; set; }
+    public GameplayActionParametersDto? ParametrosAcao { get; set; }
+}
+
+public sealed class GameplayFavoriteRollUpsertDto
+{
+    [Required, MaxLength(40)]
+    public string TipoOrigem { get; set; } = string.Empty;
+    [Required, MaxLength(160)]
+    public string IdOrigem { get; set; } = string.Empty;
+    [Required, MaxLength(120)]
+    public string Nome { get; set; } = string.Empty;
+    [Required]
+    public GameplayFavoriteRollConfigurationDto Configuracao { get; set; } = new();
+}
+
+public sealed class GameplayFavoriteRollDto
+{
+    public Guid IdFavorito { get; init; }
+    public int IdPersonagemJogador { get; init; }
+    public string TipoOrigem { get; init; } = string.Empty;
+    public string IdOrigem { get; init; } = string.Empty;
+    public string Nome { get; init; } = string.Empty;
+    public GameplayFavoriteRollConfigurationDto Configuracao { get; init; } = new();
+    public DateTime AtualizadoEmUtc { get; init; }
 }
 
 public sealed class GameplayManualRecordRequestDto
@@ -103,6 +141,23 @@ public sealed class GameplayActionReferenceDto
     public int? IdPoderSistema { get; set; }
 }
 
+/// <summary>
+/// Context selected by the player for an already configured action. These
+/// values are only inputs: the server validates them against the item/power
+/// snapshot and the published System version before rolling.
+/// </summary>
+public sealed class GameplayActionParametersDto
+{
+    [MaxLength(40)]
+    public string? Operacao { get; set; }
+    [MaxLength(40)]
+    public string? Alcance { get; set; }
+    [MaxLength(40)]
+    public string? ModoDisparo { get; set; }
+    [Range(1, 100)]
+    public int? Quantidade { get; set; }
+}
+
 public sealed class GameplayDiceGroupResultDto
 {
     public int Quantidade { get; init; }
@@ -136,6 +191,7 @@ public sealed class GameplayResultRangeDto
     public int? Maximo { get; init; }
     public bool? Critico { get; init; }
     public bool? FalhaCritica { get; init; }
+    public bool ExigeNatural { get; init; }
 }
 
 public sealed class GameplayActionSnapshotDto
@@ -158,6 +214,20 @@ public sealed class GameplayExecutionNoticeDto
     public string Codigo { get; init; } = string.Empty;
     public string Mensagem { get; init; } = string.Empty;
     public bool Fallback { get; init; }
+}
+
+public sealed class GameplayEffectProposalDto
+{
+    public string Codigo { get; init; } = string.Empty;
+    public string Tipo { get; init; } = string.Empty;
+    public string Nome { get; init; } = string.Empty;
+    public string Alvo { get; init; } = "AUTOR";
+    public string? CodigoRecurso { get; init; }
+    public string Operacao { get; init; } = "SOMAR";
+    public int Valor { get; init; }
+    public bool ExigeAlvo { get; init; }
+    public bool PodeAplicar { get; init; } = true;
+    public string? MotivoIndisponivel { get; init; }
 }
 
 public sealed class GameplayRollResultDto
@@ -184,6 +254,58 @@ public sealed class GameplayRollResultDto
     public GameplayActionSnapshotDto? OrigemAcao { get; init; }
     public IReadOnlyList<GameplayExecutionNoticeDto> Avisos { get; init; } =
         Array.Empty<GameplayExecutionNoticeDto>();
+    public IReadOnlyList<GameplayEffectProposalDto> EfeitosPropostos { get; init; } =
+        Array.Empty<GameplayEffectProposalDto>();
+    public IReadOnlyList<GameplayRollResultDto> RolagensIndividuais { get; init; } =
+        Array.Empty<GameplayRollResultDto>();
+}
+
+public sealed class GameplayActionCatalogItemDto
+{
+    public string Codigo { get; init; } = string.Empty;
+    public string Nome { get; init; } = string.Empty;
+    public string Tipo { get; init; } = string.Empty;
+    public string? CodigoAtributo { get; init; }
+    public string? GrupoAtributo { get; init; }
+    public string Expressao { get; init; } = string.Empty;
+    public GameplayRollMode ModoPadrao { get; init; }
+    public bool Executavel { get; init; }
+    public string? MotivoIndisponivel { get; init; }
+}
+
+public sealed class GameplayActionCatalogDto
+{
+    public int IdSistemaVersao { get; init; }
+    public string DadoTesteGeral { get; init; } = string.Empty;
+    public IReadOnlyList<GameplayActionCatalogItemDto> Acoes { get; init; } =
+        Array.Empty<GameplayActionCatalogItemDto>();
+}
+
+public sealed class GameplayEffectApplyRequestDto
+{
+    [Required]
+    public Guid ChaveIdempotencia { get; set; }
+    [Range(1, long.MaxValue)]
+    public long IdEventoOrigem { get; set; }
+    [Required, MaxLength(100)]
+    public string CodigoEfeito { get; set; } = string.Empty;
+    public int? IdPersonagemAlvo { get; set; }
+    [Range(0, long.MaxValue)]
+    public long? RevisaoSessaoEsperada { get; set; }
+    [Range(0, long.MaxValue)]
+    public long? RevisaoPersonagemEsperada { get; set; }
+}
+
+public sealed class GameplayEffectApplicationDto
+{
+    public long IdEventoOrigem { get; init; }
+    public string CodigoEfeito { get; init; } = string.Empty;
+    public int IdPersonagemAlvo { get; init; }
+    public long RevisaoPersonagem { get; init; }
+    public string Campo { get; init; } = string.Empty;
+    public int ValorAnterior { get; init; }
+    public int ValorAplicado { get; init; }
+    public int ValorAtual { get; init; }
 }
 
 public sealed class GameplayEventDto
@@ -226,6 +348,7 @@ public sealed class GameplayCommandResponseDto
     public GameplaySessionDto? Sessao { get; init; }
     public GameplayEventDto? Evento { get; init; }
     public GameplayRollResultDto? Rolagem { get; init; }
+    public GameplayEffectApplicationDto? Aplicacao { get; init; }
 }
 
 public sealed class GameplayEventPageDto

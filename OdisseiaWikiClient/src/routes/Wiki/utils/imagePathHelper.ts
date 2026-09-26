@@ -7,18 +7,28 @@
 export const normalizeImagePath = (imagePath: string | undefined): string => {
   if (!imagePath) return '';
 
-  // URLs externas e previews locais já estão prontas para uso.
-  if (/^(https?:|data:|blob:)/i.test(imagePath)) {
-    return imagePath;
+  const trimmedPath = imagePath.trim();
+
+  if (/^(data:|blob:)/i.test(trimmedPath)) {
+    return trimmedPath;
+  }
+
+  const normalizedSeparators = trimmedPath
+    .replace(/assets\\_dynamic/gi, 'assets_dynamic')
+    .replace(/\\/g, '/');
+
+  // Preserva a origem de URLs externas após normalizar apenas seus separadores.
+  if (/^https?:/i.test(normalizedSeparators)) {
+    return normalizedSeparators;
   }
 
   // Se já começa com /, devolvemos como está
-  if (imagePath.startsWith('/')) {
-    return imagePath;
+  if (normalizedSeparators.startsWith('/')) {
+    return normalizedSeparators;
   }
 
   // Remove "public/" do início se existir
-  let normalized = imagePath.replace(/^public\//, '');
+  let normalized = normalizedSeparators.replace(/^public\//, '');
 
   // Garante que comece com /
   if (!normalized.startsWith('/')) {

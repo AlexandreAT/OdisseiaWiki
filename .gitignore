@@ -28,6 +28,9 @@ node_modules/
 .vite/
 dist/
 
+# Local build outputs
+/artifacts/
+
 # Environment / Secrets
 .env
 .env.*

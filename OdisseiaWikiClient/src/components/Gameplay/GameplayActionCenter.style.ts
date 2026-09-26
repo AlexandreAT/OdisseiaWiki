@@ -234,6 +234,21 @@ export const RollDialogHeader = styled.header`
   }
 `;
 
+export const RollDialogHeaderActions = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+`;
+
+export const FavoriteRollButton = styled(CloseButton)<{ $active: boolean }>`
+  width: 40px;
+  height: 40px;
+  color: ${({ $active }) => $active ? '#ffd65a' : 'var(--clearneonBlue)'};
+  border-color: ${({ $active }) => $active ? 'rgba(255, 214, 90, .75)' : 'var(--clearneonBlue)'};
+
+  &:disabled { opacity: .55; cursor: wait; }
+`;
+
 export const RollDialogBody = styled.div`
   position: relative;
   z-index: 4;

@@ -20,6 +20,16 @@ public sealed class GameplayEngineService : IGameplayEngineService
     private const int MaxManualAbsoluteValue = 1_000_000;
     private const int HistoryScanBatchSize = 101;
     private const int MaxHistoryRowsPerRequest = 2_000;
+    private const int MaxFavoriteRollsPerCharacter = 40;
+
+    private static readonly HashSet<string> FavoriteSourceTypes = new(StringComparer.Ordinal)
+    {
+        "ATRIBUTO",
+        "ITEM",
+        "SKILL",
+        "MAGIA",
+        "PROTESE",
+    };
 
     private static readonly HashSet<string> ManualCategories = new(StringComparer.Ordinal)
     {
@@ -37,6 +47,7 @@ public sealed class GameplayEngineService : IGameplayEngineService
 
     private readonly IGameplayEngineRepository _repository;
     private readonly GameplayRollEvaluator _rollEvaluator;
+    private readonly GameplayActionResolver _actionResolver;
     private readonly IGameplayCursorCodec _cursorCodec;
     private readonly IGameplayCommandRateLimiter _rateLimiter;
     private readonly IMesaRealtimeNotifier _realtimeNotifier;
@@ -46,15 +57,230 @@ public sealed class GameplayEngineService : IGameplayEngineService
         JsonOptions.Converters.Add(new JsonStringEnumConverter());
     }
 
+    private GameplayOperationResult<GameplayRollResultDto> EvaluateResolvedAction(
+        GameplayResolvedAction resolved)
+    {
+        int executions = ReadSnapshotInt(resolved.Snapshot, "quantidadeSolicitada") ?? 1;
+        if (executions > 1)
+            return EvaluateMultipleResolvedActions(resolved, executions);
+
+        GameplayRollResultDto raw;
+        try
+        {
+            raw = _rollEvaluator.Evaluate(new GameplayRollPlan(
+                BuildExpression(resolved.Groups, resolved.Mode),
+                resolved.Groups,
+                resolved.Mode,
+                resolved.Modifier,
+                ModifierDetails: resolved.Modifiers));
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            return RuleFailure<GameplayRollResultDto>(
+                "TESTE_FORA_LIMITE",
+                "A configuração do teste excede os limites de dados permitidos.");
+        }
+        catch (OverflowException)
+        {
+            return RuleFailure<GameplayRollResultDto>(
+                "RESULTADO_FORA_LIMITE",
+                "Os valores deste teste excedem o limite permitido.");
+        }
+
+        int? associatedValue = ResolveAssociatedValue(resolved, raw);
+        GameplayResolvedResultRange? outcome = null;
+        bool unclassified = false;
+        if (resolved.Ranges.Count > 0)
+        {
+            int natural = raw.ValorNatural ?? 0;
+            int metric = resolved.UseTotalForRanges ? raw.Total : natural;
+            GameplayResolvedResultRange? naturalOutcome = resolved.Ranges
+                .Where(range => range.RequiresNatural)
+                .FirstOrDefault(range => natural >= range.Minimum && natural <= range.Maximum);
+            List<GameplayResolvedResultRange> regularRanges = resolved.Ranges
+                .Where(range => !range.RequiresNatural)
+                .OrderBy(range => range.Minimum)
+                .ToList();
+            outcome = naturalOutcome
+                ?? regularRanges.FirstOrDefault(range => metric >= range.Minimum && metric <= range.Maximum);
+            if (outcome is null && resolved.UseTotalForRanges && raw.Modificador != 0)
+            {
+                outcome = regularRanges
+                    .Where(range => range.Maximum < metric)
+                    .OrderByDescending(range => range.Maximum)
+                    .FirstOrDefault()
+                    ?? regularRanges
+                        .Where(range => range.Minimum > metric)
+                        .OrderBy(range => range.Minimum)
+                        .FirstOrDefault();
+            }
+            unclassified = outcome is null;
+        }
+
+        string? resultCode = outcome?.Code;
+        string? resultName = outcome?.Name;
+        if (resolved.Snapshot.Tipo == "FONTE_XP")
+        {
+            resultCode = "XP_CALCULADO";
+            resultName = "XP calculado";
+        }
+        GameplayRollResultDto withOutcome = WithOutcome(raw, resultCode, resultName, associatedValue);
+        IReadOnlyList<GameplayResultRangeDto> ranges = resolved.Ranges.Select(range => new GameplayResultRangeDto
+        {
+            Codigo = range.Code,
+            Nome = range.Name,
+            Minimo = range.Minimum == int.MinValue ? null : range.Minimum,
+            Maximo = range.Maximum == int.MaxValue ? null : range.Maximum,
+            ExigeNatural = range.RequiresNatural,
+            Critico = range.Critical,
+            FalhaCritica = range.CriticalFailure,
+        }).ToList();
+        IReadOnlyList<GameplayExecutionNoticeDto> notices = unclassified
+            ? resolved.Notices.Concat(new[]
+            {
+                new GameplayExecutionNoticeDto
+                {
+                    Codigo = "TABELA_RESULTADO_INCOMPLETA",
+                    Mensagem = "O resultado ficou fora das faixas publicadas e foi mantido sem classificação.",
+                    Fallback = false,
+                },
+            }).ToArray()
+            : resolved.Notices;
+        GameplayRollResultDto contracted = WithRollContract(
+            withOutcome,
+            resolved.Mode,
+            new GameplayDifficultyDto
+            {
+                Codigo = resolved.Snapshot.Codigo ?? "TESTE",
+                Nome = resolved.Name,
+                Alvo = ReadSnapshotInt(resolved.Snapshot, "alvo"),
+                Comparador = resolved.Snapshot.Valores.GetValueOrDefault("comparador")
+                    ?? (resolved.UseTotalForRanges ? "total" : "natural"),
+            },
+            ranges,
+            resolved.Snapshot,
+            notices,
+            outcome is { Critical: true, RequiresNatural: true },
+            outcome is { CriticalFailure: true, RequiresNatural: true });
+        return GameplayOperationResult<GameplayRollResultDto>.Ok(
+            WithEffectProposals(contracted, outcome?.EffectJson));
+    }
+
+    private GameplayOperationResult<GameplayRollResultDto> EvaluateMultipleResolvedActions(
+        GameplayResolvedAction resolved,
+        int executions)
+    {
+        if (executions is < 2 or > MaxDicePerCommand)
+            return RuleFailure<GameplayRollResultDto>("QUANTIDADE_INVALIDA", "A quantidade de ações está fora dos limites permitidos.");
+        var singleValues = new Dictionary<string, string>(resolved.Snapshot.Valores, StringComparer.Ordinal)
+        {
+            ["quantidadeSolicitada"] = "1",
+        };
+        GameplayActionSnapshotDto singleSnapshot = new()
+        {
+            Tipo = resolved.Snapshot.Tipo,
+            IdPersonagemJogador = resolved.Snapshot.IdPersonagemJogador,
+            RevisaoPersonagem = resolved.Snapshot.RevisaoPersonagem,
+            IdInstancia = resolved.Snapshot.IdInstancia,
+            IdItemSistema = resolved.Snapshot.IdItemSistema,
+            IdPoderSistema = resolved.Snapshot.IdPoderSistema,
+            IdSistemaVersao = resolved.Snapshot.IdSistemaVersao,
+            Codigo = resolved.Snapshot.Codigo,
+            Nome = resolved.Snapshot.Nome,
+            Valores = singleValues,
+        };
+        var rolls = new List<GameplayRollResultDto>(executions);
+        for (int index = 0; index < executions; index++)
+        {
+            GameplayOperationResult<GameplayRollResultDto> result = EvaluateResolvedAction(
+                resolved with { Snapshot = singleSnapshot });
+            if (!result.Sucesso || result.Dados is null) return result;
+            rolls.Add(result.Dados);
+        }
+
+        int hits = rolls.Count(IsSuccessfulRoll);
+        var aggregateValues = new Dictionary<string, string>(resolved.Snapshot.Valores, StringComparer.Ordinal)
+        {
+            ["acertosResolvidos"] = hits.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            ["falhasResolvidas"] = (executions - hits).ToString(System.Globalization.CultureInfo.InvariantCulture),
+        };
+        GameplayActionSnapshotDto aggregateSnapshot = new()
+        {
+            Tipo = resolved.Snapshot.Tipo,
+            IdPersonagemJogador = resolved.Snapshot.IdPersonagemJogador,
+            RevisaoPersonagem = resolved.Snapshot.RevisaoPersonagem,
+            IdInstancia = resolved.Snapshot.IdInstancia,
+            IdItemSistema = resolved.Snapshot.IdItemSistema,
+            IdPoderSistema = resolved.Snapshot.IdPoderSistema,
+            IdSistemaVersao = resolved.Snapshot.IdSistemaVersao,
+            Codigo = resolved.Snapshot.Codigo,
+            Nome = resolved.Snapshot.Nome,
+            Valores = aggregateValues,
+        };
+        GameplayRollResultDto aggregate = new()
+        {
+            Expressao = $"{executions}x ({BuildExpression(resolved.Groups, resolved.Mode)})",
+            Grupos = rolls.SelectMany(roll => roll.Grupos).ToArray(),
+            Modificadores = resolved.Modifiers,
+            ValorNatural = null,
+            Modificador = rolls.Sum(roll => roll.Modificador),
+            Subtotal = rolls.Sum(roll => roll.Subtotal),
+            Total = rolls.Sum(roll => roll.Total),
+            CodigoResultado = "ACOES_MULTIPLAS_RESOLVIDAS",
+            NomeResultado = $"{hits} de {executions} acertos",
+            Manual = false,
+            Modo = resolved.Mode,
+            Dificuldade = rolls[0].Dificuldade,
+            FaixasResultado = rolls[0].FaixasResultado,
+            CriticoNatural = rolls.Any(roll => roll.CriticoNatural == true),
+            FalhaCriticaNatural = rolls.Any(roll => roll.FalhaCriticaNatural == true),
+            OrigemAcao = aggregateSnapshot,
+            Avisos = resolved.Notices,
+            RolagensIndividuais = rolls,
+        };
+        return GameplayOperationResult<GameplayRollResultDto>.Ok(WithEffectProposals(aggregate, null));
+    }
+
+    private static bool IsSuccessfulRoll(GameplayRollResultDto roll)
+    {
+        string code = NormalizeCode(roll.CodigoResultado);
+        if (code.Length == 0 || code.Contains("FALHA", StringComparison.Ordinal) ||
+            code.Contains("ERRO", StringComparison.Ordinal)) return false;
+        return true;
+    }
+
+    private static int? ResolveAssociatedValue(
+        GameplayResolvedAction resolved,
+        GameplayRollResultDto roll)
+    {
+        int? value = resolved.FixedAssociatedValue;
+        if (!value.HasValue && resolved.Snapshot.Tipo == "FONTE_XP")
+        {
+            value = NormalizeCode(resolved.ValueTransform) switch
+            {
+                "PARIDADE_1_2" => Math.Abs(roll.Subtotal) % 2 == 0 ? 2 : 1,
+                _ => roll.Subtotal,
+            };
+        }
+        if (!value.HasValue) return null;
+        if (resolved.AssociatedMinimum.HasValue)
+            value = Math.Max(value.Value, resolved.AssociatedMinimum.Value);
+        if (resolved.AssociatedMaximum.HasValue)
+            value = Math.Min(value.Value, resolved.AssociatedMaximum.Value);
+        return value;
+    }
+
     public GameplayEngineService(
         IGameplayEngineRepository repository,
         GameplayRollEvaluator rollEvaluator,
+        GameplayActionResolver actionResolver,
         IGameplayCursorCodec cursorCodec,
         IGameplayCommandRateLimiter rateLimiter,
         IMesaRealtimeNotifier realtimeNotifier)
     {
         _repository = repository;
         _rollEvaluator = rollEvaluator;
+        _actionResolver = actionResolver;
         _cursorCodec = cursorCodec;
         _rateLimiter = rateLimiter;
         _realtimeNotifier = realtimeNotifier;
@@ -407,6 +633,216 @@ public sealed class GameplayEngineService : IGameplayEngineService
         CancellationToken cancellationToken = default)
         => PersistRollAsync(idMesa, idMesaSessao, idUsuario, request, cancellationToken);
 
+    public async Task<GameplayOperationResult<GameplayCommandResponseDto>> ApplyEffectAsync(
+        int idMesa,
+        long idMesaSessao,
+        int idUsuario,
+        GameplayEffectApplyRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        if (request.ChaveIdempotencia == Guid.Empty || request.IdEventoOrigem <= 0 ||
+            string.IsNullOrWhiteSpace(request.CodigoEfeito) || !request.RevisaoPersonagemEsperada.HasValue)
+        {
+            return Validation<GameplayCommandResponseDto>(
+                "EFEITO_INVALIDO",
+                "Recarregue a ficha e tente aplicar o efeito novamente.");
+        }
+        string effectCode = NormalizeCode(request.CodigoEfeito);
+        string hash = HashPayload(new
+        {
+            request.IdEventoOrigem,
+            codigoEfeito = effectCode,
+            request.IdPersonagemAlvo,
+            request.RevisaoSessaoEsperada,
+            request.RevisaoPersonagemEsperada,
+        });
+        GameplayOperationResult<GameplayCommandResponseDto> result;
+        int? changedCharacterId = null;
+        try
+        {
+            result = await _repository.ExecuteInTransactionAsync(async token =>
+            {
+                Mesa? mesa = await _repository.LockMesaAsync(idMesa, token);
+                if (mesa is null || mesa.PadraoSistema)
+                    return NotFound<GameplayCommandResponseDto>("MESA_NAO_ENCONTRADA", "Mesa não encontrada.");
+                if (!await _repository.CanAccessTableAsync(idMesa, idUsuario, token))
+                    return Forbidden<GameplayCommandResponseDto>("MESA_SEM_ACESSO", "Você não participa desta Mesa.");
+                GameplayOperationResult<GameplayCommandResponseDto>? replay = await TryReplayAsync(
+                    idMesa,
+                    idUsuario,
+                    request.ChaveIdempotencia,
+                    hash,
+                    token);
+                if (replay is not null) return replay;
+                if (mesa.IdMesaSessaoAtiva != idMesaSessao)
+                    return Conflict<GameplayCommandResponseDto>("SESSAO_NAO_ATIVA", "Esta sessão não está mais ativa.");
+                MesaSessao? session = await _repository.LockSessionAsync(idMesaSessao, token);
+                if (session is null || session.IdMesa != idMesa || session.Status != MesaSessaoStatus.Ativa)
+                    return Conflict<GameplayCommandResponseDto>("SESSAO_NAO_ATIVA", "Esta sessão não está mais ativa.");
+                if (request.RevisaoSessaoEsperada.HasValue && request.RevisaoSessaoEsperada != session.RevisaoEstado)
+                    return Conflict<GameplayCommandResponseDto>("REVISAO_SESSAO_DESATUALIZADA", "A sessão mudou. Recarregue antes de continuar.");
+
+                MesaEvento? sourceEvent = await _repository.GetEventAsync(request.IdEventoOrigem, token);
+                if (sourceEvent is null || sourceEvent.IdMesaSessao != idMesaSessao || sourceEvent.Tipo != "ROLAGEM_REALIZADA")
+                    return NotFound<GameplayCommandResponseDto>("ROLAGEM_NAO_ENCONTRADA", "A rolagem de origem não foi encontrada nesta sessão.");
+                bool isMaster = mesa.IdusuarioCriacao == idUsuario;
+                if (!isMaster && sourceEvent.IdUsuarioAtor != idUsuario)
+                    return Forbidden<GameplayCommandResponseDto>("EFEITO_SEM_PERMISSAO", "Somente o autor da rolagem ou o mestre pode aplicar este efeito.");
+                GameplayRollResultDto? sourceRoll = ReadRollFromEvent(ParseJson(sourceEvent.DadosJson));
+                GameplayEffectProposalDto? proposal = sourceRoll?.EfeitosPropostos.FirstOrDefault(item =>
+                    NormalizeCode(item.Codigo) == effectCode);
+                if (proposal is null || !proposal.PodeAplicar)
+                    return RuleFailure<GameplayCommandResponseDto>("EFEITO_NAO_DISPONIVEL", "Este efeito não está disponível para aplicação.");
+
+                int? targetId = NormalizeCode(proposal.Alvo) == "AUTOR"
+                    ? sourceEvent.IdPersonagemJogador
+                    : request.IdPersonagemAlvo;
+                if (!targetId.HasValue)
+                    return Validation<GameplayCommandResponseDto>("ALVO_OBRIGATORIO", "Selecione o personagem que receberá o efeito.");
+                if (!isMaster && targetId != sourceEvent.IdPersonagemJogador)
+                    return Forbidden<GameplayCommandResponseDto>("ALTERACAO_ALVO_EXIGE_MESTRE", "Somente o mestre pode alterar outro personagem.");
+
+                PersonagemJogador? target = await _repository.GetCharacterForUpdateAsync(targetId.Value, token);
+                if (target is null || target.Idmesa != idMesa)
+                    return NotFound<GameplayCommandResponseDto>("ALVO_NAO_ENCONTRADO", "O personagem alvo não foi encontrado nesta Mesa.");
+                if (target.RevisaoRuntime != request.RevisaoPersonagemEsperada.Value)
+                    return Conflict<GameplayCommandResponseDto>("REVISAO_PERSONAGEM_DESATUALIZADA", "A ficha mudou. Recarregue antes de aplicar o efeito.");
+                if (await _repository.HasEffectApplicationAsync(
+                        idMesaSessao,
+                        request.IdEventoOrigem,
+                        effectCode,
+                        target.IdpersonagemJogador,
+                        token))
+                {
+                    return Conflict<GameplayCommandResponseDto>("EFEITO_JA_APLICADO", "Este efeito já foi aplicado neste personagem.");
+                }
+
+                SistemaVersao? version = await _repository.GetSystemVersionAsync(session.IdSistemaVersao, token);
+                if (version is null)
+                    return Conflict<GameplayCommandResponseDto>("VERSAO_NAO_ENCONTRADA", "A versão da sessão não está disponível.");
+                GameplayOperationResult<GameplayEffectMutation> mutationResult = ApplyEffectToCharacter(
+                    target,
+                    proposal,
+                    version);
+                if (!mutationResult.Sucesso || mutationResult.Dados is null)
+                    return ConvertFailure<GameplayEffectMutation, GameplayCommandResponseDto>(mutationResult);
+                GameplayEffectMutation mutation = mutationResult.Dados;
+
+                DateTime now = DateTime.UtcNow;
+                MesaComando command = NewCommand(
+                    idMesa,
+                    idMesaSessao,
+                    idUsuario,
+                    target.IdpersonagemJogador,
+                    request.ChaveIdempotencia,
+                    hash,
+                    "EFEITO_APLICAR",
+                    null,
+                    request.RevisaoSessaoEsperada,
+                    now,
+                    request.RevisaoPersonagemEsperada);
+                command.RevisoesAlvosJson = Serialize(new Dictionary<string, long>
+                {
+                    [$"personagem:{target.IdpersonagemJogador}"] = request.RevisaoPersonagemEsperada.Value,
+                });
+                _repository.AddCommand(command);
+                await _repository.SaveChangesAsync(token);
+
+                long previousRevision = target.RevisaoRuntime;
+                target.RevisaoRuntime = checked(target.RevisaoRuntime + 1);
+                session.UltimaSequenciaEvento++;
+                session.RevisaoEstado++;
+                GameplayEffectApplicationDto application = new()
+                {
+                    IdEventoOrigem = request.IdEventoOrigem,
+                    CodigoEfeito = effectCode,
+                    IdPersonagemAlvo = target.IdpersonagemJogador,
+                    RevisaoPersonagem = target.RevisaoRuntime,
+                    Campo = mutation.Field,
+                    ValorAnterior = mutation.PreviousValue,
+                    ValorAplicado = mutation.AppliedDelta,
+                    ValorAtual = mutation.CurrentValue,
+                };
+                string payload = Serialize(new
+                {
+                    schemaVersion = 1,
+                    request.IdEventoOrigem,
+                    codigoEfeito = effectCode,
+                    idPersonagemAlvo = target.IdpersonagemJogador,
+                    titulo = proposal.Nome,
+                    descricao = $"{mutation.Field}: {mutation.PreviousValue} → {mutation.CurrentValue}",
+                    manual = false,
+                    revisaoAnterior = previousRevision,
+                    revisaoNova = target.RevisaoRuntime,
+                    aplicacao = application,
+                });
+                MesaEvento effectEvent = NewEvent(
+                    session,
+                    command,
+                    "EFEITO_APLICADO",
+                    GameplayEventOrigin.Automatica,
+                    sourceEvent.Visibilidade,
+                    idUsuario,
+                    target,
+                    version,
+                    target.IdSistemaVersao,
+                    effectCode,
+                    payload,
+                    now);
+                _repository.AddEvent(effectEvent);
+                await _repository.SaveChangesAsync(token);
+                _repository.AddEffectApplication(new MesaEfeitoAplicado
+                {
+                    IdMesaSessao = session.IdMesaSessao,
+                    IdEventoOrigem = sourceEvent.IdMesaEvento,
+                    IdEventoAplicacao = effectEvent.IdMesaEvento,
+                    IdPersonagemAlvo = target.IdpersonagemJogador,
+                    ChaveEfeito = effectCode,
+                    HashPlano = HashPayload(new
+                    {
+                        proposal.Codigo,
+                        proposal.Tipo,
+                        proposal.Alvo,
+                        proposal.CodigoRecurso,
+                        proposal.Operacao,
+                        proposal.Valor,
+                        target.IdpersonagemJogador,
+                    }),
+                    AplicadoEmUtc = now,
+                });
+                await _repository.SaveChangesAsync(token);
+                GameplayCommandResponseDto response = BuildResponse(
+                    command,
+                    mesa,
+                    session,
+                    MapEvent(effectEvent, idUsuario, isMaster),
+                    null,
+                    false,
+                    application);
+                command.RespostaJson = Serialize(response);
+                await _repository.SaveChangesAsync(token);
+                changedCharacterId = target.IdpersonagemJogador;
+                return GameplayOperationResult<GameplayCommandResponseDto>.Ok(response);
+            }, cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict<GameplayCommandResponseDto>("CONCORRENCIA_PERSONAGEM", "A ficha mudou. Recarregue e tente novamente.");
+        }
+        catch (DbUpdateException)
+        {
+            return Conflict<GameplayCommandResponseDto>("CONFLITO_COMANDO", "O efeito já foi processado ou a sessão mudou.");
+        }
+
+        if (result.Sucesso && result.Dados is { Replay: false, Evento: not null })
+        {
+            await _realtimeNotifier.NotificarMesaAlteradaAsync(idMesa, cancellationToken);
+            if (changedCharacterId.HasValue)
+                await _realtimeNotifier.NotificarPersonagemAlteradoAsync(idMesa, changedCharacterId.Value, cancellationToken);
+        }
+        return result;
+    }
+
     public async Task<GameplayOperationResult<GameplayCommandResponseDto>> RegisterManualAsync(
         int idMesa,
         long idMesaSessao,
@@ -658,6 +1094,122 @@ public sealed class GameplayEngineService : IGameplayEngineService
         });
     }
 
+    public async Task<GameplayOperationResult<GameplayActionCatalogDto>> GetActionCatalogAsync(
+        int idPersonagemJogador,
+        int idUsuario,
+        CancellationToken cancellationToken = default)
+    {
+        PersonagemJogador? character = await _repository.GetCharacterAsync(idPersonagemJogador, cancellationToken);
+        if (character is null)
+            return NotFound<GameplayActionCatalogDto>("PERSONAGEM_NAO_ENCONTRADO", "Personagem não encontrado.");
+        if (character.Idusuario != idUsuario)
+            return Forbidden<GameplayActionCatalogDto>("PERSONAGEM_SEM_CONTROLE", "Você não controla este personagem.");
+        if (!await _repository.CanAccessTableAsync(character.Idmesa, idUsuario, cancellationToken))
+            return Forbidden<GameplayActionCatalogDto>("MESA_SEM_ACESSO", "Você não participa desta Mesa.");
+        Mesa? mesa = await _repository.GetMesaAsync(character.Idmesa, cancellationToken);
+        int? versionId = mesa?.IdMesaSessaoAtiva.HasValue == true
+            ? (await _repository.GetSessionAsync(mesa.IdMesaSessaoAtiva.Value, cancellationToken))?.IdSistemaVersao
+            : mesa?.IdSistemaVersao;
+        if (!versionId.HasValue)
+            return RuleFailure<GameplayActionCatalogDto>("MESA_SEM_VERSAO", "A Mesa não possui uma versão executável.");
+        SistemaVersao? version = await _repository.GetSystemVersionAsync(versionId.Value, cancellationToken);
+        return version is null
+            ? RuleFailure<GameplayActionCatalogDto>("VERSAO_NAO_ENCONTRADA", "A versão da Mesa não está disponível.")
+            : GameplayOperationResult<GameplayActionCatalogDto>.Ok(_actionResolver.BuildCatalog(version));
+    }
+
+    public async Task<GameplayOperationResult<IReadOnlyCollection<GameplayFavoriteRollDto>>> GetFavoriteRollsAsync(
+        int idPersonagemJogador,
+        int idUsuario,
+        CancellationToken cancellationToken = default)
+    {
+        PersonagemJogador? character = await _repository.GetCharacterAsync(idPersonagemJogador, cancellationToken);
+        GameplayOperationResult<PersonagemJogador> access = await ValidateFavoriteCharacterAccessAsync(
+            character,
+            idUsuario,
+            cancellationToken);
+        if (!access.Sucesso || access.Dados is null)
+            return ConvertFailure<PersonagemJogador, IReadOnlyCollection<GameplayFavoriteRollDto>>(access);
+
+        IReadOnlyCollection<GameplayFavoriteRollDto> favorites = ReadFavoriteRolls(access.Dados)
+            .OrderByDescending(item => item.AtualizadoEmUtc)
+            .ToArray();
+        return GameplayOperationResult<IReadOnlyCollection<GameplayFavoriteRollDto>>.Ok(favorites);
+    }
+
+    public async Task<GameplayOperationResult<GameplayFavoriteRollDto>> UpsertFavoriteRollAsync(
+        int idPersonagemJogador,
+        int idUsuario,
+        GameplayFavoriteRollUpsertDto request,
+        CancellationToken cancellationToken = default)
+    {
+        string sourceType = NormalizeCode(request.TipoOrigem);
+        string sourceId = request.IdOrigem.Trim();
+        string name = request.Nome.Trim();
+        if (!FavoriteSourceTypes.Contains(sourceType))
+            return Validation<GameplayFavoriteRollDto>("TIPO_FAVORITO_INVALIDO", "Este tipo de rolagem não pode ser favoritado.");
+        if (sourceId.Length == 0 || name.Length == 0)
+            return Validation<GameplayFavoriteRollDto>("FAVORITO_INCOMPLETO", "Informe a origem e o nome da rolagem favorita.");
+        if (!Enum.IsDefined(request.Configuracao.Modo) || !Enum.IsDefined(request.Configuracao.Visibilidade))
+            return Validation<GameplayFavoriteRollDto>("OPCAO_INVALIDA", "A configuração da rolagem é inválida.");
+
+        PersonagemJogador? character = await _repository.GetCharacterForUpdateAsync(idPersonagemJogador, cancellationToken);
+        GameplayOperationResult<PersonagemJogador> access = await ValidateFavoriteCharacterAccessAsync(
+            character,
+            idUsuario,
+            cancellationToken);
+        if (!access.Sucesso || access.Dados is null)
+            return ConvertFailure<PersonagemJogador, GameplayFavoriteRollDto>(access);
+
+        List<GameplayFavoriteRollDto> favorites = ReadFavoriteRolls(access.Dados).ToList();
+        GameplayFavoriteRollDto? current = favorites.FirstOrDefault(item =>
+            string.Equals(item.TipoOrigem, sourceType, StringComparison.Ordinal) &&
+            string.Equals(item.IdOrigem, sourceId, StringComparison.Ordinal));
+        if (current is null && favorites.Count >= MaxFavoriteRollsPerCharacter)
+            return RuleFailure<GameplayFavoriteRollDto>("LIMITE_FAVORITOS", $"Cada personagem pode ter até {MaxFavoriteRollsPerCharacter} rolagens favoritas.");
+
+        GameplayFavoriteRollDto saved = new()
+        {
+            IdFavorito = current?.IdFavorito ?? Guid.NewGuid(),
+            IdPersonagemJogador = idPersonagemJogador,
+            TipoOrigem = sourceType,
+            IdOrigem = sourceId,
+            Nome = name,
+            Configuracao = CopyFavoriteConfiguration(request.Configuracao),
+            AtualizadoEmUtc = DateTime.UtcNow,
+        };
+        favorites.RemoveAll(item => item.IdFavorito == saved.IdFavorito ||
+            (string.Equals(item.TipoOrigem, sourceType, StringComparison.Ordinal) &&
+             string.Equals(item.IdOrigem, sourceId, StringComparison.Ordinal)));
+        favorites.Add(saved);
+        access.Dados.RolagensFavoritasJson = Serialize(favorites);
+        await _repository.SaveChangesAsync(cancellationToken);
+        return GameplayOperationResult<GameplayFavoriteRollDto>.Ok(saved);
+    }
+
+    public async Task<GameplayOperationResult<bool>> DeleteFavoriteRollAsync(
+        int idPersonagemJogador,
+        Guid idFavorito,
+        int idUsuario,
+        CancellationToken cancellationToken = default)
+    {
+        PersonagemJogador? character = await _repository.GetCharacterForUpdateAsync(idPersonagemJogador, cancellationToken);
+        GameplayOperationResult<PersonagemJogador> access = await ValidateFavoriteCharacterAccessAsync(
+            character,
+            idUsuario,
+            cancellationToken);
+        if (!access.Sucesso || access.Dados is null)
+            return ConvertFailure<PersonagemJogador, bool>(access);
+
+        List<GameplayFavoriteRollDto> favorites = ReadFavoriteRolls(access.Dados).ToList();
+        int removed = favorites.RemoveAll(item => item.IdFavorito == idFavorito);
+        if (removed == 0)
+            return NotFound<bool>("FAVORITO_NAO_ENCONTRADO", "A rolagem favorita não foi encontrada.");
+        access.Dados.RolagensFavoritasJson = favorites.Count == 0 ? null : Serialize(favorites);
+        await _repository.SaveChangesAsync(cancellationToken);
+        return GameplayOperationResult<bool>.Ok(true);
+    }
+
     public async Task<GameplayOperationResult<GameplaySessionDto?>> SetLegacyLiveStatusAsync(
         int idMesa,
         int idUsuario,
@@ -757,6 +1309,7 @@ public sealed class GameplayEngineService : IGameplayEngineService
             request.RevisaoSessaoEsperada,
             request.RevisaoPersonagemEsperada,
             request.ReferenciaAcao,
+            request.ParametrosAcao,
         };
         string hash = HashPayload(normalizedHashPayload);
         GameplayOperationResult<GameplayCommandResponseDto> result;
@@ -793,7 +1346,9 @@ public sealed class GameplayEngineService : IGameplayEngineService
                 GameplayRollResultDto roll = evaluation.Dados;
 
                 DateTime now = DateTime.UtcNow;
-                string actionCode = NormalizeCode(request.CodigoAcao);
+                string actionCode = roll.OrigemAcao?.Valores.TryGetValue("codigoAcao", out string? resolvedActionCode) == true
+                    ? NormalizeCode(resolvedActionCode)
+                    : NormalizeCode(request.CodigoAcao);
                 MesaComando command = NewCommand(
                     idMesa,
                     idMesaSessao,
@@ -810,7 +1365,9 @@ public sealed class GameplayEngineService : IGameplayEngineService
                 await _repository.SaveChangesAsync(token);
 
                 context.Session.UltimaSequenciaEvento++;
-                string title = BuildActionTitle(actionCode, request.CodigoAtributo);
+                string title = roll.OrigemAcao is { Tipo: not "" } origin
+                    ? origin.Nome ?? BuildActionTitle(actionCode, request.CodigoAtributo)
+                    : BuildActionTitle(actionCode, request.CodigoAtributo);
                 string description = BuildRollDescription(roll);
                 string payload = Serialize(new
                 {
@@ -957,12 +1514,18 @@ public sealed class GameplayEngineService : IGameplayEngineService
     {
         if (!Enum.IsDefined(request.Modo) || !Enum.IsDefined(request.Visibilidade) || request.Grupos is null)
             return Validation<GameplayRollResultDto>("OPCAO_INVALIDA", "A opção de rolagem é inválida.");
+        GameplayOperationResult<GameplayResolvedAction> resolvedActionResult = HasActionReference(request.ReferenciaAcao)
+            ? character is null
+                ? Validation<GameplayResolvedAction>("PERSONAGEM_OBRIGATORIO", "Selecione o personagem que executará a ação.")
+                : _actionResolver.Resolve(request, character, version)
+            : _actionResolver.ResolveSystemAction(request, character, version);
+        if (!resolvedActionResult.Sucesso || resolvedActionResult.Dados is null)
+            return ConvertFailure<GameplayResolvedAction, GameplayRollResultDto>(resolvedActionResult);
+        return EvaluateResolvedAction(resolvedActionResult.Dados);
+
+#pragma warning disable CS0162 // Mantido temporariamente para compatibilidade de leitura de comandos antigos.
         if (HasActionReference(request.ReferenciaAcao))
-        {
-            return RuleFailure<GameplayRollResultDto>(
-                "ORIGEM_ACAO_NAO_SUPORTADA",
-                "Esta acao ainda nao possui uma regra autoritativa para arma, item ou poder.");
-        }
+            return EvaluateReferencedAction(request, character, version);
         string action = NormalizeCode(request.CodigoAcao);
         bool isOdisseia = string.Equals(
             version.SistemaRpg?.Codigo,
@@ -1084,6 +1647,7 @@ public sealed class GameplayEngineService : IGameplayEngineService
         }
 
         return EvaluateExperienceRoll(action, version);
+#pragma warning restore CS0162
     }
 
     private GameplayOperationResult<GameplayRollResultDto> EvaluateExperienceRoll(
@@ -1186,6 +1750,129 @@ public sealed class GameplayEngineService : IGameplayEngineService
             FallbackNotice("A fonte de XP foi resolvida pela tabela publicada da versao da Mesa.")));
     }
 
+    private GameplayOperationResult<GameplayRollResultDto> EvaluateReferencedAction(
+        GameplayRollRequestDto request,
+        PersonagemJogador? character,
+        SistemaVersao version)
+    {
+        if (character is null)
+        {
+            return Validation<GameplayRollResultDto>(
+                "PERSONAGEM_OBRIGATORIO",
+                "Selecione o personagem que executará a ação.");
+        }
+
+        GameplayOperationResult<GameplayResolvedAction> resolvedResult = _actionResolver.Resolve(
+            request,
+            character,
+            version);
+        if (!resolvedResult.Sucesso || resolvedResult.Dados is null)
+            return ConvertFailure<GameplayResolvedAction, GameplayRollResultDto>(resolvedResult);
+        GameplayResolvedAction resolved = resolvedResult.Dados;
+
+        GameplayRollResultDto raw;
+        try
+        {
+            raw = _rollEvaluator.Evaluate(new GameplayRollPlan(
+                BuildExpression(resolved.Groups, resolved.Mode),
+                resolved.Groups,
+                resolved.Mode,
+                resolved.Modifier,
+                ModifierDetails: resolved.Modifiers));
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            return RuleFailure<GameplayRollResultDto>(
+                "TESTE_FORA_LIMITE",
+                "A configuração do teste excede os limites de dados permitidos.");
+        }
+        catch (OverflowException)
+        {
+            return RuleFailure<GameplayRollResultDto>(
+                "RESULTADO_FORA_LIMITE",
+                "Os valores deste teste excedem o limite permitido.");
+        }
+
+        int natural = raw.ValorNatural ?? 0;
+        int metric = resolved.UseTotalForRanges ? raw.Total : natural;
+        // Natural-only outcomes (for example natural 1/20) must win over an
+        // intermediate total range. Otherwise a modifier could hide a
+        // published critical success or failure.
+        GameplayResolvedResultRange? naturalOutcome = resolved.Ranges
+            .Where(range => range.RequiresNatural)
+            .FirstOrDefault(range => natural >= range.Minimum && natural <= range.Maximum);
+        List<GameplayResolvedResultRange> regularRanges = resolved.Ranges
+            .Where(range => !range.RequiresNatural)
+            .OrderBy(range => range.Minimum)
+            .ToList();
+        GameplayResolvedResultRange? outcome = naturalOutcome
+            ?? regularRanges.FirstOrDefault(range => metric >= range.Minimum && metric <= range.Maximum);
+        if (outcome is null && resolved.UseTotalForRanges && raw.Modificador != 0)
+        {
+            // Faixas especiais continuam dependendo do valor natural. Quando
+            // um modificador leva o total para uma dessas faixas ou para fora
+            // do limite do dado, preservamos a faixa comum configurada mais
+            // próxima sem promover o resultado a preciso/crítico.
+            outcome = regularRanges
+                .Where(range => range.Maximum < metric)
+                .OrderByDescending(range => range.Maximum)
+                .FirstOrDefault()
+                ?? regularRanges
+                    .Where(range => range.Minimum > metric)
+                    .OrderBy(range => range.Minimum)
+                    .FirstOrDefault();
+        }
+        bool unclassified = outcome is null;
+        outcome ??= new GameplayResolvedResultRange(
+            "RESULTADO_NAO_CLASSIFICADO",
+            "Resultado sem classificação",
+            metric,
+            metric,
+            false,
+            false,
+            false);
+
+        GameplayRollResultDto withOutcome = WithOutcome(
+            raw,
+            outcome.Code,
+            outcome.Name,
+            null);
+        IReadOnlyList<GameplayResultRangeDto> ranges = resolved.Ranges.Select(range => new GameplayResultRangeDto
+        {
+            Codigo = range.Code,
+            Nome = range.Name,
+            Minimo = range.Minimum,
+            Maximo = range.Maximum,
+            ExigeNatural = range.RequiresNatural,
+            Critico = range.Critical,
+            FalhaCritica = range.CriticalFailure,
+        }).ToList();
+        return GameplayOperationResult<GameplayRollResultDto>.Ok(WithRollContract(
+            withOutcome,
+            resolved.Mode,
+            new GameplayDifficultyDto
+            {
+                Codigo = resolved.Snapshot.Codigo ?? "TESTE",
+                Nome = resolved.Name,
+                Comparador = resolved.UseTotalForRanges ? "total" : "natural",
+            },
+            ranges,
+            resolved.Snapshot,
+            unclassified
+                ? resolved.Notices.Concat(new[]
+                {
+                    new GameplayExecutionNoticeDto
+                    {
+                        Codigo = "TABELA_RESULTADO_INCOMPLETA",
+                        Mensagem = "O total ficou fora das faixas publicadas; a rolagem foi mantida sem classificar sucesso ou falha.",
+                        Fallback = false,
+                    },
+                }).ToList()
+                : resolved.Notices,
+            outcome.Critical && outcome.RequiresNatural,
+            outcome.CriticalFailure && outcome.RequiresNatural));
+    }
+
     private static GameplayOperationResult<IReadOnlyList<GameplayDiceGroupSpec>> ValidateGenericGroups(
         IReadOnlyCollection<GameplayDiceGroupRequestDto> requestGroups,
         GameplayRollMode mode)
@@ -1216,6 +1903,110 @@ public sealed class GameplayEngineService : IGameplayEngineService
         }
         return GameplayOperationResult<IReadOnlyList<GameplayDiceGroupSpec>>.Ok(
             groups.Select(group => new GameplayDiceGroupSpec(group.Quantidade, group.Faces)).ToList());
+    }
+
+    private static GameplayOperationResult<GameplayEffectMutation> ApplyEffectToCharacter(
+        PersonagemJogador character,
+        GameplayEffectProposalDto proposal,
+        SistemaVersao version)
+    {
+        if (proposal.Valor is <= 0 or > MaxManualAbsoluteValue)
+            return RuleFailure<GameplayEffectMutation>("VALOR_EFEITO_INVALIDO", "O valor configurado para o efeito é inválido.");
+        JsonObject root;
+        try
+        {
+            root = JsonNode.Parse(character.StatusJson) as JsonObject ?? new JsonObject();
+        }
+        catch (JsonException)
+        {
+            return RuleFailure<GameplayEffectMutation>("STATUS_INVALIDO", "A ficha possui dados de status inválidos.");
+        }
+
+        string type = NormalizeCode(proposal.Tipo);
+        string operation = NormalizeCode(proposal.Operacao);
+        string field;
+        JsonObject container;
+        int minimum = 0;
+        int? maximum = null;
+        if (type == "XP")
+        {
+            field = FindJsonProperty(root, "xp") ?? "xp";
+            container = root;
+        }
+        else
+        {
+            string resourceCode = NormalizeCode(proposal.CodigoRecurso);
+            SistemaRecursoConfig? resource = version.Recursos.FirstOrDefault(item =>
+                item.Ativo && NormalizeCode(item.Codigo) == resourceCode);
+            if (resource is null)
+                return RuleFailure<GameplayEffectMutation>("RECURSO_NAO_PUBLICADO", "O recurso deste efeito não existe na versão publicada do Sistema.");
+            container = GetOrCreateJsonObject(root, "status");
+            string preferredField = resource.Codigo.Trim().ToLowerInvariant();
+            field = FindJsonProperty(container, preferredField) ?? preferredField;
+            minimum = resource.PermiteValorNegativo
+                ? decimal.ToInt32(decimal.Max(resource.ValorMinimo, int.MinValue))
+                : Math.Max(0, decimal.ToInt32(decimal.Max(resource.ValorMinimo, 0)));
+            if (resource.ValorMaximo.HasValue)
+                maximum = decimal.ToInt32(decimal.Min(resource.ValorMaximo.Value, int.MaxValue));
+            string? sheetMaximumField = FindJsonProperty(container, $"{preferredField}Maxima")
+                ?? FindJsonProperty(container, $"{preferredField}Maximo");
+            if (sheetMaximumField is not null && TryReadJsonInt(container[sheetMaximumField], out int sheetMaximum))
+                maximum = sheetMaximum;
+        }
+
+        int previous = TryReadJsonInt(container[field], out int stored) ? stored : 0;
+        int signedDelta = operation switch
+        {
+            "SOMAR" => proposal.Valor,
+            "SUBTRAIR" => -proposal.Valor,
+            _ => 0,
+        };
+        if (signedDelta == 0)
+            return RuleFailure<GameplayEffectMutation>("OPERACAO_EFEITO_INVALIDA", "A operação configurada para o efeito é inválida.");
+        int current;
+        try
+        {
+            current = checked(previous + signedDelta);
+        }
+        catch (OverflowException)
+        {
+            return RuleFailure<GameplayEffectMutation>("VALOR_EFEITO_FORA_LIMITE", "O efeito excede os limites aceitos pela ficha.");
+        }
+        current = Math.Max(minimum, current);
+        if (maximum.HasValue) current = Math.Min(maximum.Value, current);
+        container[field] = current;
+        character.StatusJson = root.ToJsonString();
+        return GameplayOperationResult<GameplayEffectMutation>.Ok(new GameplayEffectMutation(
+            field,
+            previous,
+            current - previous,
+            current));
+    }
+
+    private static JsonObject GetOrCreateJsonObject(JsonObject root, string property)
+    {
+        string? existing = FindJsonProperty(root, property);
+        if (existing is not null && root[existing] is JsonObject current) return current;
+        var created = new JsonObject();
+        root[property] = created;
+        return created;
+    }
+
+    private static string? FindJsonProperty(JsonObject source, string property)
+        => source.FirstOrDefault(pair => pair.Key.Equals(property, StringComparison.OrdinalIgnoreCase)).Key;
+
+    private static bool TryReadJsonInt(JsonNode? node, out int value)
+    {
+        value = 0;
+        if (node is not JsonValue jsonValue) return false;
+        if (jsonValue.TryGetValue(out int integer))
+        {
+            value = integer;
+            return true;
+        }
+        return jsonValue.TryGetValue(out double number) && double.IsFinite(number) &&
+            Math.Truncate(number) == number && number is >= int.MinValue and <= int.MaxValue &&
+            (value = (int)number) == number;
     }
 
     private static GameplayOperationResult<GameplayManualNormalized> NormalizeManual(
@@ -1404,7 +2195,8 @@ public sealed class GameplayEngineService : IGameplayEngineService
         MesaSessao session,
         GameplayEventDto? gameplayEvent,
         GameplayRollResultDto? roll,
-        bool replay) => new()
+        bool replay,
+        GameplayEffectApplicationDto? application = null) => new()
     {
         IdComando = command.IdMesaComando,
         Replay = replay,
@@ -1415,6 +2207,7 @@ public sealed class GameplayEngineService : IGameplayEngineService
         Sessao = MapSession(session),
         Evento = gameplayEvent,
         Rolagem = roll,
+        Aplicacao = application,
     };
 
     private static GameplayCommandResponseDto CloneAsReplay(GameplayCommandResponseDto source) => new()
@@ -1428,6 +2221,7 @@ public sealed class GameplayEngineService : IGameplayEngineService
         Sessao = source.Sessao,
         Evento = source.Evento,
         Rolagem = source.Evento?.Oculto == true ? null : source.Rolagem,
+        Aplicacao = source.Aplicacao,
     };
 
     private static GameplaySessionDto MapSession(MesaSessao source) => new()
@@ -1594,6 +2388,179 @@ public sealed class GameplayEngineService : IGameplayEngineService
         };
     }
 
+    private static GameplayRollResultDto WithEffectProposals(
+        GameplayRollResultDto source,
+        string? configuredEffectJson)
+    {
+        var effects = new List<GameplayEffectProposalDto>();
+        GameplayActionSnapshotDto? origin = source.OrigemAcao;
+        if (origin?.Tipo == "FONTE_XP" && source.ValorAssociado is > 0)
+        {
+            effects.Add(new GameplayEffectProposalDto
+            {
+                Codigo = "APLICAR_XP",
+                Tipo = "XP",
+                Nome = $"Aplicar {source.ValorAssociado.Value} XP",
+                Alvo = "AUTOR",
+                CodigoRecurso = "XP",
+                Operacao = "SOMAR",
+                Valor = source.ValorAssociado.Value,
+            });
+        }
+
+        if (origin is not null)
+        {
+            int uses = Math.Max(1, ReadSnapshotInt(origin, "quantidadeSolicitada") ?? 1);
+            AddSnapshotCost(effects, origin, "estaminaPorUsoProposta", "ESTAMINA", "Gastar estamina", uses);
+            AddSnapshotCost(effects, origin, "custoEstaminaProposto", "ESTAMINA", "Gastar estamina");
+            AddSnapshotCost(effects, origin, "custoManaProposto", "MANA", "Gastar mana");
+            AddSnapshotCost(effects, origin, "custoVidaProposto", "VIDA", "Gastar vida");
+
+            bool failed = NormalizeCode(source.CodigoResultado).Contains("FALHA", StringComparison.Ordinal) ||
+                NormalizeCode(source.CodigoResultado).Contains("ERRO", StringComparison.Ordinal);
+            if (!failed)
+            {
+                int? damage = ReadSnapshotInt(origin, "danoPorAcertoProposto")
+                    ?? ReadSnapshotInt(origin, "danoProposto");
+                if (damage is > 0)
+                {
+                    int hits = Math.Max(1, ReadSnapshotInt(origin, "acertosResolvidos") ?? 1);
+                    bool validDamage = TryMultiplyEffectValue(damage.Value, hits, out int totalDamage);
+                    effects.Add(new GameplayEffectProposalDto
+                    {
+                        Codigo = "APLICAR_DANO",
+                        Tipo = "DANO",
+                        Nome = validDamage ? $"Aplicar {totalDamage} de dano" : "Dano fora do limite",
+                        Alvo = "ALVO",
+                        CodigoRecurso = "VIDA",
+                        Operacao = "SUBTRAIR",
+                        Valor = totalDamage,
+                        ExigeAlvo = true,
+                        PodeAplicar = validDamage,
+                        MotivoIndisponivel = validDamage ? null : "O dano calculado excede o limite seguro da ficha.",
+                    });
+                }
+            }
+        }
+
+        effects.AddRange(ReadConfiguredEffects(configuredEffectJson));
+        IReadOnlyList<GameplayEffectProposalDto> distinct = effects
+            .GroupBy(effect => effect.Codigo, StringComparer.Ordinal)
+            .Select(group => group.First())
+            .ToArray();
+        return CopyRoll(source, distinct);
+    }
+
+    private static void AddSnapshotCost(
+        ICollection<GameplayEffectProposalDto> effects,
+        GameplayActionSnapshotDto origin,
+        string snapshotKey,
+        string resourceCode,
+        string label,
+        int multiplier = 1)
+    {
+        int? value = ReadSnapshotInt(origin, snapshotKey);
+        if (value is not > 0) return;
+        bool validCost = TryMultiplyEffectValue(value.Value, Math.Max(1, multiplier), out int total);
+        effects.Add(new GameplayEffectProposalDto
+        {
+            Codigo = $"APLICAR_CUSTO_{resourceCode}",
+            Tipo = "RECURSO",
+            Nome = validCost ? $"{label}: {total}" : $"{label}: valor fora do limite",
+            Alvo = "AUTOR",
+            CodigoRecurso = resourceCode,
+            Operacao = "SUBTRAIR",
+            Valor = total,
+            PodeAplicar = validCost,
+            MotivoIndisponivel = validCost ? null : "O custo calculado excede o limite seguro da ficha.",
+        });
+    }
+
+    private static bool TryMultiplyEffectValue(int value, int multiplier, out int total)
+    {
+        long calculated = (long)value * multiplier;
+        if (calculated is <= 0 or > MaxManualAbsoluteValue)
+        {
+            total = 0;
+            return false;
+        }
+        total = (int)calculated;
+        return true;
+    }
+
+    private static int? ReadSnapshotInt(GameplayActionSnapshotDto source, string key)
+        => source.Valores.TryGetValue(key, out string? raw) && int.TryParse(raw, out int value)
+            ? value
+            : null;
+
+    private static IReadOnlyList<GameplayEffectProposalDto> ReadConfiguredEffects(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return Array.Empty<GameplayEffectProposalDto>();
+        try
+        {
+            JsonNode? root = JsonNode.Parse(json);
+            JsonArray? entries = root as JsonArray ?? (root as JsonObject)?["efeitos"] as JsonArray;
+            if (entries is null) return Array.Empty<GameplayEffectProposalDto>();
+            var effects = new List<GameplayEffectProposalDto>();
+            foreach (JsonObject entry in entries.OfType<JsonObject>())
+            {
+                string code = NormalizeCode(entry["codigo"]?.GetValue<string>());
+                string type = NormalizeCode(entry["tipo"]?.GetValue<string>());
+                int? value = entry["valor"]?.GetValue<int>();
+                if (code.Length == 0 || type.Length == 0 || value is null or <= 0) continue;
+                string target = NormalizeCode(entry["alvo"]?.GetValue<string>());
+                string? resourceCode = NormalizeOptionalCode(entry["codigoRecurso"]?.GetValue<string>());
+                bool canApply = type == "XP" || resourceCode is not null;
+                effects.Add(new GameplayEffectProposalDto
+                {
+                    Codigo = code,
+                    Tipo = type,
+                    Nome = entry["nome"]?.GetValue<string>() ?? code,
+                    Alvo = target.Length == 0 ? "AUTOR" : target,
+                    CodigoRecurso = resourceCode,
+                    Operacao = NormalizeOptionalCode(entry["operacao"]?.GetValue<string>()) ?? "SOMAR",
+                    Valor = value.Value,
+                    ExigeAlvo = entry["exigeAlvo"]?.GetValue<bool>() ?? target == "ALVO",
+                    PodeAplicar = canApply,
+                    MotivoIndisponivel = canApply
+                        ? null
+                        : "Este efeito continua assistido porque ainda não altera um recurso publicado.",
+                });
+            }
+            return effects;
+        }
+        catch (Exception exception) when (exception is JsonException or InvalidOperationException)
+        {
+            return Array.Empty<GameplayEffectProposalDto>();
+        }
+    }
+
+    private static GameplayRollResultDto CopyRoll(
+        GameplayRollResultDto source,
+        IReadOnlyList<GameplayEffectProposalDto>? effects = null) => new()
+    {
+        Expressao = source.Expressao,
+        Grupos = source.Grupos,
+        Modificadores = source.Modificadores,
+        ValorNatural = source.ValorNatural,
+        Modificador = source.Modificador,
+        Subtotal = source.Subtotal,
+        Total = source.Total,
+        CodigoResultado = source.CodigoResultado,
+        NomeResultado = source.NomeResultado,
+        ValorAssociado = source.ValorAssociado,
+        Manual = source.Manual,
+        Modo = source.Modo,
+        Dificuldade = source.Dificuldade,
+        FaixasResultado = source.FaixasResultado,
+        CriticoNatural = source.CriticoNatural,
+        FalhaCriticaNatural = source.FalhaCriticaNatural,
+        OrigemAcao = source.OrigemAcao,
+        Avisos = source.Avisos,
+        EfeitosPropostos = effects ?? source.EfeitosPropostos,
+        RolagensIndividuais = source.RolagensIndividuais,
+    };
+
     private static GameplayRollResultDto WithOutcome(
         GameplayRollResultDto source,
         string? resultCode,
@@ -1611,6 +2578,8 @@ public sealed class GameplayEngineService : IGameplayEngineService
         NomeResultado = resultName,
         ValorAssociado = associatedValue,
         Manual = source.Manual,
+        EfeitosPropostos = source.EfeitosPropostos,
+        RolagensIndividuais = source.RolagensIndividuais,
     };
 
     private static GameplayRollResultDto WithRollContract(
@@ -1619,7 +2588,9 @@ public sealed class GameplayEngineService : IGameplayEngineService
         GameplayDifficultyDto? difficulty,
         IReadOnlyList<GameplayResultRangeDto> ranges,
         GameplayActionSnapshotDto origin,
-        IReadOnlyList<GameplayExecutionNoticeDto> notices) => new()
+        IReadOnlyList<GameplayExecutionNoticeDto> notices,
+        bool? criticalNatural = null,
+        bool? criticalFailureNatural = null) => new()
     {
         Expressao = source.Expressao,
         Grupos = source.Grupos,
@@ -1635,13 +2606,12 @@ public sealed class GameplayEngineService : IGameplayEngineService
         Modo = mode,
         Dificuldade = difficulty,
         FaixasResultado = ranges,
-        // Nenhuma regra atual publicada do Odisseia marca automaticamente
-        // critical outcomes for these tests. Null states that no critical rule
-        // was evaluated, rather than inventing one from the natural die.
-        CriticoNatural = null,
-        FalhaCriticaNatural = null,
+        CriticoNatural = criticalNatural,
+        FalhaCriticaNatural = criticalFailureNatural,
         OrigemAcao = origin,
         Avisos = notices,
+        EfeitosPropostos = source.EfeitosPropostos,
+        RolagensIndividuais = source.RolagensIndividuais,
     };
 
     private static IReadOnlyList<GameplayResultRangeDto> OutcomeRanges(int successMinimum) => new[]
@@ -1824,6 +2794,58 @@ public sealed class GameplayEngineService : IGameplayEngineService
         return string.IsNullOrWhiteSpace(value) ? null : value;
     }
 
+    private async Task<GameplayOperationResult<PersonagemJogador>> ValidateFavoriteCharacterAccessAsync(
+        PersonagemJogador? character,
+        int idUsuario,
+        CancellationToken cancellationToken)
+    {
+        if (character is null)
+            return NotFound<PersonagemJogador>("PERSONAGEM_NAO_ENCONTRADO", "Personagem não encontrado.");
+        if (character.Idusuario != idUsuario)
+            return Forbidden<PersonagemJogador>("PERSONAGEM_SEM_CONTROLE", "Você não controla este personagem.");
+        if (!await _repository.CanAccessTableAsync(character.Idmesa, idUsuario, cancellationToken))
+            return Forbidden<PersonagemJogador>("MESA_SEM_ACESSO", "Você não participa desta Mesa.");
+        return GameplayOperationResult<PersonagemJogador>.Ok(character);
+    }
+
+    private static IReadOnlyCollection<GameplayFavoriteRollDto> ReadFavoriteRolls(PersonagemJogador character)
+    {
+        if (string.IsNullOrWhiteSpace(character.RolagensFavoritasJson))
+            return Array.Empty<GameplayFavoriteRollDto>();
+        return DeserializeOrDefault<List<GameplayFavoriteRollDto>>(character.RolagensFavoritasJson)
+            ?.Where(item => item.IdFavorito != Guid.Empty && item.IdPersonagemJogador == character.IdpersonagemJogador)
+            .Take(MaxFavoriteRollsPerCharacter)
+            .ToArray() ?? Array.Empty<GameplayFavoriteRollDto>();
+    }
+
+    private static GameplayFavoriteRollConfigurationDto CopyFavoriteConfiguration(
+        GameplayFavoriteRollConfigurationDto source) => new()
+    {
+        CodigoAcao = source.CodigoAcao.Trim(),
+        CodigoAtributo = NormalizeOptionalCode(source.CodigoAtributo),
+        Grupos = source.Grupos.Take(MaxDiceGroups).Select(group => new GameplayDiceGroupRequestDto
+        {
+            Quantidade = group.Quantidade,
+            Faces = group.Faces,
+        }).ToList(),
+        Modo = source.Modo,
+        Visibilidade = source.Visibilidade,
+        ReferenciaAcao = source.ReferenciaAcao is null ? null : new GameplayActionReferenceDto
+        {
+            Tipo = NormalizeOptionalCode(source.ReferenciaAcao.Tipo),
+            IdInstancia = NormalizeOptionalText(source.ReferenciaAcao.IdInstancia),
+            IdItemSistema = source.ReferenciaAcao.IdItemSistema,
+            IdPoderSistema = source.ReferenciaAcao.IdPoderSistema,
+        },
+        ParametrosAcao = source.ParametrosAcao is null ? null : new GameplayActionParametersDto
+        {
+            Operacao = NormalizeOptionalCode(source.ParametrosAcao.Operacao),
+            Alcance = NormalizeOptionalCode(source.ParametrosAcao.Alcance),
+            ModoDisparo = NormalizeOptionalCode(source.ParametrosAcao.ModoDisparo),
+            Quantidade = source.ParametrosAcao.Quantidade,
+        },
+    };
+
     private static bool HasActionReference(GameplayActionReferenceDto? source) => source is not null &&
         (!string.IsNullOrWhiteSpace(source.Tipo) ||
          !string.IsNullOrWhiteSpace(source.IdInstancia) ||
@@ -1873,4 +2895,11 @@ public sealed class GameplayEngineService : IGameplayEngineService
         string? Observation,
         int? IdCharacter,
         GameplayEventVisibility Visibility);
+
+    private sealed record GameplayEffectMutation(
+        string Field,
+        int PreviousValue,
+        int AppliedDelta,
+        int CurrentValue);
+
 }

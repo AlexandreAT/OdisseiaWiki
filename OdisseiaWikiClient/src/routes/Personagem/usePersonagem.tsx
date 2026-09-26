@@ -32,8 +32,10 @@ export const usePersonagem = (idParam?: string | undefined, source: 'public' | '
           // Build a raw object compatible with normalizePersonagem
           const raw = {
             idpersonagemJogador: (payload as any).idpersonagemJogador ?? (payload as any).idpersonagem ?? idParam,
-            idusuario: (payload as any).idusuario ?? (payload as any).idusuario,
-            idmesa: (payload as any).idmesa ?? (payload as any).idmesa,
+            idusuario: (payload as any).idusuario ?? (payload as any).idUsuario ?? (payload as any).Idusuario ?? (payload as any).IdUsuario,
+            idmesa: (payload as any).idmesa ?? (payload as any).idMesa ?? (payload as any).Idmesa ?? (payload as any).IdMesa,
+            idSistemaVersao: (payload as any).idSistemaVersao ?? (payload as any).IdSistemaVersao ?? null,
+            revisaoRuntime: (payload as any).revisaoRuntime ?? (payload as any).RevisaoRuntime,
             nome: (payload as any).nome ?? '',
             idraca: (payload as any).idraca ?? (payload as any).Idraca ?? undefined,
             idcidade: (payload as any).idcidade ?? (payload as any).Idcidade ?? undefined,

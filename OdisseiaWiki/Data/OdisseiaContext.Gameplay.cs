@@ -9,6 +9,7 @@ public partial class OdisseiaContext
     public virtual DbSet<MesaComando> MesaComandos { get; set; }
     public virtual DbSet<MesaEvento> MesaEventos { get; set; }
     public virtual DbSet<MesaRolagem> MesaRolagens { get; set; }
+    public virtual DbSet<MesaEfeitoAplicado> MesaEfeitosAplicados { get; set; }
 
     private static void ConfigureGameplay(ModelBuilder modelBuilder)
     {
@@ -29,6 +30,7 @@ public partial class OdisseiaContext
         modelBuilder.Entity<PersonagemJogador>(entity =>
         {
             entity.Property(item => item.RevisaoRuntime).IsConcurrencyToken();
+            entity.Property(item => item.RolagensFavoritasJson).HasColumnType("json");
         });
 
         modelBuilder.Entity<MesaSessao>(entity =>
@@ -158,6 +160,39 @@ public partial class OdisseiaContext
                 .HasForeignKey<MesaRolagem>(item => item.IdMesaEvento)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("FK_MesaRolagem_Evento");
+        });
+
+        modelBuilder.Entity<MesaEfeitoAplicado>(entity =>
+        {
+            entity.ToTable("mesaefeitosaplicados");
+            entity.HasKey(item => item.IdMesaEfeitoAplicado);
+            entity.Property(item => item.IdMesaEfeitoAplicado).HasColumnName("IDMesaEfeitoAplicado");
+            entity.Property(item => item.IdMesaSessao).HasColumnName("IDMesaSessao");
+            entity.Property(item => item.IdEventoOrigem).HasColumnName("IDEventoOrigem");
+            entity.Property(item => item.IdEventoAplicacao).HasColumnName("IDEventoAplicacao");
+            entity.Property(item => item.IdPersonagemAlvo).HasColumnName("IDPersonagemAlvo");
+            entity.Property(item => item.AplicadoEmUtc).HasColumnType("datetime(6)");
+            entity.HasIndex(item => new
+                { item.IdMesaSessao, item.IdEventoOrigem, item.ChaveEfeito, item.IdPersonagemAlvo })
+                .IsUnique()
+                .HasDatabaseName("UX_MesaEfeito_Sessao_Origem_Chave_Alvo");
+            entity.HasIndex(item => item.IdEventoAplicacao)
+                .IsUnique()
+                .HasDatabaseName("UX_MesaEfeito_EventoAplicacao");
+            entity.HasIndex(item => new { item.IdPersonagemAlvo, item.AplicadoEmUtc })
+                .HasDatabaseName("IX_MesaEfeito_Alvo_Data");
+            entity.HasOne(item => item.Sessao).WithMany(item => item.EfeitosAplicados)
+                .HasForeignKey(item => item.IdMesaSessao).OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_MesaEfeito_Sessao");
+            entity.HasOne(item => item.EventoOrigem).WithMany()
+                .HasForeignKey(item => item.IdEventoOrigem).OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_MesaEfeito_EventoOrigem");
+            entity.HasOne(item => item.EventoAplicacao).WithMany()
+                .HasForeignKey(item => item.IdEventoAplicacao).OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_MesaEfeito_EventoAplicacao");
+            entity.HasOne(item => item.PersonagemAlvo).WithMany()
+                .HasForeignKey(item => item.IdPersonagemAlvo).OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_MesaEfeito_PersonagemAlvo");
         });
     }
 }

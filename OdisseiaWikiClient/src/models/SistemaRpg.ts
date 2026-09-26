@@ -237,6 +237,7 @@ export interface SistemaFonteExperiencia {
   valorMaximo: number | null;
   usaVantagem: boolean;
   descricao?: string;
+  configuracaoJson?: string;
   ordem: number;
 }
 

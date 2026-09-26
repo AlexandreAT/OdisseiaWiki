@@ -29,6 +29,30 @@ export const RuntimeIdentity = styled.div`
   min-width: 0;
 `;
 
+export const RuntimeTable = styled.span<{ $live: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding-left: 10px;
+  border-left: 1px solid rgba(0, 210, 255, .34);
+  color: var(--lightGrey);
+  font-size: .72rem;
+
+  svg { width: 17px; height: 17px; color: var(--clearneonBlue); }
+  span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  i {
+    width: 7px;
+    height: 7px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background: ${({ $live }) => $live ? 'var(--clearneonGreen)' : 'var(--grey)'};
+    box-shadow: ${({ $live }) => $live ? '0 0 8px var(--clearneonGreen)' : 'none'};
+  }
+
+  @media (max-width: 600px) { padding-left: 0; border-left: 0; }
+`;
+
 export const RuntimeName = styled.strong`
   color: var(--clearneonBlue);
   font-family: 'DO Futuristic', sans-serif;

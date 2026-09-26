@@ -1,5 +1,6 @@
 import { useId, useState } from 'react';
 import { BiErrorCircle, BiInfoCircle } from 'react-icons/bi';
+import TableRestaurantOutlinedIcon from '@mui/icons-material/TableRestaurantOutlined';
 import { LoadingIndicator } from '../LoadingIndicator';
 import { SistemaRuntimeContexto, SistemaRuntimeOrigem } from '../../../models/SistemaRpg';
 import {
@@ -13,6 +14,7 @@ import {
   RuntimeMessagePanel,
   RuntimeUpdateButton,
   RuntimeWarning,
+  RuntimeTable,
 } from './SystemRuntimeIndicator.style';
 import { getRuntimeFallbackMessage, getRuntimeWarningMessage, isDisplayableRuntimeWarning } from './SystemRuntimeIndicator.utils';
 
@@ -22,6 +24,8 @@ interface SystemRuntimeIndicatorProps {
   error?: string | null;
   onUpdate?: () => void;
   updating?: boolean;
+  mesaNome?: string | null;
+  mesaAoVivo?: boolean;
 }
 
 const ORIGIN_LABELS: Record<SistemaRuntimeOrigem, string> = {
@@ -39,6 +43,8 @@ export const SystemRuntimeIndicator = ({
   error,
   onUpdate,
   updating = false,
+  mesaNome,
+  mesaAoVivo = false,
 }: SystemRuntimeIndicatorProps) => {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const detailsId = useId();
@@ -94,8 +100,17 @@ export const SystemRuntimeIndicator = ({
   return (
     <RuntimeIndicator $hasWarnings={hasWarnings} aria-live="polite">
       <RuntimeIdentity>
-        <RuntimeName>{systemName}</RuntimeName>
-        <RuntimeMeta>v{version} · {origin}</RuntimeMeta>
+        <div>
+          <RuntimeName>{systemName}</RuntimeName>
+          <RuntimeMeta>v{version} · {origin}</RuntimeMeta>
+        </div>
+        {mesaNome && (
+          <RuntimeTable $live={mesaAoVivo} title={mesaAoVivo ? 'Mesa ao vivo' : 'Mesa offline'}>
+            <TableRestaurantOutlinedIcon aria-hidden="true" />
+            <span>{mesaNome}</span>
+            <i aria-label={mesaAoVivo ? 'Mesa ao vivo' : 'Mesa offline'} />
+          </RuntimeTable>
+        )}
       </RuntimeIdentity>
       <RuntimeActions>
         <RuntimeActionControls>
