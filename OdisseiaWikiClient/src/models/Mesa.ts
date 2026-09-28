@@ -124,7 +124,7 @@ export interface MesaPersonagensGerenciamento {
 export interface MesaAoVivoSnapshot extends MesaPersonagensGerenciamento {
   jogadoresOnline: number;
   participantes: number;
-  turnoAtual: 'Mestre';
+  turnoAtual: string;
   atualizadoEm?: string;
 }
 

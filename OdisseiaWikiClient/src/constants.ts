@@ -69,14 +69,17 @@ export const normalizeTrajeTipo = (value: unknown): TrajeTipo | undefined => {
 };
 
 export const ACERTO_DADO_OPTIONS: { value: DadoAcerto; label: string }[] = [
+  { value: 'D4', label: 'D4' },
   { value: 'D6', label: 'D6' },
   { value: 'D8', label: 'D8' },
+  { value: 'D10', label: 'D10' },
+  { value: 'D12', label: 'D12' },
   { value: 'D20', label: 'D20' },
 ];
 
 export const normalizeDadoAcerto = (value: unknown): DadoAcerto | '' => {
   const normalized = String(value ?? '').trim().toUpperCase().replace(/^1(?=D)/, '');
-  return ACERTO_DADO_OPTIONS.some((option) => option.value === normalized)
+  return /^D\d+$/.test(normalized)
     ? normalized as DadoAcerto
     : '';
 };

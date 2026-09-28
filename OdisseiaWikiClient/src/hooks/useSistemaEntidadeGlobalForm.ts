@@ -159,23 +159,41 @@ export const useSistemaEntidadeGlobalForm = ({
 
   const displayContext = useMemo<SistemaRuntimeContexto | null>(() => {
     const base = runtime.contexto;
-    if (!base) return null;
     const selectedVersion = versions.find((version) => version.idSistemaVersao === effectiveVersionId);
-    return {
-      ...base,
+    if (!base && (!selectedSystem || !effectiveVersionId || !selectedVersion)) return null;
+
+    const preview: SistemaRuntimeContexto = base ?? {
       idSistemaRpg: effectiveSystemId,
       idSistemaVersao: effectiveVersionId,
-      codigoSistema: selectedSystem?.codigo ?? base.codigoSistema,
-      nomeSistema: selectedSystem?.nome ?? base.nomeSistema,
-      numeroVersao: selectedVersion?.numeroVersao ?? base.numeroVersao,
-      statusVersao: selectedVersion?.status ?? base.statusVersao,
-      origem: base.usaFallbackLegado
-        ? base.origem
+      codigoSistema: selectedSystem!.codigo,
+      nomeSistema: selectedSystem!.nome,
+      numeroVersao: selectedVersion!.numeroVersao,
+      statusVersao: selectedVersion!.status,
+      origem: vinculo.acompanharPublicacaoAtual ? 'PublicacaoAtualEntidade' : 'VersaoFixadaEntidade',
+      acompanhaPublicacaoAtual: vinculo.acompanharPublicacaoAtual,
+      idVersaoFixada: vinculo.acompanharPublicacaoAtual ? null : effectiveVersionId,
+      usaFallbackLegado: false,
+      itens: { tipos: catalogTypes },
+      proveniencias: [],
+      warnings: [],
+      fallbacks: [],
+    };
+
+    return {
+      ...preview,
+      idSistemaRpg: effectiveSystemId,
+      idSistemaVersao: effectiveVersionId,
+      codigoSistema: selectedSystem?.codigo ?? preview.codigoSistema,
+      nomeSistema: selectedSystem?.nome ?? preview.nomeSistema,
+      numeroVersao: selectedVersion?.numeroVersao ?? preview.numeroVersao,
+      statusVersao: selectedVersion?.status ?? preview.statusVersao,
+      origem: preview.usaFallbackLegado
+        ? preview.origem
         : (vinculo.acompanharPublicacaoAtual ? 'PublicacaoAtualEntidade' : 'VersaoFixadaEntidade'),
       acompanhaPublicacaoAtual: vinculo.acompanharPublicacaoAtual,
       idVersaoFixada: vinculo.acompanharPublicacaoAtual ? null : effectiveVersionId,
       itens: {
-        tipos: catalogTypes.length > 0 ? catalogTypes : base.itens.tipos,
+        tipos: catalogTypes.length > 0 ? catalogTypes : preview.itens.tipos,
       },
     };
   }, [catalogTypes, effectiveSystemId, effectiveVersionId, runtime.contexto, selectedSystem, versions, vinculo.acompanharPublicacaoAtual]);
@@ -190,8 +208,8 @@ export const useSistemaEntidadeGlobalForm = ({
     effectiveVersionId,
     contexto: displayContext,
     catalogTypes: catalogTypes.length > 0 ? catalogTypes : (runtime.contexto?.itens?.tipos ?? []),
-    loading: runtime.loading || loadingOptions,
-    error: runtime.error ?? optionsError,
+    loading: loadingOptions || (runtime.loading && !displayContext),
+    error: optionsError ?? (displayContext ? null : runtime.error),
     reload: runtime.reload,
     selectSystem,
     toggleFollowCurrent,

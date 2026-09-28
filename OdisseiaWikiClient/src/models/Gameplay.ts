@@ -109,6 +109,10 @@ export interface GameplayEffectProposal {
   nome: string;
   alvo: 'AUTOR' | 'ALVO' | string;
   codigoRecurso?: string | null;
+  idInstancia?: string | null;
+  codigoCondicao?: string | null;
+  duracaoCondicao?: number | null;
+  cooldownTurnos?: number | null;
   operacao: 'SOMAR' | 'SUBTRAIR' | string;
   valor: number;
   exigeAlvo: boolean;
@@ -132,6 +136,11 @@ export interface GameplayActionCatalog {
   idSistemaVersao: number;
   dadoTesteGeral: string;
   acoes: GameplayActionCatalogItem[];
+  defesas: Array<{
+    codigo: string;
+    nome: string;
+    ordem: number;
+  }>;
 }
 
 export interface GameplayEffectApplyRequest {
@@ -141,6 +150,8 @@ export interface GameplayEffectApplyRequest {
   idPersonagemAlvo?: number;
   revisaoSessaoEsperada?: number;
   revisaoPersonagemEsperada: number;
+  danoMitigadoConfirmado?: number;
+  defesasUtilizadas?: string[];
 }
 
 export interface GameplayEffectApplication {
@@ -149,9 +160,13 @@ export interface GameplayEffectApplication {
   idPersonagemAlvo: number;
   revisaoPersonagem: number;
   campo: string;
+  tipo: string;
   valorAnterior: number;
   valorAplicado: number;
   valorAtual: number;
+  danoBruto?: number | null;
+  danoMitigado?: number | null;
+  defesasUtilizadas?: string[];
 }
 
 export interface GameplayEvent {

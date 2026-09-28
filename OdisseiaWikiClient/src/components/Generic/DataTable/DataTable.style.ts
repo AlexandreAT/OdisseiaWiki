@@ -157,6 +157,12 @@ export const DataTableContainer = styled.div<Props>`
       ${({ theme }) =>
         theme === "dark" ? "var(--lightBlack)" : "var(--clearblack)"};
     padding: 10px;
+    color: ${({ theme }) =>
+      theme === "dark" ? "var(--whitesmoke)" : "var(--black)"} !important;
+
+    label {
+      color: inherit;
+    }
 
     ${({ neon, theme }) =>
       neon === "on" &&

@@ -5,8 +5,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Item } from '../../models/Itens';
 import type {
   GameplayCharacterOption,
+  GameplayActionCatalog,
   GameplayCommandResponse,
   GameplayEffectApplyRequest,
+  GameplayEffectProposal,
   GameplayFavoriteRoll,
   GameplayFavoriteRollUpsert,
   GameplayRollMode,
@@ -21,7 +23,17 @@ import { InputText } from '../Generic/InputText/InputText';
 import { Modal } from '../Generic/Modal/Modal';
 import { Select } from '../Generic/Select/Select';
 import { DiceRollOverlay } from './DiceRollOverlay/DiceRollOverlay';
-import { FavoriteButton, SheetActionButton, SheetActionError, SheetActionFields, SheetActionForm, SheetActionResult } from './GameplaySheetActionDialog.style';
+import {
+  FavoriteButton,
+  SheetActionButton,
+  SheetActionError,
+  SheetActionFields,
+  SheetActionForm,
+  SheetActionResult,
+  SheetDefenseButton,
+  SheetDefenseOptions,
+  SheetEffectFields,
+} from './GameplaySheetActionDialog.style';
 
 export type GameplaySheetActionSource = {
   type: 'ITEM' | 'PROTESE' | 'SKILL' | 'MAGIA';
@@ -41,6 +53,7 @@ interface GameplaySheetActionDialogProps {
   onClose: () => void;
   onRoll: (payload: GameplayRollRequest) => Promise<GameplayCommandResponse>;
   onApplyEffect?: (payload: GameplayEffectApplyRequest) => Promise<GameplayCommandResponse>;
+  onGetActionCatalog?: (idPersonagemJogador: number) => Promise<GameplayActionCatalog>;
   onEffectApplied?: () => void | Promise<void>;
   onDiceVisualOpenChange?: (open: boolean) => void;
   onResultRevealed?: () => void;
@@ -48,6 +61,8 @@ interface GameplaySheetActionDialogProps {
   favoriteSaving?: boolean;
   onSaveFavorite?: (payload: GameplayFavoriteRollUpsert) => Promise<unknown>;
   onRemoveFavorite?: (idFavorito: string) => Promise<unknown>;
+  effectTargets?: GameplayCharacterOption[];
+  isMaster?: boolean;
 }
 
 const modeOptions = [
@@ -114,6 +129,7 @@ export const GameplaySheetActionDialog = ({
   onClose,
   onRoll,
   onApplyEffect,
+  onGetActionCatalog,
   onEffectApplied,
   onDiceVisualOpenChange,
   onResultRevealed,
@@ -121,6 +137,8 @@ export const GameplaySheetActionDialog = ({
   favoriteSaving = false,
   onSaveFavorite,
   onRemoveFavorite,
+  effectTargets = [],
+  isMaster = false,
 }: GameplaySheetActionDialogProps) => {
   const spec = useMemo(() => actionTest(source), [source]);
   const weapon = source?.item?.tipo === 'arma';
@@ -138,9 +156,14 @@ export const GameplaySheetActionDialog = ({
   const [diceError, setDiceError] = useState<string | null>(null);
   const [applyingEffect, setApplyingEffect] = useState<string | null>(null);
   const [appliedEffects, setAppliedEffects] = useState<string[]>([]);
+  const [effectTargetId, setEffectTargetId] = useState<number | ''>('');
+  const [actionCatalog, setActionCatalog] = useState<GameplayActionCatalog | null>(null);
+  const [effectMitigations, setEffectMitigations] = useState<Record<string, string>>({});
+  const [effectDefenses, setEffectDefenses] = useState<Record<string, string[]>>({});
   const diceRequestStartedRef = useRef(false);
   const resultNotificationSentRef = useRef(false);
   const revisionRef = useRef(0);
+  const effectTargetRevisionsRef = useRef(new Map<number, number>());
 
   const attributes = useMemo(() => {
     const status = parseStatus(character?.personagem.statusJson);
@@ -192,8 +215,30 @@ export const GameplaySheetActionDialog = ({
     resultNotificationSentRef.current = false;
     setApplyingEffect(null);
     setAppliedEffects([]);
+    setEffectTargetId('');
+    setEffectMitigations({});
+    setEffectDefenses({});
     revisionRef.current = character?.personagem.revisaoRuntime ?? 0;
   }, [character?.personagem.revisaoRuntime, favorite, fireModeOptions, open, operations, rangeOptions, spec?.codigoAtributo, spec?.modo]);
+
+  useEffect(() => {
+    if (!open || !character || !onGetActionCatalog) {
+      setActionCatalog(null);
+      return;
+    }
+    let active = true;
+    void onGetActionCatalog(character.personagem.idpersonagemJogador)
+      .then((catalog) => { if (active) setActionCatalog(catalog); })
+      .catch(() => { if (active) setActionCatalog(null); });
+    return () => { active = false; };
+  }, [character, onGetActionCatalog, open]);
+
+  useEffect(() => {
+    effectTargetRevisionsRef.current = new Map(effectTargets.map((target) => [
+      target.personagem.idpersonagemJogador,
+      target.personagem.revisaoRuntime ?? 0,
+    ]));
+  }, [effectTargets]);
 
   useEffect(() => {
     if (diceOpen || !response?.rolagem || resultNotificationSentRef.current) return;
@@ -278,20 +323,48 @@ export const GameplaySheetActionDialog = ({
     }
   };
 
-  const handleApplyEffect = async (effectCode: string) => {
+  const handleApplyEffect = async (effect: GameplayEffectProposal) => {
     const sourceEventId = response?.evento?.idEvento;
     if (!onApplyEffect || !sourceEventId) return;
-    setApplyingEffect(effectCode);
+    const selectedTargetId = effect.exigeAlvo ? Number(effectTargetId) : undefined;
+    if (effect.exigeAlvo && (!isMaster || !selectedTargetId)) {
+      setError('Selecione o personagem que receberá o efeito.');
+      return;
+    }
+    const expectedRevision = selectedTargetId
+      ? effectTargetRevisionsRef.current.get(selectedTargetId)
+      : revisionRef.current;
+    if (expectedRevision === undefined) {
+      setError('A ficha do alvo precisa ser atualizada antes de aplicar o efeito.');
+      return;
+    }
+    const isDamage = normalizeCode(effect.tipo) === 'DANO';
+    const mitigationText = effectMitigations[effect.codigo]?.trim() ?? '';
+    const mitigation = mitigationText === '' ? 0 : Number(mitigationText);
+    if (isDamage && (!Number.isInteger(mitigation) || mitigation < 0 || mitigation > effect.valor)) {
+      setError(`Informe um dano mitigado entre 0 e ${effect.valor}.`);
+      return;
+    }
+    setApplyingEffect(effect.codigo);
     setError(null);
     try {
       const applied = await onApplyEffect({
         chaveIdempotencia: crypto.randomUUID(),
         idEventoOrigem: sourceEventId,
-        codigoEfeito: effectCode,
-        revisaoPersonagemEsperada: revisionRef.current,
+        codigoEfeito: effect.codigo,
+        idPersonagemAlvo: selectedTargetId,
+        revisaoPersonagemEsperada: expectedRevision,
+        danoMitigadoConfirmado: isDamage ? mitigation : undefined,
+        defesasUtilizadas: isDamage ? (effectDefenses[effect.codigo] ?? []) : undefined,
       });
-      if (applied.aplicacao) revisionRef.current = applied.aplicacao.revisaoPersonagem;
-      setAppliedEffects((current) => [...new Set([...current, effectCode])]);
+      if (applied.aplicacao) {
+        if (selectedTargetId) {
+          effectTargetRevisionsRef.current.set(selectedTargetId, applied.aplicacao.revisaoPersonagem);
+        } else {
+          revisionRef.current = applied.aplicacao.revisaoPersonagem;
+        }
+      }
+      setAppliedEffects((current) => [...new Set([...current, effect.codigo])]);
       await onEffectApplied?.();
     } catch (requestError) {
       setError(getApiErrorMessage(requestError, 'Não foi possível aplicar o efeito.'));
@@ -361,23 +434,84 @@ export const GameplaySheetActionDialog = ({
                 <small key={`roll-${index + 1}`}>Ação {index + 1}: {getGameplayRollSummary(individual)}</small>
               ))}
               {response.rolagem.avisos?.map((notice) => <small key={notice.codigo}>{notice.mensagem}</small>)}
+              {response.rolagem.efeitosPropostos?.some((effect) => effect.podeAplicar && effect.exigeAlvo) && isMaster && effectTargets.length > 0 && (
+                <Select
+                  label="Alvo dos efeitos"
+                  theme={theme}
+                  neon={neon}
+                  value={effectTargetId}
+                  onChange={(event) => setEffectTargetId(event.target.value ? Number(event.target.value) : '')}
+                  options={effectTargets.map((target) => ({
+                    value: target.personagem.idpersonagemJogador,
+                    label: target.personagem.nome,
+                  }))}
+                  width="100%"
+                />
+              )}
               {response.rolagem.efeitosPropostos?.map((effect) => (
                 !effect.podeAplicar ? (
                   <small key={effect.codigo}>{effect.nome} · {effect.motivoIndisponivel || 'efeito indisponível'}</small>
-                ) : effect.exigeAlvo ? (
+                ) : effect.exigeAlvo && (!isMaster || effectTargets.length === 0) ? (
                   <small key={effect.codigo}>{effect.nome} · escolha do alvo fica com o mestre.</small>
                 ) : (
-                  <CyberButton
-                    key={effect.codigo}
-                    theme={theme}
-                    neon={neon}
-                    colorType="primary"
-                    width="fit-content"
-                    text={appliedEffects.includes(effect.codigo) ? 'Aplicado' : effect.nome}
-                    loading={applyingEffect === effect.codigo}
-                    disabled={!onApplyEffect || Boolean(response.simulacao) || appliedEffects.includes(effect.codigo) || Boolean(applyingEffect)}
-                    onClick={() => void handleApplyEffect(effect.codigo)}
-                  />
+                  <SheetEffectFields key={effect.codigo}>
+                    {isMaster && normalizeCode(effect.tipo) === 'DANO' && (
+                      <>
+                        <InputText
+                          theme={theme}
+                          neon={neon}
+                          label={`Dano mitigado (de ${effect.valor})`}
+                          type="number"
+                          value={effectMitigations[effect.codigo] ?? '0'}
+                          onChange={(event) => setEffectMitigations((current) => ({
+                            ...current,
+                            [effect.codigo]: event.target.value,
+                          }))}
+                          width="100%"
+                        />
+                        {Boolean(actionCatalog?.defesas.length) && (
+                          <div>
+                            <p>Defesas utilizadas, na ordem:</p>
+                            <SheetDefenseOptions>
+                              {actionCatalog!.defesas.map((defense) => {
+                                const selected = effectDefenses[effect.codigo] ?? [];
+                                const selectionOrder = selected.indexOf(defense.codigo);
+                                return (
+                                  <SheetDefenseButton
+                                    key={defense.codigo}
+                                    type="button"
+                                    $selected={selectionOrder >= 0}
+                                    onClick={() => setEffectDefenses((current) => {
+                                      const values = current[effect.codigo] ?? [];
+                                      return {
+                                        ...current,
+                                        [effect.codigo]: values.includes(defense.codigo)
+                                          ? values.filter((code) => code !== defense.codigo)
+                                          : [...values, defense.codigo],
+                                      };
+                                    })}
+                                  >
+                                    {selectionOrder >= 0 ? `${selectionOrder + 1}. ` : ''}{defense.nome}
+                                  </SheetDefenseButton>
+                                );
+                              })}
+                            </SheetDefenseOptions>
+                          </div>
+                        )}
+                        <p>O mestre confirma a mitigação; a engine registra o dano bruto, o dano final e a ordem aplicada.</p>
+                      </>
+                    )}
+                    <CyberButton
+                      theme={theme}
+                      neon={neon}
+                      colorType="primary"
+                      width="fit-content"
+                      text={appliedEffects.includes(effect.codigo) ? 'Aplicado' : effect.nome}
+                      loading={applyingEffect === effect.codigo}
+                      disabled={!onApplyEffect || Boolean(response.simulacao) || appliedEffects.includes(effect.codigo) || Boolean(applyingEffect)}
+                      onClick={() => void handleApplyEffect(effect)}
+                    />
+                  </SheetEffectFields>
                 )
               ))}
             </SheetActionResult>

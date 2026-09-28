@@ -113,6 +113,7 @@ export interface ArmaAtributos {
   modoModificadores?: ModoModificadoresArma | null;
   acessorios?: AcessorioAnexado[];
   efeito?: string;
+  condicoes?: GameplayConditionEffectConfig[];
   tipoArma?: ArmaTipo;
   tipoDano?: ArmaTipoDano;
   danoBase?: number;
@@ -126,6 +127,11 @@ export interface ArmaAtributos {
   cadencia?: number;
   capacidadeUso?: number;
   capacidadeMunicao?: number;
+  /** Habilita a proposta autoritativa de consumo após uma rolagem. */
+  controlaMunicao?: boolean;
+  municaoAtual?: number;
+  custoMunicaoTiro?: number;
+  custoMunicaoRajada?: number;
   gastoEstaminaPorAtaque?: number;
   acerto?: DadoAcerto;
   duracaoEfeito?: string;
@@ -144,6 +150,7 @@ export interface TrajeAtributos {
   aplicaTeste?: boolean;
   teste?: GameplayTestSpec;
   efeito?: string;
+  condicoes?: GameplayConditionEffectConfig[];
   tipoTraje?: TrajeTipo;
   armaduraBase: number;
   protecaoBase: number;
@@ -157,6 +164,7 @@ export interface ConsumiveisAtributos {
   aplicaTeste?: boolean;
   teste?: GameplayTestSpec;
   efeito?: string;
+  condicoes?: GameplayConditionEffectConfig[];
   especial?: string;
   restaura?: {
     vida?: number;
@@ -172,6 +180,7 @@ export interface AcessorioAtributos {
   modificadores?: ModificadoresArma;
   compatibilidade?: 'todas' | ModoModificadoresArma;
   efeito?: string;
+  condicoes?: GameplayConditionEffectConfig[];
   bonus?: string[];
   slot?: string;
   duracao?: string;
@@ -191,6 +200,12 @@ export interface ModificadoresArma {
   efeitos?: string[];
 }
 
+export interface GameplayConditionEffectConfig {
+  codigo: string;
+  valor?: number;
+  duracao?: number;
+}
+
 /** Snapshot da instalação: alterações futuras do catálogo não reescrevem a ficha. */
 export interface AcessorioAnexado {
   idItemBase: string;
@@ -202,6 +217,7 @@ export interface OutrosAtributos {
   aplicaTeste?: boolean;
   teste?: GameplayTestSpec;
   efeito?: string;
+  condicoes?: GameplayConditionEffectConfig[];
   especial?: string;
   duracao?: string;
 }
@@ -210,6 +226,7 @@ export interface ImplanteAtributos {
   aplicaTeste?: boolean;
   teste?: GameplayTestSpec;
   efeito?: string;
+  condicoes?: GameplayConditionEffectConfig[];
   parteCorpo?: 'mao' | 'braco' | 'pe' | 'perna' | 'corpo' | 'ocular' | 'outro';
   lado?: 'direito' | 'esquerdo' | 'ambos' | 'nao-se-aplica';
   material?: 'simples' | 'carbono' | 'blindada' | 'arcana' | 'titanio' | 'sicmithril' | 'outro';

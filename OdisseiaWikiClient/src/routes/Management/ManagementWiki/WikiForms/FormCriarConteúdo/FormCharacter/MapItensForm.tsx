@@ -11,7 +11,7 @@ import { catalogReferenceOptions, ItemFormOption, SistemaItemFormCatalog } from 
 import { WeaponModifiers } from '../../../../../../components/WeaponModifiers/WeaponModifiers';
 import { WeaponAccessories } from '../../../../../../components/WeaponAccessories/WeaponAccessories';
 import { getWeaponModifierMode } from '../../../../../../utils/weaponModifiers';
-import type { AcessorioAtributos } from '../../../../../../models/Itens';
+import type { AcessorioAtributos, GameplayConditionEffectConfig } from '../../../../../../models/Itens';
 import type { GameplayTestSpec } from '../../../../../../models/Gameplay';
 
 interface BaseProps {
@@ -193,6 +193,58 @@ const TestSpecificationFields = ({
   );
 };
 
+const ConditionEffectFields = ({
+  value = [],
+  onChange,
+  theme,
+  neon,
+  options = [],
+}: {
+  value?: GameplayConditionEffectConfig[];
+  onChange: (value: GameplayConditionEffectConfig[]) => void;
+  theme: 'dark' | 'light';
+  neon: 'on' | 'off';
+  options?: ItemFormOption[];
+}) => {
+  if (options.length === 0) return null;
+  const update = (index: number, changes: Partial<GameplayConditionEffectConfig>) => onChange(
+    value.map((condition, currentIndex) => currentIndex === index ? { ...condition, ...changes } : condition),
+  );
+  const available = options.filter((option) => !value.some((condition) => condition.codigo === option.value));
+  return (
+    <AttributeSubsection theme={theme} neon={neon}>
+      <AttributeSubsectionTitle theme={theme} neon={neon}>Condições propostas</AttributeSubsectionTitle>
+      <p>A condição será apenas proposta após a rolagem. O mestre confirma o alvo e pode alterar os valores no combate.</p>
+      {value.map((condition, index) => (
+        <AttributeRow $columns={4} key={`${condition.codigo}-${index}`}>
+          <Select
+            label="Condição"
+            theme={theme}
+            neon={neon}
+            value={condition.codigo}
+            options={options}
+            onChange={(event) => update(index, { codigo: event.target.value })}
+            width="100%"
+          />
+          <InputText label="Valor (opcional)" type="number" theme={theme} neon={neon} value={condition.valor ?? ''} onChange={(event) => update(index, { valor: event.target.value === '' ? undefined : Number(event.target.value) })} />
+          <InputText label="Duração (opcional)" type="number" theme={theme} neon={neon} value={condition.duracao ?? ''} onChange={(event) => update(index, { duracao: event.target.value === '' ? undefined : Number(event.target.value) })} />
+          <CyberButton theme={theme} neon={neon} colorType="secondary" width="100%" text="Remover" onClick={() => onChange(value.filter((_, currentIndex) => currentIndex !== index))} />
+        </AttributeRow>
+      ))}
+      {available.length > 0 && (
+        <CyberButton
+          theme={theme}
+          neon={neon}
+          colorType="primary"
+          width="fit-content"
+          text="Adicionar condição"
+          onClick={() => onChange([...value, { codigo: available[0].value }])}
+        />
+      )}
+    </AttributeSubsection>
+  );
+};
+
 export const ArmaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon, managementLayout = false, sistemaItemCatalogo }) => {
   const initialValue = (value ?? {}) as ArmaAtributos;
   const local: ArmaAtributos = {
@@ -201,6 +253,10 @@ export const ArmaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme,
     cadencia: initialValue.cadencia ?? initialValue.ataquesPorTurno ?? 1,
     capacidadeUso: initialValue.capacidadeUso ?? 0,
     capacidadeMunicao: initialValue.capacidadeMunicao ?? initialValue.municao?.capacidade ?? 0,
+    controlaMunicao: initialValue.controlaMunicao ?? false,
+    municaoAtual: initialValue.municaoAtual ?? initialValue.municao?.atual ?? initialValue.capacidadeMunicao ?? initialValue.municao?.capacidade ?? 0,
+    custoMunicaoTiro: initialValue.custoMunicaoTiro ?? 1,
+    custoMunicaoRajada: initialValue.custoMunicaoRajada ?? 0,
     gastoEstaminaPorAtaque: initialValue.gastoEstaminaPorAtaque ?? 0,
     bonus: initialValue.bonus ?? [],
     especial: initialValue.especial ?? '',
@@ -216,9 +272,18 @@ export const ArmaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme,
     }
 
     if (key === 'capacidadeMunicao') {
+      const capacity = Number(val) || 0;
+      updated.municaoAtual = Math.min(local.municaoAtual ?? capacity, capacity);
       updated.municao = {
-        capacidade: Number(val) || 0,
-        atual: local.municao?.atual ?? 0,
+        capacidade: capacity,
+        atual: updated.municaoAtual,
+      };
+    }
+
+    if (key === 'municaoAtual') {
+      updated.municao = {
+        capacidade: local.capacidadeMunicao ?? local.municao?.capacidade ?? 0,
+        atual: Number(val) || 0,
       };
     }
 
@@ -259,8 +324,21 @@ export const ArmaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme,
         </AttributeRow>
         <AttributeRow $columns={2}>
           <InputText label={`Estamina por ação${getPrimeiroAtaqueComGastoEstamina(local.tipoArma) === 2 ? ' (2ª+)' : ''}`} type="number" theme={theme} neon={neon} value={local.gastoEstaminaPorAtaque ?? ''} onChange={e => handleChange('gastoEstaminaPorAtaque', e.target.value === '' ? undefined : Number(e.target.value))} />
-          <Select label="Acerto" theme={theme} neon={neon} value={normalizeDadoAcerto(local.acerto)} onChange={e => handleChange('acerto', e.target.value as DadoAcerto)} options={catalogReferenceOptions(sistemaItemCatalogo, 'Outro', ACERTO_DADO_OPTIONS).filter((option) => /^d(?:6|8|20)$/i.test(option.value)).map((option) => ({ ...option, value: option.value.toUpperCase() }))} width="100%" />
+          <Select label="Acerto" theme={theme} neon={neon} value={normalizeDadoAcerto(local.acerto)} onChange={e => handleChange('acerto', e.target.value as DadoAcerto)} options={catalogReferenceOptions(sistemaItemCatalogo, 'Outro', ACERTO_DADO_OPTIONS).filter((option) => /^d\d+$/i.test(option.value)).map((option) => ({ ...option, value: option.value.toUpperCase() }))} width="100%" />
         </AttributeRow>
+        <CheckBox
+          neon={neon}
+          label="Controlar munição pela engine"
+          checked={Boolean(local.controlaMunicao)}
+          onChange={(controlaMunicao) => handleChange('controlaMunicao', controlaMunicao)}
+        />
+        {local.controlaMunicao && (
+          <AttributeRow $columns={3}>
+            <InputText label="Munição atual" type="number" theme={theme} neon={neon} value={local.municaoAtual ?? ''} onChange={e => handleChange('municaoAtual', e.target.value === '' ? undefined : Number(e.target.value))} />
+            <InputText label="Munição por tiro" type="number" theme={theme} neon={neon} value={local.custoMunicaoTiro ?? ''} onChange={e => handleChange('custoMunicaoTiro', e.target.value === '' ? undefined : Number(e.target.value))} />
+            <InputText label="Munição por rajada" type="number" theme={theme} neon={neon} value={local.custoMunicaoRajada ?? ''} onChange={e => handleChange('custoMunicaoRajada', e.target.value === '' ? undefined : Number(e.target.value))} />
+          </AttributeRow>
+        )}
       </ManagementAttributeGroup>
 
       <Select label="Modificadores de combate" theme={theme} neon={neon} width="100%"
@@ -279,6 +357,13 @@ export const ArmaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme,
       {local.aplicaTeste !== false && (
         <TestSpecificationFields value={local.teste} onChange={(teste) => handleChange('teste', teste)} theme={theme} neon={neon} weapon testOptions={sistemaItemCatalogo?.testOptions} />
       )}
+      <ConditionEffectFields
+        value={local.condicoes}
+        onChange={(condicoes) => handleChange('condicoes', condicoes)}
+        theme={theme}
+        neon={neon}
+        options={sistemaItemCatalogo?.conditionOptions}
+      />
 
       <ManagementAttributeGroup enabled={managementLayout} title="Efeitos e propriedades" theme={theme} neon={neon}>
         <AttributeRow>
@@ -337,6 +422,13 @@ export const TrajeAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme
         <InputText label="Efeito" theme={theme} neon={neon} value={local.efeito ?? ''} onChange={e => handleChange('efeito', e.target.value)} />
       </AttributeRow>
       <TestSpecificationFields value={local.teste} onChange={(teste) => handleChange('teste', teste)} theme={theme} neon={neon} testOptions={sistemaItemCatalogo?.testOptions} />
+      <ConditionEffectFields
+        value={local.condicoes}
+        onChange={(condicoes) => handleChange('condicoes', condicoes)}
+        theme={theme}
+        neon={neon}
+        options={sistemaItemCatalogo?.conditionOptions}
+      />
     </FormItemAtributos>
   );
 };
@@ -452,6 +544,13 @@ export const ImplanteAtributosForm: React.FC<BaseProps> = ({ value, onChange, th
       neon={neon}
       testOptions={sistemaItemCatalogo?.testOptions}
     />
+    <ConditionEffectFields
+      value={atributos.condicoes}
+      onChange={(condicoes) => update({ condicoes })}
+      theme={theme}
+      neon={neon}
+      options={sistemaItemCatalogo?.conditionOptions}
+    />
   </FormItemAtributos>;
 };
 
@@ -472,6 +571,7 @@ export const ConsumiveisAtributosForm: React.FC<BaseProps> = ({ value, onChange,
       <InputText label="Efeito" theme={theme} neon={neon} value={value?.efeito || ""} onChange={e => onChange({ ...value, efeito: e.target.value })} />
     </AttributeRow>
     <TestSpecificationFields value={value?.teste} onChange={(teste) => onChange({ ...value, teste, aplicaTeste: Boolean(teste) })} theme={theme} neon={neon} testOptions={sistemaItemCatalogo?.testOptions} />
+    <ConditionEffectFields value={value?.condicoes} onChange={(condicoes) => onChange({ ...value, condicoes })} theme={theme} neon={neon} options={sistemaItemCatalogo?.conditionOptions} />
   </FormItemAtributos>
 );
 
@@ -491,6 +591,7 @@ export const AcessorioAtributosForm: React.FC<BaseProps> = ({ value, onChange, t
       <InputText label="Efeito" theme={theme} neon={neon} value={value?.efeito || ""} onChange={e => onChange({ ...value, efeito: e.target.value })} />
     </AttributeRow>
     <TestSpecificationFields value={value?.teste} onChange={(teste) => onChange({ ...value, teste, aplicaTeste: Boolean(teste) })} theme={theme} neon={neon} testOptions={sistemaItemCatalogo?.testOptions} />
+    <ConditionEffectFields value={value?.condicoes} onChange={(condicoes) => onChange({ ...value, condicoes })} theme={theme} neon={neon} options={sistemaItemCatalogo?.conditionOptions} />
   </FormItemAtributos>
 );
 
@@ -506,6 +607,7 @@ export const OutrosAtributosForm: React.FC<BaseProps> = ({ value, onChange, them
       <InputText label="Efeito" theme={theme} neon={neon} value={value?.efeito || ""} onChange={e => onChange({ ...value, efeito: e.target.value })} />
     </AttributeRow>
     <TestSpecificationFields value={value?.teste} onChange={(teste) => onChange({ ...value, teste, aplicaTeste: Boolean(teste) })} theme={theme} neon={neon} testOptions={sistemaItemCatalogo?.testOptions} />
+    <ConditionEffectFields value={value?.condicoes} onChange={(condicoes) => onChange({ ...value, condicoes })} theme={theme} neon={neon} options={sistemaItemCatalogo?.conditionOptions} />
   </FormItemAtributos>
 );
 
@@ -520,7 +622,7 @@ export const atributosFormMap: Record<string, React.FC<BaseProps>> = {
 
 
 
-export const AtaqueAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon }) => {
+export const AtaqueAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon, sistemaItemCatalogo }) => {
   const [local, setLocal] = React.useState(
     withNormalizedAcerto(value, { dano: null, especial: "", cooldown: "", bonus: "" })
   );
@@ -556,6 +658,14 @@ export const AtaqueAtributosForm: React.FC<BaseProps> = ({ value, onChange, them
         onChange={e => handleChange('cooldown', e.target.value)}
       />
       <InputText
+        label="Cooldown (turnos)"
+        type="number"
+        theme={theme}
+        neon={neon}
+        value={local.cooldownTurnos ?? ''}
+        onChange={e => handleChange('cooldownTurnos', e.target.value === '' ? undefined : Math.max(0, Number(e.target.value)))}
+      />
+      <InputText
         label="Bonûs"
         theme={theme}
         neon={neon}
@@ -564,11 +674,12 @@ export const AtaqueAtributosForm: React.FC<BaseProps> = ({ value, onChange, them
       />
       <AcertoDadoSelect value={local.acerto} onChange={(acerto) => handleChange('acerto', acerto)} theme={theme} neon={neon} />
       <TestSpecificationFields value={local.teste} onChange={(teste) => handleChange('teste', teste)} theme={theme} neon={neon} />
+      <ConditionEffectFields value={local.condicoes} onChange={(condicoes) => handleChange('condicoes', condicoes)} theme={theme} neon={neon} options={sistemaItemCatalogo?.conditionOptions} />
     </FormItemAtributos>
   );
 };
 
-export const SuporteAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon }) => {
+export const SuporteAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon, sistemaItemCatalogo }) => {
   const [local, setLocal] = React.useState(
     withNormalizedAcerto(value, { especial: "", cooldown: "", bonus: "" })
   );
@@ -595,6 +706,7 @@ export const SuporteAtributosForm: React.FC<BaseProps> = ({ value, onChange, the
         value={local.cooldown}
         onChange={e => handleChange('cooldown', e.target.value)}
       />
+      <InputText label="Cooldown (turnos)" type="number" theme={theme} neon={neon} value={local.cooldownTurnos ?? ''} onChange={e => handleChange('cooldownTurnos', e.target.value === '' ? undefined : Math.max(0, Number(e.target.value)))} />
       <InputText
         label="Bonûs"
         theme={theme}
@@ -604,11 +716,12 @@ export const SuporteAtributosForm: React.FC<BaseProps> = ({ value, onChange, the
       />
       <AcertoDadoSelect value={local.acerto} onChange={(acerto) => handleChange('acerto', acerto)} theme={theme} neon={neon} />
       <TestSpecificationFields value={local.teste} onChange={(teste) => handleChange('teste', teste)} theme={theme} neon={neon} />
+      <ConditionEffectFields value={local.condicoes} onChange={(condicoes) => handleChange('condicoes', condicoes)} theme={theme} neon={neon} options={sistemaItemCatalogo?.conditionOptions} />
     </FormItemAtributos>
   );
 };
 
-export const BuffAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon }) => {
+export const BuffAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon, sistemaItemCatalogo }) => {
   const [local, setLocal] = React.useState(
     withNormalizedAcerto(value, { especial: "", cooldown: "", bonus: "" })
   );
@@ -635,6 +748,7 @@ export const BuffAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme,
         value={local.cooldown}
         onChange={e => handleChange('cooldown', e.target.value)}
       />
+      <InputText label="Cooldown (turnos)" type="number" theme={theme} neon={neon} value={local.cooldownTurnos ?? ''} onChange={e => handleChange('cooldownTurnos', e.target.value === '' ? undefined : Math.max(0, Number(e.target.value)))} />
       <InputText
         label="Bonûs"
         theme={theme}
@@ -644,11 +758,12 @@ export const BuffAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme,
       />
       <AcertoDadoSelect value={local.acerto} onChange={(acerto) => handleChange('acerto', acerto)} theme={theme} neon={neon} />
       <TestSpecificationFields value={local.teste} onChange={(teste) => handleChange('teste', teste)} theme={theme} neon={neon} />
+      <ConditionEffectFields value={local.condicoes} onChange={(condicoes) => handleChange('condicoes', condicoes)} theme={theme} neon={neon} options={sistemaItemCatalogo?.conditionOptions} />
     </FormItemAtributos>
   );
 };
 
-export const DebuffAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon }) => {
+export const DebuffAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon, sistemaItemCatalogo }) => {
   const [local, setLocal] = React.useState(
     withNormalizedAcerto(value, { especial: "", cooldown: "", bonus: "" })
   );
@@ -675,6 +790,7 @@ export const DebuffAtributosForm: React.FC<BaseProps> = ({ value, onChange, them
         value={local.cooldown}
         onChange={e => handleChange('cooldown', e.target.value)}
       />
+      <InputText label="Cooldown (turnos)" type="number" theme={theme} neon={neon} value={local.cooldownTurnos ?? ''} onChange={e => handleChange('cooldownTurnos', e.target.value === '' ? undefined : Math.max(0, Number(e.target.value)))} />
       <InputText
         label="Bonûs"
         theme={theme}
@@ -684,6 +800,7 @@ export const DebuffAtributosForm: React.FC<BaseProps> = ({ value, onChange, them
       />
       <AcertoDadoSelect value={local.acerto} onChange={(acerto) => handleChange('acerto', acerto)} theme={theme} neon={neon} />
       <TestSpecificationFields value={local.teste} onChange={(teste) => handleChange('teste', teste)} theme={theme} neon={neon} />
+      <ConditionEffectFields value={local.condicoes} onChange={(condicoes) => handleChange('condicoes', condicoes)} theme={theme} neon={neon} options={sistemaItemCatalogo?.conditionOptions} />
     </FormItemAtributos>
   );
 };

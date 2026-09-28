@@ -92,6 +92,20 @@ public sealed class GameplayEngineRepository : IGameplayEngineRepository
             item => item.IdpersonagemJogador == idPersonagemJogador,
             cancellationToken);
 
+    public async Task<MesaCombate?> GetActiveCombatForUpdateAsync(
+        long idMesaSessao,
+        CancellationToken cancellationToken = default)
+    {
+        MesaCombate? combat = await _context.MesaCombates
+            .FromSqlInterpolated($"SELECT * FROM `mesacombates` WHERE `IDMesaSessao` = {idMesaSessao} AND `Status` <> 'Encerrado' FOR UPDATE")
+            .SingleOrDefaultAsync(cancellationToken);
+        if (combat is null) return null;
+        await _context.Entry(combat).Collection(item => item.Participantes).LoadAsync(cancellationToken);
+        await _context.Entry(combat).Collection(item => item.Condicoes).LoadAsync(cancellationToken);
+        await _context.Entry(combat).Collection(item => item.Cooldowns).LoadAsync(cancellationToken);
+        return combat;
+    }
+
     public Task<MesaEvento?> GetEventAsync(
         long idMesaEvento,
         CancellationToken cancellationToken = default)
@@ -124,6 +138,12 @@ public sealed class GameplayEngineRepository : IGameplayEngineRepository
             .Include(item => item.Recursos)
             .Include(item => item.Acoes)
             .Include(item => item.ResultadosDado)
+            .Include(item => item.Condicoes)
+            .Include(item => item.Descansos)
+            .Include(item => item.Morte)
+            .Include(item => item.TiposDano)
+            .Include(item => item.TiposDefesa)
+            .Include(item => item.SkillConfig)
             .FirstOrDefaultAsync(
             item => item.IdSistemaVersao == idSistemaVersao,
             cancellationToken);

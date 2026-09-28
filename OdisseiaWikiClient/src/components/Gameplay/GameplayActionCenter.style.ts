@@ -533,6 +533,44 @@ export const ResultCard = styled.div<{ $outcome?: 'success' | 'failure' | 'neutr
   p { margin: 0; color: var(--lightGrey); font-size: 0.75rem; overflow-wrap: anywhere; }
 `;
 
+export const EffectApplicationFields = styled.div`
+  display: grid;
+  gap: 10px;
+  margin-top: 4px;
+  padding: 12px;
+  border-left: 2px solid var(--clearneonBlue);
+  background: rgba(0, 5, 14, 0.52);
+  text-align: left;
+
+  > div { min-width: 0; }
+`;
+
+export const EffectDefenseOptions = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+`;
+
+export const EffectDefenseButton = styled.button<{ $selected: boolean }>`
+  min-height: 30px;
+  padding: 5px 9px;
+  border: 1px solid ${({ $selected }) => $selected ? 'var(--clearneonBlue)' : 'var(--grey)'};
+  color: ${({ $selected }) => $selected ? 'var(--clearneonBlue)' : 'var(--lightGrey)'};
+  background: ${({ $selected }) => $selected ? 'rgba(0, 188, 255, 0.1)' : 'rgba(0, 5, 14, 0.72)'};
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.68rem;
+  transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
+
+  &:hover,
+  &:focus-visible {
+    border-color: var(--clearneonBlue);
+    color: var(--clearneonBlue);
+    outline: none;
+  }
+`;
+
 export const RollDialogResult = styled(ResultCard)`
   padding: 18px;
   text-align: center;

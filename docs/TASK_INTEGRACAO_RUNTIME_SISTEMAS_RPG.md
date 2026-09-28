@@ -1,5 +1,8 @@
 # Task — Tornar o Sistema de RPG a fonte efetiva das regras do projeto
 
+> **Estado:** concluída no escopo de integração do runtime.
+> Este arquivo preserva o plano histórico da implementação. O estado atual das regras está em [RPG_SYSTEMS.md](RPG_SYSTEMS.md), e o contrato funcional da Mesa está em [GAMEPLAY_ENGINE.md](GAMEPLAY_ENGINE.md).
+
 ## Leitura obrigatória antes de qualquer alteração
 
 Antes de modificar o código, leia integralmente:

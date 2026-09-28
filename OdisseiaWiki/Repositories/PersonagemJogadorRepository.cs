@@ -1,9 +1,12 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using OdisseiaWiki.Data;
 using System.Data;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using OdisseiaWiki.Enums;
 using OdisseiaWiki.Models;
 using OdisseiaWiki.Repositories.Interfaces;
+using OdisseiaWiki.Services.Helpers;
 
 namespace OdisseiaWiki.Repositories
 {
@@ -170,6 +173,31 @@ namespace OdisseiaWiki.Repositories
                         sessoesAtivas[mesaBloqueada.Idmesa] = sessaoBloqueada;
                     }
 
+                    bool mudouDeMesa = idMesaAtual.Value != personagem.Idmesa;
+                    if (mudouDeMesa && sessoesAtivas.Count > 0)
+                        throw new InvalidOperationException("MESA_EM_SESSAO_NAO_PODE_MOVER_PERSONAGEM");
+
+                    MesaSessao? sessao = mudouDeMesa
+                        ? null
+                        : sessoesAtivas.GetValueOrDefault(mesaAtual.Idmesa);
+
+                    // Combat commands lock session -> combat -> character. Keep
+                    // the same order here so simultaneous sheet writes cannot
+                    // deadlock with a combat action for the same participant.
+                    MesaCombate? activeCombat = null;
+                    if (sessao is not null)
+                    {
+                        activeCombat = await _context.MesaCombates
+                            .FromSqlInterpolated($"SELECT * FROM `mesacombates` WHERE `IDMesaSessao` = {sessao.IdMesaSessao} AND `Status` <> 'Encerrado' FOR UPDATE")
+                            .SingleOrDefaultAsync();
+                        if (activeCombat is not null)
+                        {
+                            await _context.Entry(activeCombat).Collection(item => item.Participantes).LoadAsync();
+                            await _context.Entry(activeCombat).Collection(item => item.Condicoes).LoadAsync();
+                            await _context.Entry(activeCombat).Collection(item => item.Cooldowns).LoadAsync();
+                        }
+                    }
+
                     PersonagemJogador? locked = await _context.PersonagemJogadores
                         .FromSqlInterpolated(
                             $"SELECT * FROM `personagensJogador` WHERE `IDPersonagemJogador` = {personagem.IdpersonagemJogador} FOR UPDATE")
@@ -179,14 +207,6 @@ namespace OdisseiaWiki.Repositories
 
                     if (locked.Idmesa != idMesaAtual.Value)
                         throw new DbUpdateConcurrencyException("PERSONAGEM_MOVIMENTADO");
-
-                    bool mudouDeMesa = locked.Idmesa != personagem.Idmesa;
-                    if (mudouDeMesa && sessoesAtivas.Count > 0)
-                        throw new InvalidOperationException("MESA_EM_SESSAO_NAO_PODE_MOVER_PERSONAGEM");
-
-                    MesaSessao? sessao = mudouDeMesa
-                        ? null
-                        : sessoesAtivas.GetValueOrDefault(mesaAtual.Idmesa);
 
                     if (sessao is not null)
                     {
@@ -209,6 +229,39 @@ namespace OdisseiaWiki.Repositories
 
                     _context.Entry(locked).CurrentValues.SetValues(personagem);
                     locked.RevisaoRuntime = checked(revisaoEsperada + 1);
+
+                    IReadOnlyList<string> synchronizedConditions = Array.Empty<string>();
+                    MesaCombateParticipante? synchronizedParticipant = null;
+                    if (sessao is not null && activeCombat is not null)
+                    {
+                        synchronizedParticipant = activeCombat.Participantes.FirstOrDefault(item =>
+                            item.IdPersonagemJogador == locked.IdpersonagemJogador &&
+                            item.Status != MesaCombateParticipanteStatus.Removido);
+                        if (synchronizedParticipant is not null)
+                        {
+                            SistemaVersao? version = await _context.SistemaVersoes
+                                .AsNoTracking()
+                                .Include(item => item.Condicoes)
+                                .Include(item => item.Morte)
+                                .Include(item => item.Recursos)
+                                .FirstOrDefaultAsync(item => item.IdSistemaVersao == sessao.IdSistemaVersao);
+                            if (version is not null)
+                            {
+                                synchronizedParticipant.PersonagemJogador = locked;
+                                GameplayConditionSynchronizationResult synchronization =
+                                    GameplayConditionRuntime.SynchronizeState(
+                                        locked,
+                                        activeCombat,
+                                        synchronizedParticipant,
+                                        version,
+                                        audit.IdUsuarioAtor,
+                                        DateTime.UtcNow);
+                                synchronizedConditions = synchronization.Changes;
+                                if (synchronizedConditions.Count > 0)
+                                    activeCombat.Revisao++;
+                            }
+                        }
+                    }
 
                     if (sessao is not null)
                     {
@@ -235,6 +288,10 @@ namespace OdisseiaWiki.Repositories
 
                         sessao.UltimaSequenciaEvento++;
                         sessao.RevisaoEstado++;
+                        string eventDataJson = EnrichRuntimeEvent(
+                            audit.DadosEventoJson,
+                            synchronizedConditions,
+                            synchronizedParticipant);
                         _context.MesaEventos.Add(new MesaEvento
                         {
                             IdMesaSessao = sessao.IdMesaSessao,
@@ -249,7 +306,7 @@ namespace OdisseiaWiki.Repositories
                             IdSistemaVersaoPersonagem = locked.IdSistemaVersao,
                             CodigoRegra = "FICHA_ATUALIZAR",
                             SchemaVersion = 1,
-                            DadosJson = audit.DadosEventoJson,
+                            DadosJson = eventDataJson,
                             OcorreuEmUtc = now,
                         });
                         command.RespostaJson = $$"""{"idPersonagemJogador":{{locked.IdpersonagemJogador}},"revisaoRuntime":{{locked.RevisaoRuntime}},"sequenciaEvento":{{sessao.UltimaSequenciaEvento}}}""";
@@ -266,6 +323,37 @@ namespace OdisseiaWiki.Repositories
                     throw;
                 }
             });
+        }
+
+        private static string EnrichRuntimeEvent(
+            string sourceJson,
+            IReadOnlyList<string> synchronizedConditions,
+            MesaCombateParticipante? participant)
+        {
+            if (synchronizedConditions.Count == 0 && participant is null)
+                return sourceJson;
+            JsonObject root;
+            try
+            {
+                root = JsonNode.Parse(sourceJson) as JsonObject ?? new JsonObject();
+            }
+            catch (JsonException)
+            {
+                root = new JsonObject { ["descricaoOriginal"] = sourceJson };
+            }
+            if (synchronizedConditions.Count > 0)
+                root["condicoesSincronizadas"] = JsonSerializer.SerializeToNode(synchronizedConditions);
+            if (participant is not null)
+            {
+                root["estadoCombate"] = new JsonObject
+                {
+                    ["idParticipante"] = participant.IdMesaCombateParticipante,
+                    ["status"] = participant.Status.ToString(),
+                    ["sucessosSobrevivencia"] = participant.SucessosSobrevivencia,
+                    ["falhasSobrevivencia"] = participant.FalhasSobrevivencia,
+                };
+            }
+            return root.ToJsonString();
         }
 
         public async Task<bool> DeleteAsync(int id)

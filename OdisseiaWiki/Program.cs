@@ -612,6 +612,7 @@ public class Program
         services.AddScoped<IItemService, ItemService>();
         services.AddScoped<IMesaService, MesaService>();
         services.AddScoped<IGameplayEngineService, GameplayEngineService>();
+        services.AddScoped<IGameplayCombatService, GameplayCombatService>();
         services.AddSingleton<IGameplayCommandRateLimiter, GameplayCommandRateLimiter>();
         services.AddScoped<GameplayRollEvaluator>();
         services.AddScoped<GameplayActionResolver>();

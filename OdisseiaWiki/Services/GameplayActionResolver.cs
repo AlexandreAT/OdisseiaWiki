@@ -108,6 +108,16 @@ public sealed class GameplayActionResolver
             IdSistemaVersao = version.IdSistemaVersao,
             DadoTesteGeral = general.DadoTesteGeral,
             Acoes = actions,
+            Defesas = version.TiposDefesa
+                .OrderBy(defense => defense.OrdemAplicacao)
+                .ThenBy(defense => defense.Ordem)
+                .Select(defense => new GameplayDefenseOptionDto
+                {
+                    Codigo = defense.Codigo,
+                    Nome = defense.Nome,
+                    Ordem = defense.OrdemAplicacao,
+                })
+                .ToArray(),
         };
     }
 
@@ -449,6 +459,7 @@ public sealed class GameplayActionResolver
         };
         string actionCode = "USAR_ITEM";
         string displayName = ReadString(item, "nome") ?? "Item";
+        string? conditionMode = null;
 
         if (isWeapon)
         {
@@ -461,6 +472,7 @@ public sealed class GameplayActionResolver
                 return ConvertFailure<WeaponContext, GameplayResolvedAction>(weaponResult);
 
             WeaponContext weapon = weaponResult.Dados;
+            conditionMode = weapon.Mode;
             actionCode = weapon.ActionCode;
             values["operacao"] = weapon.Operation;
             values["modoArma"] = weapon.Mode;
@@ -471,6 +483,12 @@ public sealed class GameplayActionResolver
                 values["danoPorAcertoProposto"] = weapon.DamagePerHit.Value.ToString(CultureInfo.InvariantCulture);
             if (weapon.StaminaPerUse.HasValue)
                 values["estaminaPorUsoProposta"] = weapon.StaminaPerUse.Value.ToString(CultureInfo.InvariantCulture);
+            if (weapon.AmmoCost.HasValue)
+            {
+                values["consumoMunicaoProposto"] = weapon.AmmoCost.Value.ToString(CultureInfo.InvariantCulture);
+                values["municaoAtual"] = weapon.CurrentAmmo!.Value.ToString(CultureInfo.InvariantCulture);
+                values["municaoAposConsumo"] = (weapon.CurrentAmmo.Value - weapon.AmmoCost.Value).ToString(CultureInfo.InvariantCulture);
+            }
             if (weapon.Effects.Count > 0)
                 values["efeitosModificadores"] = string.Join(" | ", weapon.Effects);
             if (weapon.AppliedAccessories.Count > 0)
@@ -481,6 +499,20 @@ public sealed class GameplayActionResolver
                 Codigo = "EFEITOS_NAO_APLICADOS",
                 Mensagem = "Dano, munição, estamina e efeitos foram registrados como proposta; nenhum estado da ficha foi alterado por esta rolagem.",
                 Fallback = false,
+            });
+        }
+
+        (IReadOnlyList<ConditionEffectSnapshot> configuredConditions, IReadOnlyList<string> invalidConditions) =
+            ReadConditionEffects(attributes, conditionMode, version);
+        if (configuredConditions.Count > 0)
+            values["condicoesPropostasJson"] = JsonSerializer.Serialize(configuredConditions, JsonOptions);
+        foreach (string invalidCondition in invalidConditions)
+        {
+            notices.Add(new GameplayExecutionNoticeDto
+            {
+                Codigo = "CONDICAO_NAO_PUBLICADA",
+                Mensagem = $"A condição '{invalidCondition}' foi ignorada porque não existe na versão publicada da Mesa.",
+                Fallback = true,
             });
         }
 
@@ -546,6 +578,21 @@ public sealed class GameplayActionResolver
             ?? ReadString(power, "idMagiaBase")
             ?? ReadString(power, "idPoderBase");
         if (!string.IsNullOrWhiteSpace(powerBaseId)) values["idPoderBase"] = powerBaseId;
+
+        if (version.SkillConfig?.UsaCooldown == true)
+        {
+            int? cooldownTurns = ReadInt(attributes, "cooldownTurnos")
+                ?? ReadInt(power, "cooldownTurnos")
+                ?? ReadPositiveTurnCount(ReadString(attributes, "cooldown"))
+                ?? ReadPositiveTurnCount(ReadString(power, "cooldown"));
+            if (cooldownTurns is > 0)
+                values["cooldownTurnosProposto"] = cooldownTurns.Value.ToString(CultureInfo.InvariantCulture);
+        }
+
+        (IReadOnlyList<ConditionEffectSnapshot> configuredConditions, _) =
+            ReadConditionEffects(attributes, null, version);
+        if (configuredConditions.Count > 0)
+            values["condicoesPropostasJson"] = JsonSerializer.Serialize(configuredConditions, JsonOptions);
 
         return BuildResolved(
             request,
@@ -815,6 +862,40 @@ public sealed class GameplayActionResolver
                 : $"{source.StableId}:{source.Name}")
             .ToList();
 
+        int? ammoCost = null;
+        int? currentAmmo = null;
+        if (mode == "DISTANCIA" && ReadBool(attributes, "controlaMunicao") == true)
+        {
+            int configuredCost = fireMode == "RAJADA"
+                ? ReadInt(attributes, "custoMunicaoRajada") ?? 0
+                : ReadInt(attributes, "custoMunicaoTiro") ?? 0;
+            if (configuredCost <= 0)
+            {
+                return Failure<WeaponContext>(
+                    "MODO_SEM_CONSUMO_MUNICAO",
+                    $"O modo {fireMode!.ToLowerInvariant()} não possui consumo de munição configurado para esta arma.");
+            }
+            currentAmmo = ReadInt(attributes, "municaoAtual")
+                ?? ReadInt(GetObject(attributes, "municao"), "atual")
+                ?? ReadInt(attributes, "capacidadeMunicao")
+                ?? ReadInt(GetObject(attributes, "municao"), "capacidade")
+                ?? 0;
+            try
+            {
+                ammoCost = checked(configuredCost * quantity);
+            }
+            catch (OverflowException)
+            {
+                return Failure<WeaponContext>("CONSUMO_MUNICAO_INVALIDO", "O consumo de munição excede o limite permitido.");
+            }
+            if (currentAmmo < ammoCost)
+            {
+                return Failure<WeaponContext>(
+                    "MUNICAO_INSUFICIENTE",
+                    $"A arma possui {currentAmmo} munições, mas esta ação exige {ammoCost}.");
+            }
+        }
+
         return GameplayOperationResult<WeaponContext>.Ok(new WeaponContext(
             mode == "DISTANCIA" ? "ATACAR_COM_ARMA" : operation == "REVIDAR" ? "REVIDAR_COM_ARMA" : "ATACAR_COM_ARMA",
             operation,
@@ -825,6 +906,8 @@ public sealed class GameplayActionResolver
             modifiers,
             damagePerHit,
             staminaPerUse,
+            ammoCost,
+            currentAmmo,
             effects,
             appliedAccessories));
     }
@@ -852,6 +935,53 @@ public sealed class GameplayActionResolver
                 modifiers));
         }
         return sources;
+    }
+
+    private static (IReadOnlyList<ConditionEffectSnapshot> Effects, IReadOnlyList<string> InvalidCodes) ReadConditionEffects(
+        JsonObject? attributes,
+        string? weaponMode,
+        SistemaVersao version)
+    {
+        if (attributes is null) return (Array.Empty<ConditionEffectSnapshot>(), Array.Empty<string>());
+        var sources = new List<JsonObject> { attributes };
+        if (!string.IsNullOrWhiteSpace(weaponMode))
+        {
+            foreach (JsonObject accessory in GetArray(attributes, "acessorios").OfType<JsonObject>())
+            {
+                JsonObject? accessoryAttributes = GetObject(accessory, "atributos");
+                string compatibility = NormalizeCode(ReadString(accessoryAttributes, "compatibilidade"));
+                if (accessoryAttributes is not null &&
+                    (compatibility.Length == 0 || compatibility == "TODAS" || compatibility == weaponMode))
+                {
+                    sources.Add(accessoryAttributes);
+                }
+            }
+        }
+
+        Dictionary<string, SistemaCondicao> published = version.Condicoes
+            .ToDictionary(condition => NormalizeCode(condition.Codigo), StringComparer.Ordinal);
+        var effects = new List<ConditionEffectSnapshot>();
+        var invalid = new List<string>();
+        foreach (JsonObject entry in sources.SelectMany(source => GetArray(source, "condicoes").OfType<JsonObject>()))
+        {
+            string code = NormalizeCode(ReadString(entry, "codigo"));
+            if (code.Length == 0) continue;
+            if (!published.TryGetValue(code, out SistemaCondicao? rule))
+            {
+                invalid.Add(code);
+                continue;
+            }
+            int? value = ReadInt(entry, "valor");
+            int? duration = ReadInt(entry, "duracao");
+            effects.Add(new ConditionEffectSnapshot(
+                code,
+                rule.Nome,
+                value,
+                duration is >= 0 ? duration : null));
+        }
+        return (
+            effects.GroupBy(effect => effect.Code, StringComparer.Ordinal).Select(group => group.Last()).ToArray(),
+            invalid.Distinct(StringComparer.Ordinal).ToArray());
     }
 
     private static List<SistemaResultadoDado> FindResultRows(
@@ -1208,6 +1338,14 @@ public sealed class GameplayActionResolver
     private static int? TryReadInt(string? source)
         => int.TryParse(source, NumberStyles.Integer, CultureInfo.InvariantCulture, out int value) ? value : null;
 
+    private static int? ReadPositiveTurnCount(string? source)
+    {
+        Match match = Regex.Match(source ?? string.Empty, @"\d+");
+        return match.Success && int.TryParse(match.Value, NumberStyles.None, CultureInfo.InvariantCulture, out int value) && value > 0
+            ? value
+            : null;
+    }
+
     private static string NormalizeCode(string? source)
         => (source ?? string.Empty).Trim().ToUpperInvariant().Replace('-', '_').Replace(' ', '_');
 
@@ -1274,6 +1412,12 @@ public sealed class GameplayActionResolver
         string? StableId,
         JsonObject Modifiers);
 
+    private sealed record ConditionEffectSnapshot(
+        string Code,
+        string Name,
+        int? Value,
+        int? Duration);
+
     private sealed record WeaponContext(
         string ActionCode,
         string Operation,
@@ -1284,6 +1428,8 @@ public sealed class GameplayActionResolver
         IReadOnlyList<GameplayModifierDto> Modifiers,
         int? DamagePerHit,
         int? StaminaPerUse,
+        int? AmmoCost,
+        int? CurrentAmmo,
         IReadOnlyList<string> Effects,
         IReadOnlyList<string> AppliedAccessories);
 }

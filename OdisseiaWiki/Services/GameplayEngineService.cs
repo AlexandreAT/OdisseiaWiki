@@ -648,6 +648,12 @@ public sealed class GameplayEngineService : IGameplayEngineService
                 "Recarregue a ficha e tente aplicar o efeito novamente.");
         }
         string effectCode = NormalizeCode(request.CodigoEfeito);
+        IReadOnlyList<string> requestedDefenses = (request.DefesasUtilizadas ?? new List<string>())
+            .Select(NormalizeCode)
+            .Where(code => !string.IsNullOrWhiteSpace(code))
+            .Distinct(StringComparer.Ordinal)
+            .Take(20)
+            .ToArray();
         string hash = HashPayload(new
         {
             request.IdEventoOrigem,
@@ -655,6 +661,8 @@ public sealed class GameplayEngineService : IGameplayEngineService
             request.IdPersonagemAlvo,
             request.RevisaoSessaoEsperada,
             request.RevisaoPersonagemEsperada,
+            request.DanoMitigadoConfirmado,
+            defesasUtilizadas = requestedDefenses,
         });
         GameplayOperationResult<GameplayCommandResponseDto> result;
         int? changedCharacterId = null;
@@ -720,13 +728,53 @@ public sealed class GameplayEngineService : IGameplayEngineService
                 SistemaVersao? version = await _repository.GetSystemVersionAsync(session.IdSistemaVersao, token);
                 if (version is null)
                     return Conflict<GameplayCommandResponseDto>("VERSAO_NAO_ENCONTRADA", "A versão da sessão não está disponível.");
-                GameplayOperationResult<GameplayEffectMutation> mutationResult = ApplyEffectToCharacter(
-                    target,
-                    proposal,
-                    version);
+
+                bool isDamage = NormalizeCode(proposal.Tipo) == "DANO";
+                int mitigatedDamage = request.DanoMitigadoConfirmado ?? 0;
+                if (!isDamage && (mitigatedDamage > 0 || requestedDefenses.Count > 0))
+                    return Validation<GameplayCommandResponseDto>("MITIGACAO_INCOMPATIVEL", "Defesas só podem ser informadas ao aplicar dano.");
+                if (isDamage && mitigatedDamage > proposal.Valor)
+                    return Validation<GameplayCommandResponseDto>("MITIGACAO_INVALIDA", "O dano mitigado não pode ser maior que o dano bruto.");
+                if (isDamage && (mitigatedDamage > 0 || requestedDefenses.Count > 0) && !isMaster)
+                    return Forbidden<GameplayCommandResponseDto>("MITIGACAO_EXIGE_MESTRE", "Somente o mestre pode confirmar a mitigação e a ordem das defesas.");
+                if (isDamage)
+                {
+                    HashSet<string> publishedDefenses = version.TiposDefesa
+                        .Select(item => NormalizeCode(item.Codigo))
+                        .ToHashSet(StringComparer.Ordinal);
+                    string? invalidDefense = requestedDefenses.FirstOrDefault(code => !publishedDefenses.Contains(code));
+                    if (invalidDefense is not null)
+                        return RuleFailure<GameplayCommandResponseDto>("DEFESA_NAO_PUBLICADA", $"A defesa '{invalidDefense}' não existe na versão publicada do Sistema.");
+                }
+
+                GameplayEffectProposalDto appliedProposal = isDamage
+                    ? CopyEffectProposal(proposal, proposal.Valor - mitigatedDamage)
+                    : proposal;
+                GameplayOperationResult<GameplayEffectMutation> mutationResult = NormalizeCode(proposal.Tipo) switch
+                {
+                    "CONDICAO" => await ApplyConditionEffectAsync(
+                        idMesaSessao,
+                        idUsuario,
+                        target,
+                        appliedProposal,
+                        version,
+                        token),
+                    "COOLDOWN" => await ApplyCooldownEffectAsync(
+                        idMesaSessao,
+                        target,
+                        appliedProposal,
+                        token),
+                    _ => ApplyEffectToCharacter(target, appliedProposal, version),
+                };
                 if (!mutationResult.Sucesso || mutationResult.Dados is null)
                     return ConvertFailure<GameplayEffectMutation, GameplayCommandResponseDto>(mutationResult);
                 GameplayEffectMutation mutation = mutationResult.Dados;
+                IReadOnlyList<string> synchronizedConditions = await SynchronizeActiveCombatStateAsync(
+                    idMesaSessao,
+                    idUsuario,
+                    target,
+                    version,
+                    token);
 
                 DateTime now = DateTime.UtcNow;
                 MesaComando command = NewCommand(
@@ -759,9 +807,13 @@ public sealed class GameplayEngineService : IGameplayEngineService
                     IdPersonagemAlvo = target.IdpersonagemJogador,
                     RevisaoPersonagem = target.RevisaoRuntime,
                     Campo = mutation.Field,
+                    Tipo = mutation.Type,
                     ValorAnterior = mutation.PreviousValue,
                     ValorAplicado = mutation.AppliedDelta,
                     ValorAtual = mutation.CurrentValue,
+                    DanoBruto = isDamage ? proposal.Valor : null,
+                    DanoMitigado = isDamage ? mitigatedDamage : null,
+                    DefesasUtilizadas = isDamage ? requestedDefenses : Array.Empty<string>(),
                 };
                 string payload = Serialize(new
                 {
@@ -775,6 +827,7 @@ public sealed class GameplayEngineService : IGameplayEngineService
                     revisaoAnterior = previousRevision,
                     revisaoNova = target.RevisaoRuntime,
                     aplicacao = application,
+                    condicoesSincronizadas = synchronizedConditions,
                 });
                 MesaEvento effectEvent = NewEvent(
                     session,
@@ -804,8 +857,14 @@ public sealed class GameplayEngineService : IGameplayEngineService
                         proposal.Tipo,
                         proposal.Alvo,
                         proposal.CodigoRecurso,
+                        proposal.IdInstancia,
+                        proposal.CodigoCondicao,
+                        proposal.DuracaoCondicao,
+                        proposal.CooldownTurnos,
                         proposal.Operacao,
                         proposal.Valor,
+                        danoMitigado = isDamage ? (int?)mitigatedDamage : null,
+                        defesasUtilizadas = isDamage ? requestedDefenses : Array.Empty<string>(),
                         target.IdpersonagemJogador,
                     }),
                     AplicadoEmUtc = now,
@@ -1344,6 +1403,27 @@ public sealed class GameplayEngineService : IGameplayEngineService
                 if (!evaluation.Sucesso || evaluation.Dados is null)
                     return ConvertFailure<GameplayRollResultDto, GameplayCommandResponseDto>(evaluation);
                 GameplayRollResultDto roll = evaluation.Dados;
+
+                GameplayActionSnapshotDto? actionOrigin = roll.OrigemAcao;
+                if (actionOrigin is not null &&
+                    ReadSnapshotInt(actionOrigin, "cooldownTurnosProposto") is > 0 &&
+                    !string.IsNullOrWhiteSpace(actionOrigin.IdInstancia))
+                {
+                    MesaCombate? activeCombat = await _repository.GetActiveCombatForUpdateAsync(idMesaSessao, token);
+                    MesaCombateParticipante? actor = activeCombat?.Participantes.FirstOrDefault(item =>
+                        item.IdPersonagemJogador == context.Character?.IdpersonagemJogador &&
+                        item.Status != MesaCombateParticipanteStatus.Removido);
+                    if (actor is not null && activeCombat!.Cooldowns.Any(item =>
+                            item.IdParticipante == actor.IdMesaCombateParticipante &&
+                            item.Status == MesaCooldownStatus.Ativo &&
+                            string.Equals(item.TipoOrigem, NormalizeCode(actionOrigin.Tipo), StringComparison.Ordinal) &&
+                            string.Equals(item.IdOrigem, actionOrigin.IdInstancia, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        return RuleFailure<GameplayCommandResponseDto>(
+                            "PODER_EM_COOLDOWN",
+                            "Esta ação ainda está em cooldown para o personagem.");
+                    }
+                }
 
                 DateTime now = DateTime.UtcNow;
                 string actionCode = roll.OrigemAcao?.Valores.TryGetValue("codigoAcao", out string? resolvedActionCode) == true
@@ -1905,13 +1985,220 @@ public sealed class GameplayEngineService : IGameplayEngineService
             groups.Select(group => new GameplayDiceGroupSpec(group.Quantidade, group.Faces)).ToList());
     }
 
+    private async Task<GameplayOperationResult<GameplayEffectMutation>> ApplyConditionEffectAsync(
+        long idMesaSessao,
+        int idUsuario,
+        PersonagemJogador character,
+        GameplayEffectProposalDto proposal,
+        SistemaVersao version,
+        CancellationToken cancellationToken)
+    {
+        string conditionCode = NormalizeCode(proposal.CodigoCondicao);
+        SistemaCondicao? rule = version.Condicoes.FirstOrDefault(item => NormalizeCode(item.Codigo) == conditionCode);
+        if (rule is null)
+            return RuleFailure<GameplayEffectMutation>("CONDICAO_NAO_PUBLICADA", "A condição não existe na versão publicada do Sistema.");
+        MesaCombate? combat = await _repository.GetActiveCombatForUpdateAsync(idMesaSessao, cancellationToken);
+        if (combat is null || combat.Status != MesaCombateStatus.Ativo)
+            return RuleFailure<GameplayEffectMutation>("CONDICAO_EXIGE_COMBATE", "Prepare e inicie o combate antes de aplicar uma condição de turno.");
+        MesaCombateParticipante? participant = combat.Participantes.FirstOrDefault(item =>
+            item.IdPersonagemJogador == character.IdpersonagemJogador &&
+            item.Status != MesaCombateParticipanteStatus.Removido);
+        if (participant is null)
+            return RuleFailure<GameplayEffectMutation>("ALVO_FORA_DO_COMBATE", "O personagem alvo não participa do combate atual.");
+        if (combat.Cooldowns.Any(item =>
+                item.IdParticipante == participant.IdMesaCombateParticipante &&
+                item.Status == MesaCooldownStatus.Ativo &&
+                item.TipoOrigem == "CONDICAO" &&
+                NormalizeCode(item.IdOrigem) == conditionCode))
+        {
+            return Conflict<GameplayEffectMutation>("CONDICAO_EM_COOLDOWN", "Esta condição ainda está em cooldown para o alvo.");
+        }
+
+        int? duration = proposal.DuracaoCondicao ?? rule.DuracaoPadrao;
+        if (duration < 0)
+            return Validation<GameplayEffectMutation>("DURACAO_CONDICAO_INVALIDA", "A duração da condição não pode ser negativa.");
+        decimal? value = proposal.Valor > 0 ? proposal.Valor : rule.ValorPadrao ?? rule.ValorEfeito;
+        MesaCondicaoAtiva? current = combat.Condicoes.FirstOrDefault(item =>
+            item.IdParticipante == participant.IdMesaCombateParticipante &&
+            item.Status == MesaCondicaoStatus.Ativa &&
+            NormalizeCode(item.CodigoSnapshot) == conditionCode);
+        int previousStacks = current?.Acumulos ?? 0;
+        if (current is not null)
+        {
+            if (rule.Empilhavel)
+            {
+                current.Acumulos++;
+                current.Valor = value ?? current.Valor;
+                if (rule.PermiteSobrescrever)
+                {
+                    current.Duracao = duration;
+                    current.TurnosRestantes = rule.UnidadeDuracao == SistemaUnidadeDuracao.Turno ? duration : null;
+                }
+            }
+            else if (rule.PermiteSobrescrever)
+            {
+                current.Valor = value;
+                current.Duracao = duration;
+                current.TurnosRestantes = rule.UnidadeDuracao == SistemaUnidadeDuracao.Turno ? duration : null;
+            }
+            else
+            {
+                return Conflict<GameplayEffectMutation>("CONDICAO_JA_ATIVA", "A condição já está ativa e não permite acúmulo ou substituição.");
+            }
+        }
+        else
+        {
+            current = new MesaCondicaoAtiva
+            {
+                IdMesaCombate = combat.IdMesaCombate,
+                IdParticipante = participant.IdMesaCombateParticipante,
+                IdSistemaCondicao = rule.IdSistemaCondicao,
+                CodigoSnapshot = rule.Codigo,
+                NomeSnapshot = rule.Nome,
+                Valor = value,
+                Duracao = duration,
+                UnidadeDuracao = rule.UnidadeDuracao,
+                TurnosRestantes = rule.UnidadeDuracao == SistemaUnidadeDuracao.Turno ? duration : null,
+                CooldownTurnos = rule.CooldownTurnos,
+                RodadaAplicacao = combat.RodadaAtual,
+                TurnoAplicacao = combat.IndiceTurnoAtual,
+                RegraSnapshotJson = Serialize(new
+                {
+                    rule.CodigoRecurso,
+                    rule.OperacaoEfeito,
+                    rule.ValorEfeito,
+                    rule.MomentoEfeito,
+                    rule.CodigoRecursoGatilho,
+                    rule.OperadorGatilho,
+                    rule.ValorGatilho,
+                    rule.CooldownTurnos,
+                    rule.RegraRemocao,
+                    rule.ConfiguracaoPadraoJson,
+                }),
+                IdUsuarioAplicacao = idUsuario,
+                AplicadaEmUtc = DateTime.UtcNow,
+                Combate = combat,
+                Participante = participant,
+            };
+            combat.Condicoes.Add(current);
+        }
+        combat.Revisao++;
+
+        if (NormalizeCode(rule.MomentoEfeito) == "AO_APLICAR" &&
+            !string.IsNullOrWhiteSpace(rule.CodigoRecurso) &&
+            NormalizeCode(rule.OperacaoEfeito) is "SOMAR" or "SUBTRAIR" or "DEFINIR")
+        {
+            decimal configuredValue = proposal.Valor > 0
+                ? proposal.Valor
+                : rule.ValorEfeito ?? rule.ValorPadrao ?? 0;
+            int effectValue = decimal.ToInt32(decimal.Truncate(configuredValue));
+            GameplayOperationResult<GameplayEffectMutation> resourceMutation =
+                ApplyConditionResourceEffectToCharacter(
+                    character,
+                    rule.CodigoRecurso,
+                    rule.OperacaoEfeito,
+                    effectValue,
+                    version);
+            if (!resourceMutation.Sucesso || resourceMutation.Dados is null)
+                return resourceMutation;
+            return GameplayOperationResult<GameplayEffectMutation>.Ok(resourceMutation.Dados with
+            {
+                Type = "CONDICAO",
+            });
+        }
+
+        return GameplayOperationResult<GameplayEffectMutation>.Ok(new GameplayEffectMutation(
+            "CONDICAO",
+            $"condicao:{conditionCode}",
+            previousStacks,
+            current.Acumulos - previousStacks,
+            current.Acumulos));
+    }
+
+    private async Task<GameplayOperationResult<GameplayEffectMutation>> ApplyCooldownEffectAsync(
+        long idMesaSessao,
+        PersonagemJogador character,
+        GameplayEffectProposalDto proposal,
+        CancellationToken cancellationToken)
+    {
+        string sourceType = NormalizeCode(proposal.CodigoRecurso);
+        string sourceId = proposal.IdInstancia?.Trim() ?? string.Empty;
+        int turns = proposal.CooldownTurnos ?? proposal.Valor;
+        if (sourceType is not ("SKILL" or "MAGIA") || sourceId.Length == 0 || turns <= 0)
+            return RuleFailure<GameplayEffectMutation>("COOLDOWN_INVALIDO", "O cooldown configurado para esta ação é inválido.");
+
+        MesaCombate? combat = await _repository.GetActiveCombatForUpdateAsync(idMesaSessao, cancellationToken);
+        if (combat is null || combat.Status != MesaCombateStatus.Ativo)
+            return RuleFailure<GameplayEffectMutation>("COOLDOWN_EXIGE_COMBATE", "Prepare e inicie o combate antes de controlar cooldowns por turno.");
+        MesaCombateParticipante? participant = combat.Participantes.FirstOrDefault(item =>
+            item.IdPersonagemJogador == character.IdpersonagemJogador &&
+            item.Status != MesaCombateParticipanteStatus.Removido);
+        if (participant is null)
+            return RuleFailure<GameplayEffectMutation>("AUTOR_FORA_DO_COMBATE", "O personagem não participa do combate atual.");
+        if (combat.Cooldowns.Any(item =>
+                item.IdParticipante == participant.IdMesaCombateParticipante &&
+                item.Status == MesaCooldownStatus.Ativo &&
+                item.TipoOrigem == sourceType &&
+                string.Equals(item.IdOrigem, sourceId, StringComparison.OrdinalIgnoreCase)))
+        {
+            return Conflict<GameplayEffectMutation>("PODER_EM_COOLDOWN", "Esta ação já possui um cooldown ativo.");
+        }
+
+        combat.Cooldowns.Add(new MesaCooldownAtivo
+        {
+            IdMesaCombate = combat.IdMesaCombate,
+            IdParticipante = participant.IdMesaCombateParticipante,
+            TipoOrigem = sourceType,
+            IdOrigem = sourceId,
+            NomeSnapshot = proposal.Nome,
+            TurnosRestantes = turns,
+            RodadaInicio = combat.RodadaAtual,
+            TurnoInicio = combat.IndiceTurnoAtual,
+            CriadoEmUtc = DateTime.UtcNow,
+        });
+        combat.Revisao++;
+        return GameplayOperationResult<GameplayEffectMutation>.Ok(new GameplayEffectMutation(
+            "COOLDOWN",
+            $"cooldown:{sourceType}:{sourceId}",
+            0,
+            turns,
+            turns));
+    }
+
+    private async Task<IReadOnlyList<string>> SynchronizeActiveCombatStateAsync(
+        long idMesaSessao,
+        int idUsuario,
+        PersonagemJogador character,
+        SistemaVersao version,
+        CancellationToken cancellationToken)
+    {
+        MesaCombate? combat = await _repository.GetActiveCombatForUpdateAsync(idMesaSessao, cancellationToken);
+        MesaCombateParticipante? participant = combat?.Participantes.FirstOrDefault(item =>
+            item.IdPersonagemJogador == character.IdpersonagemJogador &&
+            item.Status != MesaCombateParticipanteStatus.Removido);
+        if (combat is null || participant is null) return Array.Empty<string>();
+        GameplayConditionSynchronizationResult result = GameplayConditionRuntime.SynchronizeState(
+            character,
+            combat,
+            participant,
+            version,
+            idUsuario,
+            DateTime.UtcNow);
+        if (result.Changes.Count > 0) combat.Revisao++;
+        return result.Changes;
+    }
+
     private static GameplayOperationResult<GameplayEffectMutation> ApplyEffectToCharacter(
         PersonagemJogador character,
         GameplayEffectProposalDto proposal,
         SistemaVersao version)
     {
-        if (proposal.Valor is <= 0 or > MaxManualAbsoluteValue)
+        string type = NormalizeCode(proposal.Tipo);
+        if (proposal.Valor < 0 || proposal.Valor > MaxManualAbsoluteValue || (proposal.Valor == 0 && type != "DANO"))
             return RuleFailure<GameplayEffectMutation>("VALOR_EFEITO_INVALIDO", "O valor configurado para o efeito é inválido.");
+        if (type == "MUNICAO")
+            return ApplyAmmoEffectToCharacter(character, proposal);
+
         JsonObject root;
         try
         {
@@ -1922,7 +2209,6 @@ public sealed class GameplayEngineService : IGameplayEngineService
             return RuleFailure<GameplayEffectMutation>("STATUS_INVALIDO", "A ficha possui dados de status inválidos.");
         }
 
-        string type = NormalizeCode(proposal.Tipo);
         string operation = NormalizeCode(proposal.Operacao);
         string field;
         JsonObject container;
@@ -1955,6 +2241,15 @@ public sealed class GameplayEngineService : IGameplayEngineService
         }
 
         int previous = TryReadJsonInt(container[field], out int stored) ? stored : 0;
+        if (type == "DANO" && proposal.Valor == 0)
+        {
+            return GameplayOperationResult<GameplayEffectMutation>.Ok(new GameplayEffectMutation(
+                type,
+                field,
+                previous,
+                0,
+                previous));
+        }
         int signedDelta = operation switch
         {
             "SOMAR" => proposal.Valor,
@@ -1977,10 +2272,160 @@ public sealed class GameplayEngineService : IGameplayEngineService
         container[field] = current;
         character.StatusJson = root.ToJsonString();
         return GameplayOperationResult<GameplayEffectMutation>.Ok(new GameplayEffectMutation(
+            type,
             field,
             previous,
             current - previous,
             current));
+    }
+
+    private static GameplayOperationResult<GameplayEffectMutation> ApplyConditionResourceEffectToCharacter(
+        PersonagemJogador character,
+        string resourceCode,
+        string? operation,
+        int value,
+        SistemaVersao version)
+    {
+        if (value < 0 || value > MaxManualAbsoluteValue)
+            return RuleFailure<GameplayEffectMutation>("VALOR_EFEITO_INVALIDO", "O valor configurado para a condição é inválido.");
+
+        JsonObject root;
+        try
+        {
+            root = JsonNode.Parse(character.StatusJson) as JsonObject ?? new JsonObject();
+        }
+        catch (JsonException)
+        {
+            return RuleFailure<GameplayEffectMutation>("STATUS_INVALIDO", "A ficha possui dados de status inválidos.");
+        }
+
+        SistemaRecursoConfig? resource = version.Recursos.FirstOrDefault(item =>
+            item.Ativo && NormalizeCode(item.Codigo) == NormalizeCode(resourceCode));
+        if (resource is null)
+            return RuleFailure<GameplayEffectMutation>("RECURSO_NAO_PUBLICADO", "O recurso desta condição não existe na versão publicada do Sistema.");
+
+        JsonObject status = GetOrCreateJsonObject(root, "status");
+        string preferredField = resource.Codigo.Trim().ToLowerInvariant();
+        string field = FindJsonProperty(status, preferredField) ?? preferredField;
+        int previous = TryReadJsonInt(status[field], out int stored) ? stored : 0;
+        int current;
+        try
+        {
+            current = NormalizeCode(operation) switch
+            {
+                "SOMAR" => checked(previous + value),
+                "SUBTRAIR" => checked(previous - value),
+                "DEFINIR" => value,
+                _ => previous,
+            };
+        }
+        catch (OverflowException)
+        {
+            return RuleFailure<GameplayEffectMutation>("VALOR_EFEITO_FORA_LIMITE", "O efeito da condição excede os limites aceitos pela ficha.");
+        }
+        if (NormalizeCode(operation) is not ("SOMAR" or "SUBTRAIR" or "DEFINIR"))
+            return RuleFailure<GameplayEffectMutation>("OPERACAO_EFEITO_INVALIDA", "A operação configurada para a condição é inválida.");
+
+        int minimum = resource.PermiteValorNegativo
+            ? decimal.ToInt32(decimal.Max(resource.ValorMinimo, int.MinValue))
+            : Math.Max(0, decimal.ToInt32(decimal.Max(resource.ValorMinimo, 0)));
+        int? maximum = resource.ValorMaximo.HasValue
+            ? decimal.ToInt32(decimal.Min(resource.ValorMaximo.Value, int.MaxValue))
+            : null;
+        string? maximumField = FindJsonProperty(status, $"{preferredField}Maxima")
+            ?? FindJsonProperty(status, $"{preferredField}Maximo");
+        if (maximumField is not null && TryReadJsonInt(status[maximumField], out int sheetMaximum))
+            maximum = sheetMaximum;
+
+        current = Math.Max(minimum, current);
+        if (maximum.HasValue) current = Math.Min(maximum.Value, current);
+        status[field] = current;
+        character.StatusJson = root.ToJsonString();
+        return GameplayOperationResult<GameplayEffectMutation>.Ok(new GameplayEffectMutation(
+            "CONDICAO",
+            field,
+            previous,
+            current - previous,
+            current));
+    }
+
+    private static GameplayOperationResult<GameplayEffectMutation> ApplyAmmoEffectToCharacter(
+        PersonagemJogador character,
+        GameplayEffectProposalDto proposal)
+    {
+        if (string.IsNullOrWhiteSpace(proposal.IdInstancia))
+            return RuleFailure<GameplayEffectMutation>("ARMA_SEM_IDENTIDADE", "A arma desta rolagem não possui uma identidade estável.");
+
+        foreach ((string sourceName, string? sourceJson) in new[]
+        {
+            ("inventario", character.InventarioJson),
+            ("proteses", character.Implantes),
+        })
+        {
+            JsonNode? root;
+            try { root = JsonNode.Parse(sourceJson ?? "[]"); }
+            catch (JsonException)
+            {
+                return RuleFailure<GameplayEffectMutation>("ITENS_INVALIDOS", "Os itens da ficha possuem dados inválidos.");
+            }
+
+            JsonObject? item = EnumerateStoredEntries(root).FirstOrDefault(entry =>
+                new[] { "id", "clientKey", "idInstancia", "idItemBase" }.Any(property =>
+                    string.Equals(ReadJsonString(entry, property), proposal.IdInstancia, StringComparison.OrdinalIgnoreCase)));
+            if (item is null) continue;
+            JsonObject attributes = GetOrCreateJsonObject(item, "atributos");
+            if (!ReadJsonBool(attributes, "controlaMunicao"))
+                return RuleFailure<GameplayEffectMutation>("MUNICAO_NAO_CONTROLADA", "Esta arma não usa controle automático de munição.");
+            int previous = ReadJsonInt(attributes, "municaoAtual")
+                ?? ReadJsonInt(attributes[FindJsonProperty(attributes, "municao") ?? string.Empty] as JsonObject, "atual")
+                ?? ReadJsonInt(attributes, "capacidadeMunicao")
+                ?? ReadJsonInt(attributes[FindJsonProperty(attributes, "municao") ?? string.Empty] as JsonObject, "capacidade")
+                ?? 0;
+            if (previous < proposal.Valor)
+                return Conflict<GameplayEffectMutation>("MUNICAO_ALTERADA", "A arma não possui mais munição suficiente. Recarregue a ficha.");
+            int current = previous - proposal.Valor;
+            attributes[FindJsonProperty(attributes, "municaoAtual") ?? "municaoAtual"] = current;
+            JsonObject legacy = GetOrCreateJsonObject(attributes, "municao");
+            legacy[FindJsonProperty(legacy, "atual") ?? "atual"] = current;
+            string serialized = root!.ToJsonString();
+            if (sourceName == "inventario") character.InventarioJson = serialized;
+            else character.Implantes = serialized;
+            return GameplayOperationResult<GameplayEffectMutation>.Ok(new GameplayEffectMutation(
+                "MUNICAO", "municao", previous, -proposal.Valor, current));
+        }
+        return NotFound<GameplayEffectMutation>("ARMA_NAO_ENCONTRADA", "A arma desta rolagem não está mais na ficha.");
+    }
+
+    private static IEnumerable<JsonObject> EnumerateStoredEntries(JsonNode? root)
+    {
+        if (root is JsonArray array) return array.OfType<JsonObject>();
+        if (root is not JsonObject objectRoot) return Enumerable.Empty<JsonObject>();
+        foreach (string property in new[] { "itens", "inventario", "items", "proteses", "implantes" })
+        {
+            string? key = FindJsonProperty(objectRoot, property);
+            if (key is not null && objectRoot[key] is JsonArray entries)
+                return entries.OfType<JsonObject>();
+        }
+        return Enumerable.Empty<JsonObject>();
+    }
+
+    private static string? ReadJsonString(JsonObject source, string property)
+    {
+        string? key = FindJsonProperty(source, property);
+        if (key is null || source[key] is not JsonValue value) return null;
+        if (value.TryGetValue(out string? text)) return text;
+        return value.TryGetValue(out int number) ? number.ToString(System.Globalization.CultureInfo.InvariantCulture) : null;
+    }
+
+    private static int? ReadJsonInt(JsonObject? source, string property)
+        => source is not null && TryReadJsonInt(source[FindJsonProperty(source, property) ?? string.Empty], out int value)
+            ? value : null;
+
+    private static bool ReadJsonBool(JsonObject source, string property)
+    {
+        string? key = FindJsonProperty(source, property);
+        if (key is null || source[key] is not JsonValue value) return false;
+        return value.TryGetValue(out bool result) && result;
     }
 
     private static JsonObject GetOrCreateJsonObject(JsonObject root, string property)
@@ -2415,6 +2860,37 @@ public sealed class GameplayEngineService : IGameplayEngineService
             AddSnapshotCost(effects, origin, "custoEstaminaProposto", "ESTAMINA", "Gastar estamina");
             AddSnapshotCost(effects, origin, "custoManaProposto", "MANA", "Gastar mana");
             AddSnapshotCost(effects, origin, "custoVidaProposto", "VIDA", "Gastar vida");
+            int? ammo = ReadSnapshotInt(origin, "consumoMunicaoProposto");
+            if (ammo is > 0 && !string.IsNullOrWhiteSpace(origin.IdInstancia))
+            {
+                effects.Add(new GameplayEffectProposalDto
+                {
+                    Codigo = "CONSUMIR_MUNICAO",
+                    Tipo = "MUNICAO",
+                    Nome = $"Consumir {ammo.Value} de munição",
+                    Alvo = "AUTOR",
+                    Operacao = "SUBTRAIR",
+                    Valor = ammo.Value,
+                    IdInstancia = origin.IdInstancia,
+                });
+            }
+            int? cooldownTurns = ReadSnapshotInt(origin, "cooldownTurnosProposto");
+            if (cooldownTurns is > 0 && !string.IsNullOrWhiteSpace(origin.IdInstancia) &&
+                NormalizeCode(origin.Tipo) is "SKILL" or "MAGIA")
+            {
+                effects.Add(new GameplayEffectProposalDto
+                {
+                    Codigo = $"INICIAR_COOLDOWN_{NormalizeCode(origin.Tipo)}_{NormalizeCode(origin.IdInstancia)}",
+                    Tipo = "COOLDOWN",
+                    Nome = $"{origin.Nome ?? origin.Tipo}: cooldown de {cooldownTurns.Value} turno(s)",
+                    Alvo = "AUTOR",
+                    CodigoRecurso = NormalizeCode(origin.Tipo),
+                    IdInstancia = origin.IdInstancia,
+                    CooldownTurnos = cooldownTurns.Value,
+                    Operacao = "INICIAR",
+                    Valor = cooldownTurns.Value,
+                });
+            }
 
             bool failed = NormalizeCode(source.CodigoResultado).Contains("FALHA", StringComparison.Ordinal) ||
                 NormalizeCode(source.CodigoResultado).Contains("ERRO", StringComparison.Ordinal);
@@ -2440,6 +2916,7 @@ public sealed class GameplayEngineService : IGameplayEngineService
                         MotivoIndisponivel = validDamage ? null : "O dano calculado excede o limite seguro da ficha.",
                     });
                 }
+                effects.AddRange(ReadSnapshotConditionEffects(origin));
             }
         }
 
@@ -2493,6 +2970,47 @@ public sealed class GameplayEngineService : IGameplayEngineService
             ? value
             : null;
 
+    private static IReadOnlyList<GameplayEffectProposalDto> ReadSnapshotConditionEffects(GameplayActionSnapshotDto source)
+    {
+        if (!source.Valores.TryGetValue("condicoesPropostasJson", out string? json) || string.IsNullOrWhiteSpace(json))
+            return Array.Empty<GameplayEffectProposalDto>();
+        try
+        {
+            JsonArray? entries = JsonNode.Parse(json) as JsonArray;
+            if (entries is null) return Array.Empty<GameplayEffectProposalDto>();
+            return entries.OfType<JsonObject>().Select(entry =>
+            {
+                string code = NormalizeCode(entry["code"]?.GetValue<string>());
+                string name = entry["name"]?.GetValue<string>() ?? code;
+                int value = entry["value"]?.GetValue<int?>() ?? 0;
+                int? duration = entry["duration"]?.GetValue<int?>();
+                string details = string.Join(" · ", new[]
+                {
+                    value > 0 ? $"valor {value}" : null,
+                    duration.HasValue ? $"{duration.Value} turno(s)" : null,
+                }.Where(detail => detail is not null));
+                return new GameplayEffectProposalDto
+                {
+                    Codigo = $"APLICAR_CONDICAO_{code}",
+                    Tipo = "CONDICAO",
+                    Nome = details.Length == 0 ? $"Aplicar {name}" : $"Aplicar {name} · {details}",
+                    Alvo = "ALVO",
+                    CodigoCondicao = code,
+                    DuracaoCondicao = duration,
+                    Operacao = "APLICAR",
+                    Valor = value,
+                    ExigeAlvo = true,
+                    PodeAplicar = code.Length > 0 && value >= 0 && duration is null or >= 0,
+                    MotivoIndisponivel = code.Length > 0 ? null : "A condição configurada não possui código válido.",
+                };
+            }).ToArray();
+        }
+        catch (Exception exception) when (exception is JsonException or InvalidOperationException)
+        {
+            return Array.Empty<GameplayEffectProposalDto>();
+        }
+    }
+
     private static IReadOnlyList<GameplayEffectProposalDto> ReadConfiguredEffects(string? json)
     {
         if (string.IsNullOrWhiteSpace(json)) return Array.Empty<GameplayEffectProposalDto>();
@@ -2534,6 +3052,26 @@ public sealed class GameplayEngineService : IGameplayEngineService
             return Array.Empty<GameplayEffectProposalDto>();
         }
     }
+
+    private static GameplayEffectProposalDto CopyEffectProposal(
+        GameplayEffectProposalDto source,
+        int value) => new()
+    {
+        Codigo = source.Codigo,
+        Tipo = source.Tipo,
+        Nome = source.Nome,
+        Alvo = source.Alvo,
+        CodigoRecurso = source.CodigoRecurso,
+        IdInstancia = source.IdInstancia,
+        CodigoCondicao = source.CodigoCondicao,
+        DuracaoCondicao = source.DuracaoCondicao,
+        CooldownTurnos = source.CooldownTurnos,
+        Operacao = source.Operacao,
+        Valor = value,
+        ExigeAlvo = source.ExigeAlvo,
+        PodeAplicar = source.PodeAplicar,
+        MotivoIndisponivel = source.MotivoIndisponivel,
+    };
 
     private static GameplayRollResultDto CopyRoll(
         GameplayRollResultDto source,
@@ -2897,6 +3435,7 @@ public sealed class GameplayEngineService : IGameplayEngineService
         GameplayEventVisibility Visibility);
 
     private sealed record GameplayEffectMutation(
+        string Type,
         string Field,
         int PreviousValue,
         int AppliedDelta,

@@ -1,1 +1,1 @@
-export type DadoAcerto = 'D6' | 'D8' | 'D20';
+export type DadoAcerto = `D${number}`;

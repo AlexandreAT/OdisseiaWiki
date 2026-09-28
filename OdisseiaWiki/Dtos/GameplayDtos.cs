@@ -223,6 +223,10 @@ public sealed class GameplayEffectProposalDto
     public string Nome { get; init; } = string.Empty;
     public string Alvo { get; init; } = "AUTOR";
     public string? CodigoRecurso { get; init; }
+    public string? IdInstancia { get; init; }
+    public string? CodigoCondicao { get; init; }
+    public int? DuracaoCondicao { get; init; }
+    public int? CooldownTurnos { get; init; }
     public string Operacao { get; init; } = "SOMAR";
     public int Valor { get; init; }
     public bool ExigeAlvo { get; init; }
@@ -279,6 +283,15 @@ public sealed class GameplayActionCatalogDto
     public string DadoTesteGeral { get; init; } = string.Empty;
     public IReadOnlyList<GameplayActionCatalogItemDto> Acoes { get; init; } =
         Array.Empty<GameplayActionCatalogItemDto>();
+    public IReadOnlyList<GameplayDefenseOptionDto> Defesas { get; init; } =
+        Array.Empty<GameplayDefenseOptionDto>();
+}
+
+public sealed class GameplayDefenseOptionDto
+{
+    public string Codigo { get; init; } = string.Empty;
+    public string Nome { get; init; } = string.Empty;
+    public int Ordem { get; init; }
 }
 
 public sealed class GameplayEffectApplyRequestDto
@@ -294,6 +307,9 @@ public sealed class GameplayEffectApplyRequestDto
     public long? RevisaoSessaoEsperada { get; set; }
     [Range(0, long.MaxValue)]
     public long? RevisaoPersonagemEsperada { get; set; }
+    [Range(0, int.MaxValue)]
+    public int? DanoMitigadoConfirmado { get; set; }
+    public List<string> DefesasUtilizadas { get; set; } = new();
 }
 
 public sealed class GameplayEffectApplicationDto
@@ -303,9 +319,13 @@ public sealed class GameplayEffectApplicationDto
     public int IdPersonagemAlvo { get; init; }
     public long RevisaoPersonagem { get; init; }
     public string Campo { get; init; } = string.Empty;
+    public string Tipo { get; init; } = "RECURSO";
     public int ValorAnterior { get; init; }
     public int ValorAplicado { get; init; }
     public int ValorAtual { get; init; }
+    public int? DanoBruto { get; init; }
+    public int? DanoMitigado { get; init; }
+    public IReadOnlyList<string> DefesasUtilizadas { get; init; } = Array.Empty<string>();
 }
 
 public sealed class GameplayEventDto

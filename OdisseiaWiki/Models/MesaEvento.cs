@@ -16,6 +16,7 @@ public sealed class MesaEvento
     public GameplayEventVisibility Visibilidade { get; set; }
     public int? IdUsuarioAtor { get; set; }
     public int? IdPersonagemJogador { get; set; }
+    public long? IdParticipanteCombate { get; set; }
     public int? IdSistemaRpg { get; set; }
     public int? IdSistemaVersaoEfetiva { get; set; }
     public int? IdSistemaVersaoPersonagem { get; set; }
@@ -30,6 +31,7 @@ public sealed class MesaEvento
     public MesaComando? Comando { get; set; }
     public Usuario? UsuarioAtor { get; set; }
     public PersonagemJogador? PersonagemJogador { get; set; }
+    public MesaCombateParticipante? ParticipanteCombate { get; set; }
     public SistemaRpg? SistemaRpg { get; set; }
     public SistemaVersao? SistemaVersaoEfetiva { get; set; }
     public SistemaVersao? SistemaVersaoPersonagem { get; set; }

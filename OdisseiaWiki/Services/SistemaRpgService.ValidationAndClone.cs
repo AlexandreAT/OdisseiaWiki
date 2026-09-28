@@ -246,6 +246,18 @@ public sealed partial class SistemaRpgService
             erros.Add("Os códigos de condições não podem se repetir.");
         if (dto.Condicoes.Any(c => !JsonValido(c.ConfiguracaoPadraoJson)))
             erros.Add("A configuração complementar de uma condição não contém JSON válido.");
+        if (dto.Condicoes.Any(c => c.CooldownTurnos < 0 ||
+            (c.ValorEfeito.HasValue && string.IsNullOrWhiteSpace(c.CodigoRecurso)) ||
+            (!string.IsNullOrWhiteSpace(c.CodigoRecurso) &&
+             !new[] { "SOMAR", "SUBTRAIR", "DEFINIR", "REDUZIR_LIMITE_PERCENTUAL", "BLOQUEAR_RECUPERACAO" }.Contains((c.OperacaoEfeito ?? string.Empty).Trim().ToUpperInvariant())) ||
+            (!string.IsNullOrWhiteSpace(c.MomentoEfeito) &&
+             !new[] { "AO_APLICAR", "INICIO_TURNO", "FIM_TURNO", "ENQUANTO_ATIVA" }.Contains(c.MomentoEfeito.Trim().ToUpperInvariant())) ||
+            (!string.IsNullOrWhiteSpace(c.OperadorGatilho) &&
+             !new[] { "<", "<=", ">", ">=", "==", "!=", "MENOR", "MENOR_OU_IGUAL", "MAIOR", "MAIOR_OU_IGUAL", "IGUAL", "DIFERENTE" }.Contains(c.OperadorGatilho.Trim().ToUpperInvariant())) ||
+            (c.ValorGatilho.HasValue && string.IsNullOrWhiteSpace(c.CodigoRecursoGatilho)) ||
+            (string.Equals(c.OperacaoEfeito, "REDUZIR_LIMITE_PERCENTUAL", StringComparison.OrdinalIgnoreCase) &&
+             (!c.ValorEfeito.HasValue || c.ValorEfeito is < 0 or > 100))))
+            erros.Add("A automação das condições possui recurso, operação ou cooldown inválido.");
         if (dto.Descansos.Any(d => string.IsNullOrWhiteSpace(d.Nome) || string.IsNullOrWhiteSpace(d.Tipo) ||
             d.DuracaoMinimaMinutos < 0 || d.DuracaoMaximaMinutos < 0 ||
             (d.DuracaoMinimaMinutos.HasValue && d.DuracaoMaximaMinutos.HasValue &&
@@ -476,7 +488,12 @@ public sealed partial class SistemaRpgService
             Codigo = c.Codigo, Nome = c.Nome, Descricao = c.Descricao, Tipo = c.Tipo,
             DuracaoPadrao = c.DuracaoPadrao, UnidadeDuracao = c.UnidadeDuracao, Empilhavel = c.Empilhavel,
             RemocaoAutomatica = c.RemocaoAutomatica, PermiteSobrescrever = c.PermiteSobrescrever,
-            ValorPadrao = c.ValorPadrao, ConfiguracaoPadraoJson = c.ConfiguracaoPadraoJson, Ordem = c.Ordem,
+            ValorPadrao = c.ValorPadrao, CodigoRecurso = c.CodigoRecurso,
+            OperacaoEfeito = c.OperacaoEfeito, ValorEfeito = c.ValorEfeito,
+            MomentoEfeito = c.MomentoEfeito, CodigoRecursoGatilho = c.CodigoRecursoGatilho,
+            OperadorGatilho = c.OperadorGatilho, ValorGatilho = c.ValorGatilho,
+            CooldownTurnos = c.CooldownTurnos, RegraRemocao = c.RegraRemocao,
+            ConfiguracaoPadraoJson = c.ConfiguracaoPadraoJson, Ordem = c.Ordem,
         }).ToList();
         destino.Descansos = origem.Descansos.Select(d => new SistemaDescansoConfig
         {

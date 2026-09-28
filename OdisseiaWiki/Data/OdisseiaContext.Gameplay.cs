@@ -10,6 +10,10 @@ public partial class OdisseiaContext
     public virtual DbSet<MesaEvento> MesaEventos { get; set; }
     public virtual DbSet<MesaRolagem> MesaRolagens { get; set; }
     public virtual DbSet<MesaEfeitoAplicado> MesaEfeitosAplicados { get; set; }
+    public virtual DbSet<MesaCombate> MesaCombates { get; set; }
+    public virtual DbSet<MesaCombateParticipante> MesaCombateParticipantes { get; set; }
+    public virtual DbSet<MesaCondicaoAtiva> MesaCondicoesAtivas { get; set; }
+    public virtual DbSet<MesaCooldownAtivo> MesaCooldownsAtivos { get; set; }
 
     private static void ConfigureGameplay(ModelBuilder modelBuilder)
     {
@@ -111,6 +115,7 @@ public partial class OdisseiaContext
             entity.Property(item => item.IdMesaComando).HasColumnName("IDMesaComando");
             entity.Property(item => item.IdUsuarioAtor).HasColumnName("IDUsuarioAtor");
             entity.Property(item => item.IdPersonagemJogador).HasColumnName("IDPersonagemJogador");
+            entity.Property(item => item.IdParticipanteCombate).HasColumnName("IDParticipanteCombate");
             entity.Property(item => item.IdSistemaRpg).HasColumnName("IDSistemaRpg");
             entity.Property(item => item.IdSistemaVersaoEfetiva).HasColumnName("IDSistemaVersaoEfetiva");
             entity.Property(item => item.IdSistemaVersaoPersonagem).HasColumnName("IDSistemaVersaoPersonagem");
@@ -138,6 +143,9 @@ public partial class OdisseiaContext
             entity.HasOne(item => item.PersonagemJogador).WithMany()
                 .HasForeignKey(item => item.IdPersonagemJogador).OnDelete(DeleteBehavior.SetNull)
                 .HasConstraintName("FK_MesaEvento_Personagem");
+            entity.HasOne(item => item.ParticipanteCombate).WithMany()
+                .HasForeignKey(item => item.IdParticipanteCombate).OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_MesaEvento_ParticipanteCombate");
             entity.HasOne(item => item.SistemaRpg).WithMany()
                 .HasForeignKey(item => item.IdSistemaRpg).OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("FK_MesaEvento_SistemaRpg");
@@ -193,6 +201,101 @@ public partial class OdisseiaContext
             entity.HasOne(item => item.PersonagemAlvo).WithMany()
                 .HasForeignKey(item => item.IdPersonagemAlvo).OnDelete(DeleteBehavior.SetNull)
                 .HasConstraintName("FK_MesaEfeito_PersonagemAlvo");
+        });
+
+        modelBuilder.Entity<MesaCombate>(entity =>
+        {
+            entity.ToTable("mesacombates");
+            entity.HasKey(item => item.IdMesaCombate);
+            entity.Property(item => item.IdMesaCombate).HasColumnName("IDMesaCombate");
+            entity.Property(item => item.IdMesaSessao).HasColumnName("IDMesaSessao");
+            entity.Property(item => item.IdParticipanteAtual).HasColumnName("IDParticipanteAtual");
+            entity.Property(item => item.IdUsuarioCriacao).HasColumnName("IDUsuarioCriacao");
+            entity.Property(item => item.IdUsuarioEncerramento).HasColumnName("IDUsuarioEncerramento");
+            entity.Property(item => item.Status).HasConversion<string>().HasMaxLength(30);
+            entity.Property(item => item.Revisao).IsConcurrencyToken();
+            entity.Property(item => item.CriadoEmUtc).HasColumnType("datetime(6)");
+            entity.Property(item => item.IniciadoEmUtc).HasColumnType("datetime(6)");
+            entity.Property(item => item.EncerradoEmUtc).HasColumnType("datetime(6)");
+            entity.Property(item => item.ChaveAtiva)
+                .HasComputedColumnSql("CASE WHEN `Status` <> 'Encerrado' THEN 1 ELSE NULL END", stored: true);
+            entity.HasIndex(item => new { item.IdMesaSessao, item.ChaveAtiva })
+                .IsUnique().HasDatabaseName("UX_MesaCombate_Sessao_Ativo");
+            entity.HasOne(item => item.Sessao).WithMany(item => item.Combates)
+                .HasForeignKey(item => item.IdMesaSessao).OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_MesaCombate_Sessao");
+            entity.HasOne(item => item.ParticipanteAtual).WithMany()
+                .HasForeignKey(item => item.IdParticipanteAtual).OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_MesaCombate_ParticipanteAtual");
+            entity.HasOne(item => item.UsuarioCriacao).WithMany()
+                .HasForeignKey(item => item.IdUsuarioCriacao).OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(item => item.UsuarioEncerramento).WithMany()
+                .HasForeignKey(item => item.IdUsuarioEncerramento).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<MesaCombateParticipante>(entity =>
+        {
+            entity.ToTable("mesacombateparticipantes");
+            entity.HasKey(item => item.IdMesaCombateParticipante);
+            entity.Property(item => item.IdMesaCombateParticipante).HasColumnName("IDMesaCombateParticipante");
+            entity.Property(item => item.IdMesaCombate).HasColumnName("IDMesaCombate");
+            entity.Property(item => item.IdPersonagemJogador).HasColumnName("IDPersonagemJogador");
+            entity.Property(item => item.IdUsuarioControlador).HasColumnName("IDUsuarioControlador");
+            entity.Property(item => item.Tipo).HasConversion<string>().HasMaxLength(30);
+            entity.Property(item => item.Status).HasConversion<string>().HasMaxLength(30);
+            entity.Property(item => item.CriadoEmUtc).HasColumnType("datetime(6)");
+            entity.Property(item => item.IniciativaRoladaEmUtc).HasColumnType("datetime(6)");
+            entity.HasIndex(item => new { item.IdMesaCombate, item.IdPersonagemJogador })
+                .IsUnique().HasDatabaseName("UX_MesaCombateParticipante_Personagem");
+            entity.HasIndex(item => new { item.IdMesaCombate, item.Ordem });
+            entity.HasOne(item => item.Combate).WithMany(item => item.Participantes)
+                .HasForeignKey(item => item.IdMesaCombate).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(item => item.PersonagemJogador).WithMany()
+                .HasForeignKey(item => item.IdPersonagemJogador).OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(item => item.UsuarioControlador).WithMany()
+                .HasForeignKey(item => item.IdUsuarioControlador).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<MesaCondicaoAtiva>(entity =>
+        {
+            entity.ToTable("mesacondicoesativas");
+            entity.HasKey(item => item.IdMesaCondicaoAtiva);
+            entity.Property(item => item.IdMesaCondicaoAtiva).HasColumnName("IDMesaCondicaoAtiva");
+            entity.Property(item => item.IdMesaCombate).HasColumnName("IDMesaCombate");
+            entity.Property(item => item.IdParticipante).HasColumnName("IDParticipante");
+            entity.Property(item => item.IdSistemaCondicao).HasColumnName("IDSistemaCondicao");
+            entity.Property(item => item.IdUsuarioAplicacao).HasColumnName("IDUsuarioAplicacao");
+            entity.Property(item => item.Status).HasConversion<string>().HasMaxLength(30);
+            entity.Property(item => item.UnidadeDuracao).HasConversion<string>().HasMaxLength(30);
+            entity.Property(item => item.RegraSnapshotJson).HasColumnType("json");
+            entity.Property(item => item.AplicadaEmUtc).HasColumnType("datetime(6)");
+            entity.Property(item => item.RemovidaEmUtc).HasColumnType("datetime(6)");
+            entity.HasIndex(item => new { item.IdParticipante, item.Status, item.CodigoSnapshot });
+            entity.HasOne(item => item.Combate).WithMany(item => item.Condicoes)
+                .HasForeignKey(item => item.IdMesaCombate).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(item => item.Participante).WithMany(item => item.Condicoes)
+                .HasForeignKey(item => item.IdParticipante).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(item => item.SistemaCondicao).WithMany()
+                .HasForeignKey(item => item.IdSistemaCondicao).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(item => item.UsuarioAplicacao).WithMany()
+                .HasForeignKey(item => item.IdUsuarioAplicacao).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<MesaCooldownAtivo>(entity =>
+        {
+            entity.ToTable("mesacooldownsativos");
+            entity.HasKey(item => item.IdMesaCooldownAtivo);
+            entity.Property(item => item.IdMesaCooldownAtivo).HasColumnName("IDMesaCooldownAtivo");
+            entity.Property(item => item.IdMesaCombate).HasColumnName("IDMesaCombate");
+            entity.Property(item => item.IdParticipante).HasColumnName("IDParticipante");
+            entity.Property(item => item.Status).HasConversion<string>().HasMaxLength(30);
+            entity.Property(item => item.CriadoEmUtc).HasColumnType("datetime(6)");
+            entity.Property(item => item.EncerradoEmUtc).HasColumnType("datetime(6)");
+            entity.HasIndex(item => new { item.IdParticipante, item.Status, item.TipoOrigem, item.IdOrigem });
+            entity.HasOne(item => item.Combate).WithMany(item => item.Cooldowns)
+                .HasForeignKey(item => item.IdMesaCombate).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(item => item.Participante).WithMany(item => item.Cooldowns)
+                .HasForeignKey(item => item.IdParticipante).OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

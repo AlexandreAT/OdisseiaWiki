@@ -605,6 +605,7 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, initialStep = 1
               onClose={() => setSheetActionSource(null)}
               onRoll={gameplay.roll}
               onApplyEffect={gameplay.applyEffect}
+              onGetActionCatalog={gameplay.getActionCatalog}
               onEffectApplied={gameplay.refresh}
               favorite={sheetFavorite}
               favoriteSaving={gameplayFavorites.saving}

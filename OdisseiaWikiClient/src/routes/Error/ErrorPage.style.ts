@@ -105,7 +105,7 @@ export const ErrorActions = styled.div`
   margin-top: 28px;
 `;
 
-export const ErrorActionButton = styled.button<{ $primary?: boolean }>`
+export const ErrorActionButton = styled.a<{ $primary?: boolean }>`
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -116,6 +116,7 @@ export const ErrorActionButton = styled.button<{ $primary?: boolean }>`
   border-radius: 5px;
   background: ${({ $primary }) => $primary ? 'rgba(0, 212, 255, 0.14)' : 'rgba(255, 255, 255, 0.05)'};
   color: var(--whitesmoke);
+  text-decoration: none;
   font-family: 'Cyberpunk Is Not Dead', sans-serif;
   font-size: 13px;
   letter-spacing: 0.7px;
@@ -132,14 +133,6 @@ export const ErrorActionButton = styled.button<{ $primary?: boolean }>`
     transform: translateY(-2px);
     border-color: var(--clearneonBlue);
     background: rgba(0, 212, 255, 0.2);
-  }
-
-  &:disabled {
-    cursor: not-allowed;
-    opacity: 0.42;
-    transform: none;
-    border-color: rgba(255, 255, 255, 0.25);
-    background: rgba(255, 255, 255, 0.04);
   }
 
   @media (max-width: 480px) {

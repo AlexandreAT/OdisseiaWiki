@@ -66,6 +66,76 @@ public sealed class GameplayEffectApplicationTests
     }
 
     [Fact]
+    public async Task ApplyEffectAsync_ConditionRunsConfiguredImmediateEffect()
+    {
+        GameplayEffectProposalDto effect = Effect(
+            "APLICAR_CONDICAO_SANGRAMENTO",
+            "CONDICAO",
+            "VIDA",
+            "APLICAR",
+            4);
+        effect = new GameplayEffectProposalDto
+        {
+            Codigo = effect.Codigo,
+            Tipo = effect.Tipo,
+            Nome = "Aplicar sangramento",
+            Alvo = "AUTOR",
+            CodigoCondicao = "SANGRAMENTO",
+            Operacao = effect.Operacao,
+            Valor = effect.Valor,
+        };
+        var fixture = new Fixture(effect);
+        fixture.Version.Condicoes.Add(new SistemaCondicao
+        {
+            IdSistemaCondicao = 8,
+            Codigo = "SANGRAMENTO",
+            Nome = "Sangramento",
+            Tipo = "DANO_CONTINUO",
+            UnidadeDuracao = SistemaUnidadeDuracao.Turno,
+            Empilhavel = true,
+            PermiteSobrescrever = true,
+            CodigoRecurso = "VIDA",
+            OperacaoEfeito = "SUBTRAIR",
+            ValorEfeito = 2,
+            MomentoEfeito = "AO_APLICAR",
+        });
+        var participant = new MesaCombateParticipante
+        {
+            IdMesaCombateParticipante = 21,
+            IdMesaCombate = 13,
+            IdPersonagemJogador = fixture.Character.IdpersonagemJogador,
+            Status = MesaCombateParticipanteStatus.Pronto,
+            NomeSnapshot = fixture.Character.Nome,
+            PersonagemJogador = fixture.Character,
+        };
+        var combat = new MesaCombate
+        {
+            IdMesaCombate = 13,
+            IdMesaSessao = fixture.Session.IdMesaSessao,
+            Status = MesaCombateStatus.Ativo,
+            Participantes = { participant },
+        };
+        fixture.Repository.Setup(repo => repo.GetActiveCombatForUpdateAsync(
+                fixture.Session.IdMesaSessao,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(combat);
+
+        GameplayOperationResult<GameplayCommandResponseDto> result = await fixture.Service.ApplyEffectAsync(
+            fixture.Mesa.Idmesa,
+            fixture.Session.IdMesaSessao,
+            Fixture.PlayerId,
+            fixture.Request(effect.Codigo));
+
+        Assert.True(result.Sucesso);
+        Assert.Equal(6, ReadStatusValue(fixture.Character.StatusJson, "vida"));
+        Assert.Equal(-4, result.Dados!.Aplicacao!.ValorAplicado);
+        Assert.Equal("vida", result.Dados.Aplicacao.Campo);
+        MesaCondicaoAtiva active = Assert.Single(combat.Condicoes);
+        Assert.Equal("SANGRAMENTO", active.CodigoSnapshot);
+        Assert.Equal(1, active.Acumulos);
+    }
+
+    [Fact]
     public async Task ApplyEffectAsync_SameEffectWithAnotherCommandKey_IsNotAppliedTwice()
     {
         var fixture = new Fixture(Effect("APLICAR_XP", "XP", "XP", "SOMAR", 3));
