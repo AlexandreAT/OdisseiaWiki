@@ -29,4 +29,5 @@ public sealed class MesaSessao
     public ICollection<MesaComando> Comandos { get; set; } = new List<MesaComando>();
     public ICollection<MesaEvento> Eventos { get; set; } = new List<MesaEvento>();
     public ICollection<MesaEfeitoAplicado> EfeitosAplicados { get; set; } = new List<MesaEfeitoAplicado>();
+    public ICollection<MesaCombate> Combates { get; set; } = new List<MesaCombate>();
 }

@@ -17,6 +17,7 @@ import {
 import { DiceRollOverlay } from '../../../components/Gameplay/DiceRollOverlay/DiceRollOverlay';
 import { LoadingIndicator } from '../../../components/Generic/LoadingIndicator';
 import { useGameplayEngine } from '../../../hooks/useGameplayEngine';
+import { useGameplayCombat } from '../../../hooks/useGameplayCombat';
 import { useGameplayFavoriteGroups, useGameplayFavorites } from '../../../hooks/useGameplayFavorites';
 import type {
   GameplayCharacterOption,
@@ -25,6 +26,7 @@ import type {
   GameplayFavoriteRollUpsert,
   GameplayRollRequest,
 } from '../../../models/Gameplay';
+import type { GameplayCombatCommandResponse, GameplayCombatParticipant } from '../../../models/GameplayCombat';
 import type { MesaPersonagemResumo } from '../../../models/Mesa';
 import type { PersonagemStatus, StatusBase } from '../../../models/PersonagemJogador';
 import { getApiErrorMessage } from '../../../utils/apiError';
@@ -50,6 +52,7 @@ import { useRemoteGameplayRolls } from './useRemoteGameplayRolls';
 import type { MesaThemeState } from '../MesaThemeState';
 import { GameplayLiveHistory } from './GameplayLiveHistory';
 import { GameplayFavoriteRolls } from './GameplayFavoriteRolls';
+import { GameplayCombatPanel } from './GameplayCombatPanel';
 import { MesaGameActivityLayout, MesaGameActivityMain, MesaGameActivitySidebar } from './GameplayLiveHistory.style';
 
 const emptyStatus: StatusBase = {
@@ -120,10 +123,24 @@ const MesaGame = () => {
     source: GameplaySheetActionSource;
     character: GameplayCharacterOption;
   } | null>(null);
+  const [combatDice, setCombatDice] = useState<{
+    kind: 'initiative' | 'survival';
+    participant: GameplayCombatParticipant;
+    response: GameplayCombatCommandResponse | null;
+    error: string | null;
+    started: boolean;
+  } | null>(null);
   const [configuredFavoriteEventId, setConfiguredFavoriteEventId] = useState<number | null>(null);
   const removalTimers = useRef(new Map<number, number>());
   const currentUserId = useMemo(getCurrentUserId, []);
   const gameplay = useGameplayEngine({ idMesa, enabled: Boolean(snapshot), mesaAoVivo: Boolean(snapshot?.mesa.aoVivo) });
+  const combat = useGameplayCombat(idMesa, gameplay.session?.idMesaSessao);
+  const currentTurnName = useMemo(() => {
+    if (combat.combat?.status !== 'Ativo') return 'Sem combate';
+    return combat.combat.participantes.find((participant) => (
+      participant.idParticipante === combat.combat?.idParticipanteAtual
+    ))?.nome ?? 'Aguardando turno';
+  }, [combat.combat]);
   const gameplayCharacters = useMemo(() => displayed
     .filter((entry) => Number(entry.idUsuarioDono ?? entry.personagem.idusuario ?? 0) === currentUserId)
     .map((entry) => ({ personagem: entry.personagem, ownerName: entry.donoNome })), [currentUserId, displayed]);
@@ -175,10 +192,12 @@ const MesaGame = () => {
     onMesaInvalidada: () => Promise.all([
       refresh(false).catch(() => undefined),
       gameplay.refresh(false, true).catch(() => undefined),
+      combat.refresh(false).catch(() => undefined),
     ]).then(() => undefined),
     onMesaRessincronizar: () => Promise.all([
       refresh(false).catch(() => undefined),
       gameplay.refresh(false, false).catch(() => undefined),
+      combat.refresh(false).catch(() => undefined),
     ]).then(() => undefined),
     onAcessoRevogado: handleAccessRevoked,
   });
@@ -325,6 +344,27 @@ const MesaGame = () => {
     return saved;
   };
 
+  const openCombatDice = (kind: 'initiative' | 'survival', participant: GameplayCombatParticipant) => {
+    setCombatDice({ kind, participant, response: null, error: null, started: false });
+    setLocalDiceOpen(true);
+  };
+
+  const throwCombatDice = async () => {
+    if (!combatDice || combatDice.started) return;
+    setCombatDice((current) => current ? { ...current, started: true, error: null } : current);
+    try {
+      const response = combatDice.kind === 'initiative'
+        ? await combat.rollInitiative(combatDice.participant.idParticipante)
+        : await combat.rollSurvival(combatDice.participant.idParticipante);
+      setCombatDice((current) => current ? { ...current, response } : current);
+    } catch (requestError) {
+      setCombatDice((current) => current ? {
+        ...current,
+        error: getApiErrorMessage(requestError, 'Não foi possível realizar a rolagem.'),
+      } : current);
+    }
+  };
+
   const handleRemoveFavorite = async (idFavorito: string) => {
     await gameplayFavorites.remove(idFavorito);
     await gameplayFavoriteGroups.refresh();
@@ -377,7 +417,7 @@ const MesaGame = () => {
           <div><small><StorageOutlinedIcon /> Sistema</small><strong>{snapshot.mesa.sistemaNome}</strong></div>
           <div><small><LayersOutlinedIcon /> Versão</small><strong>{snapshot.mesa.numeroVersao || '—'}</strong></div>
           <div><small><PersonOutlineIcon /> Jogadores online</small><strong>{onlineCount} / {snapshot.participantes}</strong></div>
-          <div><small>Turno atual</small><strong>{snapshot.turnoAtual || 'Mestre'}</strong></div>
+          <div><small>Turno atual</small><strong>{currentTurnName}</strong></div>
         </GameStatus>
 
         <MesaGameActivityLayout>
@@ -436,6 +476,32 @@ const MesaGame = () => {
               neon={isNeonActive}
               onRoll={handleQuickFavoriteRoll}
             />
+            {gameplay.session && (
+              <GameplayCombatPanel
+                combat={combat.combat}
+                characters={displayed}
+                isMaster={isMaster}
+                loading={combat.loading}
+                submitting={combat.submitting}
+                error={combat.error}
+                currentUserId={currentUserId}
+                rests={combat.catalog?.descansos ?? combat.combat?.catalogoDescansos ?? []}
+                neon={isNeonActive}
+                onStart={combat.start}
+                onAddNpc={combat.addNpc}
+                onRequestInitiative={(participant) => openCombatDice('initiative', participant)}
+                onActivate={combat.activate}
+                onAdvance={combat.advance}
+                onEnd={combat.end}
+                onApplyCondition={combat.applyCondition}
+                onRemoveCondition={combat.removeCondition}
+                onRequestSurvival={(participant) => openCombatDice('survival', participant)}
+                onApplyRest={async (characterId, restId, revision, guardConfirmed) => {
+                  await combat.applyRest(characterId, restId, revision, guardConfirmed);
+                  await refresh(false);
+                }}
+              />
+            )}
             <GameplayLiveHistory
               session={gameplay.session}
               mesaAoVivo={mesaAoVivo}
@@ -462,6 +528,7 @@ const MesaGame = () => {
             personagem: entry.personagem,
             ownerName: entry.donoNome,
           })) : []}
+          isMaster={isMaster}
           session={gameplay.session}
           mesaAoVivo={mesaAoVivo}
           events={visibleGameplayEvents}
@@ -496,10 +563,16 @@ const MesaGame = () => {
           }}
           onRoll={handleConfiguredFavoriteRoll}
           onApplyEffect={gameplay.applyEffect}
+          onGetActionCatalog={gameplay.getActionCatalog}
           onEffectApplied={gameplay.refresh}
           onDiceVisualOpenChange={setLocalDiceOpen}
           onResultRevealed={() => setConfiguredFavoriteEventId(null)}
           favorite={favoriteConfiguration?.favorite ?? null}
+          isMaster={isMaster}
+          effectTargets={isMaster ? displayed.map((entry) => ({
+            personagem: entry.personagem,
+            ownerName: entry.donoNome,
+          })) : []}
         />
         {quickRoll && (
           <DiceRollOverlay
@@ -523,6 +596,24 @@ const MesaGame = () => {
               : current)}
             onClose={() => {
               setQuickRoll(null);
+              setLocalDiceOpen(false);
+            }}
+          />
+        )}
+        {combatDice && (
+          <DiceRollOverlay
+            open
+            result={combatDice.response?.rolagem ?? null}
+            error={combatDice.error}
+            title={`${combatDice.kind === 'initiative' ? 'Iniciativa' : 'Sobrevivência'} · ${combatDice.participant.nome}`}
+            hasDice
+            requestedFaces={combatDice.response?.rolagem?.grupos[0]?.faces
+              ?? Number(combat.combat?.formulaIniciativa.match(/d\s*(\d+)/i)?.[1] || 20)}
+            requestedDiceCount={combatDice.response?.rolagem?.grupos[0]?.quantidade ?? 1}
+            neon={isNeonActive}
+            onThrow={() => void throwCombatDice()}
+            onClose={() => {
+              setCombatDice(null);
               setLocalDiceOpen(false);
             }}
           />

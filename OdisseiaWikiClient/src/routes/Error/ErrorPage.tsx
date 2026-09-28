@@ -1,5 +1,5 @@
 import { BiArrowBack, BiBookOpen, BiErrorAlt } from 'react-icons/bi';
-import { isRouteErrorResponse, useLocation, useNavigate, useRouteError } from 'react-router-dom';
+import { isRouteErrorResponse, useLocation, useRouteError } from 'react-router-dom';
 import {
   ErrorActions,
   ErrorDescription,
@@ -59,7 +59,6 @@ const getPathContext = (pathname: string): ErrorLocationState => {
 
 const ErrorPage = () => {
   const location = useLocation();
-  const navigate = useNavigate();
   const routeError = useRouteError();
   const locationState = location.state as ErrorLocationState | null;
   const pathContext = getPathContext(location.pathname);
@@ -72,31 +71,6 @@ const ErrorPage = () => {
     ?? responseDescription
     ?? pathContext.errorDescription;
 
-  const handleBack = () => {
-    const historyState = window.history.state as { idx?: number } | null;
-    const hasPreviousAppRoute = typeof historyState?.idx === 'number'
-      ? historyState.idx > 0
-      : location.key !== 'default';
-
-    if (hasPreviousAppRoute) {
-      const currentPath = location.pathname;
-      navigate(-1);
-
-      // Se a rota anterior também for a página quebrada, não deixa a pessoa
-      // presa em um ciclo: a página inicial é local e continua acessível.
-      window.setTimeout(() => {
-        if (window.location.pathname === currentPath) {
-          window.location.assign('/');
-        }
-      }, 300);
-      return;
-    }
-
-    navigate('/', { replace: true });
-  };
-
-  const handleWiki = () => navigate('/wiki/MainPage');
-
   return (
     <ErrorPageContainer>
       <ErrorPanel>
@@ -106,14 +80,13 @@ const ErrorPage = () => {
         <ErrorTitle>{title}</ErrorTitle>
         <ErrorDescription>{description}</ErrorDescription>
         <ErrorActions>
-          <ErrorActionButton type="button" onClick={handleBack}>
+          <ErrorActionButton href="/">
             <BiArrowBack />
             Voltar
           </ErrorActionButton>
           <ErrorActionButton
-            type="button"
+            href="/wiki/MainPage"
             $primary
-            onClick={handleWiki}
           >
             <BiBookOpen />
             Ir para a Wiki

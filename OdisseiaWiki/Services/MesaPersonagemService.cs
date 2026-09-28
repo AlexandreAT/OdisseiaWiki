@@ -82,10 +82,6 @@ public sealed class MesaPersonagemService : IMesaPersonagemService
                 (!personagem.Visivel && personagem.Idusuario != idUsuario))
                 continue;
 
-            bool morto = TryGetStatusNumber(personagem.StatusJson, "vida", out int vida) && vida <= 0;
-            if (morto)
-                continue;
-
             bool proprio = personagem.Idusuario == idUsuario;
             // Na Mesa em jogo, o administrador só tem visão integral pela área de
             // gerenciamento. A visualização compartilhada respeita a privacidade

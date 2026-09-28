@@ -19,22 +19,17 @@ export const MesaGameActivityMain = styled.div`
 `;
 
 export const MesaGameActivitySidebar = styled.aside`
-  position: sticky;
-  top: calc(var(--main-header-height, 85px) + 16px);
+  position: relative;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-auto-rows: max-content;
+  align-content: start;
   gap: 14px;
-  height: calc(100dvh - var(--main-header-height, 85px) - 32px);
-  max-height: calc(100dvh - var(--main-header-height, 85px) - 32px);
+  height: auto;
+  max-height: none;
   min-width: 0;
 
   @media (max-width: 980px) {
-    position: relative;
-    top: auto;
     order: -1;
-    grid-template-rows: none;
-    height: auto;
-    max-height: none;
   }
 `;
 
@@ -43,19 +38,22 @@ export const MesaGameActivityPanel = styled(ManagementContent)`
   display: flex;
   flex-direction: column;
   gap: 0;
-  height: 100%;
-  min-height: 0;
-  max-height: 100%;
+  height: min(68svh, 720px);
+  min-height: min(360px, 55svh);
+  max-height: min(68svh, 720px);
   overflow: hidden;
   padding: 0;
 
   @media (max-width: 980px) {
-    height: auto;
-    max-height: calc(100dvh - var(--main-header-height, 85px) - 28px);
+    height: min(68svh, 620px);
+    min-height: min(340px, 58svh);
+    max-height: min(68svh, 620px);
   }
 
   @media (max-width: 720px) {
-    max-height: calc(100dvh - var(--main-header-height, 54px) - 24px);
+    height: min(70svh, 560px);
+    min-height: min(320px, 62svh);
+    max-height: min(70svh, 560px);
   }
 `;
 
@@ -88,7 +86,7 @@ export const FavoriteRollsContent = styled.div`
   z-index: 5;
   display: grid;
   gap: 10px;
-  max-height: min(28dvh, 240px);
+  max-height: min(28svh, 240px);
   min-width: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -101,7 +99,7 @@ export const FavoriteRollsContent = styled.div`
   &::-webkit-scrollbar-thumb { border-radius: 10px; background: var(--clearneonBlue); }
 
   @media (max-width: 980px) {
-    max-height: min(42dvh, 320px);
+    max-height: min(42svh, 320px);
   }
 `;
 

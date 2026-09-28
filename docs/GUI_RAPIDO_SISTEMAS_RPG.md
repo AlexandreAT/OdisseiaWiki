@@ -19,13 +19,13 @@ Publicar uma versão muda as regras consultadas pelas telas, mas não apaga nem 
 
 | Tela | O que pode ser alterado | Exemplo simples | Onde isso aparece ou é usado |
 |---|---|---|---|
-| **Visão geral** | Dado principal, crítico, falha crítica, vantagem, desvantagem e módulos ativos. | Em **Regras fundamentais**, coloque `D20` em **Dado do teste geral**, `20` em **Crítico natural** e `1` em **Falha crítica natural**. | Fica disponível no contexto do Sistema e serve de referência para testes. As rolagens ainda não são executadas automaticamente pelo site. |
+| **Visão geral** | Dado principal, crítico, falha crítica, vantagem, desvantagem e módulos ativos. | Em **Regras fundamentais**, coloque `D20` em **Dado do teste geral**, `20` em **Crítico natural** e `1` em **Falha crítica natural**. | Governa as rolagens autoritativas da ficha e da Mesa. O servidor calcula o resultado e registra o evento quando existe uma sessão ativa. |
 | **Criação** | Valores iniciais, atributos, recursos e configurações raciais. | Em **Atributos**, crie o código `RESISTENCIA`, nome **Resistência**, mínimo `0`, comum `1`, máximo natural `5` e absoluto `6`. | Alimenta os campos, limites e valores iniciais dos formulários de NPC e personagem jogador. Valores já preenchidos não são substituídos. |
 | **Progressão** | Nível máximo, XP, pontos e recompensas por nível, marcos e fontes de XP. | Em **Níveis e XP**, encontre a linha do **Nível 1** e coloque `10` na coluna **XP necessário**. Isso define 10 XP para passar do nível 1 para o 2. | O novo limite aparece na página e no card do personagem, inclusive para personagem jogador. Não sobe o nível automaticamente nem altera o XP salvo. |
 | **Exploração** | Grid, movimento, pontos de ação, carga, furtividade e ações disponíveis. | Em **Grid e movimento**, coloque `4` em **Máximo por turno**. | A regra fica disponível para as telas que consultam o Sistema, mas o site ainda não movimenta peças nem desconta estamina automaticamente. |
-| **Combate** | Iniciativa, resultados dos dados, tipos de dano e tipos de defesa. | Em **Tipos de dano**, adicione o código `ELETRICO` e o nome **Elétrico**. | O tipo passa a poder ser referenciado por catálogos e formulários integrados. O site ainda não calcula e aplica sozinho todo o dano de um combate. |
+| **Combate** | Iniciativa, resultados dos dados, tipos de dano e tipos de defesa. | Em **Tipos de dano**, adicione o código `ELETRICO` e o nome **Elétrico**. | Governa iniciativa, resultados, dano e mitigação. Alterações de estado são apresentadas como propostas confirmáveis, nunca aplicadas silenciosamente. |
 | **Poderes** | Tipos de magia, custos, limite de magias, skills, ultimates e nível de desbloqueio. | Em **Skills e ultimate**, coloque `7` em **Nível da ultimate**. | Os formulários de personagem usam os limites e opções do Sistema e podem avisar quando uma ficha os ultrapassa. |
-| **Sobrevivência** | Condições, descansos, morte, estabilização, loot e refeições. | Em **Fluxo de morte e estabilização**, informe `3` em **Sucessos necessários**. | A configuração é salva e resolvida, mas ainda não existe uma engine que, ao zerar a vida, abra e execute automaticamente esse fluxo. |
+| **Sobrevivência** | Condições, descansos, morte, estabilização, loot e refeições. | Em **Fluxo de morte e estabilização**, informe `3` em **Sucessos necessários**. | Governa condições, descansos e sobrevivência. A engine acompanha duração e turnos e exige confirmação nas mutações propostas pelo fluxo. |
 | **Catálogo de itens** | Tipos, categorias, arquétipos, campos, faixas dos gráficos e referências. | Selecione **Arma > Arma de fogo > Pistola / Revólver** e edite as faixas de dano. | Orienta formulários, validações, avisos e gráficos das páginas de itens. |
 
 ## Códigos, chaves e IDs
@@ -77,6 +77,8 @@ Os limites, rótulos, opções e avisos dos itens na ficha usam o Sistema da Mes
 
 ## Resumo do que já é automático
 
-Já consomem o Sistema: progressão exibida nas fichas, limites e opções de criação, atributos, recursos, configuração racial, opções de skills e magias, catálogo e gráficos de itens globais, além de avisos de valores fora da referência.
+Já consomem o Sistema: progressão exibida nas fichas, limites e opções de criação, atributos, recursos, configuração racial, opções de skills e magias, catálogo e gráficos de itens, rolagens autoritativas, XP, munição configurada, dano e mitigação, condições, cooldowns, descansos, sobrevivência, iniciativa, rodadas e turnos.
 
-Ainda não são uma execução automática: rolagens completas, movimento, pontos de ação, aplicação de dano, condições, descanso e fluxo de morte. Essas regras podem ser cadastradas e consultadas, mas ainda dependem do mestre ou de uma futura tela de gameplay.
+Rolagens apenas calculam e propõem consequências. XP, custos, munição, dano, condições e descansos mudam o estado somente após confirmação do jogador autorizado ou do mestre. Texto narrativo ou configuração ambígua permanece assistido.
+
+Continuam fora do escopo atual: pontos de ação, movimento de peças, combos, reações, furtividade como automação de VTT e telas agregadas de estatísticas. O ledger da Mesa já registra os dados necessários para as estatísticas futuras.

@@ -23,6 +23,10 @@ const getEmptyAtributos = (tipo: ItemTipo): any => {
         cadencia: 1,
         capacidadeUso: 0,
         capacidadeMunicao: 0,
+        controlaMunicao: false,
+        municaoAtual: 0,
+        custoMunicaoTiro: 1,
+        custoMunicaoRajada: 0,
         gastoEstaminaPorAtaque: 0,
         acerto: "",
         duracaoEfeito: "",
@@ -169,8 +173,9 @@ export const useFormItem = (initialItem?: ItemPayload, contentType?: string) => 
       atributos,
       sistema.catalogTypes,
       sistema.contexto?.combate?.resultadosDado ?? [],
+      sistema.contexto?.sobrevivencia?.condicoes ?? [],
     ),
-    [atributos, sistema.catalogTypes, sistema.contexto?.combate?.resultadosDado, tipo],
+    [atributos, sistema.catalogTypes, sistema.contexto?.combate?.resultadosDado, sistema.contexto?.sobrevivencia?.condicoes, tipo],
   );
 
   const handleAtributosChange = useCallback((nextAttributes: Record<string, unknown>) => {

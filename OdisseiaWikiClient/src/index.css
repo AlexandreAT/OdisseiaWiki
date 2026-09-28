@@ -57,6 +57,8 @@
   --grey: rgb(106, 106, 106);
   --mediumgrey: rgb(80, 80, 80);
   --deepgray: #2C2C2C;
+  /* Compatibilidade com componentes antigos que usam a grafia britânica. */
+  --deepgrey: var(--deepgray);
   --clearblack: rgba(35, 35, 35, 0.8);
   --lightBlack: rgb(30, 30, 30);
   --black: rgb(23, 23, 23);
@@ -88,6 +90,12 @@ html {
 body,
 #root {
   min-height: 100%;
+  color: inherit;
+}
+
+/* Controles nativos não herdam a cor do tema em todos os navegadores.
+   Componentes com cor própria continuam prevalecendo pela classe estilizada. */
+button {
   color: inherit;
 }
 

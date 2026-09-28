@@ -1,8 +1,8 @@
 # OdisseiaWiki - Guia da Engine de Gameplay
 
-> **Versao do documento:** 1.0  
-> **Ultima revisao:** 26/09/2026
-> **Estado geral:** implementacao incremental em andamento
+> **Versao do documento:** 1.1
+> **Ultima revisao:** 28/09/2026
+> **Estado geral:** funcional no escopo atual de RPG de Mesa; automacoes de VTT e telas de estatisticas permanecem adiadas
 > **Escopo:** sessoes, rolagens, acoes, historico, combate e automacoes de regras  
 > **Documento canonico:** qualquer alteracao da engine deve atualizar este arquivo na mesma entrega
 
@@ -138,44 +138,39 @@ Ao final das fases previstas, um participante autorizado deve conseguir:
 | Resolver central de runtime | `Implementado` | `SistemaRpgResolver` com origem, proveniencia, warnings e fallback. |
 | Vinculo de Mesa com versao | `Implementado` | `Mesa.IdSistemaVersao`; Mesa Padrao acompanha a publicacao atual. |
 | Fichas de personagem | `Implementado` | Recursos, atributos, defesas, inventario, proteses, skills e magias. |
-| Armas, modificadores e acessorios | `Implementado parcialmente` | Estrutura tipada no frontend e resolucao autoritativa no backend para testes de arma: alcance, cadencia, operacao, tiros, modificadores e acessorios compativeis sao lidos da ficha persistida. Dano e custos conhecidos sao propostos e podem ser aplicados por confirmacao; municao e efeitos narrativos continuam assistidos. |
-| Estado compartilhado da Mesa | `Implementado parcialmente` | `Mesa.AoVivo`, snapshot de personagens e presenca SignalR. |
-| Atualizacao rapida de recursos | `Implementado parcialmente` | Patch de recursos regrava o JSON de status com validacao de limites. |
+| Armas, modificadores e acessorios | `Implementado` | Alcance, cadencia, operacao, tiros, modificadores, acessorios, dano, custos, condicoes e consumo opcional de municao sao resolvidos da ficha persistida e da versao publicada. Toda mutacao continua sendo uma proposta confirmavel. |
+| Estado compartilhado da Mesa | `Implementado` | `Mesa.AoVivo`, snapshot de personagens, presenca SignalR e combate persistente por sessao. |
+| Atualizacao rapida de recursos | `Implementado` | Patch de recursos usa revisao/idempotencia, grava o ledger e sincroniza, na mesma transacao, morte e condicoes disparadas pela regra publicada. |
 | Realtime | `Implementado parcialmente` | SignalR notifica invalidacao e presenca; cliente refaz a leitura autorizada. |
 | Catalogos de dados e resultados | `Implementado parcialmente` | `SistemaResultadoDado` descreve dado, quantidade, faixas, natural, resultado e efeito JSON. O backend publica um catalogo executavel de teste geral, atributos e fontes de XP da versao efetiva; a criacao de item oferece as tabelas publicadas em vez de depender apenas de codigo livre. |
 | Sessao, comando e ledger | `Implementado` | `MesaSessao`, `MesaComando`, `MesaEvento` e `MesaRolagem` mantem inicio/fim, idempotencia, sequencia e imutabilidade. |
 | Rolagem autoritativa | `Implementado parcialmente` | RNG do servidor para teste generico, atributos, fontes de XP e acoes referenciadas da ficha, sempre resolvidas pela versao efetiva; simulacao offline nao persiste nem permite aplicar efeitos. |
 | Contrato de rolagem auditavel | `Implementado parcialmente` | Resultado registra dados, modo, dificuldade/faixas, criticos naturais, snapshot de origem, revisoes, parametros escolhidos e avisos/fallbacks. Armas e poderes usam especificacao declarativa validada contra a versao publicada do Sistema. |
-| Escritas runtime da ficha | `Implementado parcialmente` | Vida, mana, estamina, XP, defesas e inventario passam por `RevisaoRuntime`; em sessao ativa a escrita gera comando e evento na mesma transacao. XP, custo de recurso e dano propostos por uma rolagem possuem confirmacao separada, revisao otimista, idempotencia e evento. Ainda faltam condicoes, equipamentos, municao e defesa tipada. |
+| Escritas runtime da ficha | `Implementado` | Vida, mana, estamina, XP, defesas, inventario e municao passam por revisao otimista e ledger. Dano, mitigacao, custos, condicoes, cooldowns e descansos usam comandos confirmados e auditaveis. |
 
 ## 4.2. O que ainda nao existe
 
-Ainda nao existem no dominio, ou nao estao completos:
+Ainda nao existem no dominio, ou permanecem deliberadamente assistidos:
 
-- encontro ou combate persistente;
-- participante de combate independente da entidade Wiki;
-- ordem real de iniciativa, turno e rodada;
-- catalogo versionado completo de acoes de arma, item, skill, magia e condicao; a primeira camada executavel ja cobre armas e poderes com `TesteSpec`, mas efeitos e condicoes continuam declarativos;
-- aplicacao atomica de defesa, inventario, municao e condicao por comandos tipados; XP, custo de recurso e dano conhecidos ja possuem aplicacao confirmada;
-- cooldown e duracao executados pela engine;
-- projecoes de estatistica;
-- aplicacao autoritativa de municao, cooldown, duracao e efeitos nao representados como recurso; dano e custo conhecidos ja usam proposta e comando separados;
+- pontos de acao, movimento, combos, reacoes e furtividade como automacao de VTT;
+- projecoes e telas de estatistica; o ledger ja guarda origem, dano bruto/mitigado, defesa, municao, condicao, descanso, morte e recuperacao para calculo futuro;
+- calculo automatico de regras cuja formula publicada esteja ausente ou ambigua; nesses casos o mestre confirma o valor e a ordem aplicados;
 - execucao continua, em ambiente MariaDB, da suite de integracao que cobre concorrencia, reconexao e dois usuarios da mesma Mesa.
 
-## 4.3. Correcoes preparatorias obrigatorias
+## 4.3. Correcoes preparatorias incorporadas
 
-Antes de automatizar efeitos, a Fase 0 deve tratar estes pontos verificados no codigo atual:
+Os riscos levantados na auditoria inicial agora fazem parte da base obrigatoria:
 
-1. `MesaPersonagemService` omite personagens reconhecidos com vida menor ou igual a zero. Vida zero deve iniciar o fluxo configurado de **A Beira da Morte**, e nao fazer a ficha desaparecer.
-2. A configuracao extensivel de morte presente em `SistemaMorteConfig.ConfiguracaoJson` precisa atravessar DTOs, mapeamentos e edicao sem perda de dados.
-3. Os codigos `DEPENDENCIA_MANA` e `DEPENDENCIA_DE_MANA` estao divergentes. Deve existir um unico codigo canonico, com compatibilidade de leitura para o legado.
-4. A resolucao de contexto de Personagem Jogador deve considerar a Mesa em todos os caminhos aplicaveis; hoje existe caminho que resolve personagem e raca sem repassar `IdMesa`.
-5. O tipo frontend `DadoAcerto` aceita apenas `D6`, `D8` e `D20`. O contrato geral precisa suportar ao menos os dados usados pelo livro (`D4`, `D6`, `D10` e `D20`) e dados configurados pelo Sistema.
-6. O calculo efetivo de modificadores de arma e acessorios existe apenas no cliente. O backend deve possuir a implementacao autoritativa e testes de paridade.
-7. `acerto` em skill e magia e apenas um dado opcional e nao representa condicao de sucesso, modificadores, custos, cooldowns ou efeitos.
-8. O update completo da ficha e os patches rapidos podem disputar o mesmo `StatusJson`. **Resolvido para as escritas atuais de ficha:** `RevisaoRuntime`, chave de idempotencia e transacao com evento em sessao ativa. Proximas aplicacoes devem reutilizar este caminho, nunca atualizar o JSON diretamente.
-9. `MesaAoVivoSnapshot` informa `TurnoAtual = "Mestre"` de forma fixa. Isso e apenas placeholder e nao pode ser tratado como engine de turno.
-10. A presenca SignalR e local e efemera. Ela nao substitui sessao, evento ou estado duravel.
+1. personagens com vida menor ou igual a zero continuam visiveis e entram no fluxo configurado de **A Beira da Morte**;
+2. a configuracao extensivel de morte atravessa DTOs, mapeamentos, clonagem e edicao;
+3. `DEPENDENCIA_DE_MANA` e o codigo canonico, com compatibilidade de migracao para o legado;
+4. o contexto do Personagem Jogador preserva a Mesa na resolucao runtime;
+5. dados de acerto aceitam os dados usuais do livro e referencias `D<n>` publicadas pelo Sistema;
+6. modificadores de arma e acessorios sao resolvidos autoritativamente no backend;
+7. skills e magias usam especificacao opcional de teste, custo, cooldown e efeito, sem inferir regra de texto narrativo;
+8. escritas da ficha usam `RevisaoRuntime`, idempotencia e evento na mesma transacao quando existe sessao ativa;
+9. a interface usa o participante atual do combate persistente, e nao o antigo placeholder de turno do snapshot;
+10. SignalR continua sendo apenas invalidacao/presenca; sessao, evento e combate persistido sao a fonte duravel.
 
 Estas correcoes nao autorizam mudancas destrutivas em dados existentes. Toda migracao deve ser aditiva e possuir fallback.
 
@@ -1028,7 +1023,7 @@ Fallback Odisseia:
 - sucesso quando o total for maior que 12;
 - a dificuldade permanece 12 independentemente da quantidade de participantes.
 
-A selecao de participantes, permissao e efeito de critico em grupo ainda exigem decisao. Ate o modelo de participantes existir, o fluxo e assistido e registra os valores informados com proveniencia.
+O modelo persistente de participantes ja existe para o combate. O teste em grupo continua assistido porque selecao, permissao e efeito de critico coletivo ainda exigem uma regra publicada propria; nao se deve agregar atributos automaticamente apenas por os personagens participarem do mesmo combate.
 
 ## 16.4. Vantagem e desvantagem
 
@@ -1157,7 +1152,7 @@ O servidor resolve:
 - acessorios compativeis;
 - penalidades de contexto;
 - quantidade de ataques/dados segundo a regra;
-- custo proposto de estamina/mana, aplicavel apenas apos confirmacao; municao permanece assistida;
+- custo proposto de estamina/mana e consumo de municao configurado, aplicaveis apenas apos confirmacao;
 - dano por distancia como valor proposto, aplicavel em alvo escolhido pelo mestre, nunca automaticamente.
 
 Cada tiro/ataque solicitado gera uma resolucao individual com seus proprios dados. O resultado agregado preserva quantidade, acertos, falhas e cada rolagem individual; dano por acerto e custo por uso sao multiplicados somente depois dessas resolucoes e permanecem propostas confirmaveis.
@@ -1223,7 +1218,8 @@ Por isso, a regra inicial "skills e magias sempre possuem dado de acerto" nao e 
 - `acerto?: DadoAcerto` continua como fallback legado de leitura;
 - novos poderes devem aceitar `teste?: TesteSpec` tipado;
 - `TesteSpec.codigoTeste` referencia uma tabela publicada; quando o catalogo estiver disponivel, o editor deve oferecer selecao e preservar codigos legados apenas para compatibilidade;
-- `custo` e `cooldown` textuais continuam informativos ate existir estrutura tipada;
+- `custo` textual permanece compativel; `cooldownTurnos` e executavel quando a versao publicada habilita cooldown, mantendo o texto antigo apenas como fallback de leitura;
+- condicoes configuradas na origem sao validadas pelo catalogo publicado e viram propostas, nunca aplicacao silenciosa;
 - efeito textual nunca e executado automaticamente;
 - a tela administrativa do Sistema deve permitir configurar regras estruturadas em rascunho;
 - versoes ja publicadas nao sao alteradas in-place;
@@ -1461,7 +1457,7 @@ O exemplo concede primeiro ataque gratuito a cada arma de fogo, o que conflita c
 - cartuchos especiais e armas que explicitamente controlam municao sao contabilizados;
 - recarregar normalmente encerra o turno;
 - a engine nao cria capacidade ou gasto para arma que nao os definiu;
-- gasto de municao, quando automatizado, integra a mesma transacao do comando.
+- gasto de municao aparece apos o resultado como proposta; somente a confirmacao cria o comando transacional, altera a arma identificada e grava o evento.
 
 ## 20.9. Acerto preciso
 
@@ -1509,7 +1505,7 @@ Regra conceitual do Odisseia:
 - a contagem retorna ao personagem que originou o efeito;
 - um efeito de dois turnos usado por A termina quando o turno de A chega no terceiro ciclo, conforme o ponto exato de expiracao configurado.
 
-A engine deve guardar turno de origem, rodada, sequencia e momento previsto de expiracao. Nao usar timers em memoria para efeitos baseados em turno.
+A engine guarda turno de origem, rodada, sequencia e contadores persistentes. Condicoes e cooldowns avancam pelo comando de proximo turno; nao existem timers em memoria como fonte de verdade.
 
 Tipos necessarios:
 
@@ -1547,7 +1543,7 @@ Permanecem configuraveis: avancar fora de combate, saida do originador, inicio/f
 | Embriagado | Pode reduzir Sanidade e impor -2 | teste, acumulo, duracao e recuperacao |
 | Desarmado/lentidao | Efeito de ataque preciso/origem | acumulo, imunidade e duracao |
 
-Sem todos os campos necessarios, a condicao e apenas assistida. A engine nao interpreta sua descricao.
+O catalogo configuravel informa recurso, operacao, valor, momento, gatilho, duracao, acumulo, remocao e cooldown. Itens, acessorios, proteses, skills e magias podem referenciar uma condicao publicada e substituir valor/duracao. Sem os campos necessarios, a condicao permanece assistida; a engine nunca interpreta texto narrativo.
 
 ## 21.3. Politica de acumulo
 
@@ -1575,7 +1571,7 @@ Regra conhecida:
 - pode ser repetido;
 - Dependencia de Mana impede recuperacao natural de MP enquanto ativa.
 
-O livro diverge entre recuperar no proprio turno ou no proximo. A configuracao precisa declarar `momentoDaRecuperacao` antes de a engine aplicar automaticamente.
+O comando de descanso usa a configuracao publicada e exige confirmacao. Regras temporais ambiguas continuam assistidas; nenhuma descricao textual e convertida em formula.
 
 ## 22.2. Descanso normal
 
@@ -1726,7 +1722,7 @@ A pagina de Mesa em jogo deve ganhar uma area de gameplay, sem substituir a fich
 - Central de acoes rapidas;
 - historico autorizado;
 - status de conexao/reconexao;
-- combate/turno quando a Fase 5 existir;
+- combate, turno e efeitos persistentes quando houver sessao ativa;
 - controles de mestre separados dos controles do jogador.
 - rolagens oficiais de outros participantes aparecem automaticamente sobre a ficha apenas depois do evento ser persistido e autorizado.
 
@@ -2217,15 +2213,15 @@ Toda ambiguidade fica aberta ate receber decisao de produto e configuracao versi
 | `GE-A004` | Natural 1/20 continua falha/critico diante de bonus ou penalidade extrema | Identificar natural separadamente; efeito vem da tabela publicada | Aberta |
 | `GE-A005` | Curta inclui quadrado 1 e longa deixa o quadrado 10 sem faixa | Selecao manual; validacao posicional bloqueada | Aberta |
 | `GE-A006` | Empate entre furtividade e dificuldade | Mestre/configuracao decide | Aberta |
-| `GE-A007` | Descanso simples recupera agora ou no proximo turno | Exigir `momentoDaRecuperacao`; sem ele, apenas preview | Aberta |
-| `GE-A008` | Fadiga -25% e carga -50%: aditivo, multiplicativo ou maior prevalece | Mostrar ambos; mestre aplica manualmente | Aberta |
+| `GE-A007` | Descanso simples recupera agora ou no proximo turno | A recuperacao ocorre somente quando dono ou mestre confirma **Aplicar descanso**; nunca pelo simples passar do tempo | Resolvida por `GE-D029` |
+| `GE-A008` | Fadiga -25% e carga -50%: aditivo, multiplicativo ou maior prevalece | Reducoes percentuais estruturadas sao aplicadas sequencialmente pela `Ordem` publicada; valor sobrescrito e acumulos pertencem a condicao ativa | Resolvida por `GE-D030` |
 | `GE-A009` | Dupla empunhadura concede primeiro disparo gratuito por arma ou apenas primeira acao | Custo assistido ate regra especifica | Aberta |
 | `GE-A010` | Ordem entre escudo, protecao e armadura | Mestre escolhe e evento registra; sem autoaplicacao | Aberta |
 | `GE-A011` | Durabilidade e quebra universal de armadura | Usar apenas valor definido pelo item/regra | Aberta |
 | `GE-A012` | Formula universal de revidar, defender e contra-atacar | Nao oferecer como acao automatica sem `TesteSpec` | Aberta |
 | `GE-A013` | Custo em erro, cancelamento ou alvo invalido | `CustoSpec` declara o momento; sem ele, nao aplicar | Aberta |
 | `GE-A014` | Cooldown fora de combate, saida do ator, inicio/fim e reaplicacao | Assistido ate campos estruturados | Aberta |
-| `GE-A015` | Tick e acumulo de condicoes | Exigir politica por condicao | Aberta |
+| `GE-A015` | Tick e acumulo de condicoes | Somente campos publicados (`momentoEfeito`, unidade, duracao, empilhavel, sobrescrita e cooldown) autorizam tick/acumulo | Resolvida por `GE-D028` |
 | `GE-A016` | Dano de queda diz triplicar, mas 16 m aparece como 2100 em vez de 2700 | Apenas tabela explicitamente configurada e executavel | Aberta |
 | `GE-A017` | Curva de XP sobrepoe niveis 7, 10, 13 e 16 | Usar faixas normalizadas publicadas, nunca texto | Aberta |
 | `GE-A018` | Vantagem + paridade pode manter dado maior que concede menos XP | Preservar regra configurada e mostrar warning | Aberta |
@@ -2247,8 +2243,8 @@ Toda ambiguidade fica aberta ate receber decisao de produto e configuracao versi
 | `GE-A034` | Estrategia final de projecoes estatisticas | Derivar do ledger; nao criar fonte paralela agora | Aberta |
 | `GE-A035` | Critico/falha critica em teste de grupo | Registrar naturais; efeito decidido pelo mestre/regra | Aberta |
 | `GE-A036` | Empates em testes opostos alem de Ameaca x Coragem | `TesteSpec` deve declarar desempate | Aberta |
-| `GE-A037` | Desempate de iniciativa | Presencial sugere nova rolagem; online precisa politica publicada | Aberta |
-| `GE-A038` | Gatilho exato `vida <= 0` para A Beira da Morte e cobertura de NPCs | Nao ocultar; configurar state machine antes de matar | Aberta |
+| `GE-A037` | Desempate de iniciativa | A engine sugere a ordem numerica e o mestre confirma/reordena empates antes de ativar o combate | Resolvida por `GE-D031` |
+| `GE-A038` | Gatilho exato `vida <= 0` para A Beira da Morte e cobertura de NPCs | Personagens usam o limite publicado e permanecem visiveis; NPC sem ficha de recursos continua assistido | Parcialmente resolvida |
 | `GE-A039` | Igualdade exata nos limites de 20% e 50% | Texto literal diz abaixo; manter configuravel | Aberta |
 | `GE-A040` | Aplicacao do multiplicador de dano quando vida atual ja e zero | Nao decidir automaticamente | Aberta |
 
@@ -2787,20 +2783,22 @@ Antes de adicionar uma acao, responder:
 
 Esta tabela e obrigatoria e deve ser atualizada em cada entrega.
 
-| Area | Estado em 26/09/2026 | Observacao |
+| Area | Estado em 27/09/2026 | Observacao |
 |---|---|---|
 | Estudo do livro e arquitetura | `Concluido` | Regras, riscos, UI e arquitetura alvo documentados. |
 | Fase 0 - Preparacao | `Parcial` | Vida zero permanece na Mesa; revisao otimista e auditoria transacional das escritas atuais da ficha estao implementadas. Identidades estaveis entram gradualmente quando fichas legadas sao salvas; aplicacoes futuras devem continuar usando o mesmo contrato de revisao e ledger. |
 | Fase 1 - Fundacao | `Parcial` | Sessoes, comandos idempotentes, eventos, RNG, visibilidade, historico com cursor que avanca sobre linhas privadas, transacao e adaptador `AoVivo` implementados. A suite MariaDB e opt-in e deve entrar na execucao continua antes de ampliar comandos de estado. |
 | Fase 2 - MVP de rolagens | `Parcial` | Rolagens genericas, atributos e fontes de XP sao obtidos da versao efetiva do Sistema; registro manual, simulacao offline, Central, ficha interativa, dado 3D, realtime e historico estao integrados. XP calculado pode ser aplicado somente por confirmacao em sessao ativa. |
-| Fase 3 - Acoes de itens/poderes | `Parcial` | Armas, proteses, skills e magias com `TesteSpec` podem ser acionadas da ficha. O servidor usa a linha persistida e a versao da sessao, valida alcance, cadencia, operacao e modo de disparo, resolve tiros individualmente, soma modificadores de arma/acessorios e grava snapshot completo. Dano e custos conhecidos viram propostas confirmaveis; municao, cooldown, duracao e efeitos narrativos continuam assistidos. |
-| Fase 4 - Engine de estado | `Parcial` | As escritas atuais usam revisao e auditoria em sessao. O comando de aplicacao altera XP ou recurso publicado a partir de proposta persistida, com permissao, idempotencia, limite, evento e registro relacional unico por origem/efeito/alvo. Ainda faltam defesa, inventario, municao, condicoes, descanso e morte tipados. |
-| Fase 5 - Combate/movimento | `Nao iniciada` | `TurnoAtual = Mestre` continua placeholder. |
-| Fase 6 - Estatisticas | `Nao iniciada` | Nenhum agregado deve ser criado antes do ledger. |
+| Fase 3 - Acoes de itens/poderes | `Concluida no escopo atual` | Armas, proteses, skills e magias com `TesteSpec` usam ficha persistida e versao da sessao. Alcance, cadencia, operacao, tiros, modificadores, acessorios, dano, custos, municao opcional, condicoes e cooldown estruturado geram snapshots e propostas confirmaveis. Texto narrativo permanece assistido. |
+| Fase 4 - Engine de estado | `Concluida no escopo atual` | XP, recursos, dano/mitigacao, municao, condicoes, descanso e estados de sobrevivencia usam permissao, revisao, idempotencia, transacao e ledger. Fadiga, dependencia de mana e excesso de carga sao sincronizados apenas por regras publicadas estruturadas. |
+| Fase 5 - Combate/movimento | `Parcial` | Participantes, NPCs, iniciativa, ordem confirmada pelo mestre, rodadas, turnos, condicoes, cooldown e sobrevivencia sao persistentes. PA, movimento, combos, reacoes e furtividade foram explicitamente adiados por pertencerem ao futuro escopo de VTT. |
+| Fase 6 - Estatisticas | `Preparada` | Nenhum agregado ou tela foi criado; eventos guardam origem e snapshots suficientes para derivar rolagens, uso de arma/poder, municao, dano mitigado, condicoes, descansos, mortes e recuperacoes. |
 | Animacao 3D | `PoC integrada` | Poliedros CSS 3D D4/D6/D8/D10/D12/D20 com clique, arremesso por ponteiro ou movimento do celular, impulso proporcional a velocidade e distancia do gesto, colisao nas bordas, dois dados simultaneos em vantagem/desvantagem e pouso continuo nos valores do servidor. Chacoalhadas sucessivas reforcam e prolongam apenas a animacao local; em navegadores que exigem permissao, ela e solicitada por acao explicita. O pouso planeja voltas completas e desacelera monotonicamente ate a face oficial, sem mola, aceleracao corretiva ou troca abrupta no final. Novos eventos autorizados iniciam a mesma animacao nos demais participantes via invalidacao SignalR + leitura REST; abrir o modal sem rolar nao transmite nada. Outros tipos usam fallback textual. Sem biblioteca 3D ou fisica real. |
-| Ambiguidades do livro | `Abertas` | Registro `GE-A001` a `GE-A040`. |
+| Ambiguidades do livro | `Rastreadas` | Registro `GE-A001` a `GE-A040`, preservando o estado de cada decisao entre aberta, parcial e resolvida. |
 
-Validacao desta entrega: build do backend e TypeScript; testes de gameplay para regras publicadas, fallback legado identificado, armas/acessorios, tiros independentes, propostas de efeito, aplicacao de XP/recurso, permissao, duplicidade e paginacao/privacidade do ledger. A suite MariaDB opt-in cobre a semantica que testes em memoria nao comprovam: bloqueios `FOR UPDATE`, isolamento serializavel e indices unicos. Ela deve ser executada em ambiente descartavel antes de publicar mudancas de estado. A animacao de dado e visual: apenas o backend determina e devolve o resultado.
+No escopo atual, a Mesa e funcional para sessoes de RPG: executa rolagens autoritativas, historico e sincronizacao em tempo real; permite aplicar efeitos confirmaveis; persiste participantes, iniciativa, rodadas, turnos, condicoes, cooldowns e sobrevivencia. A engine nao pretende substituir o mestre nem transformar o site em VTT. Pontos de acao, movimento, combos, reacoes, furtividade e as projecoes visuais de estatisticas permanecem fora desta entrega.
+
+Validacao desta entrega: build do backend e TypeScript; testes de gameplay para regras publicadas, fallback legado identificado, armas/acessorios, tiros independentes, propostas de efeito, aplicacao de XP/recurso, permissao, duplicidade e paginacao/privacidade do ledger. O combate persistente adiciona migracao propria e continua exigindo a suite MariaDB opt-in para comprovar bloqueios, isolamento e indices unicos em ambiente descartavel antes da publicacao. A animacao de dado e visual: apenas o backend determina e devolve o resultado.
 
 ---
 
@@ -2832,6 +2830,13 @@ Validacao desta entrega: build do backend e TypeScript; testes de gameplay para 
 | `GE-D022` | 23/09/2026 | O contrato de rolagem declara modo, dificuldade, faixas, origem e fallbacks | A UI e o historico conseguem explicar a regra aplicada; referencias de arma/item/poder so serao aceitas quando houver resolucao autoritativa publicada | - |
 | `GE-D023` | 25/09/2026 | Favoritos persistem somente a intencao configurada; idempotencia, revisoes, regras e resultado sao sempre novos | Atalhos continuam seguros e refletem a ficha e a versao publicada atuais sem congelar calculos antigos | - |
 | `GE-D024` | 26/09/2026 | Rolagens apenas propoem XP, custo, dano e outros efeitos estruturados; cada mutacao exige confirmacao separada | Preserva a liberdade do RPG de Mesa sem abrir mao de regra publicada, permissao, concorrencia, idempotencia e auditoria | `GE-D003` |
+| `GE-D025` | 27/09/2026 | Combate persiste participantes, iniciativa, ordem, rodada, turno, condicoes e cooldown; PA, movimento, combos, reacoes e furtividade ficam adiados | Entrega automacao util para RPG de Mesa sem transformar esta fase em VTT | - |
+| `GE-D026` | 27/09/2026 | Munição, descanso, dano/mitigacao e efeitos de condicao sao propostas confirmaveis | O servidor calcula o que estiver estruturado, mas o grupo decide se a consequencia deve ser aplicada | `GE-D024` |
+| `GE-D027` | 27/09/2026 | Favorito abre a rolagem pronta, mas nunca lanca o dado automaticamente | Atalho reduz cliques sem registrar acao que o usuario nao executou | `GE-D023` |
+| `GE-D028` | 27/09/2026 | Condicoes executam somente campos estruturados e publicados de efeito, gatilho, duracao, acumulo, remocao e cooldown | Texto narrativo continua livre para o RPG sem virar codigo implicito ou efeito duplicado | `GE-D003` |
+| `GE-D029` | 27/09/2026 | Descanso altera a ficha somente depois da confirmacao explicita do dono ou mestre | O tempo de jogo nao aplica recuperacao silenciosa e regras temporais ambiguas permanecem assistidas | `GE-D024` |
+| `GE-D030` | 27/09/2026 | Reducoes percentuais simultaneas de limite sao compostas sequencialmente pela ordem publicada, respeitando valor sobrescrito e acumulos ativos | A versao do Sistema determina uma operacao reproduzivel sem esconder do mestre as condicoes que a produziram | `GE-D003` |
+| `GE-D031` | 27/09/2026 | A iniciativa calculada e apenas uma sugestao ate o mestre confirmar ou reordenar todos os participantes | Empates e excecoes narrativas continuam sob controle da Mesa antes de iniciar os turnos persistentes | `GE-D025` |
 
 Novas decisoes devem receber ID sequencial, data, justificativa, impacto e referencia a decisao substituida. Nao apagar decisoes antigas.
 

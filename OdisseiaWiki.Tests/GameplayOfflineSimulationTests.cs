@@ -189,6 +189,10 @@ public sealed class GameplayOfflineSimulationTests
                 "tipoArma":"rifle_assalto",
                 "modoModificadores":"distancia",
                 "cadencia":3,
+                "controlaMunicao":true,
+                "municaoAtual":50,
+                "custoMunicaoTiro":1,
+                "custoMunicaoRajada":10,
                 "danoPorAlcance":{"longa":12},
                 "gastoEstaminaPorAtaque":4,
                 "modificadores":{"longa":-1},
@@ -197,10 +201,19 @@ public sealed class GameplayOfflineSimulationTests
                   "nome":"Mira longa",
                   "atributos":{"compatibilidade":"distancia","modificadores":{"longa":3,"dano":100}}
                 }],
-                "teste":{"codigoTeste":"ATAQUE_COMUM","codigoAtributo":"PRECISAO","grupoAtributo":"Secundario","usaTotalParaFaixas":true}
+                "teste":{"codigoTeste":"ATAQUE_COMUM","codigoAtributo":"PRECISAO","grupoAtributo":"Secundario","usaTotalParaFaixas":true},
+                "condicoes":[{"codigo":"SANGRAMENTO","valor":4,"duracao":2}]
               }
             }]
             """;
+        fixture.Version.Condicoes.Add(new SistemaCondicao
+        {
+            Codigo = "SANGRAMENTO",
+            Nome = "Sangramento",
+            Tipo = "DANO_CONTINUO",
+            UnidadeDuracao = SistemaUnidadeDuracao.Turno,
+            PermiteSobrescrever = true,
+        });
         fixture.Version.ResultadosDado.Add(new SistemaResultadoDado
         {
             CodigoTeste = "ATAQUE_COMUM",
@@ -255,6 +268,10 @@ public sealed class GameplayOfflineSimulationTests
             effect.Codigo == "APLICAR_DANO" && effect.Valor == 224 && effect.ExigeAlvo);
         Assert.Contains(result.Dados.Rolagem.EfeitosPropostos, effect =>
             effect.Codigo == "APLICAR_CUSTO_ESTAMINA" && effect.Valor == 8);
+        Assert.Contains(result.Dados.Rolagem.EfeitosPropostos, effect =>
+            effect.Codigo == "CONSUMIR_MUNICAO" && effect.Valor == 20 && effect.IdInstancia == "arma-1");
+        Assert.Contains(result.Dados.Rolagem.EfeitosPropostos, effect =>
+            effect.Codigo == "APLICAR_CONDICAO_SANGRAMENTO" && effect.Valor == 4 && effect.DuracaoCondicao == 2);
         fixture.AssertReadOnly();
     }
 
@@ -267,10 +284,12 @@ public sealed class GameplayOfflineSimulationTests
               "id":"skill-1",
               "nome":"Golpe preciso",
               "atributos":{
+                "cooldownTurnos":3,
                 "teste":{"codigoTeste":"PODER","codigoAtributo":"FORCA","grupoAtributo":"Principal","usaTotalParaFaixas":true}
               }
             }]
             """;
+        fixture.Version.SkillConfig = new SistemaSkillConfig { UsaCooldown = true };
         fixture.Version.ResultadosDado.Add(new SistemaResultadoDado
         {
             CodigoTeste = "PODER",
@@ -308,6 +327,8 @@ public sealed class GameplayOfflineSimulationTests
         Assert.Equal("SKILL", result.Dados.Rolagem.OrigemAcao?.Tipo);
         Assert.Equal("skill-1", result.Dados.Rolagem.OrigemAcao?.IdInstancia);
         Assert.Equal("PODER", result.Dados.Rolagem.OrigemAcao?.Codigo);
+        Assert.Contains(result.Dados.Rolagem.EfeitosPropostos, effect =>
+            effect.Tipo == "COOLDOWN" && effect.IdInstancia == "skill-1" && effect.CooldownTurnos == 3);
         fixture.AssertReadOnly();
     }
 

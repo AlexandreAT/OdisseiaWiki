@@ -30,6 +30,7 @@ export interface GameplayActionCenterProps {
   directInitialAction?: boolean;
   characters: GameplayCharacterOption[];
   effectTargets?: GameplayCharacterOption[];
+  isMaster?: boolean;
   mesaAoVivo: boolean;
   session: GameplaySession | null;
   events: GameplayEvent[];

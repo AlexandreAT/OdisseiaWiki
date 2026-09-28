@@ -1,5 +1,5 @@
 import { ItemTipo } from '../models/Itens';
-import { SistemaItemEscopoRuntime, SistemaItemReferenciaRuntime, SistemaResultadoDado } from '../models/SistemaRpg';
+import { SistemaCondicao, SistemaItemEscopoRuntime, SistemaItemReferenciaRuntime, SistemaResultadoDado } from '../models/SistemaRpg';
 
 export interface ItemFormOption {
   value: string;
@@ -11,6 +11,7 @@ export interface SistemaItemFormCatalog {
   categoryOptions: ItemFormOption[];
   archetypeOptions: ItemFormOption[];
   testOptions: ItemFormOption[];
+  conditionOptions: ItemFormOption[];
   references: SistemaItemReferenciaRuntime[];
   categoryCode?: string;
   archetypeCode?: string;
@@ -87,6 +88,7 @@ export const buildSistemaItemFormCatalog = (
   attributes: unknown,
   types: SistemaItemEscopoRuntime[],
   resultRows: SistemaResultadoDado[] = [],
+  conditions: SistemaCondicao[] = [],
 ): SistemaItemFormCatalog => {
   const { typeScope, categoryCode, archetypeCode } = resolveItemSystemScope(type, attributes, types);
   const categories = (typeScope?.filhos ?? []).filter((item) => item.ativo !== false);
@@ -124,6 +126,10 @@ export const buildSistemaItemFormCatalog = (
         label: item.nome,
       })),
     testOptions: [...testsByCode.values()],
+    conditionOptions: conditions.map((condition) => ({
+      value: normalizeSystemItemCode(condition.codigo),
+      label: condition.nome,
+    })),
     references: [
       ...(typeScope?.referencias ?? []),
       ...(category?.referencias ?? []),

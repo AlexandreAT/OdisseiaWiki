@@ -44,6 +44,9 @@ import {
   ComposerCard,
   ComposerGrid,
   ContextRow,
+  EffectApplicationFields,
+  EffectDefenseButton,
+  EffectDefenseOptions,
   FieldHint,
   FormulaPreview,
   FavoriteRollButton,
@@ -174,6 +177,7 @@ export const GameplayActionCenter = ({
   directInitialAction = false,
   characters,
   effectTargets = [],
+  isMaster = false,
   mesaAoVivo,
   session,
   events,
@@ -225,6 +229,8 @@ export const GameplayActionCenter = ({
   const [applyingEffect, setApplyingEffect] = useState<string | null>(null);
   const [appliedEffects, setAppliedEffects] = useState<string[]>([]);
   const [effectTargetIds, setEffectTargetIds] = useState<Record<string, number | ''>>({});
+  const [effectMitigations, setEffectMitigations] = useState<Record<string, string>>({});
+  const [effectDefenses, setEffectDefenses] = useState<Record<string, string[]>>({});
   const effectRevisionRef = useRef(0);
   const effectTargetRevisionsRef = useRef(new Map<number, number>());
   const [diceVisual, setDiceVisual] = useState<{
@@ -282,6 +288,8 @@ export const GameplayActionCenter = ({
     setAppliedEffects([]);
     setApplyingEffect(null);
     setEffectTargetIds({});
+    setEffectMitigations({});
+    setEffectDefenses({});
   }, [selectedCharacter?.personagem.idpersonagemJogador, selectedCharacter?.personagem.revisaoRuntime]);
   useEffect(() => {
     effectTargetRevisionsRef.current = new Map(effectTargets.map((target) => [
@@ -708,6 +716,14 @@ export const GameplayActionCenter = ({
     const expectedRevision = targetId
       ? effectTargetRevisionsRef.current.get(Number(targetId)) ?? 0
       : effectRevisionRef.current;
+    const isDamage = effect.tipo.trim().toUpperCase() === 'DANO';
+    const mitigationText = effectMitigations[effect.codigo]?.trim() ?? '';
+    const mitigation = mitigationText === '' ? 0 : Number(mitigationText);
+    if (isDamage && (!Number.isInteger(mitigation) || mitigation < 0 || mitigation > effect.valor)) {
+      setSubmitError(`Informe um dano mitigado entre 0 e ${effect.valor}.`);
+      setSubmitErrorTarget(lastResultTarget);
+      return;
+    }
     setApplyingEffect(effect.codigo);
     setSubmitError(null);
     try {
@@ -717,6 +733,8 @@ export const GameplayActionCenter = ({
         codigoEfeito: effect.codigo,
         idPersonagemAlvo: targetId ? Number(targetId) : undefined,
         revisaoPersonagemEsperada: expectedRevision,
+        danoMitigadoConfirmado: isDamage ? mitigation : undefined,
+        defesasUtilizadas: isDamage ? (effectDefenses[effect.codigo] ?? []) : undefined,
       });
       if (applied.aplicacao) {
         if (targetId) effectTargetRevisionsRef.current.set(Number(targetId), applied.aplicacao.revisaoPersonagem);
@@ -782,15 +800,62 @@ export const GameplayActionCenter = ({
             {effect.podeAplicar && effect.exigeAlvo && effectTargets.length === 0 ? (
               <p>{effect.nome} · o mestre escolhe o alvo na tela da Mesa.</p>
             ) : effect.podeAplicar ? (
-            <SubmitButton
-              type="button"
-              disabled={!onApplyEffect || Boolean(lastResult.simulacao) || appliedEffects.includes(effect.codigo) || Boolean(applyingEffect)}
-              onClick={() => void applyEffect(effect)}
-            >
-              {applyingEffect === effect.codigo
-                ? 'Aplicando…'
-                : appliedEffects.includes(effect.codigo) ? 'Aplicado' : effect.nome}
-            </SubmitButton>
+            <>
+              {isMaster && effect.tipo.trim().toUpperCase() === 'DANO' && (
+                <EffectApplicationFields>
+                  <InputText
+                    theme={theme}
+                    neon={neon}
+                    label={`Dano mitigado (de ${effect.valor})`}
+                    type="number"
+                    value={effectMitigations[effect.codigo] ?? '0'}
+                    onChange={(event) => setEffectMitigations((current) => ({
+                      ...current,
+                      [effect.codigo]: event.target.value,
+                    }))}
+                  />
+                  {(actionCatalog?.defesas?.length ?? 0) > 0 && (
+                    <div>
+                      <p>Defesas utilizadas, na ordem:</p>
+                      <EffectDefenseOptions>
+                        {actionCatalog!.defesas.map((defense) => {
+                          const selected = effectDefenses[effect.codigo] ?? [];
+                          const selectionOrder = selected.indexOf(defense.codigo);
+                          return (
+                            <EffectDefenseButton
+                              key={defense.codigo}
+                              type="button"
+                              $selected={selectionOrder >= 0}
+                              onClick={() => setEffectDefenses((current) => {
+                                const values = current[effect.codigo] ?? [];
+                                return {
+                                  ...current,
+                                  [effect.codigo]: values.includes(defense.codigo)
+                                    ? values.filter((code) => code !== defense.codigo)
+                                    : [...values, defense.codigo],
+                                };
+                              })}
+                            >
+                              {selectionOrder >= 0 ? `${selectionOrder + 1}. ` : ''}{defense.nome}
+                            </EffectDefenseButton>
+                          );
+                        })}
+                      </EffectDefenseOptions>
+                    </div>
+                  )}
+                  <FieldHint>O mestre confirma a mitigação; a engine registra o dano bruto, o dano final e a ordem aplicada.</FieldHint>
+                </EffectApplicationFields>
+              )}
+              <SubmitButton
+                type="button"
+                disabled={!onApplyEffect || Boolean(lastResult.simulacao) || appliedEffects.includes(effect.codigo) || Boolean(applyingEffect)}
+                onClick={() => void applyEffect(effect)}
+              >
+                {applyingEffect === effect.codigo
+                  ? 'Aplicando…'
+                  : appliedEffects.includes(effect.codigo) ? 'Aplicado' : effect.nome}
+              </SubmitButton>
+            </>
             ) : null}
           </div>
         ))}

@@ -386,6 +386,16 @@ export interface SistemaCondicao {
   remocaoAutomatica: boolean;
   permiteSobrescrever: boolean;
   valorPadrao?: number | null;
+  codigoRecurso?: string | null;
+  operacaoEfeito?: 'SOMAR' | 'SUBTRAIR' | 'DEFINIR' | string | null;
+  valorEfeito?: number | null;
+  momentoEfeito?: 'AO_APLICAR' | 'INICIO_TURNO' | 'FIM_TURNO' | string | null;
+  codigoRecursoGatilho?: string | null;
+  operadorGatilho?: '<=' | '>=' | '==' | '<' | '>' | string | null;
+  valorGatilho?: number | null;
+  cooldownTurnos?: number | null;
+  regraRemocao?: string | null;
+  configuracaoPadraoJson?: string | null;
   ordem: number;
 }
 
@@ -402,6 +412,7 @@ export interface SistemaDescansoConfig {
   exigeGuarda: boolean;
   intervaloTesteGuardaMinutos: number | null;
   permiteAtividades: boolean;
+  configuracaoJson?: string | null;
   ordem: number;
 }
 
@@ -419,6 +430,7 @@ export interface SistemaMorteConfig {
   multiplicadorDanoInstaKill: number;
   permiteEstabilizacaoManual: boolean;
   observacoes?: string;
+  configuracaoJson?: string | null;
 }
 
 export interface ConfiguracaoSobrevivenciaSistema {

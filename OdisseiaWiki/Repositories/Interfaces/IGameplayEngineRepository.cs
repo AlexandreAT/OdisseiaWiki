@@ -17,6 +17,8 @@ public interface IGameplayEngineRepository
         int idPersonagemJogador, CancellationToken cancellationToken = default);
     Task<PersonagemJogador?> GetCharacterForUpdateAsync(
         int idPersonagemJogador, CancellationToken cancellationToken = default);
+    Task<MesaCombate?> GetActiveCombatForUpdateAsync(
+        long idMesaSessao, CancellationToken cancellationToken = default);
     Task<MesaEvento?> GetEventAsync(
         long idMesaEvento, CancellationToken cancellationToken = default);
     Task<bool> HasEffectApplicationAsync(

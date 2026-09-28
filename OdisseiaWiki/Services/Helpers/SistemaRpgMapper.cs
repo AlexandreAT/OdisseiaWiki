@@ -349,6 +349,15 @@ internal static class SistemaRpgMapper
                 RemocaoAutomatica = c.RemocaoAutomatica,
                 PermiteSobrescrever = c.PermiteSobrescrever,
                 ValorPadrao = c.ValorPadrao,
+                CodigoRecurso = c.CodigoRecurso,
+                OperacaoEfeito = c.OperacaoEfeito,
+                ValorEfeito = c.ValorEfeito,
+                MomentoEfeito = c.MomentoEfeito,
+                CodigoRecursoGatilho = c.CodigoRecursoGatilho,
+                OperadorGatilho = c.OperadorGatilho,
+                ValorGatilho = c.ValorGatilho,
+                CooldownTurnos = c.CooldownTurnos,
+                RegraRemocao = c.RegraRemocao,
                 ConfiguracaoPadraoJson = c.ConfiguracaoPadraoJson,
                 Ordem = c.Ordem,
             }).ToList(),
@@ -384,6 +393,7 @@ internal static class SistemaRpgMapper
                 MultiplicadorDanoInstaKill = entity.Morte.MultiplicadorDanoInstaKill,
                 PermiteEstabilizacaoManual = entity.Morte.PermiteEstabilizacaoManual,
                 Observacoes = entity.Morte.Observacoes,
+                ConfiguracaoJson = entity.Morte.ConfiguracaoJson,
             },
         };
     }

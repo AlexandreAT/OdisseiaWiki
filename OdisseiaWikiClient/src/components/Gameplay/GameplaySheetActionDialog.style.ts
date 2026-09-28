@@ -55,3 +55,40 @@ export const SheetActionResult = styled.section`
   li { display: flex; justify-content: space-between; gap: 12px; color: var(--lightGrey); font-size: .78rem; }
   li span:last-child { color: var(--whitesmoke); font-weight: 700; }
 `;
+
+export const SheetEffectFields = styled.div`
+  display: grid;
+  gap: 10px;
+  padding: 10px 12px;
+  border-left: 2px solid var(--clearneonBlue);
+  background: rgba(0, 5, 14, .56);
+
+  > p {
+    color: var(--lightGrey);
+    font-size: .76rem;
+  }
+`;
+
+export const SheetDefenseOptions = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+`;
+
+export const SheetDefenseButton = styled.button<{ $selected: boolean }>`
+  min-height: 30px;
+  padding: 5px 9px;
+  border: 1px solid ${({ $selected }) => $selected ? 'var(--clearneonBlue)' : 'var(--grey)'};
+  color: ${({ $selected }) => $selected ? 'var(--clearneonBlue)' : 'var(--lightGrey)'};
+  background: ${({ $selected }) => $selected ? 'rgba(0, 188, 255, .1)' : 'rgba(0, 5, 14, .72)'};
+  cursor: pointer;
+  font: inherit;
+  font-size: .68rem;
+
+  &:hover,
+  &:focus-visible {
+    border-color: var(--clearneonBlue);
+    color: var(--clearneonBlue);
+    outline: none;
+  }
+`;

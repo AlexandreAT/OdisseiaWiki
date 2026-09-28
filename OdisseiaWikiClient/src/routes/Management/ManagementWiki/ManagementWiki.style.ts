@@ -40,6 +40,7 @@ export const ButtonDiv = styled.div`
 export const ButtonForm = styled.button<Props>`
     border: 2px solid transparent;
     width: 50%;
+    color: var(--whitesmoke);
 
     background-color: ${({ buttonClicked, theme, neon }) =>
         buttonClicked ?    

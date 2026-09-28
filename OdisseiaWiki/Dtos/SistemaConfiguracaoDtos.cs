@@ -323,6 +323,15 @@ public sealed class SistemaCondicaoDto
     public bool RemocaoAutomatica { get; set; }
     public bool PermiteSobrescrever { get; set; }
     public decimal? ValorPadrao { get; set; }
+    public string? CodigoRecurso { get; set; }
+    public string? OperacaoEfeito { get; set; }
+    public decimal? ValorEfeito { get; set; }
+    public string? MomentoEfeito { get; set; }
+    public string? CodigoRecursoGatilho { get; set; }
+    public string? OperadorGatilho { get; set; }
+    public decimal? ValorGatilho { get; set; }
+    public int? CooldownTurnos { get; set; }
+    public string? RegraRemocao { get; set; }
     public string? ConfiguracaoPadraoJson { get; set; }
     public int Ordem { get; set; }
 }
@@ -360,4 +369,5 @@ public sealed class SistemaMorteConfigDto
     public decimal MultiplicadorDanoInstaKill { get; set; }
     public bool PermiteEstabilizacaoManual { get; set; }
     public string? Observacoes { get; set; }
+    public string? ConfiguracaoJson { get; set; }
 }

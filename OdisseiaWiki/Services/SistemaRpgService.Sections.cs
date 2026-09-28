@@ -461,6 +461,15 @@ public sealed partial class SistemaRpgService
             RemocaoAutomatica = c.RemocaoAutomatica,
             PermiteSobrescrever = c.PermiteSobrescrever,
             ValorPadrao = c.ValorPadrao,
+            CodigoRecurso = Limpar(c.CodigoRecurso)?.ToUpperInvariant(),
+            OperacaoEfeito = Limpar(c.OperacaoEfeito)?.ToUpperInvariant(),
+            ValorEfeito = c.ValorEfeito,
+            MomentoEfeito = Limpar(c.MomentoEfeito)?.ToUpperInvariant(),
+            CodigoRecursoGatilho = Limpar(c.CodigoRecursoGatilho)?.ToUpperInvariant(),
+            OperadorGatilho = Limpar(c.OperadorGatilho),
+            ValorGatilho = c.ValorGatilho,
+            CooldownTurnos = c.CooldownTurnos,
+            RegraRemocao = Limpar(c.RegraRemocao),
             ConfiguracaoPadraoJson = Limpar(c.ConfiguracaoPadraoJson),
             Ordem = c.Ordem,
         }).ToList();
@@ -496,6 +505,7 @@ public sealed partial class SistemaRpgService
             MultiplicadorDanoInstaKill = dto.Morte.MultiplicadorDanoInstaKill,
             PermiteEstabilizacaoManual = dto.Morte.PermiteEstabilizacaoManual,
             Observacoes = Limpar(dto.Morte.Observacoes),
+            ConfiguracaoJson = Limpar(dto.Morte.ConfiguracaoJson),
         };
         SistemaRpgConfiguration.GravarRegras(versao, SistemaModuloTipo.Sobrevivencia, new SistemaRpgConfiguration.RegrasSobrevivencia
         {

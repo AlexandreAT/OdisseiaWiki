@@ -30,6 +30,8 @@ export interface AtaqueAtributos {
     dano?: number;
     especial: string;
     cooldown: string;
+    cooldownTurnos?: number;
+    condicoes?: Array<{ codigo: string; valor?: number; duracao?: number }>;
     bonus: string;
     acerto?: DadoAcerto;
     teste?: GameplayTestSpec;
@@ -38,6 +40,8 @@ export interface AtaqueAtributos {
 export interface SuporteAtributos {
     especial: string;
     cooldown: string;
+    cooldownTurnos?: number;
+    condicoes?: Array<{ codigo: string; valor?: number; duracao?: number }>;
     bonus: string;
     acerto?: DadoAcerto;
     teste?: GameplayTestSpec;
@@ -46,6 +50,8 @@ export interface SuporteAtributos {
 export interface BuffAtributos {
     especial: string;
     cooldown: string;
+    cooldownTurnos?: number;
+    condicoes?: Array<{ codigo: string; valor?: number; duracao?: number }>;
     bonus: string;
     acerto?: DadoAcerto;
     teste?: GameplayTestSpec;
@@ -54,6 +60,8 @@ export interface BuffAtributos {
 export interface DebuffAtributos {
     especial: string;
     cooldown: string;
+    cooldownTurnos?: number;
+    condicoes?: Array<{ codigo: string; valor?: number; duracao?: number }>;
     bonus: string;
     acerto?: DadoAcerto;
     teste?: GameplayTestSpec;

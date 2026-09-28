@@ -105,9 +105,22 @@ public sealed class SistemaRpgSeederTests
         Assert.Contains(versao.ResultadosDado, resultado => resultado.CodigoTeste == "TESTE_GERAL" && resultado.ResultadoMinimo == 1 && resultado.ResultadoMaximo == 3 && resultado.CodigoResultado == "FALHA");
         Assert.Contains(versao.ResultadosDado, resultado => resultado.CodigoTeste == "TESTE_GERAL" && resultado.ResultadoMinimo == 4 && resultado.ResultadoMaximo == 6 && resultado.CodigoResultado == "SUCESSO");
 
-        Assert.Contains(versao.Condicoes, condicao => condicao.Codigo == "DEPENDENCIA_DE_MANA" && condicao.DuracaoPadrao == 2);
+        Assert.Contains(versao.Condicoes, condicao =>
+            condicao.Codigo == "DEPENDENCIA_DE_MANA" &&
+            condicao.DuracaoPadrao == 2 &&
+            condicao.OperacaoEfeito == "BLOQUEAR_RECUPERACAO");
+        Assert.Contains(versao.Condicoes, condicao =>
+            condicao.Codigo == "FADIGA" &&
+            condicao.CodigoRecursoGatilho == "ESTAMINA" &&
+            condicao.OperacaoEfeito == "REDUZIR_LIMITE_PERCENTUAL" &&
+            condicao.ValorEfeito == 25);
         Assert.Contains(versao.Condicoes, condicao => condicao.Codigo == "CALOR_EXTREMO_FRIO_EXTREMO");
-        Assert.Equal(14, versao.Condicoes.Count);
+        Assert.Contains(versao.Condicoes, condicao =>
+            condicao.Codigo == "PESADO" &&
+            condicao.CodigoRecursoGatilho == "EXCESSO_CARGA" &&
+            condicao.OperacaoEfeito == "REDUZIR_LIMITE_PERCENTUAL" &&
+            condicao.ValorEfeito == 50);
+        Assert.Equal(15, versao.Condicoes.Count);
 
         Assert.NotNull(versao.Morte);
         Assert.Equal(5, versao.Morte.QuantidadeTestesCombate);

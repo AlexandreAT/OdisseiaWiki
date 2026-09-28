@@ -398,7 +398,7 @@ public sealed partial class SistemaRpgSeeder : ISistemaRpgSeeder
     {
         new() { Codigo = "VIDA", Nome = "Vida", ValorMinimo = 0, ValorPadrao = 1000, PermiteValorNegativo = false, RecuperacaoPadrao = 0, FormulaValorInicial = "Vida base da raça", FormulaValorMaximo = "Vida base da raça e modificadores", Ordem = 1, Ativo = true },
         new() { Codigo = "ESTAMINA", Nome = "Estamina", ValorMinimo = 0, ValorPadrao = 75, PermiteValorNegativo = false, RecuperacaoPadrao = 0, RecuperacaoDescansoSimples = 10, RecuperacaoDescansoNormal = 100, RecuperacaoDescansoLongo = 100, CondicaoAoZerar = "FADIGA", FormulaValorInicial = "Estamina base da raça", FormulaValorMaximo = "Estamina base da raça e modificadores", Ordem = 2, Ativo = true },
-        new() { Codigo = "MANA", Nome = "Mana", ValorMinimo = 0, ValorPadrao = 50, PermiteValorNegativo = false, RecuperacaoPadrao = 0, RecuperacaoDescansoSimples = 10, RecuperacaoDescansoNormal = 100, RecuperacaoDescansoLongo = 100, CondicaoAoZerar = "DEPENDENCIA_MANA", FormulaValorInicial = "Mana base da raça", FormulaValorMaximo = "Mana base da raça e modificadores", Ordem = 3, Ativo = true },
+        new() { Codigo = "MANA", Nome = "Mana", ValorMinimo = 0, ValorPadrao = 50, PermiteValorNegativo = false, RecuperacaoPadrao = 0, RecuperacaoDescansoSimples = 10, RecuperacaoDescansoNormal = 100, RecuperacaoDescansoLongo = 100, CondicaoAoZerar = "DEPENDENCIA_DE_MANA", FormulaValorInicial = "Mana base da raça", FormulaValorMaximo = "Mana base da raça e modificadores", Ordem = 3, Ativo = true },
         new() { Codigo = "CAPACIDADE_CARGA", Nome = "Capacidade de carga", ValorMinimo = 0, ValorPadrao = 15, PermiteValorNegativo = false, RecuperacaoPadrao = 0, FormulaValorInicial = "Capacidade base da raça", FormulaValorMaximo = "Capacidade base da raça e modificadores", Ordem = 4, Ativo = true },
     };
 
@@ -529,6 +529,7 @@ public sealed partial class SistemaRpgSeeder : ISistemaRpgSeeder
         {
             ("Fadiga", "Físico", "Ao zerar a estamina, reduz a estamina máxima em 25% até pelo menos um descanso normal.", null, false, "{\"reducaoEstaminaMaximaPercentual\":25,\"removeCom\":\"Descanso normal ou superior\"}"),
             ("Dependência de mana", "Mágico", "Ao zerar a mana, impede ações mágicas e recuperação natural por 2 turnos; depois disso o personagem pode descansar para voltar a recuperar mana.", 2, true, "{\"bloqueiaAcoesMagicas\":true,\"bloqueiaRecuperacaoNatural\":true}"),
+            ("Pesado", "Físico", "Ao exceder a capacidade de carga, reduz a estamina máxima em 50% enquanto o excesso permanecer.", null, true, "{\"reducaoEstaminaMaximaPercentual\":50,\"removeQuando\":\"carga dentro da capacidade\"}"),
             ("Sangramento", "Dano periódico", "Perde vida por turno; quantidade, duração e cura dependem da origem e do mestre.", null, false, null),
             ("Queimando", "Dano periódico", "Perde vida por turno e pode sofrer penalidades; valores e duração dependem da origem e do mestre.", null, false, null),
             ("Envenenamento", "Dano periódico", "Perde vida por turno e pode sofrer penalidades; antídotos, magias ou duração definida podem remover a condição.", null, false, null),
@@ -542,19 +543,31 @@ public sealed partial class SistemaRpgSeeder : ISistemaRpgSeeder
             ("Vício", "Psicológico", "Dependência de substância com penalidades e abstinência; testes, intervalo e cura dependem da substância e do mestre.", null, false, null),
             ("Maldição", "Mágico", "Efeito sobrenatural variável; sua remoção pode exigir encontrar a fonte ou realizar um ritual.", null, false, null),
         };
-        return dados.Select((dado, indice) => new SistemaCondicao
+        return dados.Select((dado, indice) =>
         {
-            Codigo = SistemaRpgConfiguration.NormalizarCodigo(dado.Nome, dado.Nome),
-            Nome = dado.Nome,
-            Tipo = dado.Tipo,
-            Descricao = dado.Descricao,
-            DuracaoPadrao = dado.Duracao,
-            UnidadeDuracao = SistemaUnidadeDuracao.Turno,
-            Empilhavel = false,
-            RemocaoAutomatica = dado.RemocaoAutomatica,
-            PermiteSobrescrever = true,
-            ConfiguracaoPadraoJson = dado.ConfiguracaoJson,
-            Ordem = indice + 1,
+            string code = SistemaRpgConfiguration.NormalizarCodigo(dado.Nome, dado.Nome);
+            return new SistemaCondicao
+            {
+                Codigo = code,
+                Nome = dado.Nome,
+                Tipo = dado.Tipo,
+                Descricao = dado.Descricao,
+                DuracaoPadrao = dado.Duracao,
+                UnidadeDuracao = code == "FADIGA" ? SistemaUnidadeDuracao.Descanso : SistemaUnidadeDuracao.Turno,
+                Empilhavel = false,
+                RemocaoAutomatica = dado.RemocaoAutomatica,
+                PermiteSobrescrever = true,
+                CodigoRecurso = code is "FADIGA" or "PESADO" ? "ESTAMINA" : code == "DEPENDENCIA_DE_MANA" ? "MANA" : null,
+                OperacaoEfeito = code is "FADIGA" or "PESADO" ? "REDUZIR_LIMITE_PERCENTUAL" : code == "DEPENDENCIA_DE_MANA" ? "BLOQUEAR_RECUPERACAO" : null,
+                ValorEfeito = code == "FADIGA" ? 25 : code == "PESADO" ? 50 : null,
+                MomentoEfeito = code is "FADIGA" or "PESADO" or "DEPENDENCIA_DE_MANA" ? "ENQUANTO_ATIVA" : null,
+                CodigoRecursoGatilho = code == "PESADO" ? "EXCESSO_CARGA" : code == "FADIGA" ? "ESTAMINA" : code == "DEPENDENCIA_DE_MANA" ? "MANA" : null,
+                OperadorGatilho = code == "PESADO" ? ">" : code is "FADIGA" or "DEPENDENCIA_DE_MANA" ? "<=" : null,
+                ValorGatilho = code is "FADIGA" or "DEPENDENCIA_DE_MANA" or "PESADO" ? 0 : null,
+                RegraRemocao = code == "FADIGA" ? "Descanso normal ou longo" : code == "DEPENDENCIA_DE_MANA" ? "Após a duração configurada" : code == "PESADO" ? "Reduzir a carga até a capacidade" : null,
+                ConfiguracaoPadraoJson = dado.ConfiguracaoJson,
+                Ordem = indice + 1,
+            };
         }).ToList();
     }
 
