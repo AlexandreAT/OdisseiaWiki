@@ -61,6 +61,7 @@ public sealed class PersonagemVisibilidadeProjectionTests
         Assert.False(status.RootElement.GetProperty("status").TryGetProperty("vida", out _));
         Assert.False(personagem.Visibilidade.Nivel);
         Assert.False(personagem.Visibilidade.Historia);
+        Assert.True(personagem.VisibilidadeProjetada);
     }
 
     [Fact]
@@ -97,6 +98,30 @@ public sealed class PersonagemVisibilidadeProjectionTests
         Assert.Equal(1, inventario.RootElement.GetArrayLength());
         Assert.Equal("implante visivel", inventario.RootElement[0].GetProperty("nome").GetString());
         Assert.Equal(4, inventario.RootElement[0].GetProperty("tipo").GetInt32());
+    }
+
+    [Fact]
+    public void ApplyForExternalViewer_JogadorNaoExpõeDescricaoDaPassivaOculta()
+    {
+        PersonagemVisibilidadeDto visibility = PersonagemVisibilidadeDefaults.Jogador();
+        visibility.Passivas = false;
+        PersonagemJogadorDto personagem = new()
+        {
+            Idpassiva = 4,
+            Passiva = new PersonagemPassivaResumoDto
+            {
+                Idpassiva = 4,
+                Nome = "Segredo",
+                Descricao = "Efeito secreto",
+            },
+            Visibilidade = visibility,
+        };
+
+        PersonagemVisibilidadeProjection.ApplyForExternalViewer(personagem);
+
+        Assert.True(personagem.VisibilidadeProjetada);
+        Assert.Null(personagem.Idpassiva);
+        Assert.Null(personagem.Passiva);
     }
 
     [Fact]

@@ -41,6 +41,8 @@ public partial class Item
     public bool Visivel { get; set; } = true;
     public bool Destaque { get; set; } = false;
 
+    public int IdWikiEscopo { get; set; } = WikiEscopo.IdOficial;
+
     public int? IdSistemaRpg { get; set; }
 
     public int? IdSistemaVersao { get; set; }
@@ -50,6 +52,7 @@ public partial class Item
     public DateTime DataCriacao { get; set; } = DateTime.UtcNow;
 
     public int? Idpersonagem { get; set; }
+    [JsonIgnore]
     public virtual Personagen? Personagem { get; set; }
 
     [JsonIgnore]
@@ -57,4 +60,6 @@ public partial class Item
 
     [JsonIgnore]
     public virtual SistemaVersao? SistemaVersao { get; set; }
+    [JsonIgnore]
+    public virtual WikiEscopo WikiEscopo { get; set; } = null!;
 }

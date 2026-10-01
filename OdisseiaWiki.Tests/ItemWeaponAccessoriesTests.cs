@@ -29,7 +29,7 @@ public sealed class ItemWeaponAccessoriesTests
         Mock<ISistemaEntidadeVinculoService> link = new();
         link.Setup(service => service.ValidarAsync(It.IsAny<int?>(), It.IsAny<int?>(), It.IsAny<bool>(), It.IsAny<SistemaEntidadeVinculoExistente?>()))
             .ReturnsAsync(new SistemaEntidadeVinculoResultado(true, null, null, true));
-        ItemService service = new(repository.Object, Mock.Of<IAssetService>(), Mock.Of<ISistemaRpgResolver>(), link.Object);
+        ItemService service = new(repository.Object, Mock.Of<IPersonagemRepository>(), Mock.Of<IAssetService>(), Mock.Of<ISistemaRpgResolver>(), link.Object);
         object attributes = Attributes();
 
         ItemSaveResultDto created = await service.CreateWithRuntimeAsync(new ItemCreateDto

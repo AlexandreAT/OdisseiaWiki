@@ -96,11 +96,12 @@ export const AddReferenceRow = styled.div`
   }
 `;
 
-export const EntityDisplay = styled.div<ThemeProps>`
+export const EntityDisplay = styled.div<ThemeProps & { $hidden?: boolean }>`
   padding: 12px;
   border-radius: 8px;
-  background-color: ${props => (props.$isDark ? '#1a1a1a' : '#f5f5f5')};
-  border-left: 4px solid #28a745;
+  background-color: ${props => props.$hidden ? '#000' : (props.$isDark ? '#1a1a1a' : '#f5f5f5')};
+  border-left: 4px solid ${props => props.$hidden ? '#000' : '#28a745'};
+  min-height: 42px;
 `;
 
 export const EntityContent = styled.div`

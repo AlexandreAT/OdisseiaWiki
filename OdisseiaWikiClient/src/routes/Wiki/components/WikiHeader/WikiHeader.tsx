@@ -19,9 +19,15 @@ import {
   SuggestionStatus,
   ConnectionsButton,
   ConnectionsLabel,
+  MesaScopeFilter,
+  MesaScopeDescription,
+  MesaScopeLabel,
+  MesaScopeSwitch,
 } from './WikiHeader.style';
 import { WIKI_SEARCH_GROUP_LABELS, WIKI_SEARCH_GROUP_ORDER, WikiSearchItem } from '../../types';
 import { WikiSearchLoading } from '../WikiSearchLoading';
+import { getMesaWikiRoute } from '../../../../services/wikiContext';
+import { ContentVisibilityNotice } from '../../../../components/Generic/ContentVisibilityNotice/ContentVisibilityNotice';
 
 interface WikiHeaderInternalProps extends WikiHeaderProps {
   onToggle?: (expanded: boolean) => void;
@@ -36,6 +42,9 @@ export const WikiHeader: React.FC<WikiHeaderInternalProps> = ({
   suggestionsLoading = false,
   suggestionsError = null,
   suggestionsWarning = null,
+  showMesaScopeFilter = false,
+  pesquisarSomenteMesa = true,
+  onPesquisarSomenteMesaChange,
   onToggle,
   isExpanded = true,
 }) => {
@@ -51,6 +60,11 @@ export const WikiHeader: React.FC<WikiHeaderInternalProps> = ({
     [getSuggestionGroups, searchValue],
   );
   const hasSuggestions = WIKI_SEARCH_GROUP_ORDER.some((group) => suggestionGroups[group].length > 0);
+  const canShowDropdown = showMesaScopeFilter
+    || suggestionsLoading
+    || Boolean(suggestionsError)
+    || Boolean(suggestionsWarning)
+    || hasSuggestions;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -62,7 +76,7 @@ export const WikiHeader: React.FC<WikiHeaderInternalProps> = ({
   }, []);
 
   const handleHomeClick = () => {
-    navigate('/wiki/MainPage');
+    navigate(getMesaWikiRoute('/wiki'));
     setSearchValue('');
     setSuggestionsOpen(false);
   };
@@ -137,13 +151,24 @@ export const WikiHeader: React.FC<WikiHeaderInternalProps> = ({
             />
             </SearchInputWrapper>
 
-            {suggestionsOpen && (
-              suggestionsLoading
-              || Boolean(suggestionsError)
-              || Boolean(suggestionsWarning)
-              || hasSuggestions
-            ) && (
+            {suggestionsOpen && canShowDropdown && (
               <AutocompleteDropdown $isDark={theme === 'dark'}>
+                {showMesaScopeFilter && (
+                  <MesaScopeFilter>
+                    <MesaScopeLabel htmlFor="wiki-search-mesa-scope">
+                      <span>Pesquisar apenas nesta Mesa</span>
+                      <MesaScopeDescription>
+                        Desative para incluir a Wiki geral.
+                      </MesaScopeDescription>
+                    </MesaScopeLabel>
+                    <MesaScopeSwitch
+                      id="wiki-search-mesa-scope"
+                      checked={pesquisarSomenteMesa}
+                      onChange={(event) => onPesquisarSomenteMesaChange?.(event.target.checked)}
+                      aria-label="Pesquisar apenas nesta Mesa"
+                    />
+                  </MesaScopeFilter>
+                )}
                 {suggestionsLoading && <WikiSearchLoading compact />}
                 {!suggestionsLoading && suggestionsError && (
                   <SuggestionStatus $error>{suggestionsError}</SuggestionStatus>
@@ -173,6 +198,7 @@ export const WikiHeader: React.FC<WikiHeaderInternalProps> = ({
                           onClick={() => handleSuggestionClick(item)}
                         >
                           {item.title}
+                          <ContentVisibilityNotice visible={item.visivel} />
                         </SuggestionButton>
                       ))}
                     </SuggestionGroup>
@@ -184,12 +210,12 @@ export const WikiHeader: React.FC<WikiHeaderInternalProps> = ({
 
         <ConnectionsButton
           type="button"
-          $active={location.pathname === '/wiki/conexoes'}
+          $active={location.pathname === getMesaWikiRoute('/wiki/conexoes')}
           $neon={neon === 'on'}
-          onClick={() => navigate('/wiki/conexoes')}
+          onClick={() => navigate(getMesaWikiRoute('/wiki/conexoes'))}
           title="Abrir a Teia de Conexões"
           aria-label="Abrir a Teia de Conexões"
-          aria-current={location.pathname === '/wiki/conexoes' ? 'page' : undefined}
+          aria-current={location.pathname === getMesaWikiRoute('/wiki/conexoes') ? 'page' : undefined}
         >
           <BiNetworkChart aria-hidden="true" />
           <ConnectionsLabel>Teia de conexões</ConnectionsLabel>

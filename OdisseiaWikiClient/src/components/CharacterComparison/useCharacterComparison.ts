@@ -58,7 +58,7 @@ export const useCharacterComparison = ({ open, current, source, sourceId, varian
     if (!open || current || !sourceId) return;
     const controller = new AbortController();
     setLoadingCurrent(true);
-    getCharacterForComparison(source, sourceId, variantId, controller.signal)
+    getCharacterForComparison(source, sourceId, variantId, controller.signal, tableId)
       .then(setCurrentCharacter)
       .catch((requestError) => {
         if (requestError?.name !== 'CanceledError') {
@@ -67,7 +67,7 @@ export const useCharacterComparison = ({ open, current, source, sourceId, varian
       })
       .finally(() => setLoadingCurrent(false));
     return () => controller.abort();
-  }, [current, open, source, sourceId, variantId]);
+  }, [current, open, source, sourceId, variantId, tableId]);
 
   React.useEffect(() => {
     const term = query.trim();
@@ -135,6 +135,8 @@ export const useCharacterComparison = ({ open, current, source, sourceId, varian
         selected.origem,
         Number(selected.id),
         selected.idVariante,
+        undefined,
+        selected.origem === 'Npc' ? (selected.idMesa ?? tableId) : tableId,
       );
       if (candidateRequestRef.current === requestId) setCandidate(detailed);
     } catch (requestError: unknown) {
@@ -146,7 +148,7 @@ export const useCharacterComparison = ({ open, current, source, sourceId, varian
     } finally {
       if (candidateRequestRef.current === requestId) setLoadingCandidate(false);
     }
-  }, []);
+  }, [tableId]);
 
   return {
     currentCharacter,

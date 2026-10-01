@@ -39,10 +39,11 @@ export const getCharacterForComparison = async (
   id: number,
   variantId?: string | null,
   signal?: AbortSignal,
+  tableId?: number | null,
 ): Promise<CharacterComparisonData> => {
   const response = await api.get<CharacterComparisonData>(
     `/personagens-comparacao/${source}/${id}`,
-    { params: { idVariante: variantId || undefined }, signal },
+    { params: { idVariante: variantId || undefined, idMesa: tableId || undefined }, signal },
   );
   return response.data;
 };

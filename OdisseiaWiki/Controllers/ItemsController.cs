@@ -26,7 +26,9 @@ namespace OdisseiaWiki.Controllers
                 visivel = true;
 
             var items = await _service.GetAllAsync(visivel);
-            return Ok(items);
+            return Ok(User.IsAdmin()
+                ? items
+                : await Task.WhenAll(items.Select(_service.SanitizarReferenciasPublicasAsync)));
         }
 
         [HttpGet("{id}")]
@@ -36,7 +38,7 @@ namespace OdisseiaWiki.Controllers
             
             return item is null || (!item.Visivel && !User.IsAdmin())
                 ? NotFound($"Item com id {id} não encontrado.")
-                : Ok(item);
+                : Ok(User.IsAdmin() ? item : await _service.SanitizarReferenciasPublicasAsync(item));
         }
 
         [HttpPost]

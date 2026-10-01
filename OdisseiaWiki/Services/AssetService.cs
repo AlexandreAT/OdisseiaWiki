@@ -28,6 +28,7 @@ public class AssetService : IAssetService
         "itens",
         "mesa",
         "mesas",
+        "mesawiki",
         "pages",
         "pages/gallery",
         "pages/images",

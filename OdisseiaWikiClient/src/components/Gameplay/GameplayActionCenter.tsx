@@ -569,7 +569,12 @@ export const GameplayActionCenter = ({
     diceVisualOpenRef.current = false;
     diceThrowResolverRef.current?.(false);
     diceThrowResolverRef.current = null;
-    if (diceVisual.response && diceVisual.target) {
+    if (diceVisual.target === 'attribute') {
+      setAttributeDialogOpen(false);
+      setLastResult(null);
+      setLastResultTarget(null);
+      if (directInitialAction) onClose();
+    } else if (diceVisual.response && diceVisual.target) {
       presentRollResult(diceVisual.response, diceVisual.target);
     }
     setDiceVisual((current) => ({
@@ -621,7 +626,7 @@ export const GameplayActionCenter = ({
       requestedFaces,
       requestedDiceCount: Math.min(2, groups.reduce((total, group) => total + group.quantidade, 0) * (rollMode === 'Normal' ? 1 : 2)),
       response: null,
-      target: null,
+      target,
     });
     const launched = await launchPromise;
     if (!launched) return;
@@ -634,7 +639,7 @@ export const GameplayActionCenter = ({
       setSubmitError(null);
       setSubmitErrorTarget(null);
       if (!diceVisualOpenRef.current) {
-        presentRollResult(response, target);
+        if (target !== 'attribute') presentRollResult(response, target);
       } else {
         setDiceVisual((current) => ({
           ...current,
@@ -1236,7 +1241,6 @@ export const GameplayActionCenter = ({
               <CasinoOutlinedIcon /> {submitting ? 'Rolando…' : 'Rolar teste'}
             </SubmitButton>
             {submitErrorTarget === 'attribute' && submitError && <InlineMessage $kind="error">{submitError}</InlineMessage>}
-            {renderResult('attribute')}
           </RollDialogBody>
         </RollDialogPanel>
       </RollDialogBackdrop>, document.body)}

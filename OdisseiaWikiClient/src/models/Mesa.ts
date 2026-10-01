@@ -114,6 +114,10 @@ export interface MesaPersonagemResumo {
   donoImagem?: string | null;
   online: boolean;
   morto?: boolean;
+  instanciaNpcMesa?: boolean;
+  idPersonagemOrigem?: number | null;
+  idVarianteOrigem?: string | null;
+  podeAtualizarFichaOriginal?: boolean;
 }
 
 export interface MesaPersonagensGerenciamento {
@@ -122,10 +126,24 @@ export interface MesaPersonagensGerenciamento {
 }
 
 export interface MesaAoVivoSnapshot extends MesaPersonagensGerenciamento {
+  personagensCena: MesaPersonagemResumo[];
   jogadoresOnline: number;
   participantes: number;
   turnoAtual: string;
   atualizadoEm?: string;
+}
+
+export interface MesaNpcVariante {
+  id: string;
+  nome: string;
+}
+
+export interface MesaNpcCatalogo {
+  idPersonagem: number;
+  nome: string;
+  imagem?: string | null;
+  generico: boolean;
+  variantes: MesaNpcVariante[];
 }
 
 export interface MesaExpulsaoRegistro {

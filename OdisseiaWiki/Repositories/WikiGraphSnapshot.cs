@@ -13,9 +13,22 @@ public sealed class WikiGraphSnapshot
     public IReadOnlyList<WikiGraphPageRelationRecord> PageRelations { get; init; } = Array.Empty<WikiGraphPageRelationRecord>();
 }
 
-public sealed record WikiGraphCityRecord(int Id, string? Name, string? Image, bool Visible);
+public sealed record WikiGraphCityRecord(
+    int Id,
+    string? Name,
+    string? Image,
+    bool Visible,
+    int IdWikiEscopo = 1,
+    int? IdSistemaRpg = null);
 
-public sealed record WikiGraphPageRecord(int Id, string? Title, string? Slug, string? Image, bool Visible);
+public sealed record WikiGraphPageRecord(
+    int Id,
+    string? Title,
+    string? Slug,
+    string? Image,
+    bool Visible,
+    int IdWikiEscopo = 1,
+    int? IdSistemaRpg = null);
 
 public sealed record WikiGraphCharacterRecord(
     int Id,
@@ -29,8 +42,24 @@ public sealed record WikiGraphCharacterRecord(
     bool ImagemVisivel = true,
     bool RacaVisivel = true,
     bool CidadeVisivel = true,
-    bool PersonagensRelacionadosVisivel = true);
+    bool PersonagensRelacionadosVisivel = true,
+    int IdWikiEscopo = 1,
+    int? IdSistemaRpg = null,
+    int? IdSistemaVersao = null,
+    bool AcompanharPublicacaoAtual = true);
 
-public sealed record WikiGraphRaceRecord(int Id, string? Name, string? Image, bool Visible);
+public sealed record WikiGraphRaceRecord(
+    int Id,
+    string? Name,
+    string? Image,
+    bool Visible,
+    int IdWikiEscopo = 1,
+    int? IdSistemaRpg = null,
+    int? IdSistemaVersao = null,
+    bool AcompanharPublicacaoAtual = true);
 
-public sealed record WikiGraphPageRelationRecord(int PageId, string Content);
+public sealed record WikiGraphPageRelationRecord(
+    int PageId,
+    string Content,
+    int IdWikiEscopo = 1,
+    int? IdSistemaRpg = null);

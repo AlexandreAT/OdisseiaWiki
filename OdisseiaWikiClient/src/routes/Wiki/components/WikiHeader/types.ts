@@ -8,4 +8,7 @@ export interface WikiHeaderProps {
   suggestionsLoading?: boolean;
   suggestionsError?: string | null;
   suggestionsWarning?: string | null;
+  showMesaScopeFilter?: boolean;
+  pesquisarSomenteMesa?: boolean;
+  onPesquisarSomenteMesaChange?: (somenteMesa: boolean) => void;
 }

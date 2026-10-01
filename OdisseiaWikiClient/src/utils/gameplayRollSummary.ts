@@ -1,4 +1,5 @@
 import type { GameplayRollResult } from '../models/Gameplay';
+import { getLegacyAttributeFormulaOutcome } from './gameplayOutcome';
 
 const signedOperation = (value: number) => value >= 0 ? `+ ${value}` : `− ${Math.abs(value)}`;
 
@@ -20,7 +21,11 @@ export const getGameplayRollCalculation = (roll: GameplayRollResult) => {
 };
 
 export const getGameplayRollSummary = (roll: GameplayRollResult) => {
-  const outcome = roll.nomeResultado?.trim();
+  const legacyOutcome = getLegacyAttributeFormulaOutcome(roll);
+  const outcome = legacyOutcome === 'success' ? 'Sucesso'
+    : legacyOutcome === 'failure' ? 'Falha'
+      : roll.codigoResultado?.trim().toUpperCase() === 'FORMULA' ? ''
+        : roll.nomeResultado?.trim();
   const calculation = getGameplayRollCalculation(roll);
   return outcome ? `${outcome}: ${calculation}` : calculation;
 };

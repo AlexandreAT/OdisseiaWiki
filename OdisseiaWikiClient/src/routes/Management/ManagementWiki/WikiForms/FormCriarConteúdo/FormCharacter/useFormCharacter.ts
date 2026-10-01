@@ -269,9 +269,7 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType, idEnti
       setLoadingItens(true);
       try {
         const result = await getItens();
-        console.log("🚀 ~ fetchItens ~ result:", result)
         const itens: Item[] = result.map(mapToItem);
-        console.log("🚀 ~ fetchItens ~ itens:", itens)
         setAllItens(itens);
         setListItens(itens);
       } catch (err) {
@@ -288,25 +286,23 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType, idEnti
     const fetchPersonagens = async () => {
       try {
         const result = await getPersonagens();
-        console.log("🚀 ~ fetchPersonagens ~ result:", result)
         // API pode retornar array diretamente ou { personagens: [...] }
         const rawList = Array.isArray(result)
           ? result
           : (result as any)?.personagens ?? [];
-        console.log("🚀 ~ fetchPersonagens ~ rawList:", rawList)
         // Normaliza cada item para garantir idpersonagem e nome
         const normalized = rawList.map((p: any) => ({
           ...p,
           idpersonagem: p.idpersonagem ?? p.Idpersonagem ?? p.id,
           nome: p.nome ?? p.Nome ?? 'Sem nome'
         }));
-        console.log("🚀 ~ fetchPersonagens ~ normalized:", normalized)
         setAllPersonagens(normalized);
       } catch (err) {
         console.error("Erro ao buscar personagens:", err);
       }
     };
-    fetchPersonagens();
+    setLoadingPersonagens(true);
+    void fetchPersonagens().finally(() => setLoadingPersonagens(false));
   }, []);
 
   useEffect(() => {
@@ -543,7 +539,6 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType, idEnti
         imagem: it.imagem ?? undefined,
         atributos: it.atributos ?? {},
       }));
-      console.log("🚀 ~ handleSubmit ~ inventarioMapped:", inventarioMapped)
 
       const magiaMapped: Magia[] = magiasComImagens.filter((magia) => Boolean(magia.nome?.trim())).map(({ imagemArquivo: _imagemArquivo, ...magia }) => {
         const serializedEffect = serializeRichText((magia as any).efeito);
@@ -615,11 +610,9 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType, idEnti
           defesas: defesas,
         },
       };
-      console.log("🚀 ~ handleSubmit ~ payload:", payload)
 
       if (variants.generico) Object.assign(payload, await persistCharacterVariants(variants.variants, userName));
       const result = await salvarPersonagem(payload);
-      console.log("🚀 ~ handleSubmit ~ result:", result)
 
       if (!result.sucesso) {
         const message = typeof result.mensagemErro === 'string' && result.mensagemErro.trim()

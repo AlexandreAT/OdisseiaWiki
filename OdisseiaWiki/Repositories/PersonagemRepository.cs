@@ -18,11 +18,12 @@ namespace OdisseiaWiki.Repositories
             _context = context;
         }
 
-        public async Task<List<Personagen>> GetAllAsync(bool? visivel = null)
+        public async Task<List<Personagen>> GetAllAsync(bool? visivel = null, int? idWikiEscopo = null)
         {
             IQueryable<Personagen> query = _context.Personagens
                 .AsNoTracking()
-                .Include(personagem => personagem.ConfiguracaoVisibilidade);
+                .Include(personagem => personagem.ConfiguracaoVisibilidade)
+                .Where(personagem => personagem.IdWikiEscopo == (idWikiEscopo ?? WikiEscopo.IdOficial));
 
             if (visivel.HasValue)
                 query = query.Where(p => p.Visivel == visivel.Value);
@@ -30,10 +31,13 @@ namespace OdisseiaWiki.Repositories
             return await query.ToListAsync();
         }
 
-        public async Task<Personagen?> GetByIdAsync(int id)
+        public Task<Personagen?> GetByIdAsync(int id) => GetByIdAsync(id, null);
+
+        public async Task<Personagen?> GetByIdAsync(int id, int? idWikiEscopo)
             => await _context.Personagens
                 .Include(personagem => personagem.ConfiguracaoVisibilidade)
-                .FirstOrDefaultAsync(personagem => personagem.Idpersonagem == id);
+                .FirstOrDefaultAsync(personagem => personagem.Idpersonagem == id &&
+                    personagem.IdWikiEscopo == (idWikiEscopo ?? WikiEscopo.IdOficial));
 
         public async Task<List<ProficienciaResumoView>> GetProficienciasByPersonagemIdAsync(int id)
             => await _context.PersonagemProficiencias
@@ -75,13 +79,14 @@ namespace OdisseiaWiki.Repositories
             return true;
         }
 
-        public async Task<List<Personagen>> SearchAsync(string termo)
+        public async Task<List<Personagen>> SearchAsync(string termo, int? idWikiEscopo = null)
         {
             var termoLower = termo.ToLower();
 
             var personagens = await _context.Personagens
                 .AsNoTracking()
                 .Include(personagem => personagem.ConfiguracaoVisibilidade)
+                .Where(personagem => personagem.IdWikiEscopo == (idWikiEscopo ?? WikiEscopo.IdOficial))
                 .ToListAsync();
 
             return personagens.Where(i =>
@@ -91,12 +96,13 @@ namespace OdisseiaWiki.Repositories
             ).ToList();
         }
 
-        public async Task<List<Personagen>> GetBatchAsync(List<int> ids)
+        public async Task<List<Personagen>> GetBatchAsync(List<int> ids, int? idWikiEscopo = null)
         {
             return await _context.Personagens
                 .AsNoTracking()
                 .Include(personagem => personagem.ConfiguracaoVisibilidade)
-                .Where(p => ids.Contains(p.Idpersonagem))
+                .Where(p => ids.Contains(p.Idpersonagem) &&
+                    p.IdWikiEscopo == (idWikiEscopo ?? WikiEscopo.IdOficial))
                 .ToListAsync();
         }
 
@@ -104,12 +110,26 @@ namespace OdisseiaWiki.Repositories
             string term,
             int? excludedId,
             int limit)
+            => await SearchOfficialForComparisonAsync(term, excludedId, limit, requireVisible: true);
+
+        public async Task<List<PersonagemComparacaoRegistro>> SearchAllOfficialForComparisonAsync(
+            string term,
+            int? excludedId,
+            int limit)
+            => await SearchOfficialForComparisonAsync(term, excludedId, limit, requireVisible: false);
+
+        private async Task<List<PersonagemComparacaoRegistro>> SearchOfficialForComparisonAsync(
+            string term,
+            int? excludedId,
+            int limit,
+            bool requireVisible)
         {
             string pattern = $"%{term.Trim()}%";
 
             return await _context.Personagens
                 .AsNoTracking()
-                .Where(personagem => personagem.Visivel)
+                .Where(personagem => personagem.IdWikiEscopo == WikiEscopo.IdOficial)
+                .Where(personagem => !requireVisible || personagem.Visivel)
                 .Where(personagem => !excludedId.HasValue || personagem.Idpersonagem != excludedId.Value)
                 .Where(personagem =>
                     EF.Functions.Like(personagem.Nome, pattern) ||
@@ -135,6 +155,7 @@ namespace OdisseiaWiki.Repositories
             => await _context.Personagens
                 .AsNoTracking()
                 .Where(personagem => personagem.Idpersonagem == id)
+                .Where(personagem => personagem.IdWikiEscopo == WikiEscopo.IdOficial)
                 .Where(personagem => !requireVisible || personagem.Visivel)
                 .Select(personagem => new PersonagemComparacaoRegistro
                 {

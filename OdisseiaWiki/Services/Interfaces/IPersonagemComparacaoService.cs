@@ -18,5 +18,6 @@ public interface IPersonagemComparacaoService
         int id,
         int? idUsuario,
         bool administrador,
-        string? idVariante = null);
+        string? idVariante = null,
+        int? idMesa = null);
 }

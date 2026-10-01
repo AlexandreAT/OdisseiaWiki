@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { GameplayCombatCommandBase, GameplayCombatCommandResponse, GameplayCombatSnapshot, GameplayStateCatalog } from '../models/GameplayCombat';
 import {
   adicionarNpcCombate,
@@ -11,9 +11,11 @@ import {
   obterCombateAtual,
   obterCatalogoEstadoGameplay,
   removerCondicaoCombate,
+  removerParticipanteCombate,
   rolarIniciativaCombate,
   rolarSobrevivenciaCombate,
 } from '../services/gameplayCombatService';
+import type { AdicionarNpcCombatePayload } from '../services/gameplayCombatService';
 import { getApiErrorMessage } from '../utils/apiError';
 
 export const useGameplayCombat = (idMesa?: number, idMesaSessao?: number | null) => {
@@ -22,31 +24,52 @@ export const useGameplayCombat = (idMesa?: number, idMesaSessao?: number | null)
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const refreshPromiseRef = useRef<Promise<GameplayCombatSnapshot | null> | null>(null);
+  const queuedRefreshRef = useRef(false);
 
-  const refresh = useCallback(async (showLoading = false, reportError = showLoading) => {
+  const refresh = useCallback((showLoading = false, reportError = showLoading): Promise<GameplayCombatSnapshot | null> => {
     if (!idMesa || !idMesaSessao) {
       setCombat(null);
       setCatalog(null);
-      return null;
+      return Promise.resolve(null);
     }
-    if (showLoading) setLoading(true);
-    try {
-      const [current, currentCatalog] = await Promise.all([
-        obterCombateAtual(idMesa, idMesaSessao),
-        obterCatalogoEstadoGameplay(idMesa, idMesaSessao),
-      ]);
-      setCombat((previous) => previous?.revisao === current?.revisao && previous?.idMesaCombate === current?.idMesaCombate ? previous : current);
-      setCatalog(currentCatalog);
-      setError(null);
-      return current;
-    } catch (requestError) {
-      if (reportError) {
-        setError(getApiErrorMessage(requestError, 'Não foi possível carregar o combate.'));
+    if (refreshPromiseRef.current) {
+      queuedRefreshRef.current = true;
+      return refreshPromiseRef.current;
+    }
+
+    const request = (async () => {
+      if (showLoading) setLoading(true);
+      try {
+        const [current, currentCatalog] = await Promise.all([
+          obterCombateAtual(idMesa, idMesaSessao),
+          obterCatalogoEstadoGameplay(idMesa, idMesaSessao),
+        ]);
+        setCombat((previous) => previous?.revisao === current?.revisao && previous?.idMesaCombate === current?.idMesaCombate ? previous : current);
+        setCatalog((previous) => previous && JSON.stringify(previous) === JSON.stringify(currentCatalog)
+          ? previous : currentCatalog);
+        setError(null);
+        return current;
+      } catch (requestError) {
+        if (reportError) {
+          setError(getApiErrorMessage(requestError, 'Não foi possível carregar o combate.'));
+        }
+        return null;
+      } finally {
+        if (showLoading) setLoading(false);
       }
-      return null;
-    } finally {
-      if (showLoading) setLoading(false);
-    }
+    })();
+    refreshPromiseRef.current = request;
+    const finish = () => {
+      if (refreshPromiseRef.current !== request) return;
+      refreshPromiseRef.current = null;
+      if (queuedRefreshRef.current) {
+        queuedRefreshRef.current = false;
+        void refresh(false, false);
+      }
+    };
+    void request.then(finish, finish);
+    return request;
   }, [idMesa, idMesaSessao]);
 
   useEffect(() => { void refresh(true); }, [refresh]);
@@ -81,7 +104,8 @@ export const useGameplayCombat = (idMesa?: number, idMesaSessao?: number | null)
     error,
     refresh,
     start: (idsPersonagens: number[]) => execute((basePayload) => iniciarCombate(idMesa!, idMesaSessao!, { ...basePayload, idsPersonagens })),
-    addNpc: (nome: string, modificadorIniciativa: number) => execute((basePayload) => adicionarNpcCombate(idMesa!, idMesaSessao!, { ...basePayload, nome, modificadorIniciativa })),
+    addNpc: (npc: AdicionarNpcCombatePayload) => execute((basePayload) => adicionarNpcCombate(idMesa!, idMesaSessao!, { ...basePayload, ...npc })),
+    removeParticipant: (idParticipante: number) => execute((basePayload) => removerParticipanteCombate(idMesa!, idMesaSessao!, { ...basePayload, idParticipante })),
     rollInitiative: (idParticipante: number) => execute((basePayload) => rolarIniciativaCombate(idMesa!, idMesaSessao!, { ...basePayload, idParticipante })),
     activate: (ordemParticipantes: number[]) => execute((basePayload) => ativarCombate(idMesa!, idMesaSessao!, { ...basePayload, ordemParticipantes })),
     advance: () => execute((basePayload) => avancarTurnoCombate(idMesa!, idMesaSessao!, basePayload)),

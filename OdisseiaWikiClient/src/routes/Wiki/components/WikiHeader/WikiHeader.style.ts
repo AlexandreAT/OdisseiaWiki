@@ -291,6 +291,77 @@ export const AutocompleteDropdown = styled.div<{ $isDark: boolean }>`
   }
 `;
 
+export const MesaScopeFilter = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 50px;
+  padding: 8px 9px 10px;
+  border-bottom: 1px solid rgba(0, 212, 255, 0.24);
+`;
+
+export const MesaScopeLabel = styled.label`
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  color: var(--clearneonBlue);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.25;
+  cursor: pointer;
+`;
+
+export const MesaScopeDescription = styled.span`
+  color: rgba(255, 255, 255, 0.56);
+  font-size: 10px;
+  font-weight: 400;
+`;
+
+export const MesaScopeSwitch = styled.input.attrs({ type: 'checkbox' })`
+  appearance: none;
+  position: relative;
+  flex: 0 0 auto;
+  width: 36px;
+  height: 20px;
+  margin: 0;
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.72);
+    transition: transform 160ms ease, background-color 160ms ease;
+  }
+
+  &:checked {
+    border-color: var(--clearneonBlue);
+    background: rgba(0, 212, 255, 0.2);
+    box-shadow: 0 0 7px rgba(0, 212, 255, 0.22);
+  }
+
+  &:checked::after {
+    transform: translateX(16px);
+    background: var(--clearneonBlue);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--clearneonBlue);
+    outline-offset: 2px;
+  }
+`;
+
 export const SuggestionGroup = styled.section`
   display: flex;
   flex-direction: column;

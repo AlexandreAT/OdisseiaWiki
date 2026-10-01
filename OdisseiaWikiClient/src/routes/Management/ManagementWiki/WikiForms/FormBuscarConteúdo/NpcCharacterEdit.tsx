@@ -1,4 +1,11 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Select } from '../../../../../components/Generic/Select/Select';
+import { getMesas } from '../../../../../services/mesaService';
+import { getAuthSession } from '../../../../../services/authSession';
+import { getMesaWikiIdFromPath } from '../../../../../services/wikiContext';
+import { useSistemaRuntimeContexto } from '../../../../../hooks/useSistemaRuntimeContexto';
+import type { Mesa } from '../../../../../models/Mesa';
 import { CharacterVariantName, CharacterVariantPager, CharacterVariantType } from '../../../../../components/CharacterVariants/CharacterVariants';
 import { findInvalidVariant } from '../../../../../utils/characterVariants';
 import { persistCharacterVariants } from '../../../../../services/characterVariantsService';
@@ -17,13 +24,14 @@ import { FloatingActions, FloatingSaveButton, SyncIconBadge } from '../../../../
 import { FormController, FormEditController } from '../../../../Hub/UserCharacters/CharacterCreate/FormUserCharacter/FormUserCharacter.style';
 import { saveAsset } from '../../../../../services/assetsService';
 import { persistCharacterEntryImages } from '../../../../../services/characterEntryImageService';
-import { atualizarPersonagem, getPersonagemById, getPersonagens, PersonagemPayload, PersonagemUpdatePayload } from '../../../../../services/personagensService';
+import { atualizarPersonagem, getPersonagemById, getPersonagemForClone, getPersonagens, salvarPersonagem, PersonagemPayload, PersonagemUpdatePayload } from '../../../../../services/personagensService';
 import { normalizeToJSONContent, prepareForAPI } from '../../../../../utils/richTextHelpers';
 import { normalizeCharacterStatusExtras } from '../../../../../utils/characterStatus';
 import { useFormCharacter } from '../FormCriarConteúdo/FormCharacter/useFormCharacter';
 import { EditHeader } from './EditFormStyles';
 import { getApiErrorMessage } from '../../../../../utils/apiError';
 import { normalizeGalleryImages } from '../../../../../models/GalleryImage';
+import { cloneCharacterEntries, cloneCharacterName, detachUnavailableBaseItems } from '../../../../../utils/characterClone';
 import { SystemEntityBinding } from '../../../../../components/Generic/SystemEntityBinding';
 import { LoadingIndicator } from '../../../../../components/Generic/LoadingIndicator';
 import { CharacterVisibilityModal } from '../../../../../components/CharacterVisibility';
@@ -38,6 +46,8 @@ interface NpcCharacterEditProps {
   characterId: string;
   onBack: () => void;
   onSave?: () => void;
+  clone?: boolean;
+  sourceMesaId?: number;
 }
 
 const parseJson = <T,>(value: unknown, fallback: T): T => {
@@ -116,7 +126,36 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
   characterId,
   onBack,
   onSave,
+  clone = false,
+  sourceMesaId,
 }) => {
+  const navigate = useNavigate();
+  const targetMesaId = getMesaWikiIdFromPath();
+  const session = getAuthSession(localStorage.getItem('token'));
+  const isAdmin = session.status === 'authenticated' && session.roles.includes('Admin');
+  const [targetMesas, setTargetMesas] = React.useState<Mesa[]>([]);
+  React.useEffect(() => {
+    if (!clone) return;
+    let active = true;
+    getMesas().then((mesas) => {
+      if (!active) return;
+      let currentUserId = 0;
+      try {
+        const user = JSON.parse(localStorage.getItem('usuario') || 'null');
+        currentUserId = Number(user?.id ?? user?.idusuario ?? user?.idUsuario ?? 0);
+      } catch { /* Sessão sem usuário local. */ }
+      setTargetMesas(mesas.filter((mesa) => isAdmin || Number(mesa.idusuarioCriacao) === currentUserId));
+    }).catch(() => { if (active) setTargetMesas([]); });
+    return () => { active = false; };
+  }, [clone, isAdmin]);
+  const changeDestination = (value: string) => {
+    const nextMesaId = Number(value) || null;
+    const query = new URLSearchParams({ cloneNpc: characterId });
+    if (sourceMesaId) query.set('sourceMesaId', String(sourceMesaId));
+    navigate(nextMesaId
+      ? `/mesa/${nextMesaId}/wiki/gerenciar?${query}`
+      : `/management/wiki?${query}`);
+  };
   const [editStep, setEditStep] = React.useState<1 | 2>(1);
   const [isLoadingCharacter, setIsLoadingCharacter] = React.useState(true);
   const [isSaving, setIsSaving] = React.useState(false);
@@ -192,21 +231,29 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
     statusExtras,
     setStatusExtras,
     listItens,
+    loadingItens,
     handleSelectItem,
     avatarFile,
     sistema,
     variants,
-  } = useFormCharacter({ applyRaceDefaults: false, idEntidade: characterId });
+  } = useFormCharacter({ applyRaceDefaults: false, idEntidade: clone ? undefined : characterId });
+  const targetRuntime = useSistemaRuntimeContexto({
+    idMesa: clone && targetMesaId ? targetMesaId : undefined,
+    idRaca: race,
+    enabled: Boolean(clone && targetMesaId && race),
+  });
   const hydrateVariants = variants.hydrate;
   const hydrateSistemaVinculo = sistema.hydrateVinculo;
   const npcId = Number(characterId);
-  const canConfigureVisibility = Number.isInteger(npcId) && npcId > 0;
+  const canConfigureVisibility = !clone && Number.isInteger(npcId) && npcId > 0;
 
   const [extraInformation, setExtraInformation] = React.useState('');
   const [galeriaUrls, setGaleriaUrls] = React.useState<string[]>([]);
   const [galeriaShapes, setGaleriaShapes] = React.useState<string[]>([]);
   const [galeriaCaptions, setGaleriaCaptions] = React.useState<string[]>([]);
   const [galeriaPreviewFileMap, setGaleriaPreviewFileMap] = React.useState<Record<string, File>>({});
+  const [relatedIds, setRelatedIds] = React.useState<number[]>([]);
+  const [sourceVisibility, setSourceVisibility] = React.useState<PersonagemPayload['visibilidade']>();
 
   const raceImageUrl = React.useMemo(
     () => selectedRace?.imagem ?? '',
@@ -238,9 +285,12 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
         let payload: PersonagemPayload | null = null;
 
         try {
-          const byIdResponse = await getPersonagemById(characterId);
+          const byIdResponse = clone
+            ? await getPersonagemForClone(characterId, sourceMesaId)
+            : await getPersonagemById(characterId);
           payload = resolvePersonagemPayload(byIdResponse);
         } catch {
+          if (clone) throw new Error('Não foi possível carregar o personagem original para clonagem.');
           const allCharacters = await getPersonagens();
           payload = allCharacters.find((item) => String(item.idpersonagem) === String(characterId)) ?? null;
         }
@@ -262,7 +312,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
           defesas: { armadura: 0, protecao: 0, escudo: 0, outras: 0 },
         });
         setStatusExtras(normalizeCharacterStatusExtras(status));
-        hydrateVariants(payload.statusJson);
+        hydrateVariants(payload.statusJson, clone);
 
         const loadedTraits = parseJson<string[] | string>(payload.tracos, []);
         const loadedCostumes = parseJson<string[] | string>(payload.costumes, []);
@@ -296,22 +346,12 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
         const relacionados = parseJson<string[] | number[] | string | number>(payload.personagemsVinculados, []);
         const loadedGaleria = normalizeGalleryImages(payload.galeriaImagem);
 
-        const relatedList = (Array.isArray(relacionados) ? relacionados : [relacionados])
-          .map((item) => {
-            if (item === null || item === undefined || item === '') return null;
+        setRelatedIds((Array.isArray(relacionados) ? relacionados : [relacionados])
+          .map(Number)
+          .filter((relatedId) => Number.isInteger(relatedId) && relatedId > 0 && (!clone || relatedId !== npcId)));
+        if (clone) setSourceVisibility(payload.visibilidade);
 
-            const id = Number(item);
-            if (!Number.isInteger(id) || id <= 0) return null;
-
-            const found = allPersonagens.find((p: any) => (p.idpersonagem ?? p.Idpersonagem) === id);
-            return {
-              id,
-              nome: found ? (found.nome ?? found.Nome ?? `Personagem ${id}`) : `Personagem ${id}`,
-            };
-          })
-          .filter((item): item is { id: number; nome: string } => !!item);
-
-        setUserName(payload.nome || '');
+        setUserName(clone ? cloneCharacterName(payload.nome || '') : payload.nome || '');
         setRace(Number(payload.idraca));
         setCity(payload.idcidade ? Number(payload.idcidade) : undefined);
         setAvatarUrl(payload.imagem || '');
@@ -333,11 +373,12 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
           acompanharPublicacaoAtual: payload.acompanharPublicacaoAtual,
         });
         setItens(Array.isArray(loadedItens) && loadedItens.length > 0
-          ? loadedItens
+          ? clone ? cloneCharacterEntries(loadedItens) : loadedItens
           : [{ nome: '', descricao: '', quantidade: 0, peso: 0, tipo: 'outro' } as any]);
-        setSkills(Array.isArray(loadedSkills) ? loadedSkills.filter((skill) => Boolean(skill?.nome?.trim())) : []);
-        setMagias(Array.isArray(loadedMagias) ? loadedMagias.filter((magia) => Boolean(magia?.nome?.trim())) : []);
-        setListPersonagemRelacionado(relatedList);
+        const meaningfulSkills = Array.isArray(loadedSkills) ? loadedSkills.filter((skill) => Boolean(skill?.nome?.trim())) : [];
+        const meaningfulMagias = Array.isArray(loadedMagias) ? loadedMagias.filter((magia) => Boolean(magia?.nome?.trim())) : [];
+        setSkills(clone ? cloneCharacterEntries(meaningfulSkills) : meaningfulSkills);
+        setMagias(clone ? cloneCharacterEntries(meaningfulMagias) : meaningfulMagias);
         setStatusBasico({
           ...status.status,
           vida: status.status?.vida ?? 0,
@@ -390,8 +431,9 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
       active = false;
     };
   }, [
-    allPersonagens,
     characterId,
+    clone,
+    sourceMesaId,
     setAlignment,
     setAtributosPrincipais,
     setAtributosSecundarios,
@@ -416,6 +458,15 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
     hydrateSistemaVinculo,
     hydrateVariants,
   ]);
+
+  React.useEffect(() => {
+    if (isLoadingCharacter) return;
+    setListPersonagemRelacionado(relatedIds.flatMap((relatedId) => {
+      const found = allPersonagens.find((personagem) => Number(personagem.idpersonagem ?? personagem.Idpersonagem) === relatedId);
+      if (clone && !found) return [];
+      return [{ id: relatedId, nome: found?.nome ?? found?.Nome ?? `Personagem ${relatedId}` }];
+    }));
+  }, [allPersonagens, clone, isLoadingCharacter, relatedIds, setListPersonagemRelacionado]);
 
   const snapshot = React.useMemo(() => JSON.stringify({
     generico: variants.generico,
@@ -544,7 +595,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
 
   const validateEdit = React.useCallback(() => {
     const hasNameError = !userName.trim() || userName.trim().length > 100;
-    const hasRaceError = !race || race === 0;
+    const hasRaceError = !race || race === 0 || (clone && !listRaces.some((item) => item.idraca === race));
 
     setNameError(hasNameError);
     setRaceError(hasRaceError);
@@ -556,10 +607,23 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
     }
 
     return true;
-  }, [race, userName]);
+  }, [clone, listRaces, race, userName]);
 
   const handleSave = React.useCallback(async (options?: { goBackAfterSave?: boolean }) => {
     if (!validateEdit()) return;
+    if (clone && (loadingRaces || loadingCities || loadingItens || (targetMesaId ? targetRuntime.loading : sistema.loading))) {
+      toast.error('Aguarde o catálogo e o Sistema de destino carregarem.');
+      return;
+    }
+    if (clone && targetMesaId && (!targetRuntime.contexto || targetRuntime.error)) {
+      toast.error('Não foi possível validar as regras do Sistema da Mesa.');
+      return;
+    }
+    if (clone && city && !listCities.some((item) => item.idcidade === city)) {
+      setEditStep(2);
+      toast.error('Escolha uma cidade disponível no destino.');
+      return;
+    }
     const invalidVariant = variants.generico ? findInvalidVariant(variants.variants) : -1;
     if (invalidVariant >= 0) {
       variants.showNameError(invalidVariant);
@@ -567,7 +631,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
       setEditStep(1);
       return;
     }
-    if (!sistema.vinculo.acompanharPublicacaoAtual && !sistema.vinculo.idSistemaVersao) {
+    if (!targetMesaId && !sistema.vinculo.acompanharPublicacaoAtual && !sistema.vinculo.idSistemaVersao) {
       setEditStep(1);
       toast.error('Selecione uma versão publicada para fixar o Sistema deste NPC.');
       return;
@@ -626,6 +690,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
         resolveFolderName: () => 'magias',
       });
 
+      const catalogItemIds = new Set(listItens.map((item) => String(item.id)));
       const inventarioMapped = itensComImagens.map(({ imagemArquivo: _imagemArquivo, ...item }) => ({
         id: item.id ?? generateId(),
         idItemBase: item.idItemBase ?? undefined,
@@ -641,6 +706,9 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
         imagem: item.imagem ?? undefined,
         atributos: item.atributos ?? {},
       }));
+      const validInventario = clone
+        ? detachUnavailableBaseItems(inventarioMapped, catalogItemIds)
+        : inventarioMapped;
 
       const skillsMapped = skillsComImagens.filter((skill) => Boolean(skill.nome?.trim())).map(({ imagemArquivo: _imagemArquivo, ...skill }) => {
         const serializedEffect = serializeRichText((skill as any).efeito);
@@ -694,10 +762,10 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
         destaque: destaque ?? false,
         idpassiva,
         ultimate: ultimate || undefined,
-        idSistemaRpg: sistema.vinculo.idSistemaRpg ?? sistema.effectiveSystemId,
-        idSistemaVersao: sistema.vinculo.acompanharPublicacaoAtual ? null : sistema.vinculo.idSistemaVersao,
-        acompanharPublicacaoAtual: sistema.vinculo.acompanharPublicacaoAtual,
-        inventarioJson: inventarioMapped,
+        idSistemaRpg: targetMesaId ? null : sistema.vinculo.idSistemaRpg ?? sistema.effectiveSystemId,
+        idSistemaVersao: targetMesaId || sistema.vinculo.acompanharPublicacaoAtual ? null : sistema.vinculo.idSistemaVersao,
+        acompanharPublicacaoAtual: targetMesaId ? undefined : sistema.vinculo.acompanharPublicacaoAtual,
+        inventarioJson: validInventario,
         skills: skillsMapped,
         magia: magiasMapped,
         personagemsVinculados: listPersonagemRelacionado
@@ -744,8 +812,18 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
           },
         },
       };
-      if (variants.generico) Object.assign(payload, await persistCharacterVariants(variants.variants, userName));
-      const result = await atualizarPersonagem(characterId, payload);
+      if (variants.generico) {
+        const variantsToSave = clone
+          ? variants.variants.map((variant) => ({
+              ...variant,
+              inventarioJson: detachUnavailableBaseItems(variant.inventarioJson, catalogItemIds),
+            }))
+          : variants.variants;
+        Object.assign(payload, await persistCharacterVariants(variantsToSave, userName));
+      }
+      const result = clone
+        ? await salvarPersonagem({ ...payload, tags, visibilidadeInicial: sourceVisibility })
+        : await atualizarPersonagem(characterId, payload);
       if (result?.sucesso === false) {
         toast.error(result.mensagemErro || 'Erro ao atualizar personagem.');
         return;
@@ -753,7 +831,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
 
       setLastSavedSnapshot(snapshot);
       if (!variants.generico) variants.hydrate(null);
-      toast.success('NPC atualizado com sucesso!');
+      toast.success(clone ? 'NPC clonado com sucesso!' : 'NPC atualizado com sucesso!');
       await onSave?.();
 
       if (options?.goBackAfterSave) {
@@ -772,6 +850,11 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
     avatarFile,
     avatarUrl,
     characterId,
+    clone,
+    targetMesaId,
+    sourceMesaId,
+    sourceVisibility,
+    listItens,
     city,
     costumes,
     defesas,
@@ -787,6 +870,10 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
     magias,
     nanites,
     onSave,
+    loadingRaces,
+    loadingCities,
+    loadingItens,
+    listCities,
     race,
     skills,
     snapshot,
@@ -802,6 +889,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
     xp,
     onBack,
     sistema,
+    targetRuntime,
   ]);
 
   const handleSaveAndBack = React.useCallback(async () => {
@@ -862,15 +950,38 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
       />
 
       <EditHeader theme={theme} neon={neon}>
-        <h2>Editando: {userName || 'Personagem'}</h2>
+        <h2>{clone ? 'Clonando' : 'Editando'}: {userName || 'Personagem'}</h2>
       </EditHeader>
+      {!clone && (
+        <div style={{ margin: '12px 0' }}>
+          <CyberButton type="button" theme={theme} neon={neon} text="Clonar personagem"
+            width="220px" onClick={() => {
+              const query = new URLSearchParams({ cloneNpc: characterId });
+              if (targetMesaId) query.set('sourceMesaId', String(targetMesaId));
+              navigate(`${window.location.pathname}?${query}`);
+            }} />
+        </div>
+      )}
+
+      {clone && (
+        <div style={{ maxWidth: 420, margin: '16px 0' }}>
+          <Select theme={theme} neon={neon} label="Destino do clone"
+            value={targetMesaId ?? 'global'}
+            onChange={(event) => changeDestination(event.target.value)}
+            options={[
+              ...(isAdmin ? [{ value: 'global', label: 'Wiki geral' }] : []),
+              ...targetMesas.map((mesa) => ({ value: mesa.idmesa, label: mesa.nome })),
+            ]} allowEmptyOption={false} />
+          <p style={{ marginTop: 8 }}>Raça e cidade precisam existir no destino. Itens indisponíveis mantêm seus dados, mas perdem o vínculo com o catálogo.</p>
+        </div>
+      )}
 
       <FormEditController>
         <CharacterVariantType generico={variants.generico} count={variants.variants.length}
           onChange={variants.setGenerico} neon={neon} />
         {editStep === 1 && (
           <>
-          <SystemEntityBinding theme={theme} neon={neon} state={sistema} />
+          {!targetMesaId && <SystemEntityBinding theme={theme} neon={neon} state={sistema} />}
           <CharacterVariantPager enabled={variants.generico} index={variants.index} count={variants.variants.length}
             onSelect={variants.select} onAdd={variants.add} characterName={userName} theme={theme} neon={neon}>
           <CharacterSystemForm
@@ -908,7 +1019,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
             itemColumns={itemColumns}
             skillsColumns={skillsColumns}
             magiasColumns={magiasColumns}
-            runtimeContext={sistema.contexto}
+            runtimeContext={clone && targetMesaId ? targetRuntime.contexto : sistema.contexto}
             comparisonSource="Npc"
             comparisonId={Number(characterId)}
             comparisonVariant={variants.generico ? {

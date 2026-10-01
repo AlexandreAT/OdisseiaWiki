@@ -15,6 +15,11 @@ public interface IMesaRealtimeNotifier
         int idMesa,
         CancellationToken cancellationToken = default);
 
+    Task NotificarMesaSecaoAlteradaAsync(
+        int idMesa,
+        string secao,
+        CancellationToken cancellationToken = default);
+
     Task RevogarAcessoUsuarioAsync(
         int idMesa,
         int idUsuario,

@@ -11,6 +11,9 @@ public sealed class MesaCombateParticipante
     public MesaCombateParticipanteTipo Tipo { get; set; }
     public MesaCombateParticipanteStatus Status { get; set; } = MesaCombateParticipanteStatus.AguardandoIniciativa;
     public int? IdPersonagemJogador { get; set; }
+    public int? IdPersonagemOrigem { get; set; }
+    [MaxLength(100)]
+    public string? IdVarianteOrigem { get; set; }
     public int? IdUsuarioControlador { get; set; }
     [Required, MaxLength(150)]
     public string NomeSnapshot { get; set; } = null!;
@@ -28,6 +31,7 @@ public sealed class MesaCombateParticipante
 
     public MesaCombate Combate { get; set; } = null!;
     public PersonagemJogador? PersonagemJogador { get; set; }
+    public Personagen? PersonagemOrigem { get; set; }
     public Usuario? UsuarioControlador { get; set; }
     public ICollection<MesaCondicaoAtiva> Condicoes { get; set; } = new List<MesaCondicaoAtiva>();
     public ICollection<MesaCooldownAtivo> Cooldowns { get; set; } = new List<MesaCooldownAtivo>();

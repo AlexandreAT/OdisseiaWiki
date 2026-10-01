@@ -47,6 +47,7 @@ import { BiTrash, BiPlus, BiMoveVertical, BiInfoCircle } from 'react-icons/bi';
 import { EntityEditFloatingActions } from '../../FormBuscarConteúdo/EntityEditFloatingActions';
 import { revealFirstValidationError } from '../../../../../../utils/formValidationFeedback';
 import { useEntityEditSync } from '../../../../../../hooks/useEntityEditSync';
+import { getMesaWikiIdFromPath } from '../../../../../../services/wikiContext';
 
 const BLOCK_TYPES: PageBlockType[] = [
   PageBlockType.RICH_TEXT,
@@ -72,6 +73,7 @@ export const FormPage: React.FC<FormPageProps> = ({
   pageId,
   onSaveSuccess,
 }) => {
+  const isWikiDaMesa = getMesaWikiIdFromPath() !== null;
   const {
     titulo,
     setTitulo,
@@ -475,7 +477,9 @@ export const FormPage: React.FC<FormPageProps> = ({
             Adicionar novo bloco:
           </label>
           <BlockTypeSelector>
-            {BLOCK_TYPES.map((tipo) => (
+            {BLOCK_TYPES
+              .filter((tipo) => !isWikiDaMesa || tipo !== PageBlockType.INFOLORE)
+              .map((tipo) => (
               <BlockTypeButton
                 key={tipo}
                 type="button"

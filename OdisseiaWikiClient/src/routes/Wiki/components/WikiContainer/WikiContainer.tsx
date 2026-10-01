@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
-import { useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { WikiContainerProps } from './types';
 import {
   WikiContainerWrapper,
@@ -9,6 +9,7 @@ import {
   ErrorContainer,
   LoadingContainer,
   SearchWarning,
+  EmptyWikiState,
 } from './WikiContainer.style';
 import { WikiHeader } from '../WikiHeader';
 import { WikiSidebar } from '../WikiSidebar';
@@ -17,6 +18,7 @@ import { WikiSearchResults } from '../WikiSearchResults';
 import { usePageContent, useWikiSearch } from '../../hooks';
 import { WikiSearchLoading } from '../WikiSearchLoading';
 import { useApiAvailabilityStatus } from '../../../../hooks/useApiAvailabilityStatus';
+import { getMesaWikiIdFromPath } from '../../../../services/wikiContext';
 
 interface RootState {
   themesReducer: {
@@ -28,12 +30,14 @@ interface RootState {
 export const WikiContainer: React.FC<WikiContainerProps> = () => {
   const { theme, neon } = useSelector((state: RootState) => state.themesReducer);
   const [searchParams] = useSearchParams();
+  const { slug } = useParams<{ slug?: string }>();
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [headerExpanded, setHeaderExpanded] = useState(true);
   const apiAvailabilityStatus = useApiAvailabilityStatus();
   
   const isDark = theme === 'dark';
   const isSearching = searchParams.has('q') || searchParams.has('type');
+  const isMesaWikiRoot = getMesaWikiIdFromPath() !== null && !slug && !isSearching;
   
   const { page, loading: pageLoading, error: pageError } = usePageContent();
   const {
@@ -44,11 +48,16 @@ export const WikiContainer: React.FC<WikiContainerProps> = () => {
     catalogLoading,
     catalogError,
     catalogWarning,
+    catalog,
     getSuggestionGroups,
     handleSearch,
     handleGroupSelect,
     handleResultSelect,
+    isMesaWiki,
+    pesquisarSomenteMesa,
+    setPesquisarSomenteMesa,
   } = useWikiSearch();
+  const hasPublishedMesaContent = Object.values(catalog).some((entries) => entries.length > 0);
 
   const handleSidebarToggle = (expanded: boolean) => {
     setSidebarExpanded(expanded);
@@ -77,15 +86,40 @@ export const WikiContainer: React.FC<WikiContainerProps> = () => {
         suggestionsLoading={catalogLoading}
         suggestionsError={catalogError}
         suggestionsWarning={catalogWarning}
+        showMesaScopeFilter={isMesaWiki}
+        pesquisarSomenteMesa={pesquisarSomenteMesa}
+        onPesquisarSomenteMesaChange={setPesquisarSomenteMesa}
         onToggle={handleHeaderToggle}
         isExpanded={headerExpanded}
       />
       
       <WikiContentArea $isDark={isDark}>
-        {!isSearching && <WikiSidebar page={page} onToggle={handleSidebarToggle} headerExpanded={headerExpanded} sidebarExpanded={sidebarExpanded} />}
+        {!isSearching && !isMesaWikiRoot && <WikiSidebar page={page} onToggle={handleSidebarToggle} headerExpanded={headerExpanded} sidebarExpanded={sidebarExpanded} />}
         
         <WikiMainSection $isDark={isDark} $sidebarExpanded={!isSearching && sidebarExpanded} $headerExpanded={headerExpanded}>
-          {isSearching ? (
+          {isMesaWikiRoot ? (
+            <>
+              {catalogLoading && apiAvailabilityStatus === 'idle' && (
+                <LoadingContainer $isDark={isDark}>
+                  <WikiSearchLoading label="Carregando Wiki da Mesa" />
+                </LoadingContainer>
+              )}
+              {!catalogLoading && catalogError && (
+                <ErrorContainer $isDark={isDark}>
+                  <p>{catalogError}</p>
+                </ErrorContainer>
+              )}
+              {!catalogLoading && !catalogError && (
+                <EmptyWikiState $isDark={isDark}>
+                  <h2>{hasPublishedMesaContent ? 'Wiki da Mesa' : 'Esta Mesa ainda não possui conteúdo publicado.'}</h2>
+                  <p>{hasPublishedMesaContent
+                    ? 'Use a busca para explorar os conteúdos disponíveis nesta campanha.'
+                    : 'Quando o mestre publicar conteúdos para a campanha, eles aparecerão aqui.'}
+                  </p>
+                </EmptyWikiState>
+              )}
+            </>
+          ) : isSearching ? (
             <>
               {searchLoading && apiAvailabilityStatus === 'idle' && (
                 <LoadingContainer $isDark={isDark}>

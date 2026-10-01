@@ -7,6 +7,8 @@ import {
   MesaExpulsaoRegistro,
   MesaHubResponse,
   MesaJogador,
+  MesaNpcCatalogo,
+  MesaPersonagemResumo,
   MesaPersonagensGerenciamento,
   MesaPesquisaFiltros,
   MesaPublica,
@@ -174,5 +176,34 @@ export const atualizarMesaAoVivo = async (
   aoVivo: boolean,
 ): Promise<MesaResumo> => {
   const response = await api.put<MesaResumo>(`/Mesa/${idMesa}/ao-vivo`, { aoVivo });
+  return response.data;
+};
+
+export const pesquisarNpcsMesa = async (idMesa: number, termo = ''): Promise<MesaNpcCatalogo[]> => {
+  const response = await api.get<MesaNpcCatalogo[]>(`/Mesa/${idMesa}/npcs/catalogo`, { params: { termo: termo || undefined } });
+  return response.data;
+};
+
+export const adicionarNpcMesa = async (
+  idMesa: number,
+  idPersonagemOrigem: number,
+  idVarianteOrigem?: string | null,
+): Promise<MesaPersonagemResumo> => {
+  const response = await api.post<MesaPersonagemResumo>(`/Mesa/${idMesa}/npcs`, { idPersonagemOrigem, idVarianteOrigem });
+  return response.data;
+};
+
+export const atualizarVisibilidadeNpcMesa = async (idMesa: number, idPersonagem: number, visivel: boolean) => {
+  const response = await api.patch<boolean>(`/Mesa/${idMesa}/npcs/${idPersonagem}/visibilidade`, { visivel });
+  return response.data;
+};
+
+export const removerNpcMesa = async (idMesa: number, idPersonagem: number) => {
+  const response = await api.delete<boolean>(`/Mesa/${idMesa}/npcs/${idPersonagem}`);
+  return response.data;
+};
+
+export const publicarNpcMesa = async (idMesa: number, idPersonagem: number) => {
+  const response = await api.post<boolean>(`/Mesa/${idMesa}/npcs/${idPersonagem}/publicar`);
   return response.data;
 };

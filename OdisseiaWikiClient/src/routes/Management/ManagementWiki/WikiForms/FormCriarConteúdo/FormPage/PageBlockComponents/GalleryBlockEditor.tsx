@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { PageBlock, GalleryBlockContent, ImageBlockContent } from '../../../../../../../models/Pages';
 import { ImageUploader } from '../../../../../../../components/Generic/ImageUploader/ImageUploader';
 import { saveAsset } from '../../../../../../../services/assetsService';
+import { getApiErrorMessage } from '../../../../../../../utils/apiError';
 import type { CropPreset, CropResult } from '../../../../../../../components/Generic/ImageUploader/types';
 import {
   Container,
@@ -71,7 +72,7 @@ export const GalleryBlockEditor: React.FC<GalleryBlockEditorProps> = ({
 
       toast.success('Imagem adicionada com sucesso!');
     } catch (error) {
-      toast.error('Erro ao salvar imagem');
+      toast.error(getApiErrorMessage(error, 'Não foi possível salvar a imagem.'));
       console.error(error);
     }
   };

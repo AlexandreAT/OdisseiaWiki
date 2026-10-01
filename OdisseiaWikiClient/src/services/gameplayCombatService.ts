@@ -24,7 +24,17 @@ const post = async <T extends GameplayCombatCommandBase>(idMesa: number, idMesaS
 };
 
 export const iniciarCombate = (idMesa: number, idSessao: number, payload: GameplayCombatCommandBase & { idsPersonagens: number[] }) => post(idMesa, idSessao, 'iniciar', payload);
-export const adicionarNpcCombate = (idMesa: number, idSessao: number, payload: GameplayCombatCommandBase & { nome: string; imagem?: string; modificadorIniciativa: number }) => post(idMesa, idSessao, 'npcs', payload);
+export interface AdicionarNpcCombatePayload {
+  nome: string;
+  imagem?: string | null;
+  modificadorIniciativa: number;
+  idPersonagemJogador?: number | null;
+  idPersonagemOrigem?: number | null;
+  idVarianteOrigem?: string | null;
+}
+
+export const adicionarNpcCombate = (idMesa: number, idSessao: number, payload: GameplayCombatCommandBase & AdicionarNpcCombatePayload) => post(idMesa, idSessao, 'npcs', payload);
+export const removerParticipanteCombate = (idMesa: number, idSessao: number, payload: GameplayCombatCommandBase & { idParticipante: number }) => post(idMesa, idSessao, 'participantes/remover', payload);
 export const rolarIniciativaCombate = (idMesa: number, idSessao: number, payload: GameplayCombatCommandBase & { idParticipante: number }) => post(idMesa, idSessao, 'iniciativa', payload);
 export const ativarCombate = (idMesa: number, idSessao: number, payload: GameplayCombatCommandBase & { ordemParticipantes: number[] }) => post(idMesa, idSessao, 'ativar', payload);
 export const avancarTurnoCombate = (idMesa: number, idSessao: number, payload: GameplayCombatCommandBase) => post(idMesa, idSessao, 'avancar', payload);

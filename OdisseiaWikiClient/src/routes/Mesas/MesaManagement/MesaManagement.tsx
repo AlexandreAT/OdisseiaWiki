@@ -49,7 +49,7 @@ const tabs: Array<{ key: MesaManagementTab | 'wiki' | 'configuracoes'; label: st
   { key: 'pedidos', label: 'Pedidos', icon: PersonOutlineIcon },
   { key: 'jogadores', label: 'Jogadores', icon: GroupsOutlinedIcon },
   { key: 'personagens', label: 'Personagens', icon: PersonOutlineIcon },
-  { key: 'wiki', label: 'Wiki da Mesa', icon: MenuBookOutlinedIcon, disabled: true },
+  { key: 'wiki', label: 'Wiki da Mesa', icon: MenuBookOutlinedIcon },
   { key: 'configuracoes', label: 'Configurações', icon: SettingsOutlinedIcon, disabled: true },
 ];
 
@@ -105,7 +105,7 @@ const MesaManagement = () => {
               {tabs.map((item) => {
                 const Icon = item.icon;
                 return (
-                  <SidebarButton key={item.key} $active={tab === item.key} disabled={item.disabled} onClick={() => !item.disabled && selectTab(item.key as MesaManagementTab)} title={item.disabled ? 'Recurso preparado para uma próxima etapa' : undefined}>
+                  <SidebarButton key={item.key} $active={tab === item.key} disabled={item.disabled} onClick={() => item.key === 'wiki' ? navigate(`/mesa/${idMesa}/wiki/gerenciar`) : !item.disabled && selectTab(item.key as MesaManagementTab)} title={item.disabled ? 'Recurso preparado para uma próxima etapa' : undefined}>
                     <Icon /> {item.label}{item.disabled && <DisabledHint>Em breve</DisabledHint>}
                   </SidebarButton>
                 );
@@ -137,7 +137,7 @@ const MesaManagement = () => {
                   <MesaHudDecor neon={isNeonActive} />
                   <div><h1>Pedidos de entrada</h1><p>Gerencie quem deseja participar desta Mesa.</p></div>
                 </PageHeader>
-                <div>
+                {state.tabLoading ? <LoadingIndicator compact label="Carregando pedidos" /> : <div>
                   {state.requests.length === 0 && <EmptyState>Nenhum pedido pendente.</EmptyState>}
                   {state.requests.map((request) => (
                     <RequestCard $neon={isNeonActive} key={request.idSolicitacao}>
@@ -147,7 +147,7 @@ const MesaManagement = () => {
                       <div><ActionButton $accent="green" $compact onClick={() => void state.accept(request.idSolicitacao)}><CheckIcon /> Aceitar</ActionButton> <ActionButton $accent="red" $compact onClick={() => void state.refuse(request.idSolicitacao)}><CloseIcon /> Recusar</ActionButton></div>
                     </RequestCard>
                   ))}
-                </div>
+                </div>}
               </>
             )}
             {tab === 'jogadores' && (
@@ -156,6 +156,7 @@ const MesaManagement = () => {
                   <MesaHudDecor neon={isNeonActive} />
                   <div><h1>Jogadores</h1><p>Participantes atualmente vinculados à Mesa.</p></div>
                 </PageHeader>
+                {state.tabLoading ? <LoadingIndicator compact label="Carregando jogadores" /> : <>
                 {state.players.length === 0 && <EmptyState>Nenhum jogador participante.</EmptyState>}
                 {state.players.map((player) => (
                   <RequestCard $neon={isNeonActive} key={player.idUsuario}>
@@ -165,6 +166,7 @@ const MesaManagement = () => {
                     <ActionButton $accent="red" $compact onClick={() => setExpelUser({ id: player.idUsuario, name: player.nome })}>Expulsar</ActionButton>
                   </RequestCard>
                 ))}
+                </>}
               </>
             )}
             {tab === 'personagens' && (
@@ -173,7 +175,7 @@ const MesaManagement = () => {
                   <MesaHudDecor neon={isNeonActive} />
                   <div><h1>Personagens da Mesa</h1><p>Leitura administrativa, incluindo fichas invisíveis e personagens mortos.</p></div>
                 </PageHeader>
-                {state.characters.length === 0 ? <EmptyState>Nenhum personagem vinculado.</EmptyState> : (
+                {state.tabLoading ? <LoadingIndicator compact label="Carregando personagens" /> : state.characters.length === 0 ? <EmptyState>Nenhum personagem vinculado.</EmptyState> : (
                   <CharacterGrid>{state.characters.map((entry) => {
                     const parsed = parseCharacterStatus(entry.personagem.statusJson);
                     return (

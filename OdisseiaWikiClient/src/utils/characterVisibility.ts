@@ -59,6 +59,9 @@ export const getProjectedHiddenCharacterFields = (
   visibility?: PersonagemVisibilidade | null,
 ): CamposOcultosProjetados => {
   const raw = isRecord(rawPayload) ? rawPayload : {};
+  // A API distingue dados realmente removidos de campos vazios na ficha completa.
+  // O fallback abaixo continua cobrindo respostas de servidores antigos.
+  if (readAny(raw, 'visibilidadeProjetada', 'VisibilidadeProjetada') === false) return {};
   const statusRoot = parseStatus(readAny(raw, 'statusJson', 'StatusJson'));
   const status = readAny(statusRoot, 'status');
   const attributes = readAny(statusRoot, 'atributos');

@@ -12,9 +12,54 @@ namespace OdisseiaWiki.Services.Helpers;
 /// </summary>
 public static class PersonagemVisibilidadeProjection
 {
+    public static async Task FilterInvisibleReferencesAsync(
+        Personagen personagem,
+        Func<int, Task<bool>> canViewRace,
+        Func<int, Task<bool>> canViewCity,
+        Func<int, Task<bool>> canViewCharacter)
+    {
+        if (personagem.Idraca > 0 && !await canViewRace(personagem.Idraca))
+        {
+            personagem.Idraca = 0;
+            personagem.IdracaNavigation = null!;
+            personagem.Idpassiva = null;
+            personagem.Passiva = null;
+            // A configuração resolvida pode conter valores e proveniências da raça oculta.
+            personagem.SistemaRuntime = null;
+        }
+
+        if (personagem.Idcidade.HasValue && !await canViewCity(personagem.Idcidade.Value))
+        {
+            personagem.Idcidade = null;
+            personagem.IdcidadeNavigation = null;
+        }
+
+        if (string.IsNullOrWhiteSpace(personagem.PersonagemsVinculados))
+            return;
+
+        try
+        {
+            List<int> relacionados = JsonSerializer.Deserialize<List<int>>(personagem.PersonagemsVinculados) ?? new();
+            List<int> visiveis = new();
+            foreach (int id in relacionados)
+            {
+                if (await canViewCharacter(id))
+                    visiveis.Add(id);
+                else
+                    personagem.QuantidadeRelacionadosOcultos++;
+            }
+            personagem.PersonagemsVinculados = JsonSerializer.Serialize(visiveis);
+        }
+        catch (JsonException)
+        {
+            personagem.PersonagemsVinculados = null;
+        }
+    }
+
     public static void ApplyForExternalViewer(Personagen personagem)
     {
         PersonagemVisibilidadeDto visibilidade = personagem.Visibilidade;
+        personagem.VisibilidadeProjetada = true;
 
         if (!visibilidade.Nome) personagem.Nome = string.Empty;
         if (!visibilidade.Imagem) personagem.Imagem = null;
@@ -61,6 +106,7 @@ public static class PersonagemVisibilidadeProjection
     public static void ApplyForExternalViewer(PersonagemJogadorDto personagem)
     {
         PersonagemVisibilidadeDto visibilidade = personagem.Visibilidade;
+        personagem.VisibilidadeProjetada = true;
 
         if (!visibilidade.Nome) personagem.Nome = string.Empty;
         if (!visibilidade.Imagem) personagem.Imagem = null;
@@ -91,7 +137,11 @@ public static class PersonagemVisibilidadeProjection
                 visibilidade.Proteses);
         }
         if (!visibilidade.Proteses) personagem.Implantes = null;
-        if (!visibilidade.Passivas) personagem.Idpassiva = null;
+        if (!visibilidade.Passivas)
+        {
+            personagem.Idpassiva = null;
+            personagem.Passiva = null;
+        }
         if (!visibilidade.Ultimate) personagem.Ultimate = null;
         if (!visibilidade.Skills)
         {

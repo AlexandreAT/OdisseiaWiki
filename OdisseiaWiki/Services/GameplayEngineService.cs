@@ -479,7 +479,7 @@ public sealed class GameplayEngineService : IGameplayEngineService
         }
 
         if (result.Sucesso && result.Dados is { Replay: false, Evento: not null })
-            await _realtimeNotifier.NotificarMesaAlteradaAsync(idMesa, cancellationToken);
+            await _realtimeNotifier.NotificarMesaSecaoAlteradaAsync(idMesa, "gameplay", cancellationToken);
         return result;
     }
 
@@ -621,7 +621,7 @@ public sealed class GameplayEngineService : IGameplayEngineService
         }
 
         if (result.Sucesso && result.Dados is { Replay: false, Evento: not null })
-            await _realtimeNotifier.NotificarMesaAlteradaAsync(idMesa, cancellationToken);
+            await _realtimeNotifier.NotificarMesaSecaoAlteradaAsync(idMesa, "gameplay", cancellationToken);
         return result;
     }
 
@@ -895,7 +895,7 @@ public sealed class GameplayEngineService : IGameplayEngineService
 
         if (result.Sucesso && result.Dados is { Replay: false, Evento: not null })
         {
-            await _realtimeNotifier.NotificarMesaAlteradaAsync(idMesa, cancellationToken);
+            await _realtimeNotifier.NotificarMesaSecaoAlteradaAsync(idMesa, "gameplay", cancellationToken);
             if (changedCharacterId.HasValue)
                 await _realtimeNotifier.NotificarPersonagemAlteradoAsync(idMesa, changedCharacterId.Value, cancellationToken);
         }
@@ -1030,7 +1030,7 @@ public sealed class GameplayEngineService : IGameplayEngineService
         }
 
         if (result.Sucesso && result.Dados is { Replay: false, Evento: not null })
-            await _realtimeNotifier.NotificarMesaAlteradaAsync(idMesa, cancellationToken);
+            await _realtimeNotifier.NotificarMesaSecaoAlteradaAsync(idMesa, "gameplay", cancellationToken);
         return result;
     }
 
@@ -1127,11 +1127,15 @@ public sealed class GameplayEngineService : IGameplayEngineService
         PersonagemJogador? character = await _repository.GetCharacterAsync(idPersonagemJogador, cancellationToken);
         if (character is null)
             return NotFound<GameplaySimulationResponseDto>("PERSONAGEM_NAO_ENCONTRADO", "Personagem não encontrado.");
-        if (character.Idusuario != idUsuario || request.IdPersonagemJogador != idPersonagemJogador)
+        if (request.IdPersonagemJogador != idPersonagemJogador)
+            return Forbidden<GameplaySimulationResponseDto>("PERSONAGEM_SEM_CONTROLE", "Você não controla este personagem.");
+        if (character.Idusuario != idUsuario && !character.IdPersonagemOrigem.HasValue)
             return Forbidden<GameplaySimulationResponseDto>("PERSONAGEM_SEM_CONTROLE", "Você não controla este personagem.");
         if (!await _repository.CanAccessTableAsync(character.Idmesa, idUsuario, cancellationToken))
             return Forbidden<GameplaySimulationResponseDto>("MESA_SEM_ACESSO", "Você não participa desta Mesa.");
         Mesa? mesa = await _repository.GetMesaAsync(character.Idmesa, cancellationToken);
+        if (mesa is null || !CanControlCharacter(mesa, character, idUsuario))
+            return Forbidden<GameplaySimulationResponseDto>("PERSONAGEM_SEM_CONTROLE", "Você não controla este personagem.");
         if (mesa?.IdMesaSessaoAtiva is not null)
         {
             return RuleFailure<GameplaySimulationResponseDto>(
@@ -1161,11 +1165,13 @@ public sealed class GameplayEngineService : IGameplayEngineService
         PersonagemJogador? character = await _repository.GetCharacterAsync(idPersonagemJogador, cancellationToken);
         if (character is null)
             return NotFound<GameplayActionCatalogDto>("PERSONAGEM_NAO_ENCONTRADO", "Personagem não encontrado.");
-        if (character.Idusuario != idUsuario)
+        if (character.Idusuario != idUsuario && !character.IdPersonagemOrigem.HasValue)
             return Forbidden<GameplayActionCatalogDto>("PERSONAGEM_SEM_CONTROLE", "Você não controla este personagem.");
         if (!await _repository.CanAccessTableAsync(character.Idmesa, idUsuario, cancellationToken))
             return Forbidden<GameplayActionCatalogDto>("MESA_SEM_ACESSO", "Você não participa desta Mesa.");
         Mesa? mesa = await _repository.GetMesaAsync(character.Idmesa, cancellationToken);
+        if (mesa is null || !CanControlCharacter(mesa, character, idUsuario))
+            return Forbidden<GameplayActionCatalogDto>("PERSONAGEM_SEM_CONTROLE", "Você não controla este personagem.");
         int? versionId = mesa?.IdMesaSessaoAtiva.HasValue == true
             ? (await _repository.GetSessionAsync(mesa.IdMesaSessaoAtiva.Value, cancellationToken))?.IdSistemaVersao
             : mesa?.IdSistemaVersao;
@@ -1329,7 +1335,7 @@ public sealed class GameplayEngineService : IGameplayEngineService
             if (!cleanup.Sucesso)
                 return ConvertFailure<bool, GameplaySessionDto?>(cleanup);
             if (cleanup.Dados)
-                await _realtimeNotifier.NotificarMesaAlteradaAsync(idMesa, cancellationToken);
+                await _realtimeNotifier.NotificarMesaSecaoAlteradaAsync(idMesa, "gameplay", cancellationToken);
             return GameplayOperationResult<GameplaySessionDto?>.Ok(null);
         }
         GameplayOperationResult<GameplayCommandResponseDto> ended = await EndSessionAsync(
@@ -1505,7 +1511,7 @@ public sealed class GameplayEngineService : IGameplayEngineService
         }
 
         if (result.Sucesso && result.Dados is { Replay: false, Evento: not null })
-            await _realtimeNotifier.NotificarMesaAlteradaAsync(idMesa, cancellationToken);
+            await _realtimeNotifier.NotificarMesaSecaoAlteradaAsync(idMesa, "gameplay", cancellationToken);
         return result;
     }
 
@@ -1566,7 +1572,7 @@ public sealed class GameplayEngineService : IGameplayEngineService
             character = await _repository.GetCharacterAsync(idCharacter.Value, cancellationToken);
             if (character is null || character.Idmesa != idMesa)
                 return NotFound<GameplayCommandContext>("PERSONAGEM_NAO_ENCONTRADO", "Personagem não encontrado nesta Mesa.");
-            if (character.Idusuario != idUsuario)
+            if (!CanControlCharacter(mesa, character, idUsuario))
                 return Forbidden<GameplayCommandContext>("PERSONAGEM_SEM_CONTROLE", "Você não controla este personagem.");
         }
 
@@ -3320,6 +3326,10 @@ public sealed class GameplayEngineService : IGameplayEngineService
     private static string NormalizeCode(string? source)
         => (source ?? string.Empty).Trim().ToUpperInvariant().Replace('-', '_').Replace(' ', '_');
 
+    private static bool CanControlCharacter(Mesa mesa, PersonagemJogador character, int idUsuario)
+        => character.Idusuario == idUsuario
+            || (mesa.IdusuarioCriacao == idUsuario && character.IdPersonagemOrigem.HasValue);
+
     private static string? NormalizeOptionalCode(string? source)
     {
         string value = NormalizeCode(source);
@@ -3339,10 +3349,13 @@ public sealed class GameplayEngineService : IGameplayEngineService
     {
         if (character is null)
             return NotFound<PersonagemJogador>("PERSONAGEM_NAO_ENCONTRADO", "Personagem não encontrado.");
-        if (character.Idusuario != idUsuario)
+        if (character.Idusuario != idUsuario && !character.IdPersonagemOrigem.HasValue)
             return Forbidden<PersonagemJogador>("PERSONAGEM_SEM_CONTROLE", "Você não controla este personagem.");
         if (!await _repository.CanAccessTableAsync(character.Idmesa, idUsuario, cancellationToken))
             return Forbidden<PersonagemJogador>("MESA_SEM_ACESSO", "Você não participa desta Mesa.");
+        Mesa? mesa = await _repository.GetMesaAsync(character.Idmesa, cancellationToken);
+        if (mesa is null || !CanControlCharacter(mesa, character, idUsuario))
+            return Forbidden<PersonagemJogador>("PERSONAGEM_SEM_CONTROLE", "Você não controla este personagem.");
         return GameplayOperationResult<PersonagemJogador>.Ok(character);
     }
 

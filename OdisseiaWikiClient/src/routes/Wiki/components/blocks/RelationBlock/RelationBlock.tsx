@@ -36,6 +36,7 @@ import { getRacasByIds } from '../../../../../services/racasService';
 import { getItensByIds } from '../../../../../services/itensService';
 import { getPagesByIds } from '../../../../../services/pageService';
 import TitleGlitch from '../../../../../components/Generic/TitleGlitch/TitleGlitch';
+import { getMesaWikiRoute } from '../../../../../services/wikiContext';
 
 const typeIcons: Record<string, React.ReactNode> = {
   Cidade: <BiNote />,
@@ -162,6 +163,7 @@ const RelationTypeCarousel: React.FC<RelationTypeCarouselProps> = ({ tipo, items
       // group ids per type
       const idsByType: Record<string, Set<string>> = {};
       items.forEach(r => {
+        if (r.oculto || r.tipoEntidade === 'Oculto') return;
         const tipo = r.tipoEntidade || 'Outro';
         if (!idsByType[tipo]) idsByType[tipo] = new Set<string>();
         if (r.idEntidade != null && String(r.idEntidade).toString().trim() !== '') idsByType[tipo].add(String(r.idEntidade));
@@ -275,6 +277,13 @@ const RelationTypeCarousel: React.FC<RelationTypeCarouselProps> = ({ tipo, items
   const renderRelationItem = (relation: RelatedEntityReference, index: number) => {
     const key = `${tipo}:${String(relation.idEntidade)}:${index}`;
     const ent = entityMap[`${relation.tipoEntidade}:${String(relation.idEntidade)}`];
+    if (relation.oculto || relation.tipoEntidade === 'Oculto' || !ent) {
+      return (
+        <RelationCard key={key} type="button" disabled $hidden aria-label="Conteúdo oculto">
+          <RelationCardPlaceholder $hidden aria-hidden="true" />
+        </RelationCard>
+      );
+    }
     const handleClick = () => {
       if (didDrag.current) {
         didDrag.current = false;
@@ -289,16 +298,17 @@ const RelationTypeCarousel: React.FC<RelationTypeCarouselProps> = ({ tipo, items
       const route = getEntityRoute(relation.tipoEntidade, entityId, ent);
       if (!route) return;
 
-      navigate(route);
+      navigate(getMesaWikiRoute(route));
     };
 
     const resolvedName = ent?.Nome ?? ent?.nome ?? ent?.Titulo ?? ent?.titulo;
     const resolvedImage = ent?.Imagem ?? ent?.imagem ?? ent?.CoverImage ?? ent?.coverImage;
-    const name = resolvedName ? String(resolvedName) : (relation.nome || 'Sem nome');
-    const img = resolvedImage ? String(resolvedImage) : relation.imagem;
+    const name = resolvedName ? String(resolvedName) : 'Sem nome';
+    const img = resolvedImage ? String(resolvedImage) : undefined;
+    const privateToReader = ent?.visivel === false || ent?.Visivel === false;
 
     return (
-      <RelationCard key={key} type="button" onClick={handleClick}>
+      <RelationCard key={key} type="button" onClick={handleClick} $private={privateToReader}>
         {img ? (
           <RelationCardImage
             $entityType={relation.tipoEntidade}
@@ -315,6 +325,7 @@ const RelationTypeCarousel: React.FC<RelationTypeCarouselProps> = ({ tipo, items
           <RelationCardTitle>{name}</RelationCardTitle>
           <RelationCardType>
             {typeLabels[relation.tipoEntidade] ?? relation.tipoEntidade}
+            {privateToReader && ' · Só você vê'}
           </RelationCardType>
         </RelationCardContent>
       </RelationCard>
@@ -408,10 +419,10 @@ export const RelationBlock: React.FC<RelationBlockProps> = ({ block, theme, neon
         <RelationTypeGroup key={tipo}>
           <RelationTypeGroupHeader>
             <TypeIconWrapper>
-              {typeIcons[tipo] || <BiUserCircle />}
+              {tipo === 'Oculto' ? <BiShapeSquare /> : typeIcons[tipo] || <BiUserCircle />}
             </TypeIconWrapper>
             <TypeLabel>
-              {typeLabels[tipo] ?? tipo}s ({items.length})
+              {tipo === 'Oculto' ? `Ocultos (${items.length})` : `${typeLabels[tipo] ?? tipo}s (${items.length})`}
             </TypeLabel>
           </RelationTypeGroupHeader>
 

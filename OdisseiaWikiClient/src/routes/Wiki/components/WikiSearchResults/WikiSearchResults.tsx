@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { BiBookmark, BiChevronLeft, BiChevronRight, BiSortAlt2 } from 'react-icons/bi';
 import { normalizeImagePath } from '../../utils/imagePathHelper';
+import { ContentVisibilityNotice } from '../../../../components/Generic/ContentVisibilityNotice/ContentVisibilityNotice';
 import {
   WikiSearchItem,
   WikiSearchEntityType,
@@ -172,6 +173,7 @@ export const WikiSearchResults: React.FC<WikiSearchResultsProps> = ({
                   />
                   <ResultCardContent $type={group}>
                     <ResultCardTitle>{item.title}</ResultCardTitle>
+                    <ContentVisibilityNotice visible={item.visivel} />
                     {item.description && <ResultCardDescription>{item.description}</ResultCardDescription>}
                   </ResultCardContent>
                 </ResultCard>

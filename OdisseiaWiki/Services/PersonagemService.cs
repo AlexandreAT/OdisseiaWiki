@@ -13,6 +13,8 @@ namespace OdisseiaWiki.Services
     public class PersonagemService : IPersonagemService
     {
         private readonly IPersonagemRepository _repository;
+        private readonly IRacaRepository _racas;
+        private readonly ICidadeRepository _cidades;
         private readonly IAssetService _assetService;
         private readonly ISistemaRpgResolver _sistemaResolver;
         private readonly ISistemaEntidadeVinculoService _vinculoSistemaService;
@@ -21,15 +23,19 @@ namespace OdisseiaWiki.Services
             IPersonagemRepository repository,
             IAssetService assetService,
             ISistemaRpgResolver sistemaResolver,
-            ISistemaEntidadeVinculoService vinculoSistemaService)
+            ISistemaEntidadeVinculoService vinculoSistemaService,
+            IRacaRepository racas,
+            ICidadeRepository cidades)
         {
             _repository = repository;
+            _racas = racas;
+            _cidades = cidades;
             _assetService = assetService;
             _sistemaResolver = sistemaResolver;
             _vinculoSistemaService = vinculoSistemaService;
         }
 
-        public async Task<ResultPersonagem> CreateAsync(PersonagemDto dto)
+        public async Task<ResultPersonagem> CreateAsync(PersonagemDto dto, int? idWikiEscopo = null)
         {
             string? variantError = PersonagemVariantesHelper.ValidateAndNormalize(dto);
             if (variantError is not null) return ResultPersonagem.Fail(variantError);
@@ -75,6 +81,7 @@ namespace OdisseiaWiki.Services
                 Tags = JsonSerializer.Serialize(ContentCategoryHelper.EnsureCategoryTag(dto.Tags, ContentCategoryHelper.Personagem)),
                 Visivel = dto.Visivel,
                 Destaque = dto.Destaque,
+                IdWikiEscopo = idWikiEscopo ?? WikiEscopo.IdOficial,
                 IdSistemaRpg = vinculo.IdSistemaRpg,
                 IdSistemaVersao = vinculo.IdSistemaVersao,
                 AcompanharPublicacaoAtual = vinculo.AcompanharPublicacaoAtual,
@@ -84,24 +91,30 @@ namespace OdisseiaWiki.Services
                 DataCriacao = DateTime.UtcNow
             };
 
+            if (dto.VisibilidadeInicial is not null)
+                personagem.ConfiguracaoVisibilidade = PersonagemVisibilidadeDefaults.CreateEntity(
+                    idPersonagem: null,
+                    idPersonagemJogador: null,
+                    dto: dto.VisibilidadeInicial);
+
             var criado = await _repository.CreateAsync(personagem);
             AplicarVisibilidade(criado);
             criado.SistemaRuntime = await ResolverRuntimeAsync(criado);
             return ResultPersonagem.Ok(criado);
         }
 
-        public async Task<List<Personagen>> GetAllAsync(bool? visivel = null)
+        public async Task<List<Personagen>> GetAllAsync(bool? visivel = null, int? idWikiEscopo = null)
         {
-            List<Personagen> personagens = await _repository.GetAllAsync(visivel);
+            List<Personagen> personagens = await _repository.GetAllAsync(visivel, idWikiEscopo);
             foreach (Personagen personagem in personagens)
                 AplicarVisibilidade(personagem);
 
             return personagens;
         }
 
-        public async Task<Personagen?> GetByIdAsync(int id)
+        public async Task<Personagen?> GetByIdAsync(int id, int? idWikiEscopo = null)
         {
-            Personagen? personagem = await _repository.GetByIdAsync(id);
+            Personagen? personagem = await ObterPorIdAsync(id, idWikiEscopo);
             if (personagem is null)
                 return null;
 
@@ -111,9 +124,21 @@ namespace OdisseiaWiki.Services
             return personagem;
         }
 
-        public async Task<bool?> AtualizarVisivelAsync(int id, bool visivel)
+        public async Task ProjectForPublicAsync(Personagen personagem)
         {
-            Personagen? personagem = await _repository.GetByIdAsync(id);
+            PersonagemVisibilidadeProjection.ApplyForExternalViewer(personagem);
+            await PersonagemVisibilidadeProjection.FilterInvisibleReferencesAsync(
+                personagem,
+                async id => (await _racas.GetByIdAsync(id, WikiEscopo.IdOficial))?.Visivel == true,
+                async id => (await _cidades.GetByIdAsync(id, WikiEscopo.IdOficial))?.Visivel == true,
+                async id => await _repository.GetByIdAsync(id, WikiEscopo.IdOficial) is { Visivel: true } alvo &&
+                    PersonagemVisibilidadeDefaults.FromEntity(
+                        alvo.ConfiguracaoVisibilidade, personagemJogador: false).Nome);
+        }
+
+        public async Task<bool?> AtualizarVisivelAsync(int id, bool visivel, int? idWikiEscopo = null)
+        {
+            Personagen? personagem = await ObterPorIdAsync(id, idWikiEscopo);
             if (personagem is null)
                 return null;
 
@@ -122,11 +147,11 @@ namespace OdisseiaWiki.Services
             return atualizado.Visivel;
         }
 
-        public async Task<ResultPersonagem> UpdateAsync(int id, PersonagemDto dto)
+        public async Task<ResultPersonagem> UpdateAsync(int id, PersonagemDto dto, int? idWikiEscopo = null)
         {
             string? variantError = PersonagemVariantesHelper.ValidateAndNormalize(dto);
             if (variantError is not null) return ResultPersonagem.Fail(variantError);
-            var personagem = await _repository.GetByIdAsync(id);
+            var personagem = await ObterPorIdAsync(id, idWikiEscopo);
             if (personagem == null)
                 return ResultPersonagem.Fail($"Personagem com id {id} não encontrado.");
 
@@ -190,18 +215,18 @@ namespace OdisseiaWiki.Services
             return ResultPersonagem.Ok(atualizado);
         }
 
-        public async Task<List<Personagen>> GetBatchAsync(List<int> ids)
+        public async Task<List<Personagen>> GetBatchAsync(List<int> ids, int? idWikiEscopo = null)
         {
-            List<Personagen> personagens = await _repository.GetBatchAsync(ids);
+            List<Personagen> personagens = await _repository.GetBatchAsync(ids, idWikiEscopo);
             foreach (Personagen personagem in personagens)
                 AplicarVisibilidade(personagem);
 
             return personagens;
         }
 
-        public async Task<bool> DeleteAsync(int id)
+        public async Task<bool> DeleteAsync(int id, int? idWikiEscopo = null)
         {
-            Personagen? personagem = await _repository.GetByIdAsync(id);
+            Personagen? personagem = await ObterPorIdAsync(id, idWikiEscopo);
             if (personagem is null)
                 return false;
 
@@ -223,6 +248,11 @@ namespace OdisseiaWiki.Services
                 personagem.Historia,
                 personagem.Implantes,
                 personagem.Ultimate);
+
+        private Task<Personagen?> ObterPorIdAsync(int id, int? idWikiEscopo) =>
+            idWikiEscopo.HasValue
+                ? _repository.GetByIdAsync(id, idWikiEscopo)
+                : _repository.GetByIdAsync(id);
 
         private static void AplicarVisibilidade(Personagen personagem) => personagem.Visibilidade =
             PersonagemVisibilidadeDefaults.FromEntity(

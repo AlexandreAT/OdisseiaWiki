@@ -1,4 +1,6 @@
 import api from '../axios/api';
+import { getApiErrorMessage } from '../utils/apiError';
+import { getMesaWikiApiPath, getMesaWikiIdFromPath } from './wikiContext';
 
 export interface SaveAssetPayload {
     imageFile: File;
@@ -35,8 +37,16 @@ export const saveAsset = (payload: SaveAssetPayload): Promise<SaveAssetResult> =
         formData.append('entityName', payload.entityName);
         if (payload.folderName) formData.append('folderName', payload.folderName);
 
-        const response = await api.postForm<SaveAssetResult>('/assets/upload', formData);
-        return response.data;
+        const endpoint = getMesaWikiIdFromPath()
+            ? getMesaWikiApiPath('assets', '/assets/upload')
+            : '/assets/upload';
+        try {
+            const response = await api.postForm<SaveAssetResult>(endpoint, formData);
+            return response.data;
+        } catch (error) {
+            // Mantém a causa do upload para todos os formulários que reutilizam este serviço.
+            throw new Error(getApiErrorMessage(error, 'Não foi possível enviar a imagem.'));
+        }
     })();
 
     fileUploads.set(key, upload);

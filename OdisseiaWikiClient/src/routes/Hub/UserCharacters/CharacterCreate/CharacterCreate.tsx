@@ -8,15 +8,17 @@ import { BasicInfoForm } from './FormUserCharacter/BasicInfoForm/BasicInfoForm';
 import { StatusForm } from './FormUserCharacter/StatusForm/StatusForm';
 import { CharacterStepDots } from '../../../Shared/CharacterForms/CharacterStepDots';
 import { SystemRuntimeIndicator } from '../../../../components/Generic/SystemRuntimeIndicator';
+import type { PersonagemJogador } from '../../../../models/PersonagemJogador';
 
 interface UserCharactersProps {
   theme: 'dark' | 'light';
   neon: 'on' | 'off';
   userId: number;
   onSave?: () => void;
+  cloneSource?: PersonagemJogador;
 }
 
-const CharacterCreateComponent = ({ theme, neon, userId, onSave }: UserCharactersProps) => {
+const CharacterCreateComponent = ({ theme, neon, userId, onSave, cloneSource }: UserCharactersProps) => {
   const {
     step, handleNext, handleSubmit,
     handlePrev, isFirstStep, isLastStep,
@@ -54,7 +56,7 @@ const CharacterCreateComponent = ({ theme, neon, userId, onSave }: UserCharacter
     mesaError, setMesaError,
     isSubmitting,
     runtimeContext, runtimeLoading, runtimeError,
-  } = useFormUserCharacter(userId, onSave);
+  } = useFormUserCharacter(userId, onSave, cloneSource, Boolean(cloneSource));
 
   const raceImageUrl = React.useMemo(() => 
     selectedRace?.imagem ?? '',
@@ -124,6 +126,8 @@ const CharacterCreateComponent = ({ theme, neon, userId, onSave }: UserCharacter
         disabled={loadingMesas}
         allowEmptyOption={false}
       />
+
+      {cloneSource && <p>Ao mudar de Mesa, raça e cidade precisam existir no destino. Itens indisponíveis mantêm seus dados, mas perdem o vínculo com o catálogo.</p>}
 
       {selectedMesa && (
         <SystemRuntimeIndicator

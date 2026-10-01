@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getPageBySlug } from '../../../services/pageService';
 import { Page } from '../../../models/Pages';
 import { WikiContentState } from '../types';
+import { getMesaWikiIdFromPath, getMesaWikiRoute } from '../../../services/wikiContext';
 
 export const usePageContent = () => {
   const { slug } = useParams<{ slug?: string }>();
@@ -15,7 +16,11 @@ export const usePageContent = () => {
 
   useEffect(() => {
     if (!slug) {
-      navigate('/wiki/MainPage');
+      if (getMesaWikiIdFromPath()) {
+        setState({ page: null, loading: false, error: null });
+        return;
+      }
+      navigate(getMesaWikiRoute('/wiki/MainPage'));
       return;
     }
 

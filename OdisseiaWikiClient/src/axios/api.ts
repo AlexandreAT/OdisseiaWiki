@@ -17,6 +17,24 @@ interface RetryableRequestConfig extends InternalAxiosRequestConfig {
   __odisseiaRequestTracked?: boolean;
 }
 
+const hasIdempotencyKey = (data: unknown): boolean => {
+  if (!data) return false;
+
+  let payload = data;
+  if (typeof payload === 'string') {
+    try {
+      payload = JSON.parse(payload);
+    } catch {
+      return false;
+    }
+  }
+
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return false;
+  const key = (payload as Record<string, unknown>).chaveIdempotencia
+    ?? (payload as Record<string, unknown>).ChaveIdempotencia;
+  return typeof key === 'string' && key.trim().length > 0;
+};
+
 const api = axios.create({
   baseURL: apiUrl,
   timeout: API_REQUEST_TIMEOUT_MS,
@@ -63,12 +81,13 @@ api.interceptors.response.use(
     }
 
     const isSafeGet = config?.method?.toLowerCase() === 'get';
+    const canRetry = isSafeGet || hasIdempotencyKey(config?.data);
 
     if (!config || !isTransientApiError(error)) {
       return Promise.reject(error);
     }
 
-    if (!isSafeGet) {
+    if (!canRetry) {
       void wakeApiServer({ announceDelayMs: 0 }).catch(() => undefined);
       return Promise.reject(error);
     }

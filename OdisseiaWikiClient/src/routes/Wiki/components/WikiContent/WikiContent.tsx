@@ -17,6 +17,7 @@ import {
 import { WikiBlockRenderer } from '../blocks';
 
 import TitleGlitch from '../../../../components/Generic/TitleGlitch/TitleGlitch';
+import { ContentVisibilityNotice } from '../../../../components/Generic/ContentVisibilityNotice/ContentVisibilityNotice';
 import { ScrollRevealBlock } from '../../../../components/Generic/ScrollRevealBlock';
 
 export const WikiContent: React.FC<WikiContentProps> = ({
@@ -85,6 +86,7 @@ export const WikiContent: React.FC<WikiContentProps> = ({
             text={page.titulo}
             fontSize="4rem"
           />
+          <ContentVisibilityNotice visible={page.visivel} />
 
           {page.descricao && (
             <PageDescription>{page.descricao}</PageDescription>

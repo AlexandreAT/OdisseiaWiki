@@ -5,6 +5,7 @@ public sealed class PersonagemComparacaoRegistro
     public int Id { get; set; }
     public bool Jogador { get; set; }
     public bool Visivel { get; set; } = true;
+    public bool AcessoCompleto { get; set; }
     public int? Idusuario { get; set; }
     public string Nome { get; set; } = null!;
     public string? Imagem { get; set; }

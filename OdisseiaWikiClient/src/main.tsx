@@ -1,6 +1,7 @@
 import React, { lazy, Suspense } from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
+import '@fontsource/orbitron/latin.css'
 import './index.css'
 
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
@@ -31,6 +32,8 @@ const MesaPublic = lazy(() => import('./routes/Mesas/MesaPublic/MesaPublic'));
 const MesaCreate = lazy(() => import('./routes/Mesas/MesaCreate/MesaCreate'));
 const MesaManagement = lazy(() => import('./routes/Mesas/MesaManagement/MesaManagement'));
 const MesaGame = lazy(() => import('./routes/Mesas/MesaGame/MesaGame'));
+const MesaNpcSheet = lazy(() => import('./routes/Mesas/MesaGame/MesaNpcSheet').then(module => ({ default: module.MesaNpcSheet })));
+const MesaWikiManagement = lazy(() => import('./routes/Mesas/MesaWiki/MesaWikiManagement'));
 const Profile = lazy(() => import('./routes/Profile/Profile'));
 
 const withRouteLoading = (element: React.ReactNode) => (
@@ -108,6 +111,39 @@ const router = createBrowserRouter([{
         {
           path: 'mesa/:id/jogo',
           element: <MesaAccessGuard>{withRouteLoading(<MesaGame />)}</MesaAccessGuard>
+        },
+        {
+          path: 'mesa/:id/jogo/npc/:characterId/ficha',
+          element: <MesaAccessGuard>{withRouteLoading(<MesaNpcSheet />)}</MesaAccessGuard>
+        },
+        {
+          path: 'mesa/:id/wiki/gerenciar',
+          element: <MesaAccessGuard>{withRouteLoading(<MesaWikiManagement />)}</MesaAccessGuard>
+        },
+        {
+          path: 'mesa/:id/wiki/conexoes',
+          element: <MesaAccessGuard>{withRouteLoading(<WikiGraphPage />)}</MesaAccessGuard>
+        },
+        {
+          path: 'mesa/:id/wiki',
+          element: <MesaAccessGuard>{withRouteLoading(<Wiki />)}</MesaAccessGuard>,
+          children: [{ path: ':slug', element: <MesaAccessGuard>{withRouteLoading(<Wiki />)}</MesaAccessGuard> }]
+        },
+        {
+          path: 'mesa/:mesaId/wiki/personagem/:id',
+          element: <MesaAccessGuard>{withRouteLoading(<PersonagemPage />)}</MesaAccessGuard>
+        },
+        {
+          path: 'mesa/:mesaId/wiki/cidade/:id',
+          element: <MesaAccessGuard>{withRouteLoading(<CidadePage />)}</MesaAccessGuard>
+        },
+        {
+          path: 'mesa/:mesaId/wiki/raca/:id',
+          element: <MesaAccessGuard>{withRouteLoading(<RacaPage />)}</MesaAccessGuard>
+        },
+        {
+          path: 'mesa/:mesaId/wiki/item/:id',
+          element: <MesaAccessGuard>{withRouteLoading(<ItemPage />)}</MesaAccessGuard>
         },
         {
           path: 'personagem/:id',

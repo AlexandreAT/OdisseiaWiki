@@ -83,7 +83,7 @@ namespace OdisseiaWiki.Controllers
             if (!User.IsAdmin())
                 visivel = true;
 
-            var pages = await _service.GetAllAsync(visivel);
+            var pages = await _service.GetAllAsync(visivel, ocultarReferenciasInvisiveis: !User.IsAdmin());
 
             return Ok(ResultPage.Ok(pages));
         }

@@ -723,7 +723,7 @@ export const SidebarMenu = styled.nav`
   @media(max-width:560px){grid-template-columns:repeat(2,minmax(0,1fr));}
 `;
 
-export const SidebarButton = styled.button<{ $active?: boolean }>`
+export const SidebarButton = styled.button.attrs({ type: 'button' })<{ $active?: boolean }>`
   display:flex;
   align-items:center;
   gap:10px;

@@ -19,13 +19,16 @@ export const ContentController = styled.div<Props>`
   display: flex;
   flex-direction: column;
   width: ${({ width }) => width || `100%`};
+  box-sizing: border-box;
   ${({ height }) => height && `height: ${height};`}
 `;
 
 export const BarContainer = styled.div<Props>`
   position: relative;
+  isolation: isolate;
   width: 100%;
   height: ${({ height }) => height || "24px"};
+  box-sizing: border-box;
   border-radius: 7px;
   overflow: hidden;
 
@@ -48,6 +51,11 @@ export const BarContainer = styled.div<Props>`
 `;
 
 export const BarFill = styled.div<Props>`
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  bottom: 0;
+  left: 0;
   height: 100%;
   transition: width 0.3s ease;
 
@@ -61,9 +69,17 @@ export const BarFill = styled.div<Props>`
 
 export const ValueText = styled.p`
   position: absolute;
+  z-index: 2;
   right: 8px;
   top: 50%;
   transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  min-height: 1em;
+  margin: 0;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
   font-size: 1em;
   font-weight: 600;
   color: var(--whitesmoke);

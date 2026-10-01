@@ -2,6 +2,7 @@ import api from "../axios/api";
 import { JSONContent, PontoDeInteresse } from "../models/Cities";
 import { GalleryImage, normalizeGalleryImages } from '../models/GalleryImage';
 import { ServiceRequestOptions } from './serviceRequestOptions';
+import { getMesaWikiApiPath, getMesaWikiApiPathForMesa, getMesaWikiIdFromPath } from './wikiContext';
 
 export interface CidadePayload {
   idcidade: number;
@@ -88,20 +89,39 @@ const parsePontosDeInteresse = (
 
 export const getCidades = async (
   visivel?: boolean,
-  requestOptions: ServiceRequestOptions = {}
+  requestOptions: ServiceRequestOptions = {},
+  somenteProprias = false,
 ): Promise<ResultCidades> => {
-  const params = visivel !== undefined ? { visivel } : {};
-  const response = await api.get("/cidades", { params, ...requestOptions });
-  return response.data;
+  const params = {
+    ...(visivel !== undefined ? { visivel } : {}),
+    ...(getMesaWikiIdFromPath() && somenteProprias ? { proprias: true } : {}),
+  };
+  const response = await api.get(getMesaWikiApiPath('cidades', '/cidades'), { params, ...requestOptions });
+  return getMesaWikiIdFromPath() ? { sucesso: true, cidades: response.data } : response.data;
+};
+
+export const getCidadesDaMesa = async (
+  idMesa: number,
+  visivel = true,
+  requestOptions: ServiceRequestOptions = {},
+): Promise<ResultCidades> => {
+  const response = await api.get(getMesaWikiApiPathForMesa(idMesa, 'cidades'), {
+    params: { visivel },
+    ...requestOptions,
+  });
+  return { sucesso: true, cidades: response.data };
 };
 
 export const createCidade = async (dto: CreateCidadeDto): Promise<ResultCreateCidade> => {
-  const response = await api.post("/cidades", dto);
+  const response = await api.post(getMesaWikiApiPath('cidades', '/cidades'), dto);
   return response.data;
 };
 
-export const getCidadeById = async (id: number): Promise<CidadePayload> => {
-  const response = await api.get(`/cidades/${id}`);
+export const getCidadeById = async (id: number, idMesa?: number): Promise<CidadePayload> => {
+  const endpoint = idMesa
+    ? getMesaWikiApiPathForMesa(idMesa, 'cidades')
+    : getMesaWikiApiPath('cidades', '/cidades');
+  const response = await api.get(`${endpoint}/${id}`);
   const city = response.data as RawCidadePayload;
 
   return {
@@ -113,16 +133,20 @@ export const getCidadeById = async (id: number): Promise<CidadePayload> => {
 };
 
 export const getCidadesByIds = async (ids: number[]): Promise<CidadePayload[]> => {
+  if (getMesaWikiIdFromPath()) {
+    const cidades = await getCidades();
+    return (cidades.cidades ?? []).filter((cidade) => ids.includes(cidade.idcidade));
+  }
   const response = await api.post(`/cidades/batch`, { ids });
   return response.data;
 };
 
 export const updateCidade = async (id: number, dto: CreateCidadeDto): Promise<ResultCreateCidade> => {
-  const response = await api.put(`/cidades/${id}`, dto);
+  const response = await api.put(`${getMesaWikiApiPath('cidades', '/cidades')}/${id}`, dto);
   return response.data;
 };
 
 export const deleteCidade = async (id: number): Promise<boolean> => {
-  const response = await api.delete(`/cidades/${id}`);
+  const response = await api.delete(`${getMesaWikiApiPath('cidades', '/cidades')}/${id}`);
   return response.status === 204 || response.status === 200;
 };

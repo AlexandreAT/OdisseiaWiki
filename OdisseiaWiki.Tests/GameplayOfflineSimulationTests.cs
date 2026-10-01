@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Moq;
 using OdisseiaWiki.Dtos;
 using OdisseiaWiki.Enums;
@@ -50,6 +51,72 @@ public sealed class GameplayOfflineSimulationTests
         Assert.Equal("ATRIBUTO", result.Dados.Rolagem.OrigemAcao?.Tipo);
         Assert.Equal(7, result.Dados.Rolagem.OrigemAcao?.IdPersonagemJogador);
         Assert.Equal("2", result.Dados.Rolagem.OrigemAcao?.Valores["valor"]);
+        fixture.AssertReadOnly();
+    }
+
+    [Theory]
+    [InlineData(10, 2, 12, "SUCESSO")]
+    [InlineData(1, 2, 3, "FALHA")]
+    public async Task SimulateAsync_AtributoDeNpc_InterpretaFormulaPublicadaSemRejeitarFichaExistente(
+        int resistance, int die, int total, string outcome)
+    {
+        var fixture = new Fixture();
+        fixture.Character.IdPersonagemOrigem = 30;
+        fixture.Character.StatusJson = JsonSerializer.Serialize(new
+        {
+            atributos = new { principais = new { resistencia = resistance } },
+        });
+        fixture.Version.Atributos.Add(new SistemaAtributoConfig
+        {
+            CodigoAtributo = "RESISTENCIA",
+            Nome = "Resistência",
+            Grupo = SistemaAtributoGrupo.Principal,
+            ValorMinimo = 0,
+            ValorMaximoAbsoluto = 6,
+            FormulaTeste = "1D6 + atributo; o resultado deve ser maior que 6",
+            Ativo = true,
+        });
+        fixture.Version.ResultadosDado.Add(new SistemaResultadoDado
+        {
+            CodigoTeste = "TESTE_ATRIBUTO",
+            CodigoResultado = "FORMULA",
+            NomeResultado = "Aplicar fórmula",
+            ResultadoMinimo = 1,
+            ResultadoMaximo = 6,
+        });
+        fixture.Dice.Setup(diceRoller => diceRoller.Roll(1, 6)).Returns(new[] { die });
+
+        GameplayOperationResult<GameplaySimulationResponseDto> result = await fixture.Service.SimulateAsync(
+            7, 12, Request("ATRIBUTO_PRINCIPAL", "resistencia"));
+
+        Assert.True(result.Sucesso, result.Mensagem);
+        Assert.Equal(total, result.Dados!.Rolagem.Total);
+        Assert.Equal(outcome, result.Dados.Rolagem.CodigoResultado);
+        fixture.AssertReadOnly();
+    }
+
+    [Fact]
+    public async Task SimulateAsync_AtributoDeJogador_AcimaDoLimitePublicadoContinuaInvalidado()
+    {
+        var fixture = new Fixture();
+        fixture.Character.StatusJson = """{"atributos":{"principais":{"resistencia":10}}}""";
+        fixture.Version.Atributos.Add(new SistemaAtributoConfig
+        {
+            CodigoAtributo = "RESISTENCIA",
+            Nome = "Resistência",
+            Grupo = SistemaAtributoGrupo.Principal,
+            ValorMinimo = 0,
+            ValorMaximoAbsoluto = 6,
+            FormulaTeste = "1D6 + atributo > 6",
+            Ativo = true,
+        });
+
+        GameplayOperationResult<GameplaySimulationResponseDto> result = await fixture.Service.SimulateAsync(
+            7, 12, Request("ATRIBUTO_PRINCIPAL", "resistencia"));
+
+        Assert.False(result.Sucesso);
+        Assert.Equal("ATRIBUTO_FORA_LIMITE", result.Codigo);
+        fixture.Dice.VerifyNoOtherCalls();
         fixture.AssertReadOnly();
     }
 

@@ -23,13 +23,14 @@ interface MesaPresencaAtualizada {
 interface MesaInvalidada {
   idMesa: number;
   atualizadoEmUtc: string;
+  secao?: 'mesa' | 'personagens' | 'gameplay' | string;
 }
 
 interface UseMesaEmJogoRealtimeOptions {
   idMesa?: number;
   enabled?: boolean;
   aoVivo?: boolean;
-  onMesaInvalidada?: () => void | Promise<void>;
+  onMesaInvalidada?: (section?: string) => void | Promise<void>;
   onMesaRessincronizar?: () => void | Promise<void>;
   onAcessoRevogado?: () => void | Promise<void>;
 }
@@ -97,6 +98,7 @@ export const useMesaEmJogoRealtime = ({
     let inactiveDocument = document.visibilityState !== 'visible';
     let enteredMesa = false;
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
+    let presenceRetryTimer: ReturnType<typeof setTimeout> | undefined;
 
     const connection: HubConnection = new HubConnectionBuilder()
       .withUrl(mesaHubUrl, {
@@ -139,6 +141,27 @@ export const useMesaEmJogoRealtime = ({
       && !inactiveDocument
       && document.visibilityState === 'visible';
 
+    const resyncSafely = async () => {
+      try {
+        await (resyncCallback.current ?? invalidationCallback.current)?.();
+      } catch {
+        // Uma leitura REST falha não deve derrubar um transporte conectado.
+      }
+    };
+
+    const retryPresence = () => {
+      if (!aoVivo || !canConnect() || presenceRetryTimer) return;
+      presenceRetryTimer = setTimeout(async () => {
+        presenceRetryTimer = undefined;
+        if (!canConnect() || enteredMesa || connection.state !== HubConnectionState.Connected) return;
+        try {
+          await enterMesa();
+        } catch {
+          retryPresence();
+        }
+      }, 5_000);
+    };
+
     const scheduleInitialRetry = () => {
       if (!canConnect() || retryTimer) return;
       retryTimer = setTimeout(() => {
@@ -166,13 +189,17 @@ export const useMesaEmJogoRealtime = ({
           } catch {
             // A mesa pode ter sido encerrada entre o snapshot REST e o hub.
             // Mantemos a observação para receber a atualização que corrige o estado.
-            await (resyncCallback.current ?? invalidationCallback.current)?.();
+            await resyncSafely();
+            retryPresence();
           }
         }
         setStatus('connected');
+        // Fecha a janela entre o snapshot REST inicial e a inscrição no Hub.
+        await resyncSafely();
       } catch {
         if (!disposed) {
           setStatus('disconnected');
+          if (connection.state !== HubConnectionState.Disconnected) await connection.stop();
           scheduleInitialRetry();
         }
       }
@@ -181,7 +208,7 @@ export const useMesaEmJogoRealtime = ({
     connection.on('PresencaAtualizada', publishPresence);
     connection.on('MesaInvalidada', (event: MesaInvalidada) => {
       if (!disposed && event?.idMesa === idMesa) {
-        void invalidationCallback.current?.();
+        void invalidationCallback.current?.(event.secao);
       }
     });
     connection.on('AcessoRevogado', (event: MesaInvalidada) => {
@@ -201,10 +228,14 @@ export const useMesaEmJogoRealtime = ({
       try {
         await observeMesa();
         if (aoVivo && !inactiveDocument && document.visibilityState === 'visible') {
-          await enterMesa();
+          try {
+            await enterMesa();
+          } catch {
+            retryPresence();
+          }
         }
         setStatus('connected');
-        await (resyncCallback.current ?? invalidationCallback.current)?.();
+        await resyncSafely();
       } catch {
         setStatus('disconnected');
         await connection.stop();
@@ -222,6 +253,8 @@ export const useMesaEmJogoRealtime = ({
 
     const stopForInactiveDocument = () => {
       inactiveDocument = true;
+      if (presenceRetryTimer) clearTimeout(presenceRetryTimer);
+      presenceRetryTimer = undefined;
       void (async () => {
         await leaveMesa();
         if (connection.state !== HubConnectionState.Disconnected) {
@@ -245,15 +278,11 @@ export const useMesaEmJogoRealtime = ({
 
     void startConnection();
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('blur', stopForInactiveDocument);
-    window.addEventListener('focus', resumeForActiveDocument);
-
     return () => {
       disposed = true;
       if (retryTimer) clearTimeout(retryTimer);
+      if (presenceRetryTimer) clearTimeout(presenceRetryTimer);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('blur', stopForInactiveDocument);
-      window.removeEventListener('focus', resumeForActiveDocument);
       connection.off('PresencaAtualizada');
       connection.off('MesaInvalidada');
       connection.off('AcessoRevogado');
@@ -261,6 +290,16 @@ export const useMesaEmJogoRealtime = ({
       void leaveMesa().finally(() => connection.stop());
     };
   }, [aoVivo, enabled, idMesa]);
+
+  useEffect(() => {
+    if (!enabled || !idMesa || status === 'connected') return undefined;
+    // Só consulta enquanto o transporte está indisponível. O snapshot e o
+    // histórico preservam a identidade dos dados se nada mudou, sem loading.
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void resyncCallback.current?.();
+    }, 15_000);
+    return () => window.clearInterval(timer);
+  }, [enabled, idMesa, status]);
 
   return {
     status,

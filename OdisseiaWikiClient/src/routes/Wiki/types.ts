@@ -8,6 +8,7 @@ export interface WikiSearchItem {
   title: string;
   description?: string;
   image?: string;
+  visivel?: boolean;
   createdAt?: string;
   route: string;
   searchTerms?: string[];

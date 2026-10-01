@@ -8,6 +8,7 @@ import { getItens } from '../../../services/itensService';
 import { ServiceRequestOptions } from '../../../services/serviceRequestOptions';
 import { getRankedSuggestions } from '../../../utils/searchSuggestions';
 import { getCharacterVariants } from '../../../utils/characterVariants';
+import { getMesaWikiIdFromPath, getMesaWikiRoute } from '../../../services/wikiContext';
 import {
   createEmptyWikiSearchGroups,
   WikiSearchEntityType,
@@ -69,8 +70,11 @@ const createRequestOptions = (signal: AbortSignal): ServiceRequestOptions => ({
 export const useWikiSearch = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const idMesa = getMesaWikiIdFromPath();
+  const isMesaWiki = idMesa !== null;
   const catalogRequestId = useRef(0);
   const searchRequestId = useRef(0);
+  const [pesquisarSomenteMesa, setPesquisarSomenteMesa] = useState(isMesaWiki);
   const [catalog, setCatalog] = useState<WikiSearchGroups>(createEmptyWikiSearchGroups);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [catalogError, setCatalogError] = useState<string | null>(null);
@@ -87,6 +91,11 @@ export const useWikiSearch = () => {
   const query = searchParams.get('q') || '';
   const selectedGroupParam = searchParams.get('type');
   const selectedGroup = WIKI_SEARCH_GROUP_ORDER.find((group) => group === selectedGroupParam) ?? null;
+  const somenteProprias = isMesaWiki && pesquisarSomenteMesa;
+
+  useEffect(() => {
+    setPesquisarSomenteMesa(isMesaWiki);
+  }, [idMesa, isMesaWiki]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -101,11 +110,11 @@ export const useWikiSearch = () => {
       try {
         const requestOptions = createRequestOptions(controller.signal);
         const [pagesResult, charactersResult, citiesResult, racesResult, itemsResult] = await Promise.allSettled([
-          getPages(true, requestOptions),
-          getPersonagens(true, requestOptions),
-          getCidades(true, requestOptions),
-          getRacas(true, undefined, requestOptions),
-          getItens(requestOptions),
+          getPages(undefined, requestOptions, somenteProprias),
+          getPersonagens(undefined, requestOptions, somenteProprias),
+          getCidades(undefined, requestOptions, somenteProprias),
+          getRacas(undefined, undefined, requestOptions, somenteProprias),
+          getItens(requestOptions, somenteProprias),
         ]);
 
         if (!active || currentRequestId !== catalogRequestId.current) return;
@@ -137,7 +146,7 @@ export const useWikiSearch = () => {
 
         const items = itemsResult.status === 'fulfilled'
           && Array.isArray(itemsResult.value)
-          ? itemsResult.value.filter((item) => item.visivel !== false)
+          ? itemsResult.value
           : (failedGroups.push('items'), []);
 
         setCatalog({
@@ -147,8 +156,9 @@ export const useWikiSearch = () => {
             title: String(page.titulo ?? '').trim(),
             description: getPlainDescription(page.descricao),
             image: page.coverImage,
+            visivel: page.visivel,
             createdAt: page.dataCriacao,
-            route: `/wiki/${encodeURIComponent(page.slug)}`,
+            route: getMesaWikiRoute(`/wiki/${encodeURIComponent(page.slug)}`),
             searchTerms: [],
           })).filter((page) => page.title && page.id),
           characters: characters.map((character) => {
@@ -162,8 +172,9 @@ export const useWikiSearch = () => {
               title: String(character.nome ?? '').trim(),
               description: tags.join(', ') || undefined,
               image: character.imagem,
+              visivel: character.visivel,
               createdAt: character.dataCriacao,
-              route: `/personagem/${character.idpersonagem}`,
+              route: getMesaWikiRoute(`/personagem/${character.idpersonagem}`),
               searchTerms: [...tags, ...variantNames],
             };
           }).filter((character) => character.title && character.id),
@@ -175,8 +186,9 @@ export const useWikiSearch = () => {
               title: String(city.nome ?? '').trim(),
               description: getPlainDescription(city.descricao) ?? (tags.join(', ') || undefined),
               image: city.imagem,
+              visivel: city.visivel,
               createdAt: city.dataCriacao,
-              route: `/cidade/${city.idcidade}`,
+              route: getMesaWikiRoute(`/cidade/${city.idcidade}`),
               searchTerms: tags,
             };
           }).filter((city) => city.title && city.id),
@@ -188,8 +200,9 @@ export const useWikiSearch = () => {
               title: String(race.nome ?? '').trim(),
               description: tags.join(', ') || undefined,
               image: race.imagem,
+              visivel: race.visivel,
               createdAt: race.dataCriacao,
-              route: `/raca/${race.idraca}`,
+              route: getMesaWikiRoute(`/raca/${race.idraca}`),
               searchTerms: tags,
             };
           }).filter((race) => race.title && race.id),
@@ -202,8 +215,9 @@ export const useWikiSearch = () => {
               title: String(item.nome ?? '').trim(),
               description: getPlainDescription(item.descricao) ?? item.tipo,
               image: item.imagem,
+              visivel: item.visivel,
               createdAt: item.dataCriacao,
-              route: `/item/${item.iditem}`,
+              route: getMesaWikiRoute(`/item/${item.iditem}`),
               searchTerms: tags,
             }];
           }).filter((item) => item.title),
@@ -235,7 +249,7 @@ export const useWikiSearch = () => {
       active = false;
       controller.abort();
     };
-  }, []);
+  }, [somenteProprias]);
 
   useEffect(() => {
     if (!query && !selectedGroup) {
@@ -303,7 +317,11 @@ export const useWikiSearch = () => {
       let pageSearchFailed = false;
 
       try {
-        const response = await searchPages(query, createRequestOptions(controller.signal));
+        const response = await searchPages(
+          query,
+          createRequestOptions(controller.signal),
+          somenteProprias,
+        );
         if (!response.sucesso || !Array.isArray(response.pages)) {
           throw new Error(response.mensagemErro || 'Resposta inválida na busca de páginas.');
         }
@@ -319,7 +337,7 @@ export const useWikiSearch = () => {
             description: getPlainDescription(page.descricao),
             image: page.coverImage,
             createdAt: catalogPage?.createdAt,
-            route: `/wiki/${encodeURIComponent(page.slug)}`,
+            route: getMesaWikiRoute(`/wiki/${encodeURIComponent(page.slug)}`),
             searchTerms: [],
           };
         }).filter((page) => page.title && page.id), query);
@@ -362,7 +380,7 @@ export const useWikiSearch = () => {
       active = false;
       controller.abort();
     };
-  }, [catalog, catalogFailedGroups, catalogLoading, query, selectedGroup]);
+  }, [catalog, catalogFailedGroups, catalogLoading, query, selectedGroup, somenteProprias]);
 
   const getSuggestionGroups = useCallback((searchQuery: string): WikiSearchGroups => {
     const groups = createEmptyWikiSearchGroups();
@@ -374,11 +392,11 @@ export const useWikiSearch = () => {
 
   const handleSearch = useCallback((searchQuery: string) => {
     const normalizedQuery = searchQuery.trim();
-    navigate(normalizedQuery ? `/wiki/search?q=${encodeURIComponent(normalizedQuery)}` : '/wiki/MainPage');
+    navigate(normalizedQuery ? getMesaWikiRoute(`/wiki/search?q=${encodeURIComponent(normalizedQuery)}`) : getMesaWikiRoute('/wiki'));
   }, [navigate]);
 
   const handleGroupSelect = useCallback((group: WikiSearchEntityType) => {
-    navigate(`/wiki/search?type=${encodeURIComponent(group)}`);
+    navigate(getMesaWikiRoute(`/wiki/search?type=${encodeURIComponent(group)}`));
   }, [navigate]);
 
   const handleResultSelect = useCallback((item: WikiSearchItem) => {
@@ -387,6 +405,7 @@ export const useWikiSearch = () => {
 
   return {
     ...state,
+    catalog,
     catalogLoading,
     catalogError,
     catalogWarning,
@@ -394,6 +413,9 @@ export const useWikiSearch = () => {
     handleSearch,
     handleGroupSelect,
     handleResultSelect,
+    isMesaWiki,
+    pesquisarSomenteMesa,
+    setPesquisarSomenteMesa,
     isSearching: query.length > 0 || selectedGroup !== null,
   };
 };

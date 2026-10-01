@@ -19,6 +19,9 @@ export interface PersonagemJogador {
   idusuario: number;
   idmesa: number;
   idSistemaVersao?: number | null;
+  idPersonagemOrigem?: number | null;
+  idVarianteOrigem?: string | null;
+  instanciaNpcMesa?: boolean;
   revisaoRuntime?: number;
   visivel?: boolean;
   nome: string;
@@ -34,6 +37,7 @@ export interface PersonagemJogador {
   galeriaImagem?: string;
   inventarioJson?: string;
   idpassiva?: number;
+  passiva?: { idpassiva: number; nome: string; descricao?: string | null } | null;
   ultimate?: string;
   nanites?: string;
   dataCriacao: string;
@@ -45,6 +49,7 @@ export interface PersonagemJogador {
   mesaNome?: string;
   autorNome?: string;
   visibilidade?: PersonagemVisibilidade;
+  visibilidadeProjetada?: boolean;
   proficiencias?: ProficienciaResumo[];
   sistemaRuntime?: SistemaRuntimeContexto | null;
 }

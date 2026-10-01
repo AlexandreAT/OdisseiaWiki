@@ -42,8 +42,8 @@ public sealed class GameplayEffectApplicationTests
             application.IdPersonagemAlvo == fixture.Character.IdpersonagemJogador &&
             application.ChaveEfeito == "APLICAR_XP" &&
             application.HashPlano.Length == 64)), Times.Once);
-        fixture.Realtime.Verify(notifier => notifier.NotificarMesaAlteradaAsync(
-            fixture.Mesa.Idmesa, It.IsAny<CancellationToken>()), Times.Once);
+        fixture.Realtime.Verify(notifier => notifier.NotificarMesaSecaoAlteradaAsync(
+            fixture.Mesa.Idmesa, "gameplay", It.IsAny<CancellationToken>()), Times.Once);
         fixture.Realtime.Verify(notifier => notifier.NotificarPersonagemAlteradoAsync(
             fixture.Mesa.Idmesa, fixture.Character.IdpersonagemJogador, It.IsAny<CancellationToken>()), Times.Once);
     }

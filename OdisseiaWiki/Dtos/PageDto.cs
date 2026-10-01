@@ -15,6 +15,8 @@
         public bool Visivel { get; set; }
         public bool Destaque { get; set; }
 
+        public int? IdSistemaRpg { get; set; }
+
         public DateTime DataCriacao { get; set; }
 
         public List<PageBlockDto> Blocks { get; set; } = new();

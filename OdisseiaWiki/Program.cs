@@ -599,6 +599,7 @@ public class Program
         services.AddScoped<IInfoLoreRepository, InfoLoreRepository>();
         services.AddScoped<IPageRepository, PageRepository>();
         services.AddScoped<IWikiGraphRepository, WikiGraphRepository>();
+        services.AddScoped<IWikiEscopoRepository, WikiEscopoRepository>();
         services.AddScoped<IAssetReferenceRepository, AssetReferenceRepository>();
         services.AddScoped<ISistemaRpgRepository, SistemaRpgRepository>();
 
@@ -626,6 +627,8 @@ public class Program
         services.AddScoped<IInfoLoreService, InfoLoreService>();
         services.AddScoped<IPageService, PageService>();
         services.AddScoped<IWikiGraphService, WikiGraphService>();
+        services.AddScoped<IWikiEscopoService, WikiEscopoService>();
+        services.AddScoped<IWikiMesaService, WikiMesaService>();
         services.AddScoped<ISistemaRpgService, SistemaRpgService>();
         services.AddScoped<ISistemaRpgItemCatalogService, SistemaRpgItemCatalogService>();
         services.AddScoped<ISistemaRpgResolver, SistemaRpgResolver>();

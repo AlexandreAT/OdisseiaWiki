@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { PersonagemVariante } from '../models/Characters';
 import { CharacterVariantSheet, createCharacterVariant, getCharacterVariants, normalizeVariantForEditing } from '../utils/characterVariants';
+import { cloneCharacterVariants } from '../utils/characterClone';
 
 export function useCharacterVariants(sheet: CharacterVariantSheet, applySheet: (sheet: CharacterVariantSheet) => void) {
   const [generico, setGenerico] = useState(false);
@@ -38,8 +39,9 @@ export function useCharacterVariants(sheet: CharacterVariantSheet, applySheet: (
     setNameErrorIndex(target);
   }, []);
   // Metadata hydration is stable; the edit form already restores the canonical first sheet.
-  const hydrate = useCallback((status: unknown) => {
-    const loaded = getCharacterVariants(status).map(normalizeVariantForEditing);
+  const hydrate = useCallback((status: unknown, cloning = false) => {
+    const parsed = getCharacterVariants(status).map(normalizeVariantForEditing);
+    const loaded = cloning ? cloneCharacterVariants(parsed) : parsed;
     setGenerico(loaded.length > 0);
     setStored(structuredClone(loaded));
     setIndex(0);

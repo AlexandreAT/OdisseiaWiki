@@ -18,9 +18,10 @@ namespace OdisseiaWiki.Repositories
             _context = context;
         }
 
-        public async Task<List<Cidade>> GetAllAsync(bool? visivel = null)
+        public async Task<List<Cidade>> GetAllAsync(bool? visivel = null, int? idWikiEscopo = null)
         {
-            var query = _context.Cidades.AsNoTracking();
+            var query = _context.Cidades.AsNoTracking()
+                .Where(cidade => cidade.IdWikiEscopo == (idWikiEscopo ?? WikiEscopo.IdOficial));
 
             if (visivel.HasValue)
                 query = query.Where(c => c.Visivel == visivel.Value);
@@ -28,8 +29,10 @@ namespace OdisseiaWiki.Repositories
             return await query.ToListAsync();
         }
 
-        public async Task<Cidade?> GetByIdAsync(int id)
-            => await _context.Cidades.FindAsync(id);
+        public async Task<Cidade?> GetByIdAsync(int id, int? idWikiEscopo = null)
+            => await _context.Cidades.FirstOrDefaultAsync(cidade =>
+                cidade.Idcidade == id &&
+                cidade.IdWikiEscopo == (idWikiEscopo ?? WikiEscopo.IdOficial));
 
         public async Task<Cidade> CreateAsync(Cidade cidade)
         {
@@ -55,12 +58,13 @@ namespace OdisseiaWiki.Repositories
             return true;
         }
 
-        public async Task<List<Cidade>> SearchAsync(string termo)
+        public async Task<List<Cidade>> SearchAsync(string termo, int? idWikiEscopo = null)
         {
             var termoLower = termo.ToLower();
 
             var cidades = await _context.Cidades
                 .AsNoTracking()
+                .Where(cidade => cidade.IdWikiEscopo == (idWikiEscopo ?? WikiEscopo.IdOficial))
                 .ToListAsync();
 
             return cidades.Where(i =>
@@ -70,11 +74,12 @@ namespace OdisseiaWiki.Repositories
             ).ToList();
         }
 
-        public async Task<List<Cidade>> GetBatchAsync(List<int> ids)
+        public async Task<List<Cidade>> GetBatchAsync(List<int> ids, int? idWikiEscopo = null)
         {
             return await _context.Cidades
                 .AsNoTracking()
-                .Where(c => ids.Contains(c.Idcidade))
+                .Where(c => ids.Contains(c.Idcidade) &&
+                    c.IdWikiEscopo == (idWikiEscopo ?? WikiEscopo.IdOficial))
                 .ToListAsync();
         }
     }

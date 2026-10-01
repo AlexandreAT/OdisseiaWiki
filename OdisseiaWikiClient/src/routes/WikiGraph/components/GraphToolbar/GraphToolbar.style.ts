@@ -218,6 +218,94 @@ export const ToolbarActions = styled.div`
   display: flex;
   gap: 8px;
   align-items: center;
+
+  @media (max-width: 768px) {
+    gap: 6px;
+  }
+`;
+
+export const ScopeControl = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 42px;
+  padding: 5px 9px;
+  border: 1px solid rgba(71, 219, 255, 0.36);
+  border-radius: 3px;
+  background: rgba(0, 6, 16, 0.84);
+
+  @media (max-width: 768px) {
+    width: 38px;
+    min-height: 38px;
+    padding: 0;
+    justify-content: center;
+  }
+`;
+
+export const ScopeLabel = styled.label`
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  color: var(--clearneonBlue);
+  font-family: 'Orbitron', sans-serif;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  line-height: 1.2;
+  text-transform: uppercase;
+  cursor: pointer;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
+`;
+
+export const ScopeDescription = styled.span`
+  color: rgba(245, 245, 245, 0.58);
+  font-family: inherit;
+  font-size: 8px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+`;
+
+export const ScopeSwitch = styled.input.attrs({ type: 'checkbox' })`
+  appearance: none;
+  position: relative;
+  flex: 0 0 auto;
+  width: 36px;
+  height: 20px;
+  margin: 0;
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.72);
+    transition: transform 160ms ease, background-color 160ms ease;
+  }
+
+  &:checked {
+    border-color: var(--clearneonBlue);
+    background: rgba(0, 212, 255, 0.2);
+    box-shadow: 0 0 7px rgba(0, 212, 255, 0.22);
+  }
+
+  &:checked::after {
+    transform: translateX(16px);
+    background: var(--clearneonBlue);
+  }
+
+  &:focus-visible { outline: 1px solid var(--clearneonBlue); outline-offset: 2px; }
 `;
 
 export const OrganizationControl = styled.div`

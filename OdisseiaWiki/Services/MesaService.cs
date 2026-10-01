@@ -15,6 +15,7 @@ namespace OdisseiaWiki.Services
         private readonly ISistemaRpgResolver _sistemaRpgResolver;
         private readonly IMesaRealtimeNotifier _realtimeNotifier;
         private readonly IGameplayEngineService? _gameplayEngine;
+        private readonly IWikiEscopoService? _wikiEscopoService;
 
         public MesaService(
             IMesaRepository repository,
@@ -22,7 +23,8 @@ namespace OdisseiaWiki.Services
             ISistemaRpgService sistemaRpgService,
             ISistemaRpgResolver sistemaRpgResolver,
             IMesaRealtimeNotifier? realtimeNotifier = null,
-            IGameplayEngineService? gameplayEngine = null)
+            IGameplayEngineService? gameplayEngine = null,
+            IWikiEscopoService? wikiEscopoService = null)
         {
             _repository = repository;
             _assetService = assetService;
@@ -30,6 +32,7 @@ namespace OdisseiaWiki.Services
             _sistemaRpgResolver = sistemaRpgResolver;
             _realtimeNotifier = realtimeNotifier ?? new NullMesaRealtimeNotifier();
             _gameplayEngine = gameplayEngine;
+            _wikiEscopoService = wikiEscopoService;
         }
 
         public async Task<ResultMesa> CreateAsync(MesaDto dto)
@@ -59,6 +62,8 @@ namespace OdisseiaWiki.Services
             };
 
             var criada = await _repository.CreateAsync(mesa);
+            if (_wikiEscopoService is not null)
+                await _wikiEscopoService.EnsureMesaAsync(criada.Idmesa);
             return ResultMesaOk(criada);
         }
 
@@ -105,6 +110,8 @@ namespace OdisseiaWiki.Services
                 DataCriacao = agora,
                 DataAtualizacao = agora,
             });
+            if (_wikiEscopoService is not null)
+                await _wikiEscopoService.EnsureMesaAsync(mesa.Idmesa);
             Mesa? detalhada = await _repository.GetDetailedByIdAsync(mesa.Idmesa);
             MesaResumoDto resumo = MapResumo(detalhada ?? mesa, idUsuario);
             await _realtimeNotifier.NotificarMesaAlteradaAsync(mesa.Idmesa);

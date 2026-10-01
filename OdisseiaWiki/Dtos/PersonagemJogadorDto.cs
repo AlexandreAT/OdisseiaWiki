@@ -14,6 +14,9 @@ namespace OdisseiaWiki.Dtos
         public int Idmesa { get; set; }
         public int Idusuario { get; set; }
         public int? IdSistemaVersao { get; set; }
+        public int? IdPersonagemOrigem { get; set; }
+        public string? IdVarianteOrigem { get; set; }
+        public bool InstanciaNpcMesa => IdPersonagemOrigem.HasValue;
         public long? RevisaoRuntime { get; set; }
         public Guid? ChaveIdempotencia { get; set; }
         public bool Visivel { get; set; } = true;
@@ -30,9 +33,11 @@ namespace OdisseiaWiki.Dtos
         public object? Magia { get; set; }
         public object? StatusJson { get; set; }
         public List<string>? PersonagemsVinculados { get; set; }
+        public List<string>? Tags { get; set; }
         public List<string>? Implantes { get; set; }
         public string? Ultimate { get; set; }
         public int? Idpassiva { get; set; }
+        public PersonagemPassivaResumoDto? Passiva { get; set; }
         public DateTime DataCriacao { get; set; }
         public string? RacaNome { get; set; }
         public string? CidadeNome { get; set; }
@@ -40,6 +45,8 @@ namespace OdisseiaWiki.Dtos
         public string? AutorNome { get; set; }
         public string? AutorImagem { get; set; }
         public PersonagemVisibilidadeDto Visibilidade { get; set; } = PersonagemVisibilidadeDefaults.Jogador();
+        public bool VisibilidadeProjetada { get; set; }
+        public PersonagemVisibilidadeDto? VisibilidadeInicial { get; set; }
         public List<ProficienciaResumoDto> Proficiencias { get; set; } = new();
         public SistemaRuntimeContextoDto? SistemaRuntime { get; set; }
     }
@@ -48,6 +55,13 @@ namespace OdisseiaWiki.Dtos
     {
         public int Idproficiencia { get; set; }
         public string Nome { get; set; } = null!;
+        public string? Descricao { get; set; }
+    }
+
+    public sealed class PersonagemPassivaResumoDto
+    {
+        public int Idpassiva { get; set; }
+        public string Nome { get; set; } = string.Empty;
         public string? Descricao { get; set; }
     }
 

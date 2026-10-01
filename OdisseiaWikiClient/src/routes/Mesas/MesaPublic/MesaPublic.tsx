@@ -112,11 +112,11 @@ const MesaPublic = () => {
               <StatBox $accent="pink" $neon={isNeonActive}>
                 <MesaHudDecor neon={isNeonActive} color="var(--clearneonPink)" />
                 <MenuBookOutlinedIcon />
-                <div><small>Wiki da Mesa</small><strong>Em breve</strong></div>
+                <div><small>Wiki da Mesa</small><strong>Disponível</strong></div>
               </StatBox>
             </StatGrid>
             <HeaderActions>
-              <ActionButton disabled title="A Wiki própria da Mesa será disponibilizada em uma próxima etapa"><MenuBookOutlinedIcon /> Ver Wiki da Mesa</ActionButton>
+              <ActionButton onClick={() => navigate(`/mesa/${mesa.idMesa}/wiki`)}><MenuBookOutlinedIcon /> Ver Wiki da Mesa</ActionButton>
               {mesa.papelUsuario === 'Mestre' && <ActionButton onClick={() => navigate(`/mesa/${mesa.idMesa}/gerenciar`)}><SettingsOutlinedIcon /> Gerenciar Mesa</ActionButton>}
               {mesa.papelUsuario === 'Participante' && <ActionButton onClick={() => navigate(`/mesa/${mesa.idMesa}/jogo`)}><GroupsOutlinedIcon /> Entrar na Mesa</ActionButton>}
               {mesa.solicitacaoPendente && <ActionButton disabled $accent="pink"><PersonAddAltOutlinedIcon /> Pedido pendente</ActionButton>}

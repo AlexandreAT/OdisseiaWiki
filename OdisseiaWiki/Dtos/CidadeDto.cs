@@ -15,6 +15,7 @@ namespace OdisseiaWiki.Dtos
         public List<PontoDeInteresseDto>? PontosDeInteresse { get; set; }
         public bool Visivel { get; set; } = true;
         public bool Destaque { get; set; } = false;
+        public int? IdSistemaRpg { get; set; }
         public DateTime DataCriacao { get; set; }
     }
 }

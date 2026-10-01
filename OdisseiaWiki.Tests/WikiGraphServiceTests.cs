@@ -84,7 +84,7 @@ public sealed class WikiGraphServiceTests
     }
 
     [Fact]
-    public async Task GetAsync_EmEmpateSelecionaCidadeVisivelEMantemNoInvisivelForaDoCentro()
+    public async Task GetAsync_EmEmpateSelecionaCidadeVisivelESuprimeArestasDoNoInvisivel()
     {
         WikiGraphSnapshot snapshot = new()
         {
@@ -131,13 +131,11 @@ public sealed class WikiGraphServiceTests
         Assert.Equal("city", central.EntityType);
         Assert.Equal("Cidade central", central.Title);
 
-        WikiGraphNodeDto hiddenHub = Assert.Single(result.Nodes, node => node.Hidden);
-        Assert.NotEqual(hiddenHub.GraphId, result.CentralNodeId);
-        Assert.Equal(4, result.Edges.Count(edge => edge.Source == hiddenHub.GraphId || edge.Target == hiddenHub.GraphId));
+        Assert.DoesNotContain(result.Nodes, node => node.Hidden);
     }
 
     [Fact]
-    public async Task GetAsync_PreservaTopologiaDoNoInvisivelSemExporMetadados()
+    public async Task GetAsync_RepresentaNoInvisivelConectadoSemExporMetadados()
     {
         WikiGraphSnapshot snapshot = new()
         {
@@ -181,6 +179,26 @@ public sealed class WikiGraphServiceTests
     }
 
     [Fact]
+    public async Task GetAsync_NaoRevelaPersonagemOcultoSemConexaoPublica()
+    {
+        WikiGraphSnapshot snapshot = new()
+        {
+            Characters = new[]
+            {
+                new WikiGraphCharacterRecord(91, "PERSONAGEM-OCULTO", "segredo.png", false, 0, null, null)
+            }
+        };
+
+        (WikiGraphService service, _) = CreateService(snapshot);
+
+        WikiGraphDto result = await service.GetAsync(includeHiddenMetadata: false);
+
+        Assert.Empty(result.Nodes);
+        Assert.Empty(result.Edges);
+        Assert.DoesNotContain("PERSONAGEM-OCULTO", JsonSerializer.Serialize(result), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task GetAsync_SemCidadeOuPaginaVisivelNaoDefineNoCentral()
     {
         WikiGraphSnapshot snapshot = new()
@@ -208,8 +226,8 @@ public sealed class WikiGraphServiceTests
         WikiGraphDto result = await service.GetAsync(includeHiddenMetadata: false);
 
         Assert.Null(result.CentralNodeId);
-        Assert.Equal(4, result.Stats.TotalNodes);
-        Assert.Equal(2, result.Stats.TotalEdges);
+        Assert.Equal(3, result.Stats.TotalNodes);
+        Assert.Equal(2, result.Edges.Count);
     }
 
     [Fact]
@@ -401,6 +419,110 @@ public sealed class WikiGraphServiceTests
         Assert.Single(result.Edges, edge =>
             edge.Source == personagem.GraphId || edge.Target == personagem.GraphId);
         Assert.DoesNotContain(result.Nodes, node => node.Route == "/personagem/5");
+    }
+
+    [Fact]
+    public async Task GetComContextoAsync_RestringeGrafoAoCatalogoEfetivoDaMesa()
+    {
+        WikiGraphSnapshot snapshot = new()
+        {
+            Cities = new[]
+            {
+                new WikiGraphCityRecord(1, "Oficial compatÃ­vel", null, true, 1, 10),
+                new WikiGraphCityRecord(2, "PrÃ³pria da Mesa", null, true, 25, 999),
+                new WikiGraphCityRecord(3, "Oficial de outro sistema", null, true, 1, 11),
+                new WikiGraphCityRecord(4, "De outra Mesa", null, true, 26, 10),
+            },
+        };
+        Mock<IWikiGraphRepository> repository = new(MockBehavior.Strict);
+        repository
+            .Setup(item => item.GetSnapshotAsync(
+                It.Is<IReadOnlyCollection<int>>(scopes => scopes.Contains(1) && scopes.Contains(25)),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(snapshot);
+        WikiGraphService service = new(repository.Object);
+
+        WikiGraphDto graph = await service.GetComContextoAsync(
+            includeHiddenMetadata: false,
+            idWikiEscopos: new[] { 1, 25 },
+            mesaRoutePrefix: "/mesa/7/wiki",
+            idWikiEscopoMesa: 25,
+            idSistemaRpg: 10,
+            idSistemaVersao: 3);
+
+        Assert.Equal(2, graph.Nodes.Count);
+        Assert.Contains(graph.Nodes, node => node.Title == "Oficial compatÃ­vel" && node.Route == "/mesa/7/wiki/cidade/1");
+        Assert.Contains(graph.Nodes, node => node.Title == "PrÃ³pria da Mesa" && node.Route == "/mesa/7/wiki/cidade/2");
+        Assert.DoesNotContain(graph.Nodes, node => node.Title is "Oficial de outro sistema" or "De outra Mesa");
+    }
+
+    [Fact]
+    public async Task GetComContextoAsync_ComEscopoExclusivoDaMesaNaoIncluiEntidadesOficiais()
+    {
+        WikiGraphSnapshot snapshot = new()
+        {
+            Cities = new[]
+            {
+                new WikiGraphCityRecord(1, "Oficial", null, true, 1, 10),
+                new WikiGraphCityRecord(2, "Da Mesa", null, true, 25, 10),
+            },
+        };
+        Mock<IWikiGraphRepository> repository = new(MockBehavior.Strict);
+        repository
+            .Setup(item => item.GetSnapshotAsync(
+                It.Is<IReadOnlyCollection<int>>(scopes => scopes.Count == 1 && scopes.Contains(25)),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(snapshot);
+        WikiGraphService service = new(repository.Object);
+
+        WikiGraphDto graph = await service.GetComContextoAsync(
+            includeHiddenMetadata: false,
+            idWikiEscopos: new[] { 25 },
+            mesaRoutePrefix: "/mesa/7/wiki",
+            idWikiEscopoMesa: 25,
+            idSistemaRpg: 10,
+            idSistemaVersao: 3);
+
+        WikiGraphNodeDto node = Assert.Single(graph.Nodes);
+        Assert.Equal("Da Mesa", node.Title);
+        Assert.Equal("/mesa/7/wiki/cidade/2", node.Route);
+    }
+
+    [Fact]
+    public async Task MestreVeOcultoProprioMasRecebeOcultoOficialApenasComoPlaceholder()
+    {
+        WikiGraphSnapshot snapshot = new()
+        {
+            Cities = new[]
+            {
+                new WikiGraphCityRecord(1, "Segredo oficial", null, false, 1, 10),
+                new WikiGraphCityRecord(2, "Segredo da Mesa", null, false, 25, 10),
+            },
+            Characters = new[]
+            {
+                new WikiGraphCharacterRecord(9, "Pessoa da Mesa", null, true, 0, 1, null,
+                    IdWikiEscopo: 25, IdSistemaRpg: 10),
+            },
+        };
+        Mock<IWikiGraphRepository> repository = new(MockBehavior.Strict);
+        repository.Setup(item => item.GetSnapshotAsync(
+                It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(snapshot);
+        WikiGraphService service = new(repository.Object);
+
+        WikiGraphDto graph = await service.GetComContextoAsync(
+            includeHiddenMetadata: false,
+            idWikiEscopos: new[] { 1, 25 },
+            mesaRoutePrefix: "/mesa/7/wiki",
+            idWikiEscopoMesa: 25,
+            idSistemaRpg: 10,
+            permitirOcultosDaMesa: true);
+
+        Assert.Contains(graph.Nodes, node => node.Hidden && node.Title == "Segredo da Mesa" &&
+            node.Route == "/mesa/7/wiki/cidade/2");
+        Assert.Contains(graph.Nodes, node => node.Hidden && node.Title is null &&
+            node.Route is null && node.EntityType is null);
+        Assert.DoesNotContain("Segredo oficial", System.Text.Json.JsonSerializer.Serialize(graph));
     }
 
     private static (WikiGraphService Service, Mock<IWikiGraphRepository> Repository) CreateService(

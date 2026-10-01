@@ -142,7 +142,7 @@ export const CarouselArrow = styled.button<{ $direction: 'left' | 'right' }>`
   }
 `;
 
-export const RelationCard = styled.button`
+export const RelationCard = styled.button<{ $hidden?: boolean; $private?: boolean }>`
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -159,6 +159,16 @@ export const RelationCard = styled.button`
   transition: all 0.22s ease;
   text-align: left;
   box-sizing: border-box;
+
+  ${({ $hidden }) => $hidden && `
+    background: #000;
+    border-color: #171717;
+    color: transparent;
+    justify-content: center;
+  `}
+  ${({ $private }) => $private && `
+    border-color: rgba(255, 208, 79, 0.65);
+  `}
 
   @media (max-width: 480px) {
     min-width: min(160px, calc(100vw - 40px));
@@ -189,7 +199,7 @@ export const RelationCardImage = styled(FallbackImage)<{ $entityType?: string }>
   aspect-ratio: ${props => (props.$entityType === 'Raca' || props.$entityType === 'Item' || props.$entityType === 'Personagem' ? '1 / 1' : '16 / 9')};
 `;
 
-export const RelationCardPlaceholder = styled.div<{ $entityType?: string }>`
+export const RelationCardPlaceholder = styled.div<{ $entityType?: string; $hidden?: boolean }>`
   display: flex;
   align-items: center;
   justify-content: center;
@@ -202,6 +212,14 @@ export const RelationCardPlaceholder = styled.div<{ $entityType?: string }>`
   flex-shrink: 0;
   border-radius: ${props => (props.$entityType === 'Personagem' ? '50%' : '6px')};
   aspect-ratio: ${props => (props.$entityType === 'Raca' || props.$entityType === 'Item' || props.$entityType === 'Personagem' ? '1 / 1' : '16 / 9')};
+
+  ${({ $hidden }) => $hidden && `
+    width: 100%;
+    min-width: 0;
+    height: 80px;
+    background: #000;
+    border-radius: 0;
+  `}
 `;
 
 export const RelationCardContent = styled.div`

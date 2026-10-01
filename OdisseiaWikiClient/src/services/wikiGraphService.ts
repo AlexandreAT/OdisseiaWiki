@@ -6,6 +6,7 @@ import {
   WikiGraphResponse,
 } from '../models/WikiGraph';
 import { ServiceRequestOptions } from './serviceRequestOptions';
+import { getMesaWikiApiPath } from './wikiContext';
 
 const entityTypes = new Set<WikiGraphEntityType>(['city', 'page', 'character', 'race']);
 
@@ -83,8 +84,12 @@ const parseWikiGraph = (value: unknown): WikiGraphResponse => {
 };
 
 export const getWikiGraph = async (
-  options: ServiceRequestOptions = {},
+  options: ServiceRequestOptions & { incluirWikiGeral?: boolean } = {},
 ): Promise<WikiGraphResponse> => {
-  const response = await api.get<unknown>('/wiki/graph', options);
+  const { incluirWikiGeral, ...requestOptions } = options;
+  const response = await api.get<unknown>(getMesaWikiApiPath('graph', '/wiki/graph'), {
+    ...requestOptions,
+    params: incluirWikiGeral === undefined ? undefined : { incluirWikiGeral },
+  });
   return parseWikiGraph(response.data);
 };

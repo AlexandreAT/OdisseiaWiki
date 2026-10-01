@@ -8,7 +8,7 @@ interface WikiGraphState {
   error: string | null;
 }
 
-export const useWikiGraph = () => {
+export const useWikiGraph = (incluirWikiGeral = false) => {
   const requestId = useRef(0);
   const [reloadKey, setReloadKey] = useState(0);
   const [state, setState] = useState<WikiGraphState>({
@@ -23,10 +23,14 @@ export const useWikiGraph = () => {
     let active = true;
 
     const load = async () => {
-      setState((previous) => ({ ...previous, loading: true, error: null }));
+      setState({ graph: null, loading: true, error: null });
 
       try {
-        const graph = await getWikiGraph({ signal: controller.signal, timeout: 15_000 });
+        const graph = await getWikiGraph({
+          signal: controller.signal,
+          timeout: 15_000,
+          incluirWikiGeral,
+        });
         if (!active || currentRequestId !== requestId.current) return;
         setState({ graph, loading: false, error: null });
       } catch {
@@ -45,7 +49,7 @@ export const useWikiGraph = () => {
       active = false;
       controller.abort();
     };
-  }, [reloadKey]);
+  }, [incluirWikiGeral, reloadKey]);
 
   const retry = useCallback(() => setReloadKey((value) => value + 1), []);
 

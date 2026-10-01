@@ -20,7 +20,7 @@ export const StatusBar = forwardRef<HTMLDivElement, Props>(
 
     return (
       <ContentController width={width} height={height} ref={ref}>
-        <BarContainer theme={theme} neon={neon} typeStatus={type}>
+        <BarContainer theme={theme} neon={neon} typeStatus={type} height={height}>
           <BarFill
             typeStatus={type}
             style={{ width: `${percentage}%` }}

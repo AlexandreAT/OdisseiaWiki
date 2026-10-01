@@ -158,6 +158,10 @@ public sealed class MesaPersonagemResumoDto
     public string? DonoImagem { get; init; }
     public bool Online { get; init; }
     public bool Morto { get; init; }
+    public bool InstanciaNpcMesa { get; init; }
+    public int? IdPersonagemOrigem { get; init; }
+    public string? IdVarianteOrigem { get; init; }
+    public bool PodeAtualizarFichaOriginal { get; set; }
 }
 
 public class MesaPersonagensGerenciamentoDto
@@ -169,10 +173,38 @@ public class MesaPersonagensGerenciamentoDto
 
 public sealed class MesaAoVivoSnapshotDto : MesaPersonagensGerenciamentoDto
 {
+    public IReadOnlyCollection<MesaPersonagemResumoDto> PersonagensCena { get; init; } =
+        Array.Empty<MesaPersonagemResumoDto>();
     public int JogadoresOnline { get; init; }
     public int Participantes { get; init; }
     public string TurnoAtual { get; init; } = "Mestre";
     public DateTime AtualizadoEm { get; init; } = DateTime.UtcNow;
+}
+
+public sealed class MesaNpcCatalogoDto
+{
+    public int IdPersonagem { get; init; }
+    public string Nome { get; init; } = string.Empty;
+    public string? Imagem { get; init; }
+    public bool Generico { get; init; }
+    public IReadOnlyCollection<MesaNpcVarianteDto> Variantes { get; init; } = Array.Empty<MesaNpcVarianteDto>();
+}
+
+public sealed class MesaNpcVarianteDto
+{
+    public string Id { get; init; } = string.Empty;
+    public string Nome { get; init; } = string.Empty;
+}
+
+public sealed class MesaNpcAdicionarDto
+{
+    [Range(1, int.MaxValue)] public int IdPersonagemOrigem { get; set; }
+    [MaxLength(100)] public string? IdVarianteOrigem { get; set; }
+}
+
+public sealed class MesaNpcVisibilidadeDto
+{
+    public bool Visivel { get; set; }
 }
 
 public enum MesaOperacaoErro
