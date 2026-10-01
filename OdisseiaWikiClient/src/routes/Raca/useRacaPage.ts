@@ -70,7 +70,7 @@ export const useRacaPage = () => {
 
       const [raceResult, characterResult, pageResult] = await Promise.allSettled([
         getRacaById(raceId),
-        getPersonagens(true),
+        getPersonagens(),
         getPagesReferencingEntity('Raca', raceId),
       ]);
 
@@ -99,7 +99,7 @@ export const useRacaPage = () => {
 
       if (characterResult.status === 'fulfilled') {
         setCharacters(characterResult.value
-          .filter((character) => character.visivel !== false && Number(character.idraca) === raceId)
+          .filter((character) => Number(character.idraca) === raceId)
           .sort(compareByName((character) => character.nome)));
       } else {
         setCharacters([]);
@@ -109,7 +109,6 @@ export const useRacaPage = () => {
         && pageResult.value.sucesso !== false
         && Array.isArray(pageResult.value.pages)) {
         setRelatedPages(pageResult.value.pages
-          .filter((page) => page.visivel !== false)
           .sort(compareByName((page) => page.titulo)));
       } else {
         setRelatedPages([]);

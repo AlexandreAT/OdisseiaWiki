@@ -214,6 +214,58 @@ public sealed class MesaController : ControllerBase
         return resultado.Sucesso ? Ok(resultado.Dados) : MapFailure(resultado);
     }
 
+    [HttpGet("{id:int}/npcs/catalogo")]
+    public async Task<IActionResult> SearchNpcCatalog(int id, [FromQuery] string? termo = null)
+    {
+        int? userId = User.GetUserId();
+        if (!userId.HasValue) return Unauthorized();
+        MesaOperacaoResultado<IReadOnlyCollection<MesaNpcCatalogoDto>> resultado =
+            await _personagemService.SearchNpcCatalogAsync(id, userId.Value, User.IsAdmin(), termo);
+        return resultado.Sucesso ? Ok(resultado.Dados) : MapFailure(resultado);
+    }
+
+    [HttpPost("{id:int}/npcs")]
+    public async Task<IActionResult> AddNpcInstance(int id, [FromBody] MesaNpcAdicionarDto dto)
+    {
+        int? userId = User.GetUserId();
+        if (!userId.HasValue) return Unauthorized();
+        MesaOperacaoResultado<MesaPersonagemResumoDto> resultado =
+            await _personagemService.AddNpcInstanceAsync(id, userId.Value, User.IsAdmin(), dto);
+        return resultado.Sucesso ? Ok(resultado.Dados) : MapFailure(resultado);
+    }
+
+    [HttpPatch("{id:int}/npcs/{idPersonagemJogador:int}/visibilidade")]
+    public async Task<IActionResult> SetNpcVisibility(
+        int id, int idPersonagemJogador, [FromBody] MesaNpcVisibilidadeDto dto)
+    {
+        int? userId = User.GetUserId();
+        if (!userId.HasValue) return Unauthorized();
+        MesaOperacaoResultado<bool> resultado = await _personagemService.SetNpcVisibilityAsync(
+            id, idPersonagemJogador, userId.Value, User.IsAdmin(), dto.Visivel);
+        return resultado.Sucesso ? NoContent() : MapFailure(resultado);
+    }
+
+    [HttpDelete("{id:int}/npcs/{idPersonagemJogador:int}")]
+    public async Task<IActionResult> RemoveNpcInstance(int id, int idPersonagemJogador)
+    {
+        int? userId = User.GetUserId();
+        if (!userId.HasValue) return Unauthorized();
+        MesaOperacaoResultado<bool> resultado = await _personagemService.RemoveNpcInstanceAsync(
+            id, idPersonagemJogador, userId.Value, User.IsAdmin());
+        return resultado.Sucesso ? NoContent() : MapFailure(resultado);
+    }
+
+    [HttpPost("{id:int}/npcs/{idPersonagemJogador:int}/publicar")]
+    [Authorize(Policy = AuthorizationPolicies.Admin)]
+    public async Task<IActionResult> PublishNpcInstance(int id, int idPersonagemJogador)
+    {
+        int? userId = User.GetUserId();
+        if (!userId.HasValue) return Unauthorized();
+        MesaOperacaoResultado<bool> resultado = await _personagemService.PublishNpcInstanceAsync(
+            id, idPersonagemJogador, userId.Value, admin: true);
+        return resultado.Sucesso ? NoContent() : MapFailure(resultado);
+    }
+
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {

@@ -4,6 +4,7 @@ import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import StorageOutlinedIcon from '@mui/icons-material/StorageOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import CasinoOutlinedIcon from '@mui/icons-material/CasinoOutlined';
+import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useSelector } from 'react-redux';
@@ -30,6 +31,7 @@ import type { GameplayCombatCommandResponse, GameplayCombatParticipant } from '.
 import type { MesaPersonagemResumo } from '../../../models/Mesa';
 import type { PersonagemStatus, StatusBase } from '../../../models/PersonagemJogador';
 import { getApiErrorMessage } from '../../../utils/apiError';
+import { getAuthSession } from '../../../services/authSession';
 import { getCharacterItemGameplayAction } from '../../../utils/gameplaySheetAction';
 import { CharacterSelectionCard } from '../../Hub/UserCharacters/CharacterSelectionCard/CharacterSelectionCard';
 import { useMesaEmJogoRealtime } from '../hooks/useMesaEmJogoRealtime';
@@ -53,7 +55,15 @@ import type { MesaThemeState } from '../MesaThemeState';
 import { GameplayLiveHistory } from './GameplayLiveHistory';
 import { GameplayFavoriteRolls } from './GameplayFavoriteRolls';
 import { GameplayCombatPanel } from './GameplayCombatPanel';
-import { MesaGameActivityLayout, MesaGameActivityMain, MesaGameActivitySidebar } from './GameplayLiveHistory.style';
+import {
+  MesaGameActivityLayout,
+  MesaGameActivityMain,
+  MesaGameActivitySidebar,
+  MesaSceneAdd,
+  MesaSceneHeader,
+  MesaSceneSection,
+} from './GameplayLiveHistory.style';
+import { MesaNpcPicker } from './MesaNpcPicker';
 
 const emptyStatus: StatusBase = {
   vida: 0,
@@ -65,23 +75,74 @@ const emptyStatus: StatusBase = {
   capacidadeCarga: 0,
 };
 
+type UnknownRecord = Record<string, unknown>;
+
+const asRecord = (value: unknown): UnknownRecord | null => (
+  value && typeof value === 'object' && !Array.isArray(value)
+    ? value as UnknownRecord
+    : null
+);
+
+const getProperty = (source: UnknownRecord | null, property: string): unknown => (
+  source
+    ? Object.entries(source).find(([key]) => key.toLowerCase() === property.toLowerCase())?.[1]
+    : undefined
+);
+
+const getNumber = (source: UnknownRecord | null, property: string): number | undefined => {
+  const value = getProperty(source, property);
+  const number = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(number) ? Math.max(0, Math.round(number)) : undefined;
+};
+
 const parseStatus = (raw: unknown): PersonagemStatus | null => {
   try {
-    const value = typeof raw === 'string' ? JSON.parse(raw) : raw;
-    if (!value || typeof value !== 'object') return null;
+    let value = raw;
+    // Instâncias antigas de NPC podem ter passado por mais de uma serialização
+    // antes de serem copiadas para a Mesa. Desembrulhamos sem presumir a origem.
+    for (let attempt = 0; attempt < 5 && typeof value === 'string'; attempt += 1) {
+      value = JSON.parse(value);
+    }
 
-    // A ficha persiste os recursos dentro de `status`; aceitar o formato plano
-    // mantém compatibilidade com registros antigos.
-    const nestedStatus = (value as { status?: unknown }).status;
-    return nestedStatus && typeof nestedStatus === 'object'
-      ? nestedStatus as PersonagemStatus
-      : value as PersonagemStatus;
+    const rawRoot = asRecord(value);
+    const root = asRecord(getProperty(rawRoot, 'statusJson')) ?? rawRoot;
+    if (!root) return null;
+
+    const nestedStatus = asRecord(getProperty(root, 'status')) ?? root;
+    const status: StatusBase = {
+      vida: getNumber(nestedStatus, 'vida') ?? 0,
+      vidaMaxima: getNumber(nestedStatus, 'vidaMaxima') ?? 0,
+      mana: getNumber(nestedStatus, 'mana') ?? 0,
+      manaMaxima: getNumber(nestedStatus, 'manaMaxima') ?? 0,
+      estamina: getNumber(nestedStatus, 'estamina') ?? 0,
+      estaminaMaxima: getNumber(nestedStatus, 'estaminaMaxima') ?? 0,
+      capacidadeCarga: getNumber(nestedStatus, 'capacidadeCarga') ?? 0,
+    };
+
+    return {
+      ...(root as unknown as PersonagemStatus),
+      status,
+      nivel: getNumber(root, 'nivel') ?? 0,
+      xp: getNumber(root, 'xp') ?? 0,
+    };
   } catch {
     return null;
   }
 };
 
 type DisplayCharacter = MesaPersonagemResumo & { exiting?: boolean };
+
+interface DeferredMesaSynchronization {
+  snapshot: boolean;
+  gameplay: boolean;
+  combat: boolean;
+}
+
+const emptyDeferredMesaSynchronization = (): DeferredMesaSynchronization => ({
+  snapshot: false,
+  gameplay: false,
+  combat: false,
+});
 
 const getCurrentUserId = () => {
   try {
@@ -105,12 +166,19 @@ const MesaGame = () => {
     refresh,
     updateCharacterResources,
     updateMesaLiveStatus,
+    searchNpcs,
+    addNpc,
+    setNpcVisibility,
+    removeNpc,
+    publishNpc,
   } = useMesaGameData(idMesa);
   const [displayed, setDisplayed] = useState<DisplayCharacter[]>([]);
   const [updatingLiveStatus, setUpdatingLiveStatus] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [actionCharacterId, setActionCharacterId] = useState<number | null>(null);
   const [localDiceOpen, setLocalDiceOpen] = useState(false);
+  const [npcPickerOpen, setNpcPickerOpen] = useState(false);
+  const [publishingNpc, setPublishingNpc] = useState<number | null>(null);
   const [quickRoll, setQuickRoll] = useState<{
     favorite: GameplayFavoriteRoll;
     response: GameplayCommandResponse | null;
@@ -132,18 +200,28 @@ const MesaGame = () => {
   } | null>(null);
   const [configuredFavoriteEventId, setConfiguredFavoriteEventId] = useState<number | null>(null);
   const removalTimers = useRef(new Map<number, number>());
+  const deferredMesaSynchronizationRef = useRef<DeferredMesaSynchronization>(
+    emptyDeferredMesaSynchronization(),
+  );
   const currentUserId = useMemo(getCurrentUserId, []);
+  const isSiteAdmin = useMemo(() => {
+    const session = getAuthSession(localStorage.getItem('token'));
+    return session.status === 'authenticated' && session.roles.some((role) => role.toLowerCase() === 'admin');
+  }, []);
+  const isMaster = snapshot?.mesa.papelUsuario === 'Mestre';
   const gameplay = useGameplayEngine({ idMesa, enabled: Boolean(snapshot), mesaAoVivo: Boolean(snapshot?.mesa.aoVivo) });
   const combat = useGameplayCombat(idMesa, gameplay.session?.idMesaSessao);
+  const sceneCharacters = useMemo(() => snapshot?.personagensCena ?? [], [snapshot?.personagensCena]);
   const currentTurnName = useMemo(() => {
     if (combat.combat?.status !== 'Ativo') return 'Sem combate';
     return combat.combat.participantes.find((participant) => (
       participant.idParticipante === combat.combat?.idParticipanteAtual
     ))?.nome ?? 'Aguardando turno';
   }, [combat.combat]);
-  const gameplayCharacters = useMemo(() => displayed
-    .filter((entry) => Number(entry.idUsuarioDono ?? entry.personagem.idusuario ?? 0) === currentUserId)
-    .map((entry) => ({ personagem: entry.personagem, ownerName: entry.donoNome })), [currentUserId, displayed]);
+  const gameplayCharacters = useMemo(() => [...displayed, ...sceneCharacters]
+    .filter((entry) => Number(entry.idUsuarioDono ?? entry.personagem.idusuario ?? 0) === currentUserId
+      || (isMaster && entry.instanciaNpcMesa === true))
+    .map((entry) => ({ personagem: entry.personagem, ownerName: entry.donoNome })), [currentUserId, displayed, isMaster, sceneCharacters]);
   const favoriteCharacters = useMemo(() => gameplayCharacters.map((entry) => ({
     idPersonagemJogador: entry.personagem.idpersonagemJogador,
     nome: entry.personagem.nome,
@@ -166,7 +244,7 @@ const MesaGame = () => {
     sessionId: gameplay.session?.idMesaSessao,
   });
   const remoteCharacterName = remoteRoll?.idPersonagemJogador
-    ? displayed.find((entry) => entry.personagem.idpersonagemJogador === remoteRoll.idPersonagemJogador)
+    ? [...displayed, ...sceneCharacters].find((entry) => entry.personagem.idpersonagemJogador === remoteRoll.idPersonagemJogador)
       ?.personagem.nome
     : null;
 
@@ -185,22 +263,59 @@ const MesaGame = () => {
     navigate('/hub?section=mesas', { replace: true });
   }, [navigate]);
 
+  const refreshRealtimeSection = useCallback((section?: string) => {
+    const normalizedSection = section?.trim().toLowerCase();
+    if (localDiceOpen) {
+      const pending = deferredMesaSynchronizationRef.current;
+      if (normalizedSection === 'gameplay') pending.gameplay = true;
+      else if (normalizedSection === 'combate') pending.combat = true;
+      else pending.snapshot = true;
+      return Promise.resolve();
+    }
+
+    if (normalizedSection === 'gameplay') return gameplay.refresh(false, true).catch(() => undefined);
+    if (normalizedSection === 'combate') return combat.refresh(false).then(() => undefined);
+    return refresh(false).catch(() => undefined);
+  }, [combat.refresh, gameplay.refresh, localDiceOpen, refresh]);
+
+  const resynchronizeRealtime = useCallback(() => {
+    if (localDiceOpen) {
+      deferredMesaSynchronizationRef.current = {
+        snapshot: true,
+        gameplay: true,
+        combat: true,
+      };
+      return Promise.resolve();
+    }
+
+    return Promise.all([
+      refresh(false).catch(() => undefined),
+      gameplay.refresh(false, true).catch(() => undefined),
+      combat.refresh(false).catch(() => undefined),
+    ]).then(() => undefined);
+  }, [combat.refresh, gameplay.refresh, localDiceOpen, refresh]);
+
   const realtime = useMesaEmJogoRealtime({
     idMesa,
     enabled: Boolean(snapshot),
     aoVivo: Boolean(snapshot?.mesa.aoVivo),
-    onMesaInvalidada: () => Promise.all([
-      refresh(false).catch(() => undefined),
-      gameplay.refresh(false, true).catch(() => undefined),
-      combat.refresh(false).catch(() => undefined),
-    ]).then(() => undefined),
-    onMesaRessincronizar: () => Promise.all([
-      refresh(false).catch(() => undefined),
-      gameplay.refresh(false, false).catch(() => undefined),
-      combat.refresh(false).catch(() => undefined),
-    ]).then(() => undefined),
+    onMesaInvalidada: refreshRealtimeSection,
+    onMesaRessincronizar: resynchronizeRealtime,
     onAcessoRevogado: handleAccessRevoked,
   });
+
+  useEffect(() => {
+    if (localDiceOpen) return;
+    const pending = deferredMesaSynchronizationRef.current;
+    if (!pending.snapshot && !pending.gameplay && !pending.combat) return;
+
+    deferredMesaSynchronizationRef.current = emptyDeferredMesaSynchronization();
+    const tasks: Array<Promise<unknown>> = [];
+    if (pending.snapshot) tasks.push(refresh(false).catch(() => undefined));
+    if (pending.gameplay) tasks.push(gameplay.refresh(false, true).catch(() => undefined));
+    if (pending.combat) tasks.push(combat.refresh(false).catch(() => undefined));
+    void Promise.all(tasks);
+  }, [combat.refresh, gameplay.refresh, localDiceOpen, refresh]);
 
   useEffect(() => {
     const incoming = snapshot?.personagens ?? [];
@@ -241,7 +356,6 @@ const MesaGame = () => {
   if (!snapshot) return null;
 
   const mesaAoVivo = snapshot.mesa.aoVivo;
-  const isMaster = snapshot.mesa.papelUsuario === 'Mestre';
   const onlineCount = mesaAoVivo && realtime.conectado
     ? realtime.quantidadeUsuariosOnline
     : 0;
@@ -438,7 +552,7 @@ const MesaGame = () => {
                     <DeadCardWrapper key={characterId} $exiting={entry.exiting}>
                       <CharacterSelectionCard
                         personagem={entry.personagem}
-                        status={entry.status || parsed?.status || emptyStatus}
+                        status={parsed?.status ?? entry.status ?? emptyStatus}
                         level={entry.nivel ?? parsed?.nivel ?? 1}
                         xp={entry.xp ?? parsed?.xp ?? 0}
                         theme={theme}
@@ -467,6 +581,55 @@ const MesaGame = () => {
                 })}
               </MesaGameCharacterGrid>
             )}
+            {(isMaster || sceneCharacters.length > 0) && (
+              <MesaSceneSection $neon={isNeonActive}>
+                <MesaHudDecor neon={isNeonActive} />
+                <MesaSceneHeader>
+                  {sceneCharacters.length > 0 && <div><h2>Personagens da cena</h2><p>Aliados, inimigos e NPCs que não fazem parte do grupo.</p></div>}
+                  {isMaster && <MesaSceneAdd type="button" onClick={() => setNpcPickerOpen(true)} title="Adicionar NPC"><AddOutlinedIcon /></MesaSceneAdd>}
+                </MesaSceneHeader>
+                {sceneCharacters.length > 0 && (
+                  <MesaGameCharacterGrid>
+                    {sceneCharacters.map((entry) => {
+                      const characterId = entry.personagem.idpersonagemJogador;
+                      const parsed = parseStatus(entry.personagem.statusJson);
+                      return (
+                        <CharacterSelectionCard
+                          key={characterId}
+                          personagem={entry.personagem}
+                          status={parsed?.status ?? entry.status ?? emptyStatus}
+                          level={entry.nivel ?? parsed?.nivel ?? 1}
+                          xp={entry.xp ?? parsed?.xp ?? 0}
+                          theme={theme}
+                          neon={neon}
+                          context={isMaster ? 'mesa-master' : 'mesa-other'}
+                          ownerName="NPC da Mesa"
+                          variant="mesa-game"
+                          visibleToPlayers={entry.personagem.visivel}
+                          onToggleVisibility={isMaster ? () => void setNpcVisibility(characterId, !entry.personagem.visivel) : undefined}
+                          onRemove={isMaster ? () => void (async () => {
+                            const participant = combat.combat?.participantes.find((item) => item.idPersonagemJogador === characterId && item.status !== 'Removido');
+                            if (participant && combat.combat?.status === 'Preparacao') await combat.removeParticipant(participant.idParticipante);
+                            await removeNpc(characterId);
+                          })() : undefined}
+                          onPublish={(isSiteAdmin || entry.podeAtualizarFichaOriginal) ? () => void (async () => {
+                            setPublishingNpc(characterId);
+                            await publishNpc(characterId);
+                            setPublishingNpc(null);
+                          })() : undefined}
+                          publishing={publishingNpc === characterId}
+                          onActions={isMaster ? () => { setActionCharacterId(characterId); setActionsOpen(true); } : undefined}
+                          onQuickStatusUpdate={isMaster ? (changes) => updateCharacterResources(characterId, entry.personagem.revisaoRuntime ?? 0, changes) : undefined}
+                          onView={() => navigate(`/personagem/${characterId}?tipo=jogador&mesaId=${idMesa}&modo=leitura`)}
+                          onSheet={() => navigate(`/mesa/${idMesa}/jogo/npc/${characterId}/ficha`)}
+                          onEdit={() => navigate(`/mesa/${idMesa}/jogo/npc/${characterId}/ficha?step=1`)}
+                        />
+                      );
+                    })}
+                  </MesaGameCharacterGrid>
+                )}
+              </MesaSceneSection>
+            )}
           </MesaGameActivityMain>
           <MesaGameActivitySidebar>
             <GameplayFavoriteRolls
@@ -479,7 +642,7 @@ const MesaGame = () => {
             {gameplay.session && (
               <GameplayCombatPanel
                 combat={combat.combat}
-                characters={displayed}
+                characters={[...displayed, ...sceneCharacters]}
                 isMaster={isMaster}
                 loading={combat.loading}
                 submitting={combat.submitting}
@@ -489,6 +652,8 @@ const MesaGame = () => {
                 neon={isNeonActive}
                 onStart={combat.start}
                 onAddNpc={combat.addNpc}
+                npcSearch={searchNpcs}
+                onRemoveParticipant={combat.removeParticipant}
                 onRequestInitiative={(participant) => openCombatDice('initiative', participant)}
                 onActivate={combat.activate}
                 onAdvance={combat.advance}
@@ -524,7 +689,7 @@ const MesaGame = () => {
           onCharacterChange={setActionCharacterId}
           initialCharacterId={actionCharacterId}
           characters={gameplayCharacters}
-          effectTargets={isMaster ? displayed.map((entry) => ({
+          effectTargets={isMaster ? [...displayed, ...sceneCharacters].map((entry) => ({
             personagem: entry.personagem,
             ownerName: entry.donoNome,
           })) : []}
@@ -550,6 +715,28 @@ const MesaGame = () => {
           onSaveFavorite={handleSaveFavorite}
           onRemoveFavorite={handleRemoveFavorite}
         />
+        <MesaNpcPicker
+          open={npcPickerOpen}
+          theme={theme}
+          neon={neon}
+          search={searchNpcs}
+          onClose={() => setNpcPickerOpen(false)}
+          onAdd={async (npc, variantId) => {
+            const created = await addNpc(npc.idPersonagem, variantId);
+            if (!created) return;
+            if (combat.combat?.status === 'Preparacao') {
+              await combat.addNpc({
+                nome: created.personagem.nome,
+                imagem: created.personagem.imagem,
+                modificadorIniciativa: 0,
+                idPersonagemJogador: created.personagem.idpersonagemJogador,
+                idPersonagemOrigem: created.idPersonagemOrigem,
+                idVarianteOrigem: created.idVarianteOrigem,
+              });
+            }
+            setNpcPickerOpen(false);
+          }}
+        />
         <GameplaySheetActionDialog
           open={Boolean(favoriteConfiguration)}
           source={favoriteConfiguration?.source ?? null}
@@ -569,7 +756,7 @@ const MesaGame = () => {
           onResultRevealed={() => setConfiguredFavoriteEventId(null)}
           favorite={favoriteConfiguration?.favorite ?? null}
           isMaster={isMaster}
-          effectTargets={isMaster ? displayed.map((entry) => ({
+          effectTargets={isMaster ? [...displayed, ...sceneCharacters].map((entry) => ({
             personagem: entry.personagem,
             ownerName: entry.donoNome,
           })) : []}

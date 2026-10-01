@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace OdisseiaWiki.Models;
 
@@ -28,7 +29,14 @@ public partial class Cidade
     public bool Visivel { get; set; } = true;
     public bool Destaque { get; set; } = false;
 
+    public int IdWikiEscopo { get; set; } = WikiEscopo.IdOficial;
+    public int? IdSistemaRpg { get; set; }
+
     public DateTime DataCriacao { get; set; } = DateTime.UtcNow;
 
+    [JsonIgnore]
     public virtual ICollection<Personagen> Personagens { get; set; } = new List<Personagen>();
+    [JsonIgnore]
+    public virtual WikiEscopo WikiEscopo { get; set; } = null!;
+    public virtual SistemaRpg? SistemaRpg { get; set; }
 }

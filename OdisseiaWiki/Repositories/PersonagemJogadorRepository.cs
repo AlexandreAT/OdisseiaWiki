@@ -49,14 +49,26 @@ namespace OdisseiaWiki.Repositories
         public async Task<PersonagemJogador?> GetByIdAsync(int id) => await _context.PersonagemJogadores.FindAsync(id);
 
         public async Task<PersonagemJogador?> GetByIdWithDetailsAsync(int id)
-            => await _context.PersonagemJogadores
+        {
+            PersonagemJogador? personagem = await _context.PersonagemJogadores
                 .AsNoTracking()
                 .Include(p => p.IdracaNavigation)
                 .Include(p => p.IdcidadeNavigation)
                 .Include(p => p.Mesa)
                 .Include(p => p.Usuario)
+                .Include(p => p.PersonagemOrigem)
+                    .ThenInclude(origem => origem!.ConfiguracaoVisibilidade)
                 .Include(p => p.ConfiguracaoVisibilidade)
                 .FirstOrDefaultAsync(p => p.IdpersonagemJogador == id);
+
+            // Idpassiva é o vínculo preenchido pelo editor. A navegação Passiva
+            // usa uma FK legada diferente e pode estar vazia mesmo com esse ID.
+            if (personagem?.Idpassiva is int idPassiva)
+                personagem.Passiva = await _context.Passivas.AsNoTracking()
+                    .FirstOrDefaultAsync(passiva => passiva.Idpassiva == idPassiva);
+
+            return personagem;
+        }
 
         public async Task<List<PersonagemJogador>> GetByUsuarioIdAsync(int usuarioId)
         {
@@ -67,7 +79,7 @@ namespace OdisseiaWiki.Repositories
                 .Include(p => p.Mesa)
                 .Include(p => p.Usuario)
                 .Include(p => p.ConfiguracaoVisibilidade)
-                .Where(p => p.Idusuario == usuarioId)
+                .Where(p => p.Idusuario == usuarioId && !p.IdPersonagemOrigem.HasValue)
                 .ToListAsync();
         }
 

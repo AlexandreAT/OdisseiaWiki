@@ -23,6 +23,10 @@ import {
   OrganizationControl,
   OrganizationMenu,
   OrganizationOption,
+  ScopeControl,
+  ScopeDescription,
+  ScopeLabel,
+  ScopeSwitch,
   SearchArea,
   SearchBox,
   SearchResultButton,
@@ -39,6 +43,8 @@ interface GraphToolbarProps {
   searchOpen: boolean;
   neon: boolean;
   layoutMode: WikiGraphLayoutMode;
+  mostrarControleEscopo: boolean;
+  incluirWikiGeral: boolean;
   onToggleType: (type: WikiGraphEntityType) => void;
   onQueryChange: (value: string) => void;
   onSearchFocus: () => void;
@@ -46,6 +52,7 @@ interface GraphToolbarProps {
   onSearchDismiss: () => void;
   onSelectResult: (node: WikiGraphIdentifiedNode) => void;
   onLayoutModeChange: (mode: WikiGraphLayoutMode) => void;
+  onIncluirWikiGeralChange: (incluir: boolean) => void;
   onCentralize: () => void;
 }
 
@@ -71,6 +78,8 @@ export const GraphToolbar = ({
   searchOpen,
   neon,
   layoutMode,
+  mostrarControleEscopo,
+  incluirWikiGeral,
   onToggleType,
   onQueryChange,
   onSearchFocus,
@@ -78,6 +87,7 @@ export const GraphToolbar = ({
   onSearchDismiss,
   onSelectResult,
   onLayoutModeChange,
+  onIncluirWikiGeralChange,
   onCentralize,
 }: GraphToolbarProps) => {
   const resultListId = useId();
@@ -220,6 +230,20 @@ export const GraphToolbar = ({
       </SearchArea>
 
       <ToolbarActions>
+        {mostrarControleEscopo && (
+          <ScopeControl>
+            <ScopeLabel htmlFor="graph-wiki-scope">
+              <span>Incluir Wiki geral</span>
+              <ScopeDescription>Mescla conexões oficiais compatíveis.</ScopeDescription>
+            </ScopeLabel>
+            <ScopeSwitch
+              id="graph-wiki-scope"
+              checked={incluirWikiGeral}
+              onChange={(event) => onIncluirWikiGeralChange(event.target.checked)}
+              aria-label="Incluir conexões da Wiki geral"
+            />
+          </ScopeControl>
+        )}
         <OrganizationControl ref={organizationRef}>
           <OrganizationButton
             type="button"

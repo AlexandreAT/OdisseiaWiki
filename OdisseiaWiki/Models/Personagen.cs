@@ -17,6 +17,8 @@ public partial class Personagen : PersonagemBase
     public bool Visivel { get; set; } = true;
     public bool Destaque { get; set; } = false;
 
+    public int IdWikiEscopo { get; set; } = WikiEscopo.IdOficial;
+
     public int? IdSistemaRpg { get; set; }
 
     public int? IdSistemaVersao { get; set; }
@@ -30,11 +32,22 @@ public partial class Personagen : PersonagemBase
     public virtual SistemaVersao? SistemaVersao { get; set; }
 
     [JsonIgnore]
+    public virtual WikiEscopo WikiEscopo { get; set; } = null!;
+
+    [JsonIgnore]
     public virtual PersonagemVisibilidade? ConfiguracaoVisibilidade { get; set; }
 
     [NotMapped]
     [JsonPropertyName("visibilidade")]
     public PersonagemVisibilidadeDto Visibilidade { get; set; } = PersonagemVisibilidadeDefaults.Npc();
+
+    [NotMapped]
+    [JsonPropertyName("visibilidadeProjetada")]
+    public bool VisibilidadeProjetada { get; set; }
+
+    [NotMapped]
+    [JsonPropertyName("quantidadeRelacionadosOcultos")]
+    public int QuantidadeRelacionadosOcultos { get; set; }
 
     [NotMapped]
     [JsonPropertyName("proficiencias")]

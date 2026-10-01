@@ -40,15 +40,19 @@ namespace OdisseiaWiki.Services
             _personagemRepository = personagemRepository;
         }
 
-        public async Task<ResultPage> CreateAsync(CreatePageWithBlocksDto dto)
+        public async Task<ResultPage> CreateAsync(
+            CreatePageWithBlocksDto dto,
+            int? idWikiEscopo = null,
+            int? idSistemaRpg = null)
         {
             ValidateReservedSlug(dto.Page.Slug);
-            Page? slugExistente = await _repository.GetBySlugAsync(dto.Page.Slug);
+            int scope = idWikiEscopo ?? WikiEscopo.IdOficial;
+            Page? slugExistente = await _repository.GetBySlugAsync(dto.Page.Slug, scope);
 
             if (slugExistente != null)
                 throw new InvalidOperationException("Já existe uma página com esse slug.");
 
-            await ValidateReferencesAsync(dto.Blocks);
+            await ValidateReferencesAsync(dto.Blocks, scope);
 
             Page page = new()
             {
@@ -58,6 +62,8 @@ namespace OdisseiaWiki.Services
                 CoverImage = dto.Page.CoverImage,
                 Visivel = dto.Page.Visivel,
                 Destaque = dto.Page.Destaque,
+                IdWikiEscopo = scope,
+                IdSistemaRpg = idSistemaRpg,
                 DataCriacao = DateTime.UtcNow
             };
 
@@ -70,9 +76,10 @@ namespace OdisseiaWiki.Services
 
         public async Task<PageDto?> GetByIdAsync(
             int id,
-            bool aplicarVisibilidadeDePersonagem = false)
+            bool aplicarVisibilidadeDePersonagem = false,
+            int? idWikiEscopo = null)
         {
-            Page? page = await _repository.GetByIdAsync(id);
+            Page? page = await _repository.GetByIdAsync(id, idWikiEscopo);
 
             return page is null
                 ? null
@@ -81,20 +88,21 @@ namespace OdisseiaWiki.Services
 
         public async Task<PageDto?> GetBySlugAsync(
             string slug,
-            bool aplicarVisibilidadeDePersonagem = false)
+            bool aplicarVisibilidadeDePersonagem = false,
+            int? idWikiEscopo = null)
         {
-            Page? page = await _repository.GetBySlugAsync(slug);
+            Page? page = await _repository.GetBySlugAsync(slug, idWikiEscopo);
 
             return page is null
                 ? null
                 : await MapPageParaLeituraAsync(page, aplicarVisibilidadeDePersonagem);
         }
 
-        public async Task<List<SearchItemDto>> SearchAsync(string termo)
+        public async Task<List<SearchItemDto>> SearchAsync(string termo, int? idWikiEscopo = null)
         {
             List<Page> pages = ContentCategoryHelper.MatchesCategorySearch(termo, ContentCategoryHelper.Page)
-                ? await _repository.GetAllAsync()
-                : await _repository.SearchAsync(termo);
+                ? await _repository.GetAllAsync(null, idWikiEscopo)
+                : await _repository.SearchAsync(termo, idWikiEscopo);
 
             return pages.Select(p => new SearchItemDto
             {
@@ -109,28 +117,32 @@ namespace OdisseiaWiki.Services
             }).ToList();
         }
 
-        public async Task<List<PageDto>> GetAllAsync(bool? visivel = null)
+        public async Task<List<PageDto>> GetAllAsync(bool? visivel = null, int? idWikiEscopo = null, bool ocultarReferenciasInvisiveis = false)
         {
-            List<Page> pages = await _repository.GetAllAsync(visivel);
+            List<Page> pages = await _repository.GetAllAsync(visivel, idWikiEscopo);
+            if (!ocultarReferenciasInvisiveis)
+                return pages.Select(MapPageToDto).ToList();
 
-            return pages.Select(MapPageToDto).ToList();
+            List<PageDto> resultado = new();
+            foreach (Page page in pages)
+                resultado.Add(await MapPageParaLeituraAsync(page, true));
+            return resultado;
         }
 
         public async Task<List<PageDto>> GetReferencingAsync(
             string entityType,
             string entityId,
             bool? visivel = null,
-            bool aplicarVisibilidadeDePersonagem = false)
+            bool aplicarVisibilidadeDePersonagem = false,
+            int? idWikiEscopo = null)
         {
             if (aplicarVisibilidadeDePersonagem &&
-                IsCharacterReference(entityType) &&
-                (!int.TryParse(entityId, out int idPersonagem) ||
-                 !await PodeExibirRelacionamentoPublicoAsync(idPersonagem)))
+                !await PodeExibirReferenciaPublicaAsync(entityType, entityId))
             {
                 return new List<PageDto>();
             }
 
-            List<Page> pages = await _repository.GetWithRelationBlocksAsync(visivel);
+            List<Page> pages = await _repository.GetWithRelationBlocksAsync(visivel, idWikiEscopo);
 
             return pages
                 .Where(page => page.Blocks.Any(block => ReferencesEntity(block, entityType, entityId)))
@@ -139,20 +151,21 @@ namespace OdisseiaWiki.Services
                 .ToList();
         }
 
-        public async Task<PageDto> UpdateAsync(int id, CreatePageWithBlocksDto dto)
+        public async Task<PageDto> UpdateAsync(int id, CreatePageWithBlocksDto dto, int? idWikiEscopo = null)
         {
             ValidateReservedSlug(dto.Page.Slug);
-            Page? page = await _repository.GetByIdAsync(id);
+            int scope = idWikiEscopo ?? WikiEscopo.IdOficial;
+            Page? page = await _repository.GetByIdAsync(id, scope);
 
             if (page == null)
                 throw new InvalidOperationException($"Página com id {id} não encontrada.");
 
-            Page? slugExistente = await _repository.GetBySlugAsync(dto.Page.Slug);
+            Page? slugExistente = await _repository.GetBySlugAsync(dto.Page.Slug, scope);
 
             if (slugExistente != null && slugExistente.IdPage != id)
                 throw new InvalidOperationException("Já existe uma página com esse slug.");
 
-            await ValidateReferencesAsync(dto.Blocks);
+            await ValidateReferencesAsync(dto.Blocks, scope);
 
             HashSet<string> oldAssets = ExtractAssets(page);
 
@@ -186,9 +199,9 @@ namespace OdisseiaWiki.Services
                 throw new InvalidOperationException("Esse slug é reservado para uma funcionalidade da Wiki.");
         }
 
-        public async Task<bool> DeleteAsync(int id)
+        public async Task<bool> DeleteAsync(int id, int? idWikiEscopo = null)
         {
-            Page? page = await _repository.GetByIdAsync(id);
+            Page? page = await _repository.GetByIdAsync(id, idWikiEscopo);
             if (page is null)
                 return false;
 
@@ -226,6 +239,7 @@ namespace OdisseiaWiki.Services
                 CoverImage = page.CoverImage,
                 Visivel = page.Visivel,
                 Destaque = page.Destaque,
+                IdSistemaRpg = page.IdSistemaRpg,
                 DataCriacao = page.DataCriacao,
                 Blocks = page.Blocks
                     .OrderBy(b => b.Ordem)
@@ -247,7 +261,7 @@ namespace OdisseiaWiki.Services
             if (!aplicarVisibilidadeDePersonagem)
                 return dto;
 
-            Dictionary<int, bool> relacoesPublicas = new();
+            Dictionary<(string Tipo, string Id), bool> relacoesPublicas = new();
             List<PageBlockDto> blocks = new();
             foreach (PageBlockDto block in dto.Blocks)
             {
@@ -277,7 +291,7 @@ namespace OdisseiaWiki.Services
 
         private async Task<object?> SanitizarRelacaoPublicaAsync(
             object conteudo,
-            IDictionary<int, bool> relacoesPublicas)
+            IDictionary<(string Tipo, string Id), bool> relacoesPublicas)
         {
             JsonNode? raiz;
             try
@@ -286,7 +300,7 @@ namespace OdisseiaWiki.Services
             }
             catch (Exception exception) when (exception is JsonException or NotSupportedException)
             {
-                return conteudo;
+                return JsonSerializer.Deserialize<object>(CriarReferenciaOculta().ToJsonString());
             }
 
             if (raiz is null)
@@ -319,31 +333,30 @@ namespace OdisseiaWiki.Services
 
         private async Task<JsonNode?> SanitizarEntradaDeRelacaoPublicaAsync(
             JsonNode? entrada,
-            IDictionary<int, bool> relacoesPublicas)
+            IDictionary<(string Tipo, string Id), bool> relacoesPublicas)
         {
             if (entrada is not JsonObject objeto)
-                return entrada?.DeepClone();
+                return CriarReferenciaOculta();
 
             JsonNode? tipoNode = GetProperty(objeto, "tipoEntidade");
+            JsonNode? idNode = GetProperty(objeto, "idEntidade");
             if (tipoNode is not JsonValue tipoValue ||
                 !tipoValue.TryGetValue(out string? tipo) ||
-                !IsCharacterReference(tipo))
-            {
-                return objeto.DeepClone();
-            }
+                idNode is null)
+                return CriarReferenciaOculta();
 
-            JsonNode? idNode = GetProperty(objeto, "idEntidade");
-            if (!TryGetInteger(idNode, out int idPersonagem))
-                return null;
-
-            if (!relacoesPublicas.TryGetValue(idPersonagem, out bool podeExibir))
+            string id = idNode is JsonValue idValue && idValue.TryGetValue(out string? idTexto)
+                ? idTexto ?? string.Empty
+                : idNode.ToJsonString().Trim('"');
+            string tipoNormalizado = tipo?.Trim().ToLowerInvariant() ?? string.Empty;
+            if (!relacoesPublicas.TryGetValue((tipoNormalizado, id), out bool podeExibir))
             {
-                podeExibir = await PodeExibirRelacionamentoPublicoAsync(idPersonagem);
-                relacoesPublicas[idPersonagem] = podeExibir;
+                podeExibir = await PodeExibirReferenciaPublicaAsync(tipoNormalizado, id);
+                relacoesPublicas[(tipoNormalizado, id)] = podeExibir;
             }
 
             if (!podeExibir)
-                return null;
+                return CriarReferenciaOculta();
 
             return new JsonObject
             {
@@ -351,6 +364,23 @@ namespace OdisseiaWiki.Services
                 ["idEntidade"] = idNode!.DeepClone(),
             };
         }
+
+        private async Task<bool> PodeExibirReferenciaPublicaAsync(string tipo, string id)
+        {
+            if (!await ReferenceIsVisibleInScopeAsync(tipo, id, WikiEscopo.IdOficial))
+                return false;
+
+            return !IsCharacterReference(tipo) ||
+                (int.TryParse(id, out int personagem) &&
+                 await PodeExibirRelacionamentoPublicoAsync(personagem));
+        }
+
+        private static JsonObject CriarReferenciaOculta() => new()
+        {
+            ["tipoEntidade"] = "Oculto",
+            ["idEntidade"] = Guid.NewGuid().ToString("N"),
+            ["oculto"] = true,
+        };
 
         private async Task<bool> PodeExibirRelacionamentoPublicoAsync(int idPersonagem)
         {
@@ -399,7 +429,9 @@ namespace OdisseiaWiki.Services
             string.Equals(entityType?.Trim(), "personagem", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(entityType?.Trim(), "character", StringComparison.OrdinalIgnoreCase);
 
-        private async Task ValidateReferencesAsync(IEnumerable<PageBlockDto> blocks)
+        private async Task ValidateReferencesAsync(
+            IEnumerable<PageBlockDto> blocks,
+            int? idWikiEscopo = null)
         {
             var references = new HashSet<(string Type, string Id)>();
 
@@ -433,24 +465,60 @@ namespace OdisseiaWiki.Services
 
             foreach ((string type, string referenceId) in references)
             {
-                bool isVisible = type.ToLowerInvariant() switch
-                {
-                    "cidade" when int.TryParse(referenceId, out int cityId)
-                        => (await _cidadeRepository.GetByIdAsync(cityId))?.Visivel == true,
-                    "raca" when int.TryParse(referenceId, out int raceId)
-                        => (await _racaRepository.GetByIdAsync(raceId))?.Visivel == true,
-                    "item" => (await _itemRepository.GetByIdAsync(referenceId))?.Visivel == true,
-                    "personagem" when int.TryParse(referenceId, out int characterId)
-                        => (await _personagemRepository.GetByIdAsync(characterId))?.Visivel == true,
-                    "page" or "pagina" or "página" when int.TryParse(referenceId, out int pageId)
-                        => await _repository.ExistsVisibleAsync(pageId),
-                    _ => false
-                };
+                // A escrita é restrita ao administrador global ou ao mestre do escopo.
+                // Ambos podem referenciar o conteúdo oculto que administram, mas um
+                // mestre nunca pode referenciar conteúdo oficial oculto.
+                bool canReference = await ReferenceExistsInScopeAsync(type, referenceId, idWikiEscopo);
+                if (!canReference && idWikiEscopo is > 0 and not WikiEscopo.IdOficial)
+                    canReference = await ReferenceIsVisibleInScopeAsync(
+                        type,
+                        referenceId,
+                        WikiEscopo.IdOficial);
 
-                if (!isVisible)
+                if (!canReference)
                     throw new InvalidOperationException(
                         $"A referência {type} ({referenceId}) não existe ou não está visível.");
             }
+        }
+
+        private async Task<bool> ReferenceIsVisibleInScopeAsync(
+            string type,
+            string referenceId,
+            int? idWikiEscopo)
+        {
+            return type.ToLowerInvariant() switch
+            {
+                "cidade" when int.TryParse(referenceId, out int cityId)
+                    => (await _cidadeRepository.GetByIdAsync(cityId, idWikiEscopo))?.Visivel == true,
+                "raca" when int.TryParse(referenceId, out int raceId)
+                    => (await _racaRepository.GetByIdAsync(raceId, idWikiEscopo))?.Visivel == true,
+                "item" => (await _itemRepository.GetByIdAsync(referenceId, idWikiEscopo))?.Visivel == true,
+                "personagem" or "character" when int.TryParse(referenceId, out int characterId)
+                    => (await _personagemRepository.GetByIdAsync(characterId, idWikiEscopo))?.Visivel == true,
+                "page" or "pagina" or "página" when int.TryParse(referenceId, out int pageId)
+                    => await _repository.ExistsVisibleAsync(pageId, idWikiEscopo),
+                _ => false,
+            };
+        }
+
+        private async Task<bool> ReferenceExistsInScopeAsync(
+            string type,
+            string referenceId,
+            int? idWikiEscopo)
+        {
+            return type.ToLowerInvariant() switch
+            {
+                "cidade" when int.TryParse(referenceId, out int cityId)
+                    => await _cidadeRepository.GetByIdAsync(cityId, idWikiEscopo) is not null,
+                "raca" when int.TryParse(referenceId, out int raceId)
+                    => await _racaRepository.GetByIdAsync(raceId, idWikiEscopo) is not null,
+                "item" => await _itemRepository.GetByIdAsync(referenceId, idWikiEscopo) is not null,
+                "personagem" or "character" when int.TryParse(referenceId, out int characterId)
+                    => await _personagemRepository.GetByIdAsync(characterId, idWikiEscopo) is not null,
+                "page" or "pagina" or "página" when int.TryParse(referenceId, out int pageId)
+                    => await _repository.GetByIdAsync(pageId, idWikiEscopo) is not null,
+                _ => false,
+            };
         }
 
         private static PageDto MapPageSummaryToDto(Page page)
@@ -464,6 +532,7 @@ namespace OdisseiaWiki.Services
                 CoverImage = page.CoverImage,
                 Visivel = page.Visivel,
                 Destaque = page.Destaque,
+                IdSistemaRpg = page.IdSistemaRpg,
                 DataCriacao = page.DataCriacao
             };
         }

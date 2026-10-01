@@ -21,6 +21,7 @@ namespace OdisseiaWiki.Services
         private readonly IAssetService _assetService;
         private readonly ISistemaRpgResolver _sistemaResolver;
         private readonly IMesaRealtimeNotifier _mesaRealtimeNotifier;
+        private readonly IWikiMesaService? _wikiMesaService;
 
         public PersonagemJogadorService(
             IPersonagemJogadorRepository repository,
@@ -28,7 +29,8 @@ namespace OdisseiaWiki.Services
             IMesaService mesaService,
             IAssetService assetService,
             ISistemaRpgResolver sistemaResolver,
-            IMesaRealtimeNotifier? mesaRealtimeNotifier = null)
+            IMesaRealtimeNotifier? mesaRealtimeNotifier = null,
+            IWikiMesaService? wikiMesaService = null)
         {
             _repository = repository;
             _mesaRepository = mesaRepository;
@@ -36,6 +38,7 @@ namespace OdisseiaWiki.Services
             _assetService = assetService;
             _sistemaResolver = sistemaResolver;
             _mesaRealtimeNotifier = mesaRealtimeNotifier ?? new NullMesaRealtimeNotifier();
+            _wikiMesaService = wikiMesaService;
         }
 
         public async Task<ResultPersonagemJogador> CreateAsync(PersonagemJogadorDto personagemDto)
@@ -47,6 +50,9 @@ namespace OdisseiaWiki.Services
             if (!validacaoMesa.Sucesso)
                 return ResultFail(validacaoMesa.MensagemErro!);
             personagemDto.Idmesa = validacaoMesa.Idmesa;
+            string? erroCatalogo = await ValidarCatalogoDaMesaAsync(personagemDto);
+            if (erroCatalogo is not null)
+                return ResultFail(erroCatalogo);
             SistemaRuntimeContextoDto contexto = await ResolverContextoAsync(
                 personagemDto.Idmesa,
                 personagemDto.Idraca);
@@ -55,6 +61,11 @@ namespace OdisseiaWiki.Services
             PersonagemJogador personagem = MapDtoToModel(personagemDto);
             personagem.Idcidade = personagem.Idcidade == 0 ? null : personagem.Idcidade;
             personagem.IdSistemaVersao = contexto.IdSistemaVersao;
+            if (personagemDto.VisibilidadeInicial is not null)
+                personagem.ConfiguracaoVisibilidade = PersonagemVisibilidadeDefaults.CreateEntity(
+                    idPersonagem: null,
+                    idPersonagemJogador: null,
+                    dto: personagemDto.VisibilidadeInicial);
 
             PersonagemJogador criado = await _repository.CreateAsync(personagem);
             await _mesaRealtimeNotifier.NotificarPersonagemAlteradoAsync(
@@ -83,6 +94,9 @@ namespace OdisseiaWiki.Services
             bool mesaAlterada = personagem.Idmesa != validacaoMesa.Idmesa;
             personagemDto.Idmesa = validacaoMesa.Idmesa;
             personagemDto.Idusuario = idUsuario;
+            string? erroCatalogo = await ValidarCatalogoDaMesaAsync(personagemDto);
+            if (erroCatalogo is not null)
+                return ResultFail(erroCatalogo);
 
             HashSet<string> oldAssets = ExtractAssets(personagem);
 
@@ -384,6 +398,8 @@ namespace OdisseiaWiki.Services
             personagem.Idmesa = personagemDto.Idmesa;
             personagem.Idusuario = personagemDto.Idusuario;
             personagem.Visivel = personagemDto.Visivel;
+            personagem.IdPersonagemOrigem = personagemDto.IdPersonagemOrigem ?? personagem.IdPersonagemOrigem;
+            personagem.IdVarianteOrigem = personagemDto.IdVarianteOrigem ?? personagem.IdVarianteOrigem;
 
             personagem.Alinhamento = personagemDto.Alinhamento ?? personagem.Alinhamento;
             personagem.Historia = personagemDto.Historia.HasValue 
@@ -540,6 +556,8 @@ namespace OdisseiaWiki.Services
             Idusuario = personagem.Idusuario,
             Idmesa = personagem.Idmesa,
             IdSistemaVersao = personagem.IdSistemaVersao,
+            IdPersonagemOrigem = personagem.IdPersonagemOrigem,
+            IdVarianteOrigem = personagem.IdVarianteOrigem,
             RevisaoRuntime = personagem.RevisaoRuntime,
             Visivel = personagem.Visivel,
             Idraca = personagem.Idraca,
@@ -557,10 +575,17 @@ namespace OdisseiaWiki.Services
             Skills = Deserialize<object>(personagem.Skills),
             Magia = Deserialize<object>(personagem.Magia),
             StatusJson = Deserialize<object>(personagem.StatusJson),
-            PersonagemsVinculados = Deserialize<List<string>>(personagem.PersonagemsVinculados),
+            PersonagemsVinculados = DeserializeRelatedCharacterIds(personagem.PersonagemsVinculados),
+            Tags = Deserialize<List<string>>(personagem.PersonagemOrigem?.Tags),
             Implantes = Deserialize<List<string>>(personagem.Implantes),
             Ultimate = personagem.Ultimate,
             Idpassiva = personagem.Idpassiva,
+            Passiva = personagem.Passiva is null ? null : new PersonagemPassivaResumoDto
+            {
+                Idpassiva = personagem.Passiva.Idpassiva,
+                Nome = personagem.Passiva.Nome,
+                Descricao = personagem.Passiva.Descricao,
+            },
             DataCriacao = personagem.DataCriacao,
             RacaNome = personagem.IdracaNavigation?.Nome,
             CidadeNome = personagem.IdcidadeNavigation?.Nome,
@@ -568,8 +593,8 @@ namespace OdisseiaWiki.Services
             AutorNome = personagem.Usuario?.Nome ?? personagem.Usuario?.Nickname,
             AutorImagem = personagem.Usuario?.ImagemUrl,
             Visibilidade = PersonagemVisibilidadeDefaults.FromEntity(
-                personagem.ConfiguracaoVisibilidade,
-                personagemJogador: true),
+                personagem.ConfiguracaoVisibilidade ?? personagem.PersonagemOrigem?.ConfiguracaoVisibilidade,
+                personagemJogador: !personagem.IdPersonagemOrigem.HasValue),
             SistemaRuntime = sistemaRuntime,
             Proficiencias = proficiencias?
                 .Select(proficiencia => new ProficienciaResumoDto
@@ -587,6 +612,33 @@ namespace OdisseiaWiki.Services
                 IdMesa = idMesa,
                 IdRaca = idRaca > 0 ? idRaca : null,
             });
+
+        private async Task<string?> ValidarCatalogoDaMesaAsync(PersonagemJogadorDto personagem)
+        {
+            if (_wikiMesaService is null)
+                return null;
+
+            WikiMesaOperacaoResultado<RacaDto> raca = await _wikiMesaService.GetRacaAsync(
+                personagem.Idmesa,
+                personagem.Idusuario,
+                admin: false,
+                personagem.Idraca);
+            if (!raca.Sucesso)
+                return "A raça selecionada não está disponível para esta Mesa.";
+
+            if (personagem.Idcidade is > 0)
+            {
+                WikiMesaOperacaoResultado<CidadeDto> cidade = await _wikiMesaService.GetCidadeAsync(
+                    personagem.Idmesa,
+                    personagem.Idusuario,
+                    admin: false,
+                    personagem.Idcidade.Value);
+                if (!cidade.Sucesso)
+                    return "A cidade selecionada não está disponível para esta Mesa.";
+            }
+
+            return null;
+        }
 
         private Task<SistemaRuntimeContextoDto> ResolverContextoPersonagemAsync(
             PersonagemJogador personagem) =>
@@ -858,6 +910,23 @@ namespace OdisseiaWiki.Services
             {
                 return default;
             }
+        }
+
+        private static List<string>? DeserializeRelatedCharacterIds(string? value)
+        {
+            List<JsonElement>? items = Deserialize<List<JsonElement>>(value);
+            if (items is null) return null;
+
+            return items
+                .Select(item => item.ValueKind switch
+                {
+                    JsonValueKind.Number => item.GetRawText(),
+                    JsonValueKind.String => item.GetString(),
+                    _ => null,
+                })
+                .Where(id => int.TryParse(id, out int parsed) && parsed > 0)
+                .Select(id => id!)
+                .ToList();
         }
     }
 }

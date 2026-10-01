@@ -7,13 +7,14 @@ namespace OdisseiaWiki.Repositories.Interfaces
 {
     public interface IRacaRepository
     {
-        Task<List<Raca>> GetAllAsync(bool? visivel = null);
+        Task<List<Raca>> GetAllAsync(bool? visivel = null, int? idWikiEscopo = null);
         Task<Raca?> GetByIdAsync(int id);
+        Task<Raca?> GetByIdAsync(int id, int? idWikiEscopo);
         Task<Raca> CreateAsync(Raca raca);
         Task<Raca> UpdateAsync(Raca raca);
         Task<bool> DeleteAsync(int id);
-        Task<List<Raca>> SearchAsync(string termo);
-        Task<List<Raca>> GetBatchAsync(List<int> ids);
-        Task<List<RacaPassivaDto>> SyncPassivasAsync(int idRaca, IReadOnlyCollection<RacaPassivaDto> passivas);
+        Task<List<Raca>> SearchAsync(string termo, int? idWikiEscopo = null);
+        Task<List<Raca>> GetBatchAsync(List<int> ids, int? idWikiEscopo = null);
+        Task<List<RacaPassivaDto>> SyncPassivasAsync(int idRaca, IReadOnlyCollection<RacaPassivaDto> passivas, int? idWikiEscopo = null);
     }
 }

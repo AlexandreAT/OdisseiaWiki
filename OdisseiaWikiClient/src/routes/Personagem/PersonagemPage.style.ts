@@ -1011,7 +1011,7 @@ export const StatusDiv = styled.div`
   background: rgba(0, 0, 10, 0.65);
   box-sizing: border-box;
 
-  > :last-child {
+  > div:last-of-type {
     flex: 1;
     min-width: 0;
     padding-right: 4px;
@@ -1052,27 +1052,48 @@ export const StatusDiv = styled.div`
 
 export const StatusActionButton = styled.button`
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 10px;
+  right: 10px;
   z-index: 4;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 24px;
+  height: 24px;
   padding: 0;
-  border: 1px solid var(--neonYellow);
-  background: rgba(12, 12, 0, 0.7);
+  border: 0;
+  background: transparent;
   color: var(--neonYellow);
   cursor: pointer;
+  transition: color 160ms ease, transform 160ms ease, filter 160ms ease;
 
-  svg { font-size: 17px; }
+  svg { font-size: 19px; }
 
   &:hover,
   &:focus-visible {
     color: var(--clearneonYellow);
-    border-color: var(--clearneonYellow);
-    box-shadow: 0 0 8px color-mix(in srgb, var(--clearneonYellow) 65%, transparent);
+    transform: scale(1.12);
+    filter: drop-shadow(0 0 5px var(--clearneonYellow));
+    outline: none;
+  }
+`;
+
+export const CloneCharacterButton = styled.button`
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  border: 1px solid var(--neonBlue);
+  background: rgba(0, 170, 220, .1);
+  color: var(--neonBlue);
+  cursor: pointer;
+  transition: background 160ms ease, box-shadow 160ms ease;
+
+  svg { font-size: 18px; }
+  &:hover, &:focus-visible {
+    background: rgba(0, 170, 220, .18);
+    box-shadow: 0 0 9px rgba(0, 179, 255, .4);
     outline: none;
   }
 `;
@@ -1376,6 +1397,17 @@ export const RelatedLink = styled.span`
     display: inline-flex !important;
     width: auto !important;
   }
+`;
+
+export const RelatedHiddenCard = styled.span`
+  display: inline-block;
+  width: 54px;
+  height: 23px;
+  margin: 0 4px;
+  vertical-align: middle;
+  background: #000;
+  border: 1px solid #171717;
+  border-radius: 3px;
 `;
 
 export const StoryWithImage = styled.div<{ cityImage?: string | null }>`

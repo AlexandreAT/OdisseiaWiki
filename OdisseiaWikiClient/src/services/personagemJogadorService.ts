@@ -2,6 +2,7 @@ import api from "../axios/api";
 import { PersonagemJogador } from "../models/PersonagemJogador";
 import { Principais, Secundarios } from "../models/PersonagemJogador";
 import { JSONContent } from "../models/Characters";
+import type { PersonagemVisibilidade } from '../models/PersonagemVisibilidade';
 
 export interface PersonagemJogadorPayload {
   idpersonagemJogador?: number;
@@ -13,6 +14,7 @@ export interface PersonagemJogadorPayload {
   revisaoRuntime?: number;
   chaveIdempotencia?: string;
   visivel?: boolean;
+  visibilidadeInicial?: PersonagemVisibilidade;
   historia?: JSONContent | string;
   imagem?: string;
   galeriaImagem?: string[];

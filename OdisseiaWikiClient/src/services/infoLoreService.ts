@@ -1,6 +1,7 @@
 import api from "../axios/api";
 import { JSONContent } from "../models/Characters";
 import { ServiceRequestOptions } from './serviceRequestOptions';
+import { getMesaWikiApiPath, getMesaWikiIdFromPath } from './wikiContext';
 
 export interface InfoLoreDto {
   idinfoLore?: number;
@@ -67,7 +68,8 @@ export const globalSearch = async (
     ? normalizedCategoryTerm
     : termo.trim();
 
-  const response = await api.get("/infolore/search/management", {
+  const response = await api.get(
+    getMesaWikiIdFromPath() ? getMesaWikiApiPath('search', '/infolore/search/management') : '/infolore/search/management', {
     params: { termo: requestTerm },
     ...requestOptions,
   });

@@ -58,6 +58,7 @@ export const CheckDisplay = styled.div<DisplayProps & { height?: string }>`
                 : 'var(--clearblack)'};
   border: 2px solid var(--black-blue);
   box-shadow: 0 0 1px 1px rgba(50,50,50,0.8);
+  color: ${({ theme }) => theme === 'dark' ? 'var(--whitesmoke)' : 'var(--deepgrey)'};
   transition: border 0.2s, box-shadow 0.2s;
   width: 100%;
   min-width: 0;

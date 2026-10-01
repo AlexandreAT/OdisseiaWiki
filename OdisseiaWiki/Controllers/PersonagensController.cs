@@ -41,7 +41,7 @@ namespace OdisseiaWiki.Controllers
             if (!User.IsAdmin())
             {
                 foreach (Personagen personagem in personagens)
-                    PersonagemVisibilidadeProjection.ApplyForExternalViewer(personagem);
+                    await _service.ProjectForPublicAsync(personagem);
             }
             return Ok(personagens);
         }
@@ -54,7 +54,7 @@ namespace OdisseiaWiki.Controllers
                 return NotFound($"Personagem com id {id} não encontrado.");
 
             if (!User.IsAdmin())
-                PersonagemVisibilidadeProjection.ApplyForExternalViewer(personagem);
+                await _service.ProjectForPublicAsync(personagem);
 
             return Ok(personagem);
         }
@@ -104,7 +104,7 @@ namespace OdisseiaWiki.Controllers
             {
                 personagens = personagens.Where(personagem => personagem.Visivel).ToList();
                 foreach (Personagen personagem in personagens)
-                    PersonagemVisibilidadeProjection.ApplyForExternalViewer(personagem);
+                    await _service.ProjectForPublicAsync(personagem);
             }
 
             return Ok(personagens);

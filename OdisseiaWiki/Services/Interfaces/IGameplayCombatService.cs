@@ -8,6 +8,7 @@ public interface IGameplayCombatService
     Task<GameplayOperationResult<GameplayStateCatalogDto>> GetCatalogAsync(int idMesa, long idMesaSessao, int idUsuario, CancellationToken cancellationToken = default);
     Task<GameplayOperationResult<GameplayCombatCommandResponseDto>> StartAsync(int idMesa, long idMesaSessao, int idUsuario, GameplayCombatStartRequestDto request, CancellationToken cancellationToken = default);
     Task<GameplayOperationResult<GameplayCombatCommandResponseDto>> AddNpcAsync(int idMesa, long idMesaSessao, int idUsuario, GameplayCombatAddNpcRequestDto request, CancellationToken cancellationToken = default);
+    Task<GameplayOperationResult<GameplayCombatCommandResponseDto>> RemoveParticipantAsync(int idMesa, long idMesaSessao, int idUsuario, GameplayCombatRemoveParticipantRequestDto request, CancellationToken cancellationToken = default);
     Task<GameplayOperationResult<GameplayCombatCommandResponseDto>> RollInitiativeAsync(int idMesa, long idMesaSessao, int idUsuario, GameplayCombatInitiativeRequestDto request, CancellationToken cancellationToken = default);
     Task<GameplayOperationResult<GameplayCombatCommandResponseDto>> ActivateAsync(int idMesa, long idMesaSessao, int idUsuario, GameplayCombatActivateRequestDto request, CancellationToken cancellationToken = default);
     Task<GameplayOperationResult<GameplayCombatCommandResponseDto>> AdvanceAsync(int idMesa, long idMesaSessao, int idUsuario, GameplayCombatAdvanceRequestDto request, CancellationToken cancellationToken = default);

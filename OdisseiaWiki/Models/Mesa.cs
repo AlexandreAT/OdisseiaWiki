@@ -56,6 +56,9 @@ public partial class Mesa
     public virtual ICollection<MesaEntidadeConfig> MesaEntidadeConfigs { get; set; } = new List<MesaEntidadeConfig>();
 
     [JsonIgnore]
+    public virtual WikiEscopo? WikiEscopo { get; set; }
+
+    [JsonIgnore]
     public virtual SistemaVersao? SistemaVersao { get; set; }
 
     public virtual ICollection<Mesausuario> Mesausuarios { get; set; } = new List<Mesausuario>();

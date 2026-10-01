@@ -59,7 +59,7 @@ export const LoginInput = styled.input<Props>`
     font-size: 0.9em;
     padding: 25px 10px 10px;
     font-weight: 600;
-    color: var(--deepgrey);
+    color: ${({ theme }) => theme === 'dark' ? 'var(--whitesmoke)' : 'var(--deepgrey)'};
     transition: background-color 0.2s, border 0.2s;
     box-shadow: 0 0 1px 1px rgba(50, 50, 50, 0.8);
     min-width: 0;
@@ -67,7 +67,8 @@ export const LoginInput = styled.input<Props>`
     box-sizing: border-box;
 
     &:disabled {
-        opacity: 0.64;
+        color: ${({ theme }) => theme === 'dark' ? 'var(--lightGrey)' : 'var(--mediumgrey)'};
+        opacity: 0.82;
         cursor: not-allowed;
     }
 

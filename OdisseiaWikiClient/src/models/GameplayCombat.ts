@@ -10,6 +10,8 @@ export interface GameplayCombatParticipant {
   tipo: 'PersonagemJogador' | 'Npc';
   status: GameplayCombatParticipantStatus;
   idPersonagemJogador?: number | null;
+  idPersonagemOrigem?: number | null;
+  idVarianteOrigem?: string | null;
   idUsuarioControlador?: number | null;
   nome: string;
   imagem?: string | null;

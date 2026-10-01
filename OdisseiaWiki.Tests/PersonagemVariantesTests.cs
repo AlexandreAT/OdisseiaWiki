@@ -83,7 +83,9 @@ public sealed class PersonagemVariantesTests
         binding.Setup(s => s.ValidarAsync(It.IsAny<int?>(), It.IsAny<int?>(), It.IsAny<bool>(), It.IsAny<SistemaEntidadeVinculoExistente?>()))
             .ReturnsAsync(new SistemaEntidadeVinculoResultado(true, null, null, true));
         var assets = new Mock<IAssetService>();
-        var service = new PersonagemService(repository.Object, assets.Object, Mock.Of<ISistemaRpgResolver>(), binding.Object);
+        var service = new PersonagemService(
+            repository.Object, assets.Object, Mock.Of<ISistemaRpgResolver>(), binding.Object,
+            Mock.Of<IRacaRepository>(), Mock.Of<ICidadeRepository>());
         var dto = Draft();
 
         Assert.True((await service.CreateAsync(dto)).Sucesso);

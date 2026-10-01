@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using OdisseiaWiki.Data;
+using OdisseiaWiki.Models;
 using OdisseiaWiki.Repositories.Interfaces;
 using OdisseiaWiki.Services.Helpers;
 using System.Collections.Generic;
@@ -17,9 +18,10 @@ namespace OdisseiaWiki.Repositories
             _context = context;
         }
 
-        public async Task<List<Item>> GetAllAsync(bool? visivel = null)
+        public async Task<List<Item>> GetAllAsync(bool? visivel = null, int? idWikiEscopo = null)
         {
-            var query = _context.Itens.AsNoTracking();
+            var query = _context.Itens.AsNoTracking()
+                .Where(item => item.IdWikiEscopo == (idWikiEscopo ?? WikiEscopo.IdOficial));
 
             if (visivel.HasValue)
                 query = query.Where(i => i.Visivel == visivel.Value);
@@ -27,8 +29,11 @@ namespace OdisseiaWiki.Repositories
             return await query.ToListAsync();
         }
 
-        public async Task<Item?> GetByIdAsync(string id)
-            => await _context.Itens.FindAsync(id);
+        public Task<Item?> GetByIdAsync(string id) => GetByIdAsync(id, null);
+
+        public async Task<Item?> GetByIdAsync(string id, int? idWikiEscopo)
+            => await _context.Itens.FirstOrDefaultAsync(item => item.Iditem == id &&
+                item.IdWikiEscopo == (idWikiEscopo ?? WikiEscopo.IdOficial));
 
         public async Task AddAsync(Item item)
         {
@@ -52,12 +57,13 @@ namespace OdisseiaWiki.Repositories
             }
         }
 
-        public async Task<List<Item>> SearchAsync(string termo)
+        public async Task<List<Item>> SearchAsync(string termo, int? idWikiEscopo = null)
         {
             var termoLower = termo.ToLower();
 
             var itens = await _context.Itens
                 .AsNoTracking()
+                .Where(item => item.IdWikiEscopo == (idWikiEscopo ?? WikiEscopo.IdOficial))
                 .ToListAsync();
 
             return itens.Where(i =>
@@ -67,11 +73,12 @@ namespace OdisseiaWiki.Repositories
             ).ToList();
         }
 
-        public async Task<List<Item>> GetBatchAsync(List<string> ids)
+        public async Task<List<Item>> GetBatchAsync(List<string> ids, int? idWikiEscopo = null)
         {
             return await _context.Itens
                 .AsNoTracking()
-                .Where(i => ids.Contains(i.Iditem))
+                .Where(i => ids.Contains(i.Iditem) &&
+                    i.IdWikiEscopo == (idWikiEscopo ?? WikiEscopo.IdOficial))
                 .ToListAsync();
         }
     }

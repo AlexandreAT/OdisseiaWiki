@@ -24,7 +24,7 @@ namespace OdisseiaWiki.Repositories
             return page;
         }
 
-        public async Task<List<Page>> SearchAsync(string termo)
+        public async Task<List<Page>> SearchAsync(string termo, int? idWikiEscopo = null)
         {
             string normalizedTerm = termo.Trim().ToLowerInvariant();
 
@@ -33,6 +33,7 @@ namespace OdisseiaWiki.Repositories
 
             return await _context.Pages
                 .AsNoTracking()
+                .Where(page => page.IdWikiEscopo == (idWikiEscopo ?? WikiEscopo.IdOficial))
                 .Where(p =>
                     p.Titulo.ToLower().Contains(normalizedTerm) ||
                     p.Slug.ToLower().Contains(normalizedTerm)
@@ -41,24 +42,28 @@ namespace OdisseiaWiki.Repositories
                 .ToListAsync();
         }
 
-        public async Task<Page?> GetByIdAsync(int id)
+        public async Task<Page?> GetByIdAsync(int id, int? idWikiEscopo = null)
             => await _context.Pages
                 .Include(p => p.Blocks.OrderBy(b => b.Ordem))
-                .FirstOrDefaultAsync(p => p.IdPage == id);
+                .FirstOrDefaultAsync(p => p.IdPage == id &&
+                    p.IdWikiEscopo == (idWikiEscopo ?? WikiEscopo.IdOficial));
 
-        public Task<bool> ExistsVisibleAsync(int id)
+        public Task<bool> ExistsVisibleAsync(int id, int? idWikiEscopo = null)
             => _context.Pages
                 .AsNoTracking()
-                .AnyAsync(page => page.IdPage == id && page.Visivel);
+                .AnyAsync(page => page.IdPage == id && page.Visivel &&
+                    page.IdWikiEscopo == (idWikiEscopo ?? WikiEscopo.IdOficial));
 
-        public async Task<Page?> GetBySlugAsync(string slug)
+        public async Task<Page?> GetBySlugAsync(string slug, int? idWikiEscopo = null)
             => await _context.Pages
                 .Include(p => p.Blocks.OrderBy(b => b.Ordem))
-                .FirstOrDefaultAsync(p => p.Slug == slug);
+                .FirstOrDefaultAsync(p => p.Slug == slug &&
+                    p.IdWikiEscopo == (idWikiEscopo ?? WikiEscopo.IdOficial));
 
-        public async Task<List<Page>> GetAllAsync(bool? visivel = null)
+        public async Task<List<Page>> GetAllAsync(bool? visivel = null, int? idWikiEscopo = null)
         {
-            IQueryable<Page> query = _context.Pages.AsNoTracking();
+            IQueryable<Page> query = _context.Pages.AsNoTracking()
+                .Where(page => page.IdWikiEscopo == (idWikiEscopo ?? WikiEscopo.IdOficial));
 
             if (visivel.HasValue)
                 query = query.Where(p => p.Visivel == visivel.Value);
@@ -66,11 +71,12 @@ namespace OdisseiaWiki.Repositories
             return await query.ToListAsync();
         }
 
-        public async Task<List<Page>> GetWithRelationBlocksAsync(bool? visivel = null)
+        public async Task<List<Page>> GetWithRelationBlocksAsync(bool? visivel = null, int? idWikiEscopo = null)
         {
             IQueryable<Page> query = _context.Pages
                 .AsNoTracking()
-                .Include(page => page.Blocks.Where(block => block.Tipo == PageBlockType.Relation));
+                .Include(page => page.Blocks.Where(block => block.Tipo == PageBlockType.Relation))
+                .Where(page => page.IdWikiEscopo == (idWikiEscopo ?? WikiEscopo.IdOficial));
 
             if (visivel.HasValue)
                 query = query.Where(page => page.Visivel == visivel.Value);

@@ -161,6 +161,7 @@ public sealed class GameplayMariaDbIntegrationTests
             });
 
         Assert.True(roll.Sucesso);
+        Assert.Equal(seed.Session!.UltimaSequenciaEvento + 1, roll.Dados!.UltimaSequenciaEvento);
         GameplayEngineService ownerService = CreateGameplayService(ownerContext);
         GameplayOperationResult<GameplayEventPageDto> ownerHistory = await ownerService.GetEventsAsync(
             seed.Mesa.Idmesa,

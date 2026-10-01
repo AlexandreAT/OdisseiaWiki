@@ -64,6 +64,10 @@ namespace OdisseiaWiki.Migrations
                         .HasColumnType("int")
                         .HasColumnName("IDSistemaVersao");
 
+                    b.Property<int>("IdWikiEscopo")
+                        .HasColumnType("int")
+                        .HasColumnName("IDWikiEscopo");
+
                     b.Property<string>("IditemBase")
                         .HasMaxLength(50)
                         .HasColumnType("varchar(50)");
@@ -110,6 +114,9 @@ namespace OdisseiaWiki.Migrations
                     b.HasIndex("IdSistemaVersao")
                         .HasDatabaseName("IX_Item_SistemaVersao");
 
+                    b.HasIndex("IdWikiEscopo")
+                        .HasDatabaseName("IX_Item_WikiEscopo");
+
                     b.HasIndex("PersonagemIdpersonagem");
 
                     b.ToTable("itens", null, t =>
@@ -139,6 +146,14 @@ namespace OdisseiaWiki.Migrations
                     b.Property<string>("GaleriaImagem")
                         .HasColumnType("longtext");
 
+                    b.Property<int?>("IdSistemaRpg")
+                        .HasColumnType("int")
+                        .HasColumnName("IDSistemaRpg");
+
+                    b.Property<int>("IdWikiEscopo")
+                        .HasColumnType("int")
+                        .HasColumnName("IDWikiEscopo");
+
                     b.Property<string>("Imagem")
                         .HasMaxLength(255)
                         .HasColumnType("varchar(255)");
@@ -159,6 +174,12 @@ namespace OdisseiaWiki.Migrations
 
                     b.HasKey("Idcidade")
                         .HasName("PRIMARY");
+
+                    b.HasIndex("IdSistemaRpg")
+                        .HasDatabaseName("IX_Cidade_SistemaRpg");
+
+                    b.HasIndex("IdWikiEscopo")
+                        .HasDatabaseName("IX_Cidade_WikiEscopo");
 
                     b.ToTable("cidades", (string)null);
                 });
@@ -460,9 +481,17 @@ namespace OdisseiaWiki.Migrations
                         .HasColumnType("int(11)")
                         .HasColumnName("IDPersonagemJogador");
 
+                    b.Property<int?>("IdPersonagemOrigem")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("IDPersonagemOrigem");
+
                     b.Property<int?>("IdUsuarioControlador")
                         .HasColumnType("int(11)")
                         .HasColumnName("IDUsuarioControlador");
+
+                    b.Property<string>("IdVarianteOrigem")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
 
                     b.Property<string>("ImagemSnapshot")
                         .HasMaxLength(500)
@@ -507,6 +536,9 @@ namespace OdisseiaWiki.Migrations
                     b.HasKey("IdMesaCombateParticipante");
 
                     b.HasIndex("IdPersonagemJogador");
+
+                    b.HasIndex("IdPersonagemOrigem")
+                        .HasDatabaseName("IX_MesaCombateParticipante_PersonagemOrigem");
 
                     b.HasIndex("IdUsuarioControlador");
 
@@ -1138,6 +1170,14 @@ namespace OdisseiaWiki.Migrations
                     b.Property<bool>("Destaque")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<int?>("IdSistemaRpg")
+                        .HasColumnType("int")
+                        .HasColumnName("IDSistemaRpg");
+
+                    b.Property<int>("IdWikiEscopo")
+                        .HasColumnType("int")
+                        .HasColumnName("IDWikiEscopo");
+
                     b.Property<string>("Slug")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -1152,6 +1192,15 @@ namespace OdisseiaWiki.Migrations
                         .HasColumnType("tinyint(1)");
 
                     b.HasKey("IdPage");
+
+                    b.HasIndex("IdSistemaRpg");
+
+                    b.HasIndex("IdWikiEscopo")
+                        .HasDatabaseName("IX_Page_WikiEscopo");
+
+                    b.HasIndex("IdWikiEscopo", "Slug")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Page_WikiEscopo_Slug");
 
                     b.ToTable("Pages");
                 });
@@ -1201,6 +1250,10 @@ namespace OdisseiaWiki.Migrations
                     b.Property<bool>("Destaque")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<int>("IdWikiEscopo")
+                        .HasColumnType("int")
+                        .HasColumnName("IDWikiEscopo");
+
                     b.Property<string>("Nome")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -1216,6 +1269,9 @@ namespace OdisseiaWiki.Migrations
                         .HasColumnType("tinyint(1)");
 
                     b.HasKey("Idpassiva");
+
+                    b.HasIndex("IdWikiEscopo")
+                        .HasDatabaseName("IX_Passiva_WikiEscopo");
 
                     b.ToTable("Passivas");
                 });
@@ -1274,9 +1330,17 @@ namespace OdisseiaWiki.Migrations
                     b.Property<string>("Historia")
                         .HasColumnType("text");
 
+                    b.Property<int?>("IdPersonagemOrigem")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("IDPersonagemOrigem");
+
                     b.Property<int?>("IdSistemaVersao")
                         .HasColumnType("int")
                         .HasColumnName("IDSistemaVersao");
+
+                    b.Property<string>("IdVarianteOrigem")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
 
                     b.Property<int?>("Idcidade")
                         .HasColumnType("int(11)")
@@ -1356,10 +1420,15 @@ namespace OdisseiaWiki.Migrations
                     b.HasKey("IdpersonagemJogador")
                         .HasName("PRIMARY");
 
+                    b.HasIndex("IdPersonagemOrigem");
+
                     b.HasIndex("IdSistemaVersao")
                         .HasDatabaseName("IX_PersonagensJogador_SistemaVersao");
 
                     b.HasIndex("PassivaIdpassiva");
+
+                    b.HasIndex("Idmesa", "IdPersonagemOrigem")
+                        .HasDatabaseName("IX_PersonagemJogador_Mesa_NpcOrigem");
 
                     b.HasIndex(new[] { "Idcidade" }, "ID_cidades");
 
@@ -1585,6 +1654,10 @@ namespace OdisseiaWiki.Migrations
                         .HasColumnType("int")
                         .HasColumnName("IDSistemaVersao");
 
+                    b.Property<int>("IdWikiEscopo")
+                        .HasColumnType("int")
+                        .HasColumnName("IDWikiEscopo");
+
                     b.Property<int?>("Idcidade")
                         .HasColumnType("int(11)")
                         .HasColumnName("IDCidade");
@@ -1651,6 +1724,9 @@ namespace OdisseiaWiki.Migrations
 
                     b.HasIndex("IdSistemaVersao")
                         .HasDatabaseName("IX_Personagem_SistemaVersao");
+
+                    b.HasIndex("IdWikiEscopo")
+                        .HasDatabaseName("IX_Personagem_WikiEscopo");
 
                     b.HasIndex("PassivaIdpassiva");
 
@@ -1734,6 +1810,10 @@ namespace OdisseiaWiki.Migrations
                         .HasColumnType("int")
                         .HasColumnName("IDSistemaVersao");
 
+                    b.Property<int>("IdWikiEscopo")
+                        .HasColumnType("int")
+                        .HasColumnName("IDWikiEscopo");
+
                     b.Property<string>("Imagem")
                         .HasMaxLength(255)
                         .HasColumnType("varchar(255)");
@@ -1763,6 +1843,9 @@ namespace OdisseiaWiki.Migrations
 
                     b.HasIndex("IdSistemaVersao")
                         .HasDatabaseName("IX_Raca_SistemaVersao");
+
+                    b.HasIndex("IdWikiEscopo")
+                        .HasDatabaseName("IX_Raca_WikiEscopo");
 
                     b.ToTable("racas", null, t =>
                         {
@@ -3342,6 +3425,45 @@ namespace OdisseiaWiki.Migrations
                     b.ToTable("usuariosemailtokens", (string)null);
                 });
 
+            modelBuilder.Entity("OdisseiaWiki.Models.WikiEscopo", b =>
+                {
+                    b.Property<int>("IdWikiEscopo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("IDWikiEscopo");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("IdWikiEscopo"));
+
+                    b.Property<string>("Chave")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("varchar(80)");
+
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("datetime");
+
+                    b.Property<int?>("IdMesa")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("IDMesa");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.HasKey("IdWikiEscopo");
+
+                    b.HasIndex("Chave")
+                        .IsUnique()
+                        .HasDatabaseName("UX_WikiEscopo_Chave");
+
+                    b.HasIndex("IdMesa")
+                        .IsUnique()
+                        .HasDatabaseName("UX_WikiEscopo_Mesa");
+
+                    b.ToTable("wikiescopos", (string)null);
+                });
+
             modelBuilder.Entity("Item", b =>
                 {
                     b.HasOne("OdisseiaWiki.Models.SistemaRpg", "SistemaRpg")
@@ -3356,6 +3478,13 @@ namespace OdisseiaWiki.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("FK_Item_SistemaVersao");
 
+                    b.HasOne("OdisseiaWiki.Models.WikiEscopo", "WikiEscopo")
+                        .WithMany("Itens")
+                        .HasForeignKey("IdWikiEscopo")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_Item_WikiEscopo");
+
                     b.HasOne("OdisseiaWiki.Models.Personagen", "Personagem")
                         .WithMany()
                         .HasForeignKey("PersonagemIdpersonagem");
@@ -3365,6 +3494,28 @@ namespace OdisseiaWiki.Migrations
                     b.Navigation("SistemaRpg");
 
                     b.Navigation("SistemaVersao");
+
+                    b.Navigation("WikiEscopo");
+                });
+
+            modelBuilder.Entity("OdisseiaWiki.Models.Cidade", b =>
+                {
+                    b.HasOne("OdisseiaWiki.Models.SistemaRpg", "SistemaRpg")
+                        .WithMany()
+                        .HasForeignKey("IdSistemaRpg")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_Cidade_SistemaRpg");
+
+                    b.HasOne("OdisseiaWiki.Models.WikiEscopo", "WikiEscopo")
+                        .WithMany("Cidades")
+                        .HasForeignKey("IdWikiEscopo")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_Cidade_WikiEscopo");
+
+                    b.Navigation("SistemaRpg");
+
+                    b.Navigation("WikiEscopo");
                 });
 
             modelBuilder.Entity("OdisseiaWiki.Models.Mesa", b =>
@@ -3476,6 +3627,12 @@ namespace OdisseiaWiki.Migrations
                         .HasForeignKey("IdPersonagemJogador")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("OdisseiaWiki.Models.Personagen", "PersonagemOrigem")
+                        .WithMany()
+                        .HasForeignKey("IdPersonagemOrigem")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("FK_MesaCombateParticipante_PersonagemOrigem");
+
                     b.HasOne("OdisseiaWiki.Models.Usuario", "UsuarioControlador")
                         .WithMany()
                         .HasForeignKey("IdUsuarioControlador")
@@ -3484,6 +3641,8 @@ namespace OdisseiaWiki.Migrations
                     b.Navigation("Combate");
 
                     b.Navigation("PersonagemJogador");
+
+                    b.Navigation("PersonagemOrigem");
 
                     b.Navigation("UsuarioControlador");
                 });
@@ -3769,6 +3928,26 @@ namespace OdisseiaWiki.Migrations
                     b.Navigation("IdusuarioNavigation");
                 });
 
+            modelBuilder.Entity("OdisseiaWiki.Models.Page", b =>
+                {
+                    b.HasOne("OdisseiaWiki.Models.SistemaRpg", "SistemaRpg")
+                        .WithMany()
+                        .HasForeignKey("IdSistemaRpg")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_Page_SistemaRpg");
+
+                    b.HasOne("OdisseiaWiki.Models.WikiEscopo", "WikiEscopo")
+                        .WithMany("Pages")
+                        .HasForeignKey("IdWikiEscopo")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_Page_WikiEscopo");
+
+                    b.Navigation("SistemaRpg");
+
+                    b.Navigation("WikiEscopo");
+                });
+
             modelBuilder.Entity("OdisseiaWiki.Models.PageBlock", b =>
                 {
                     b.HasOne("OdisseiaWiki.Models.Page", "Page")
@@ -3778,6 +3957,18 @@ namespace OdisseiaWiki.Migrations
                         .IsRequired();
 
                     b.Navigation("Page");
+                });
+
+            modelBuilder.Entity("OdisseiaWiki.Models.Passiva", b =>
+                {
+                    b.HasOne("OdisseiaWiki.Models.WikiEscopo", "WikiEscopo")
+                        .WithMany("Passivas")
+                        .HasForeignKey("IdWikiEscopo")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_Passiva_WikiEscopo");
+
+                    b.Navigation("WikiEscopo");
                 });
 
             modelBuilder.Entity("OdisseiaWiki.Models.Passivaraca", b =>
@@ -3801,6 +3992,12 @@ namespace OdisseiaWiki.Migrations
 
             modelBuilder.Entity("OdisseiaWiki.Models.PersonagemJogador", b =>
                 {
+                    b.HasOne("OdisseiaWiki.Models.Personagen", "PersonagemOrigem")
+                        .WithMany()
+                        .HasForeignKey("IdPersonagemOrigem")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("FK_PersonagensJogador_PersonagemOrigem");
+
                     b.HasOne("OdisseiaWiki.Models.SistemaVersao", "SistemaVersao")
                         .WithMany()
                         .HasForeignKey("IdSistemaVersao")
@@ -3843,6 +4040,8 @@ namespace OdisseiaWiki.Migrations
                     b.Navigation("Mesa");
 
                     b.Navigation("Passiva");
+
+                    b.Navigation("PersonagemOrigem");
 
                     b.Navigation("SistemaVersao");
 
@@ -3905,6 +4104,13 @@ namespace OdisseiaWiki.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("FK_Personagem_SistemaVersao");
 
+                    b.HasOne("OdisseiaWiki.Models.WikiEscopo", "WikiEscopo")
+                        .WithMany("Personagens")
+                        .HasForeignKey("IdWikiEscopo")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_Personagem_WikiEscopo");
+
                     b.HasOne("OdisseiaWiki.Models.Cidade", "IdcidadeNavigation")
                         .WithMany("Personagens")
                         .HasForeignKey("Idcidade")
@@ -3929,6 +4135,8 @@ namespace OdisseiaWiki.Migrations
                     b.Navigation("SistemaRpg");
 
                     b.Navigation("SistemaVersao");
+
+                    b.Navigation("WikiEscopo");
                 });
 
             modelBuilder.Entity("OdisseiaWiki.Models.Raca", b =>
@@ -3945,9 +4153,18 @@ namespace OdisseiaWiki.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("FK_Raca_SistemaVersao");
 
+                    b.HasOne("OdisseiaWiki.Models.WikiEscopo", "WikiEscopo")
+                        .WithMany("Racas")
+                        .HasForeignKey("IdWikiEscopo")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_Raca_WikiEscopo");
+
                     b.Navigation("SistemaRpg");
 
                     b.Navigation("SistemaVersao");
+
+                    b.Navigation("WikiEscopo");
                 });
 
             modelBuilder.Entity("OdisseiaWiki.Models.SistemaAcaoConfig", b =>
@@ -4298,6 +4515,17 @@ namespace OdisseiaWiki.Migrations
                     b.Navigation("Usuario");
                 });
 
+            modelBuilder.Entity("OdisseiaWiki.Models.WikiEscopo", b =>
+                {
+                    b.HasOne("OdisseiaWiki.Models.Mesa", "Mesa")
+                        .WithOne("WikiEscopo")
+                        .HasForeignKey("OdisseiaWiki.Models.WikiEscopo", "IdMesa")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("FK_WikiEscopo_Mesa");
+
+                    b.Navigation("Mesa");
+                });
+
             modelBuilder.Entity("OdisseiaWiki.Models.Cidade", b =>
                 {
                     b.Navigation("Personagens");
@@ -4318,6 +4546,8 @@ namespace OdisseiaWiki.Migrations
                     b.Navigation("Sessoes");
 
                     b.Navigation("SolicitacoesEntrada");
+
+                    b.Navigation("WikiEscopo");
                 });
 
             modelBuilder.Entity("OdisseiaWiki.Models.MesaComando", b =>
@@ -4482,6 +4712,21 @@ namespace OdisseiaWiki.Migrations
                     b.Navigation("Mesausuarios");
 
                     b.Navigation("PersonagensJogadores");
+                });
+
+            modelBuilder.Entity("OdisseiaWiki.Models.WikiEscopo", b =>
+                {
+                    b.Navigation("Cidades");
+
+                    b.Navigation("Itens");
+
+                    b.Navigation("Pages");
+
+                    b.Navigation("Passivas");
+
+                    b.Navigation("Personagens");
+
+                    b.Navigation("Racas");
                 });
 #pragma warning restore 612, 618
         }

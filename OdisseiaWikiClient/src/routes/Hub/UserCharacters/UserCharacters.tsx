@@ -8,7 +8,7 @@ import { PersonagemJogador, StatusBase } from '../../../models/PersonagemJogador
 import { CidadePayload, getCidades, getCidadesByIds } from '../../../services/cidadesService';
 import { getMesas } from '../../../services/mesaService';
 import { Mesa } from '../../../models/Mesa';
-import { atualizarSistemaPersonagemJogador, deletarPersonagensJogador, getPersonagensPorUsuario } from '../../../services/personagemJogadorService';
+import { atualizarSistemaPersonagemJogador, deletarPersonagensJogador, getPersonagemJogadorById, getPersonagensPorUsuario } from '../../../services/personagemJogadorService';
 import { getRacas, getRacasByIds, RacaPayload } from '../../../services/racasService';
 import { getApiErrorMessage } from '../../../utils/apiError';
 import { CharacterSelectionCard } from './CharacterSelectionCard/CharacterSelectionCard';
@@ -95,6 +95,7 @@ const parsePersonagens = (data: PersonagemJogador[]): PersonagemComStatus[] => d
     mesaNome: source.mesaNome ?? source.MesaNome,
     autorNome: source.autorNome ?? source.AutorNome,
     proficiencias: source.proficiencias ?? source.Proficiencias ?? [],
+    visibilidade: source.visibilidade ?? source.Visibilidade,
     sistemaRuntime: source.sistemaRuntime ?? source.SistemaRuntime ?? null,
   };
   let parsedStatusJson: any = null;
@@ -195,6 +196,10 @@ export const UserCharacters = ({
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedStep: 1 | 2 = searchParams.get('step') === '2' ? 2 : 1;
+  const cloneCharacterId = Number(searchParams.get('cloneCharacterId'));
+  const cloneSource = Number.isInteger(cloneCharacterId)
+    ? personagens.find((item) => item.idpersonagemJogador === cloneCharacterId)
+    : undefined;
 
   const updateRouteState = (mode: ViewMode, character?: PersonagemJogador, step?: 1 | 2) => {
     const next = new URLSearchParams(searchParams);
@@ -204,10 +209,12 @@ export const UserCharacters = ({
       next.delete('mode');
       next.delete('characterId');
       next.delete('step');
+      next.delete('cloneCharacterId');
     } else {
       next.set('mode', mode);
       if (character) next.set('characterId', String(character.idpersonagemJogador));
       else next.delete('characterId');
+      if (mode !== 'create') next.delete('cloneCharacterId');
       if (mode === 'edit') next.set('step', String(step ?? 1));
       else next.delete('step');
     }
@@ -281,6 +288,15 @@ export const UserCharacters = ({
         setSelectedCharacter(character);
         setViewMode('edit');
         return;
+      }
+      if (Number.isInteger(characterId) && characterId > 0) {
+        let active = true;
+        void getPersonagemJogadorById(characterId).then((loaded) => {
+          if (!active || !loaded?.idPersonagemOrigem) return;
+          setSelectedCharacter(loaded);
+          setViewMode('edit');
+        }).catch(() => undefined);
+        return () => { active = false; };
       }
     }
 
@@ -383,6 +399,16 @@ export const UserCharacters = ({
     }
   };
 
+  const handleClone = (personagem: PersonagemJogador) => {
+    const next = new URLSearchParams(searchParams);
+    next.set('section', 'personagens');
+    next.set('mode', 'create');
+    next.set('cloneCharacterId', String(personagem.idpersonagemJogador));
+    next.delete('characterId');
+    next.delete('step');
+    setSearchParams(next);
+  };
+
   if (loading) return <LoadingIndicator label="Carregando personagens" />;
 
   if (viewMode === 'create') {
@@ -393,17 +419,20 @@ export const UserCharacters = ({
             <ArrowBack className="icon" />
           </StyledIconButton>
         </BackButtonDiv>
-        <Title theme={theme} neon={neon}>Criar Personagem</Title>
+        <Title theme={theme} neon={neon}>{cloneCharacterId ? 'Clonar Personagem' : 'Criar Personagem'}</Title>
+        {cloneCharacterId > 0 && !cloneSource && <p>Personagem original indisponível para clonagem.</p>}
         <Suspense fallback={<LoadingIndicator label="Carregando formulário" />}>
-          <CharacterCreate
+          {(!cloneCharacterId || cloneSource) && <CharacterCreate
+            key={cloneSource?.idpersonagemJogador ?? 'novo'}
             theme={theme}
             neon={neon}
             userId={userId}
+            cloneSource={cloneSource}
             onSave={async () => {
               updateRouteState('list');
               await refreshCharacters();
             }}
-          />
+          />}
         </Suspense>
       </Main>
     );
@@ -506,6 +535,7 @@ export const UserCharacters = ({
               onView={() => navigate(`/personagem/${personagem.idpersonagemJogador}?tipo=jogador`)}
               onSheet={() => updateRouteState('edit', personagem, 2)}
               onEdit={() => updateRouteState('edit', personagem, 1)}
+              onClone={() => handleClone(personagem)}
               onUpdateSystem={() => handleSystemUpdate(personagem)}
               updatingSystem={updatingSystemId === personagem.idpersonagemJogador}
               selectionMode={selectionMode}

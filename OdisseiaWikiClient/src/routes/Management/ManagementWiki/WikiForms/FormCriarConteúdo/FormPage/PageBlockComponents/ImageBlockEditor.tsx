@@ -6,6 +6,7 @@ import { ImageUploader } from '../../../../../../../components/Generic/ImageUplo
 import { InputText } from '../../../../../../../components/Generic/InputText/InputText';
 import { RichTextEditor } from '../../../../../../../components/Generic/RichTextEditor/RichTextEditor';
 import { saveAsset } from '../../../../../../../services/assetsService';
+import { getApiErrorMessage } from '../../../../../../../utils/apiError';
 import type { CropPreset, CropResult } from '../../../../../../../components/Generic/ImageUploader/types';
 import { normalizeImagePath } from '../../../../../../Wiki/utils/imagePathHelper';
 import { detectImageShapeFromUrl } from '../../../../../../../utils/imageDisplayShape';
@@ -81,7 +82,7 @@ export const ImageBlockEditor: React.FC<ImageBlockEditorProps> = ({
       onUpdate({ url: assetResult.path, legenda, texto, posicaoTexto, proporcao: aspectRatio });
       toast.success('Imagem salva com sucesso!');
     } catch (error) {
-      toast.error('Erro ao salvar imagem');
+      toast.error(getApiErrorMessage(error, 'Não foi possível salvar a imagem.'));
       console.error(error);
     }
   };

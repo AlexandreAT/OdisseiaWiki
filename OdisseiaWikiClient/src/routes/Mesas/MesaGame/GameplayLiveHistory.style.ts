@@ -18,6 +18,85 @@ export const MesaGameActivityMain = styled.div`
   min-width: 0;
 `;
 
+export const MesaSceneSection = styled(ManagementContent)`
+  position: relative;
+  margin-top: 24px;
+  padding: 22px;
+  > header h2 { position: relative; z-index: 5; margin: 0; color: var(--clearneonBlue); font-family: 'DO Futuristic', sans-serif; font-size: 1.2rem; font-weight: 100; letter-spacing: .045em; }
+  > header p { position: relative; z-index: 5; margin: 5px 0 18px; color: var(--lightGrey); font-size: .76rem; }
+
+  /* No celular a moldura desta seção consumia a largura útil duas vezes:
+     a da página e a deste painel. Os NPCs usam a mesma grade dos jogadores,
+     portanto a seção vira apenas um cabeçalho separador. */
+  @media (max-width: 720px) {
+    margin-top: 22px;
+    padding: 16px 0 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    clip-path: none;
+
+    > [aria-hidden='true'] {
+      display: none;
+    }
+  }
+`;
+
+export const MesaSceneHeader = styled.header`
+  position: relative;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  > button:only-child {
+    margin: 0 auto;
+  }
+
+  @media (max-width: 720px) {
+    padding: 15px 0 0;
+    border-top: 1px solid rgba(57, 211, 255, .52);
+  }
+`;
+
+export const MesaSceneAdd = styled.button`
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  border: 1px solid var(--clearneonBlue);
+  background: rgba(0, 20, 38, .82);
+  color: var(--clearneonBlue);
+  cursor: pointer;
+  transition: transform 160ms ease, border-color 160ms ease, color 160ms ease,
+    background 160ms ease, box-shadow 160ms ease;
+
+  svg { transition: transform 160ms ease; }
+
+  &:focus-visible {
+    border-color: var(--clearneonPink);
+    color: var(--clearneonPink);
+    outline: none;
+    box-shadow: 0 0 9px rgba(255, 0, 238, .32);
+  }
+
+  &:active { transform: scale(.94); }
+
+  @media (hover: hover) {
+    &:hover {
+      transform: translateY(-2px);
+      border-color: var(--clearneonPink);
+      color: var(--clearneonPink);
+      background: rgba(42, 4, 46, .86);
+      box-shadow: 0 0 9px rgba(255, 0, 238, .32);
+
+      svg { transform: rotate(90deg); }
+    }
+  }
+`;
+
 export const MesaGameActivitySidebar = styled.aside`
   position: relative;
   display: grid;
@@ -74,6 +153,7 @@ export const FavoriteRollsPanel = styled(ManagementContent)`
     font-family: 'DO Futuristic', sans-serif;
     font-size: .98rem;
     font-weight: 100;
+    letter-spacing: .045em;
   }
 
   h2 svg { width: 18px; height: 18px; color: #ffd65a; }

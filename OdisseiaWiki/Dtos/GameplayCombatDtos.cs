@@ -33,6 +33,8 @@ public sealed class GameplayCombatParticipantDto
     public MesaCombateParticipanteTipo Tipo { get; init; }
     public MesaCombateParticipanteStatus Status { get; init; }
     public int? IdPersonagemJogador { get; init; }
+    public int? IdPersonagemOrigem { get; init; }
+    public string? IdVarianteOrigem { get; init; }
     public int? IdUsuarioControlador { get; init; }
     public string Nome { get; init; } = string.Empty;
     public string? Imagem { get; init; }
@@ -136,9 +138,17 @@ public sealed class GameplayCombatAddNpcRequestDto : GameplayCombatCommandReques
     [Required, MaxLength(150)] public string Nome { get; set; } = string.Empty;
     [MaxLength(500)] public string? Imagem { get; set; }
     [Range(-1000, 1000)] public int ModificadorIniciativa { get; set; }
+    [Range(1, int.MaxValue)] public int? IdPersonagemJogador { get; set; }
+    [Range(1, int.MaxValue)] public int? IdPersonagemOrigem { get; set; }
+    [MaxLength(100)] public string? IdVarianteOrigem { get; set; }
 }
 
 public sealed class GameplayCombatInitiativeRequestDto : GameplayCombatCommandRequestDto
+{
+    [Range(1, long.MaxValue)] public long IdParticipante { get; set; }
+}
+
+public sealed class GameplayCombatRemoveParticipantRequestDto : GameplayCombatCommandRequestDto
 {
     [Range(1, long.MaxValue)] public long IdParticipante { get; set; }
 }

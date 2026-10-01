@@ -2,9 +2,16 @@ import CasinoOutlinedIcon from '@mui/icons-material/CasinoOutlined';
 import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
 import PersonAddAltOutlinedIcon from '@mui/icons-material/PersonAddAltOutlined';
 import SkipNextOutlinedIcon from '@mui/icons-material/SkipNextOutlined';
-import { useEffect, useMemo, useState } from 'react';
+import SortOutlinedIcon from '@mui/icons-material/SortOutlined';
+import DragIndicatorOutlinedIcon from '@mui/icons-material/DragIndicatorOutlined';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { GameplayCombatParticipant, GameplayCombatSnapshot, GameplayRestCatalogItem } from '../../../models/GameplayCombat';
-import type { MesaPersonagemResumo } from '../../../models/Mesa';
+import type { MesaNpcCatalogo, MesaPersonagemResumo } from '../../../models/Mesa';
+import type { AdicionarNpcCombatePayload } from '../../../services/gameplayCombatService';
 import { MesaHudDecor } from '../components/MesaHudDecor/MesaHudDecor';
 import {
   CombatActions,
@@ -33,7 +40,9 @@ interface Props {
   rests: GameplayRestCatalogItem[];
   neon: boolean;
   onStart: (ids: number[]) => Promise<unknown>;
-  onAddNpc: (name: string, modifier: number) => Promise<unknown>;
+  onAddNpc: (npc: AdicionarNpcCombatePayload) => Promise<unknown>;
+  npcSearch: (term: string) => Promise<MesaNpcCatalogo[]>;
+  onRemoveParticipant: (id: number) => Promise<unknown>;
   onRequestInitiative: (participant: GameplayCombatParticipant) => void;
   onActivate: (participantIds: number[]) => Promise<unknown>;
   onAdvance: () => Promise<unknown>;
@@ -44,14 +53,25 @@ interface Props {
   onApplyRest: (characterId: number, restId: number, revision: number, guardConfirmed: boolean) => Promise<unknown>;
 }
 
+const SortableParticipant = ({ id, disabled, children }: { id: number; disabled: boolean; children: (handle: ReactNode) => ReactNode }) => {
+  const sortable = useSortable({ id, disabled });
+  const style = { transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition };
+  const handle = disabled ? null : (
+    <CombatButton type="button" ref={sortable.setActivatorNodeRef} {...sortable.attributes} {...sortable.listeners} title="Arrastar para reordenar"><DragIndicatorOutlinedIcon /></CombatButton>
+  );
+  return <div ref={sortable.setNodeRef} style={style}>{children(handle)}</div>;
+};
+
 export const GameplayCombatPanel = ({
   combat, characters, isMaster, loading, submitting, error, currentUserId, rests, neon,
-  onStart, onAddNpc, onRequestInitiative, onActivate, onAdvance, onEnd,
+  onStart, onAddNpc, npcSearch, onRemoveParticipant, onRequestInitiative, onActivate, onAdvance, onEnd,
   onApplyCondition, onRemoveCondition, onRequestSurvival, onApplyRest,
 }: Props) => {
   const [selected, setSelected] = useState<number[]>([]);
   const [order, setOrder] = useState<number[]>([]);
-  const [npcName, setNpcName] = useState('');
+  const [npcTerm, setNpcTerm] = useState('');
+  const [npcOptions, setNpcOptions] = useState<MesaNpcCatalogo[]>([]);
+  const [npcSelection, setNpcSelection] = useState('');
   const [npcModifier, setNpcModifier] = useState(0);
   const [conditionParticipant, setConditionParticipant] = useState<number | ''>('');
   const [conditionId, setConditionId] = useState<number | ''>('');
@@ -60,12 +80,26 @@ export const GameplayCombatPanel = ({
   const [restCharacterId, setRestCharacterId] = useState<number | ''>('');
   const [restId, setRestId] = useState<number | ''>('');
   const [guardConfirmed, setGuardConfirmed] = useState(false);
+  const initiativeSignature = combat?.participantes
+    .filter((participant) => participant.status !== 'Removido')
+    .map((participant) => `${participant.idParticipante}:${participant.iniciativa ?? ''}`)
+    .join('|') ?? '';
+  const previousInitiativeSignature = useRef('');
+  const knownCharacterIds = useRef<Set<number>>(new Set());
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   useEffect(() => {
-    if (selected.length === 0 && characters.length > 0) {
-      setSelected(characters.map((entry) => entry.personagem.idpersonagemJogador));
+    if (combat) return;
+    const currentIds = characters.map((entry) => entry.personagem.idpersonagemJogador);
+    const addedIds = currentIds.filter((id) => !knownCharacterIds.current.has(id));
+    knownCharacterIds.current = new Set(currentIds);
+    if (addedIds.length > 0) {
+      setSelected((current) => [...new Set([...current, ...addedIds])]);
     }
-  }, [characters, selected.length]);
+  }, [characters, combat]);
 
   const suggestedOrder = useMemo(() => combat?.participantes
     .filter((participant) => participant.status !== 'Removido')
@@ -74,15 +108,23 @@ export const GameplayCombatPanel = ({
 
   useEffect(() => {
     if (!combat || combat.status !== 'Preparacao') return;
-    setOrder((current) => current.length === suggestedOrder.length && current.every((id) => suggestedOrder.includes(id))
-      ? current
-      : suggestedOrder);
-  }, [combat, suggestedOrder]);
+    if (previousInitiativeSignature.current === initiativeSignature) return;
+    previousInitiativeSignature.current = initiativeSignature;
+    setOrder(suggestedOrder);
+  }, [combat, initiativeSignature, suggestedOrder]);
+
+  useEffect(() => {
+    if (!combat || combat.status !== 'Preparacao') return;
+    let active = true;
+    const timer = window.setTimeout(() => {
+      void npcSearch(npcTerm).then((items) => { if (active) setNpcOptions(items); }).catch(() => { if (active) setNpcOptions([]); });
+    }, npcTerm ? 220 : 0);
+    return () => { active = false; window.clearTimeout(timer); };
+  }, [combat, npcSearch, npcTerm]);
 
   const orderedParticipants = combat
     ? order.map((id) => combat.participantes.find((participant) => participant.idParticipante === id)).filter(Boolean)
     : [];
-  const allInitiatives = Boolean(combat?.participantes.length) && combat!.participantes.every((participant) => participant.iniciativa != null);
   const restCharacters = characters.filter((entry) => isMaster || Number(entry.idUsuarioDono ?? entry.personagem.idusuario ?? 0) === currentUserId);
   const selectedRest = rests.find((rest) => rest.idSistemaDescansoConfig === Number(restId));
   const selectedRestCharacter = restCharacters.find((entry) => entry.personagem.idpersonagemJogador === Number(restCharacterId));
@@ -92,13 +134,20 @@ export const GameplayCombatPanel = ({
     (!Number.isInteger(parsedConditionDuration) || parsedConditionDuration < 0)) ||
     (parsedConditionValue !== undefined && !Number.isFinite(parsedConditionValue));
 
-  const move = (index: number, direction: -1 | 1) => setOrder((current) => {
-    const target = index + direction;
-    if (target < 0 || target >= current.length) return current;
-    const next = [...current];
-    [next[index], next[target]] = [next[target], next[index]];
-    return next;
-  });
+  const onDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
+    setOrder((current) => {
+      const from = current.indexOf(Number(active.id));
+      const to = current.indexOf(Number(over.id));
+      return from < 0 || to < 0 ? current : arrayMove(current, from, to);
+    });
+  };
+
+  const selectedNpc = useMemo(() => {
+    const [sourceId, variantId = ''] = npcSelection.split(':');
+    const npc = npcOptions.find((item) => item.idPersonagem === Number(sourceId));
+    return npc ? { npc, variantId: variantId || null } : null;
+  }, [npcOptions, npcSelection]);
 
   return (
     <CombatPanel $neon={neon}>
@@ -151,9 +200,12 @@ export const GameplayCombatPanel = ({
 
         {combat && (
           <>
-            <CombatList>
-              {(combat.status === 'Preparacao' ? orderedParticipants : combat.participantes).map((participant, index) => participant && (
-                <CombatParticipant key={participant.idParticipante} $active={participant.idParticipante === combat.idParticipanteAtual}>
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+              <SortableContext items={order} strategy={verticalListSortingStrategy}>
+                <CombatList>
+              {(combat.status === 'Preparacao' ? orderedParticipants : combat.participantes).map((participant) => participant && (
+                <SortableParticipant key={participant.idParticipante} id={participant.idParticipante} disabled={!isMaster || combat.status !== 'Preparacao'}>
+                  {(dragHandle) => <CombatParticipant $active={participant.idParticipante === combat.idParticipanteAtual}>
                   {participant.imagem ? <img src={participant.imagem} alt="" /> : <span className="combat-avatar">{participant.tipo === 'Npc' ? 'N' : 'P'}</span>}
                   <div>
                     <strong>{participant.nome}</strong>
@@ -177,21 +229,43 @@ export const GameplayCombatPanel = ({
                   </div>
                   <div>
                     {participant.podeRolarIniciativa ? <CombatButton disabled={submitting} onClick={() => onRequestInitiative(participant)}><CasinoOutlinedIcon /> Rolar</CombatButton> : <InitiativeValue>{participant.iniciativa ?? '—'}</InitiativeValue>}
-                    {isMaster && combat.status === 'Preparacao' && <CombatActions><CombatButton disabled={index === 0} onClick={() => move(index, -1)}>↑</CombatButton><CombatButton disabled={index === orderedParticipants.length - 1} onClick={() => move(index, 1)}>↓</CombatButton></CombatActions>}
+                    {isMaster && combat.status === 'Preparacao' && <CombatActions>{dragHandle}<CombatButton $danger disabled={submitting} onClick={() => void onRemoveParticipant(participant.idParticipante)} title="Remover da ordem"><DeleteOutlineIcon /></CombatButton></CombatActions>}
                     {participant.status === 'ABeiraDaMorte' && participant.podeControlar && <CombatButton disabled={submitting} onClick={() => onRequestSurvival(participant)}>Sobrevivência</CombatButton>}
                   </div>
-                </CombatParticipant>
+                  </CombatParticipant>}
+                </SortableParticipant>
               ))}
-            </CombatList>
+                </CombatList>
+              </SortableContext>
+            </DndContext>
 
             {isMaster && combat.status === 'Preparacao' && (
               <>
                 <CombatForm>
-                  <input aria-label="Nome do NPC" placeholder="Nome do NPC" value={npcName} onChange={(event) => setNpcName(event.target.value)} />
+                  <input aria-label="Buscar NPC" placeholder="Buscar NPC" value={npcTerm} onChange={(event) => setNpcTerm(event.target.value)} />
+                  <select aria-label="NPC encontrado" value={npcSelection} onChange={(event) => setNpcSelection(event.target.value)}>
+                    <option value="">Selecione o NPC</option>
+                    {npcOptions.flatMap((npc) => (npc.generico ? npc.variantes : [{ id: '', nome: npc.nome }]).map((variant) => (
+                      <option key={`${npc.idPersonagem}:${variant.id}`} value={`${npc.idPersonagem}:${variant.id}`}>
+                        {npc.nome}{npc.generico ? ` — ${variant.nome}` : ''}
+                      </option>
+                    )))}
+                  </select>
                   <input aria-label="Modificador de iniciativa" type="number" value={npcModifier} onChange={(event) => setNpcModifier(Number(event.target.value))} />
-                  <CombatButton disabled={submitting || !npcName.trim()} onClick={() => void onAddNpc(npcName.trim(), npcModifier).then(() => { setNpcName(''); setNpcModifier(0); })}><PersonAddAltOutlinedIcon /> NPC</CombatButton>
+                  <CombatButton disabled={submitting || !selectedNpc} onClick={() => selectedNpc && void onAddNpc({
+                    nome: selectedNpc.variantId
+                      ? `${selectedNpc.npc.nome} — ${selectedNpc.npc.variantes.find((item) => item.id === selectedNpc.variantId)?.nome ?? ''}`
+                      : selectedNpc.npc.nome,
+                    imagem: selectedNpc.npc.imagem,
+                    modificadorIniciativa: npcModifier,
+                    idPersonagemOrigem: selectedNpc.npc.idPersonagem,
+                    idVarianteOrigem: selectedNpc.variantId,
+                  }).then(() => { setNpcSelection(''); setNpcModifier(0); })}><PersonAddAltOutlinedIcon /> NPC</CombatButton>
                 </CombatForm>
-                <CombatActions><CombatButton disabled={submitting || !allInitiatives} onClick={() => void onActivate(order)}>Confirmar ordem</CombatButton></CombatActions>
+                <CombatActions>
+                  <CombatButton disabled={submitting || order.length === 0} onClick={() => setOrder(suggestedOrder)}><SortOutlinedIcon /> Ordenar pela iniciativa</CombatButton>
+                  <CombatButton disabled={submitting || order.length === 0} onClick={() => void onActivate(order)}>Confirmar ordem</CombatButton>
+                </CombatActions>
               </>
             )}
 

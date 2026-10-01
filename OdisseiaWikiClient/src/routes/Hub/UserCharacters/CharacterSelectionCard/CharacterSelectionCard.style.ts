@@ -121,6 +121,120 @@ export const SelectionMarker = styled.span<{ $selected: boolean }>`
   }
 `;
 
+export const CardUtilityActions = styled.div`
+  position: absolute;
+  top: 16px;
+  right: 58px;
+  z-index: 9;
+  display: grid;
+
+  button {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 1px solid rgba(57, 211, 255, .55);
+    background: rgba(0, 10, 23, .88);
+    color: var(--clearneonBlue);
+    cursor: pointer;
+    transition: transform 160ms ease, border-color 160ms ease, color 160ms ease,
+      background 160ms ease, box-shadow 160ms ease;
+  }
+
+  .scene-actions-trigger {
+    width: 34px;
+    height: 34px;
+
+    svg {
+      transition: transform 160ms ease;
+    }
+  }
+
+  .scene-actions-menu {
+    position: absolute;
+    top: calc(100% + 7px);
+    right: 0;
+    display: grid;
+    min-width: 204px;
+    padding: 5px;
+    border: 1px solid rgba(57, 211, 255, .58);
+    background: rgba(0, 10, 23, .96);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, .38);
+    animation: scene-actions-enter 150ms ease-out both;
+    transform-origin: top right;
+  }
+
+  .scene-actions-menu button {
+    grid-template-columns: 20px minmax(0, 1fr);
+    justify-content: start;
+    width: 100%;
+    height: 34px;
+    padding: 0 8px;
+    border-color: transparent;
+    color: var(--clearneonBlue);
+    font-family: 'DO Futuristic', sans-serif;
+    font-size: .69rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  @media (hover: hover) {
+    .scene-actions-trigger:hover:not(:disabled) {
+      transform: translateY(-2px);
+      border-color: var(--clearneonPink);
+      color: var(--clearneonPink);
+      background: rgba(42, 4, 46, .9);
+      box-shadow: 0 0 9px rgba(255, 0, 238, .34);
+
+      svg { transform: scale(1.1); }
+    }
+
+    .scene-actions-menu button:hover:not(:disabled) {
+      transform: translateX(-2px);
+      border-color: rgba(57, 211, 255, .52);
+      background: rgba(0, 57, 77, .46);
+    }
+  }
+
+  .scene-actions-trigger[aria-expanded='true'],
+  .scene-actions-trigger:focus-visible {
+    border-color: var(--clearneonPink);
+    color: var(--clearneonPink);
+    background: rgba(42, 4, 46, .9);
+    box-shadow: 0 0 9px rgba(255, 0, 238, .3);
+    outline: none;
+  }
+
+  .scene-actions-menu button:focus-visible {
+    transform: translateX(-2px);
+    border-color: rgba(57, 211, 255, .52);
+    background: rgba(0, 57, 77, .46);
+    outline: none;
+  }
+
+  .scene-actions-menu button.danger:hover:not(:disabled),
+  .scene-actions-menu button.danger:focus-visible {
+    border-color: rgba(255, 91, 91, .62);
+    color: #ff8f8f;
+    background: rgba(99, 15, 22, .38);
+  }
+
+  @keyframes scene-actions-enter {
+    from { opacity: 0; transform: translateY(-5px) scale(.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .scene-actions-trigger:active:not(:disabled) {
+    transform: translateY(0) scale(.94);
+  }
+
+  button:disabled { opacity: .45; cursor: wait; }
+  svg { width: 17px; height: 17px; }
+`;
+
 export const CharacterHeader = styled.div`
   display: grid;
   grid-template-columns: clamp(92px, 23vw, 126px) minmax(0, 1fr);
@@ -170,9 +284,17 @@ export const MesaGameStatusColumn = styled(StatusColumn)`
   width: min(100%, 300px);
   gap: 5px;
 
+  /* A barra é editável para o mestre e somente leitura para os jogadores.
+     O valor deve usar a mesma âncora em ambos os casos. */
   ${ValueText} {
-    right: 6px;
-    font-size: 0.61rem;
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    left: auto;
+    display: flex;
+    width: max-content;
+    margin: 0;
+    transform: translateY(-50%);
   }
 
   @media (max-width: 600px) {
@@ -260,7 +382,7 @@ export const MesaGameStatusItem = styled(StatusItem)`
   gap: 6px;
 
   > :last-child {
-    min-height: 15px;
+    min-height: 18px;
   }
 
   @media (max-width: 390px) {

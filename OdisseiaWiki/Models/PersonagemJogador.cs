@@ -15,6 +15,11 @@ namespace OdisseiaWiki.Models
 
         public int? IdSistemaVersao { get; set; }
 
+        public int? IdPersonagemOrigem { get; set; }
+
+        [MaxLength(100)]
+        public string? IdVarianteOrigem { get; set; }
+
         public string? InfoSecundariasJson { get; set; }
 
         public bool Visivel { get; set; } = true;
@@ -27,6 +32,7 @@ namespace OdisseiaWiki.Models
         public virtual Usuario Usuario { get; set; } = null!;
 
         public virtual SistemaVersao? SistemaVersao { get; set; }
+        public virtual Personagen? PersonagemOrigem { get; set; }
         public virtual PersonagemVisibilidade? ConfiguracaoVisibilidade { get; set; }
     }
 }

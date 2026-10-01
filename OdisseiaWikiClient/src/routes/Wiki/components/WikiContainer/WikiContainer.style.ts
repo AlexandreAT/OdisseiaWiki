@@ -77,6 +77,28 @@ export const LoadingContainer = styled.div<WikiLayoutProps>`
   }
 `;
 
+export const EmptyWikiState = styled.section<WikiLayoutProps>`
+  display: grid;
+  place-content: center;
+  gap: 8px;
+  min-height: 400px;
+  padding: 32px;
+  text-align: center;
+
+  h2 {
+    margin: 0;
+    color: var(--clearneonBlue);
+    font-size: clamp(1.25rem, 2.4vw, 1.75rem);
+  }
+
+  p {
+    max-width: 520px;
+    margin: 0;
+    color: var(--lightGrey);
+    line-height: 1.55;
+  }
+`;
+
 export const SearchWarning = styled.p`
   align-self: center;
   width: calc(100% - 48px);

@@ -7,12 +7,13 @@ namespace OdisseiaWiki.Services.Interfaces
 {
     public interface IPersonagemService
     {
-        Task<ResultPersonagem> CreateAsync(PersonagemDto dto);
-        Task<ResultPersonagem> UpdateAsync(int id, PersonagemDto dto);
-        Task<List<Personagen>> GetAllAsync(bool? visivel = null);
-        Task<Personagen?> GetByIdAsync(int id);
-        Task<bool?> AtualizarVisivelAsync(int id, bool visivel);
-        Task<bool> DeleteAsync(int id);
-        Task<List<Personagen>> GetBatchAsync(List<int> ids);
+        Task<ResultPersonagem> CreateAsync(PersonagemDto dto, int? idWikiEscopo = null);
+        Task<ResultPersonagem> UpdateAsync(int id, PersonagemDto dto, int? idWikiEscopo = null);
+        Task<List<Personagen>> GetAllAsync(bool? visivel = null, int? idWikiEscopo = null);
+        Task<Personagen?> GetByIdAsync(int id, int? idWikiEscopo = null);
+        Task ProjectForPublicAsync(Personagen personagem);
+        Task<bool?> AtualizarVisivelAsync(int id, bool visivel, int? idWikiEscopo = null);
+        Task<bool> DeleteAsync(int id, int? idWikiEscopo = null);
+        Task<List<Personagen>> GetBatchAsync(List<int> ids, int? idWikiEscopo = null);
     }
 }

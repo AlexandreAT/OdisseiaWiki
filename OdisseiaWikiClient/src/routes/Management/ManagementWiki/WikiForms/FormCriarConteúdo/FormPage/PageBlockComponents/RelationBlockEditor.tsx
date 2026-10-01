@@ -7,6 +7,7 @@ import {
 } from '../../../../../../../models/Pages';
 import { Select } from '../../../../../../../components/Generic/Select/Select';
 import { CyberButton } from '../../../../../../../components/Generic/HighlightButton/HighlightButton';
+import { ContentVisibilityNotice } from '../../../../../../../components/Generic/ContentVisibilityNotice/ContentVisibilityNotice';
 
 import { getCidades, getCidadesByIds } from '../../../../../../../services/cidadesService';
 import { getRacas, getRacasByIds } from '../../../../../../../services/racasService';
@@ -51,6 +52,7 @@ const ENTITY_KIND_LABELS: Record<EntityKind, string> = {
   Item: 'Item',
   Raca: 'Raça',
   Page: 'Página',
+  Oculto: 'Oculto',
 };
 
 const normalizeContent = (raw: any): RelatedEntityReference[] => {
@@ -119,8 +121,6 @@ const extractEntityImage = (entity: any): string | undefined => {
   return entity?.Imagem || entity?.imagem || entity?.CoverImage || entity?.coverImage || undefined;
 };
 
-const isEntityVisible = (entity: any): boolean => entity?.Visivel === true || entity?.visivel === true;
-
 export const RelationBlockEditor: React.FC<RelationBlockEditorProps> = ({
   block,
   theme,
@@ -180,14 +180,14 @@ export const RelationBlockEditor: React.FC<RelationBlockEditorProps> = ({
             break;
           }
           case 'Page': {
-            const result = await getPages(true);
+            const result = await getPages();
             list = result.pages || [];
             break;
           }
         }
 
         if (!cancelled) {
-          setEntities(list.filter(isEntityVisible));
+          setEntities(list);
         }
       } catch (err) {
         console.error('Erro ao carregar entidades:', err);
@@ -248,7 +248,7 @@ export const RelationBlockEditor: React.FC<RelationBlockEditorProps> = ({
       })
       .map(e => ({
         value: extractEntityId(e, pickingType),
-        label: extractEntityName(e),
+        label: `${extractEntityName(e)}${e?.visivel === false || e?.Visivel === false ? ' · Só você vê' : ''}`,
       }));
 
     // debug
@@ -283,7 +283,7 @@ export const RelationBlockEditor: React.FC<RelationBlockEditorProps> = ({
       const idsByType = new Map<EntityKind, Set<string>>();
       references.forEach(r => {
         const set = idsByType.get(r.tipoEntidade as EntityKind) || new Set<string>();
-        if (r.idEntidade != null && String(r.idEntidade).trim() !== '') set.add(String(r.idEntidade));
+        if (!r.oculto && r.tipoEntidade !== 'Oculto' && r.idEntidade != null && String(r.idEntidade).trim() !== '') set.add(String(r.idEntidade));
         idsByType.set(r.tipoEntidade as EntityKind, set);
       });
 
@@ -373,7 +373,7 @@ export const RelationBlockEditor: React.FC<RelationBlockEditorProps> = ({
         </ReferenceInfoButton>
         {showReferenceInfo && (
           <ReferenceInfoPopover $isDark={theme === 'dark'} $neon={neon === 'on'} role="status">
-            Uma referência conecta esta página à entidade escolhida. Depois de salvar, a página passa a aparecer entre os conteúdos relacionados dessa entidade. Apenas entidades visíveis podem ser referenciadas, inclusive por administradores.
+            Uma referência conecta esta página à entidade escolhida. Você pode referenciar conteúdo oculto que administra; leitores verão apenas um card censurado.
           </ReferenceInfoPopover>
         )}
       </ReferenceInfo>
@@ -438,6 +438,7 @@ export const RelationBlockEditor: React.FC<RelationBlockEditorProps> = ({
             />
             <EntityDetails>
               <EntityName>{extractEntityName(previewEntity)}</EntityName>
+              <ContentVisibilityNotice visible={previewEntity?.visivel ?? previewEntity?.Visivel} />
               <EntityType>Tipo: {ENTITY_KIND_LABELS[pickingType]}</EntityType>
             </EntityDetails>
           </EntityContent>
@@ -460,7 +461,7 @@ export const RelationBlockEditor: React.FC<RelationBlockEditorProps> = ({
                   <ReferenceItem key={key} $isDark={theme === 'dark'}>
                     <ReferenceHeader>
                       <EntityType style={{ margin: 0 }}>
-                        {String(ref.idEntidade)}
+                        {ref.oculto || ref.tipoEntidade === 'Oculto' ? 'Referência oculta' : String(ref.idEntidade)}
                       </EntityType>
                       <ReferenceOrderButtons>
                         <OrderButton
@@ -488,10 +489,11 @@ export const RelationBlockEditor: React.FC<RelationBlockEditorProps> = ({
                         </RemoveButton>
                       </ReferenceOrderButtons>
                     </ReferenceHeader>
-                    <EntityDisplay $isDark={theme === 'dark'}>
+                    <EntityDisplay $isDark={theme === 'dark'} $hidden={ref.oculto || ref.tipoEntidade === 'Oculto'}>
                       <EntityContent>
                         {(() => {
                           const ent = entityMap[`${ref.tipoEntidade}:${ref.idEntidade}`];
+                          if (ref.oculto || ref.tipoEntidade === 'Oculto') return <span aria-label="Referência oculta" />;
                           const name = ent
                             ? (ent.Nome || ent.nome || ent.Titulo || ent.titulo)
                             : ref.nome;
@@ -507,6 +509,7 @@ export const RelationBlockEditor: React.FC<RelationBlockEditorProps> = ({
                               />
                               <EntityDetails>
                                 <EntityName>{name || 'Sem nome'}</EntityName>
+                                <ContentVisibilityNotice visible={ent?.visivel ?? ent?.Visivel} />
                                 <EntityType>Tipo: {ENTITY_KIND_LABELS[ref.tipoEntidade]}</EntityType>
                               </EntityDetails>
                             </>

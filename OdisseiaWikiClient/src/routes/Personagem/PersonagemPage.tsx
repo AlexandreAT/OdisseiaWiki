@@ -3,11 +3,11 @@ import { getCharacterVariants } from '../../utils/characterVariants';
 import { normalizePersonagem } from '../../utils/normalizePersonagem';
 import { CharacterVariantPager } from '../../components/CharacterVariants/CharacterVariants';
 import { createPortal } from 'react-dom';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { usePersonagem } from './usePersonagem';
-import { PageContainer, TopSection, BottomSection, AvatarWrapper, MetaRow, Sections, CardContent, InfoList, InfoItem, MetaContent, SectionSpacer, AvatarDivController, SatusDivController, StatusList, StatusDiv, HeaderStatusController, StatusController, StatusHeader, StatusBarWrapper, StatusBarFill, InfoControllers, TitleDiv, TagItem, TagList, RelatedLink, HistoryWrapper, HistoryModalOverlay, HistoryModalSheet, HistoryModalHeader, HistoryModalTitle, HistoryModalClose, HistoryModalContent, HistoryModalActions, ItemModalViewButton, InfoSpan, BottomInfoLeft, BottomInfoRight, StoryWithImage, StoryImage, HudCornerEl, HudTopLine, HudBottomLine, HudLeftLine, HudRightLine, StatusTopLine, StatusBottomLine, StatusLeftLine, StatusRightLine, BackgroundVideoContainer, BackgroundVideo, BackgroundOverlay, HexagonHud, HexagonBackground, HexagonBorder, HexagonContent, HexagonValue, PageController, PageLoadingState, SectionRow, InventoryList, LoadBar, LoadProgress, ImplantGrid, ImplantMods, SkillGrid, AbilityDescription, AbilityPair, AbilityCard, CooldownBar, CooldownFill, ItemDescriptionPreview, ItemDescriptionLayout, ItemDetailsBody, ViewMoreButton, DetailAttributes, DetailAttribute, DetailTextPair, DetailText, ItemDescriptionImage, SheetActionPanel, SheetActionGroup, SheetAttributeRollButton, StatusActionButton } from './PersonagemPage.style';
-import { PersonagemRichText, FlexRow, MutedText, BoldLabel, ItemThumb, ItemPlaceholder, GalleryToggle, GalleryContent, MaskIcon, AuthorIcon, ItemRow, FlexFill } from './PersonagemPage.style';
+import { PageContainer, TopSection, BottomSection, AvatarWrapper, MetaRow, Sections, CardContent, InfoList, InfoItem, MetaContent, SectionSpacer, AvatarDivController, SatusDivController, StatusList, StatusDiv, HeaderStatusController, StatusController, StatusHeader, StatusBarWrapper, StatusBarFill, InfoControllers, TitleDiv, TagItem, TagList, RelatedLink, HistoryWrapper, HistoryModalOverlay, HistoryModalSheet, HistoryModalHeader, HistoryModalTitle, HistoryModalClose, HistoryModalContent, HistoryModalActions, ItemModalViewButton, InfoSpan, BottomInfoLeft, BottomInfoRight, StoryWithImage, StoryImage, HudCornerEl, HudTopLine, HudBottomLine, HudLeftLine, HudRightLine, StatusTopLine, StatusBottomLine, StatusLeftLine, StatusRightLine, BackgroundVideoContainer, BackgroundVideo, BackgroundOverlay, HexagonHud, HexagonBackground, HexagonBorder, HexagonContent, HexagonValue, PageController, PageLoadingState, SectionRow, InventoryList, LoadBar, LoadProgress, ImplantGrid, ImplantMods, SkillGrid, AbilityDescription, AbilityPair, AbilityCard, CooldownBar, CooldownFill, ItemDescriptionPreview, ItemDescriptionLayout, ItemDetailsBody, ViewMoreButton, DetailAttributes, DetailAttribute, DetailTextPair, DetailText, ItemDescriptionImage, SheetActionPanel, SheetActionGroup, SheetAttributeRollButton, StatusActionButton, CloneCharacterButton } from './PersonagemPage.style';
+import { PersonagemRichText, FlexRow, MutedText, BoldLabel, ItemThumb, ItemPlaceholder, GalleryToggle, GalleryContent, MaskIcon, AuthorIcon, ItemRow, FlexFill, RelatedHiddenCard } from './PersonagemPage.style';
 import { CharacterComparisonButton, CharacterComparisonModal, createCharacterComparisonData } from '../../components/CharacterComparison';
 import glassHeart from '../../assets/svg/glass-heart.svg';
 import rollingEnergy from '../../assets/svg/rolling-energy.svg';
@@ -27,10 +27,10 @@ import village from '../../assets/svg/village.svg';
 import scales from '../../assets/svg/scales.svg';
 import dna1 from '../../assets/svg/dna1.svg';
 import { SpanLink } from '../../components/Generic/SpanLink/SpanLink';
+import { ContentVisibilityNotice } from '../../components/Generic/ContentVisibilityNotice/ContentVisibilityNotice';
 import { getPersonagensByIds } from '../../services/personagensService';
 import CloseIcon from '@mui/icons-material/Close';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
-import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import AccountCircleOutlinedIcon from '@mui/icons-material/AccountCircleOutlined';
 import backgroundVideo from '../../assets/backgroundLinesScifiAnimation.mp4';
@@ -70,6 +70,8 @@ import { GameplayActionCenter, GameplaySheetActionDialog, type GameplayActionCen
 import { useGameplayEngine } from '../../hooks/useGameplayEngine';
 import { useGameplayFavorites } from '../../hooks/useGameplayFavorites';
 import CasinoOutlinedIcon from '@mui/icons-material/CasinoOutlined';
+import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined';
+import { getAuthSession } from '../../services/authSession';
 import { getItemGameplayAction, getMagicGameplayAction, getSkillGameplayAction } from '../../utils/gameplaySheetAction';
 import {
   CHARACTER_INFORMATION_BLOCKED,
@@ -387,6 +389,7 @@ const HudContentSection: React.FC<HudContentSectionProps> = ({
 );
 
 const PersonagemPage: React.FC = () => {
+  const navigate = useNavigate();
   const params = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const id = params.id;
@@ -448,7 +451,8 @@ const PersonagemPage: React.FC = () => {
   const [cidadeNome, setCidadeNome] = React.useState<string | null>(null);
   const [cidadeImagem, setCidadeImagem] = React.useState<string | null>(null);
   const [racaNome, setRacaNome] = React.useState<string | null>(null);
-  const [personagensVinculadosNomes, setPersonagensVinculadosNomes] = React.useState<{ id: number; nome: string }[]>([]);
+  const [personagensVinculadosNomes, setPersonagensVinculadosNomes] = React.useState<{ id: number; nome: string; visivel: boolean }[]>([]);
+  const [relatedCharactersLoading, setRelatedCharactersLoading] = React.useState(false);
   const [galleryOpen, setGalleryOpen] = React.useState(true);
   const [mainImageOpen, setMainImageOpen] = React.useState(false);
   const [mainImageBackground, setMainImageBackground] = React.useState<string | null>(null);
@@ -466,15 +470,34 @@ const PersonagemPage: React.FC = () => {
   const gameplayMesaId = characterSource === 'player' ? Number((personagem as any)?.idmesa) || undefined : undefined;
   const ownsPlayerCharacter = characterSource === 'player' && currentUserId > 0 &&
     Number((personagem as any)?.idusuario ?? 0) === currentUserId;
+  const sourceMesaId = Number(params.mesaId ?? searchParams.get('mesaId')) || undefined;
+  const isNpcInstance = characterSource === 'player' && Number(personagem?.idPersonagemOrigem) > 0;
+  const isAdmin = React.useMemo(() => {
+    const session = getAuthSession(localStorage.getItem('token'));
+    return session.status === 'authenticated' && session.roles.includes('Admin');
+  }, []);
+  const canRollOnSheet = ownsPlayerCharacter && (!isNpcInstance || isAdmin);
+  const handleCloneCharacter = React.useCallback(() => {
+    if (!id) return;
+    if (characterSource === 'player') {
+      navigate(`/hub?section=personagens&mode=create&cloneCharacterId=${encodeURIComponent(id)}`);
+      return;
+    }
+    const query = new URLSearchParams({ cloneNpc: id });
+    if (sourceMesaId) query.set('sourceMesaId', String(sourceMesaId));
+    navigate(sourceMesaId
+      ? `/mesa/${sourceMesaId}/wiki/gerenciar?${query}`
+      : `/management/wiki?${query}`);
+  }, [characterSource, id, navigate, sourceMesaId]);
   const gameplay = useGameplayEngine({
     idMesa: gameplayMesaId,
-    enabled: ownsPlayerCharacter && Boolean(gameplayMesaId),
+    enabled: canRollOnSheet && Boolean(gameplayMesaId),
     // A consulta da sessão distingue a rolagem oficial da simulação mesmo
     // quando a ficha foi aberta fora da tela principal da Mesa.
-    mesaAoVivo: ownsPlayerCharacter && Boolean(gameplayMesaId),
+    mesaAoVivo: canRollOnSheet && Boolean(gameplayMesaId),
   });
-  const gameplayCharacterId = ownsPlayerCharacter ? Number((personagem as any)?.idpersonagemJogador) : undefined;
-  const gameplayFavorites = useGameplayFavorites(gameplayCharacterId, ownsPlayerCharacter);
+  const gameplayCharacterId = canRollOnSheet ? Number((personagem as any)?.idpersonagemJogador) : undefined;
+  const gameplayFavorites = useGameplayFavorites(gameplayCharacterId, canRollOnSheet);
   const sheetFavoriteType = sheetActionSource?.item?.tipo === 'implante' ? 'PROTESE' : sheetActionSource?.type;
   const sheetFavorite = gameplayFavorites.favorites.find((item) => item.tipoOrigem === sheetFavoriteType
     && item.idOrigem === sheetActionSource?.id) ?? null;
@@ -522,45 +545,52 @@ const PersonagemPage: React.FC = () => {
 
   React.useEffect(() => {
     let mounted = true;
-    const fetchRelated = async () => {
-      try {
-        const idCidade = getField(basePersonagem, ['idcidade', 'Idcidade', 'idCidade', 'idcidade']) as any;
-        if (idCidade) {
-          const res: any = await getCidadeById(Number(idCidade));
-          const cidade = res?.cidade ?? res;
-          if (mounted && cidade) {
+    setCidadeNome(null);
+    setCidadeImagem(null);
+    setRacaNome(null);
+    setPersonagensVinculadosNomes([]);
+
+    const idCidade = Number(basePersonagem?.idcidade) || 0;
+    const idRaca = Number(basePersonagem?.idraca) || 0;
+    const vinculados = basePersonagem?.personagemsVinculados;
+    setRelatedCharactersLoading(Array.isArray(vinculados) && vinculados.length > 0);
+
+    const requests: Promise<void>[] = [];
+    if (idCidade) {
+      requests.push(getCidadeById(idCidade, sourceMesaId)
+        .then((cidade) => {
+          if (mounted) {
             setCidadeNome(cidade.nome ?? null);
             setCidadeImagem(cidade.imagem ?? null);
           }
-        }
-        const idRaca = getField(basePersonagem, ['idraca', 'Idraca', 'idRaca']) as any;
-        
-        if (idRaca) {
-          const rr: any = await getRacaById(Number(idRaca));
-          const raca = rr?.raca ?? rr;
-          if (mounted && raca) {
-            setRacaNome(raca.nome ?? null);
-          }
-        }
-
-        const vinculados = basePersonagem?.personagemsVinculados;
-        if (Array.isArray(vinculados) && vinculados.length > 0) {
-          const res = await getPersonagensByIds(vinculados);
-          if (mounted && Array.isArray(res)) {
-            const nomes = res.map((p: any) => ({
-              id: Number(p.idpersonagem ?? p.id),
-              nome: p.nome ?? 'Sem nome'
-            }));
-            setPersonagensVinculadosNomes(nomes);
-          }
-        }
-      } catch (e) {
-        // fail silently
-      }
-    };
-    fetchRelated();
+        })
+        .catch(() => undefined));
+    }
+    if (idRaca) {
+      requests.push(getRacaById(idRaca, sourceMesaId)
+        .then((result) => {
+          const raca = 'nome' in result ? result : result.raca;
+          if (mounted) setRacaNome(raca?.nome ?? null);
+        })
+        .catch(() => undefined));
+    }
+    if (Array.isArray(vinculados) && vinculados.length > 0) {
+      requests.push(getPersonagensByIds(vinculados, sourceMesaId)
+        .then((related) => {
+          if (mounted) setPersonagensVinculadosNomes(related.map((item) => ({
+            id: Number(item.idpersonagem),
+            nome: item.nome ?? 'Sem nome',
+            visivel: item.visivel !== false,
+          })));
+        })
+        .catch(() => undefined)
+        .finally(() => {
+          if (mounted) setRelatedCharactersLoading(false);
+        }));
+    }
+    void Promise.all(requests);
     return () => { mounted = false; };
-  }, [basePersonagem]);
+  }, [basePersonagem, sourceMesaId]);
 
   React.useEffect(() => {
     const inventory = Array.isArray((personagem as any)?.inventarioJson)
@@ -679,6 +709,7 @@ const PersonagemPage: React.FC = () => {
   const vinculados = (personagem as any)?.personagemsVinculados;
   const relacionadosOcultos = campoEstaOculto('personagensRelacionados');
   const hasVinculados = Array.isArray(vinculados) && vinculados.length > 0;
+  const quantidadeRelacionadosOcultos = Number((personagem as any)?.quantidadeRelacionadosOcultos) || 0;
 
   const tags = (personagem as any)?.tags;
   const tagsList = Array.isArray(tags) && tags.length > 0 ? tags : null;
@@ -686,6 +717,7 @@ const PersonagemPage: React.FC = () => {
     tagsList
     || costumesList
     || hasVinculados
+    || quantidadeRelacionadosOcultos > 0
     || tracosList
     || hasInfoExtras
     || personalidadeOculta
@@ -766,7 +798,7 @@ const PersonagemPage: React.FC = () => {
   const atributosSecundariosAtuais = normalizeRuntimeAttributeValues(atributosAtuais.secundarios ?? {});
   const camposPrincipais = getRuntimeAttributeFields(runtimeContext, 'Principal', atributosPrincipaisAtuais);
   const camposSecundarios = getRuntimeAttributeFields(runtimeContext, 'Secundario', atributosSecundariosAtuais);
-  const podeUsarAcoesDaFicha = ownsPlayerCharacter && Boolean(gameplayMesaId);
+  const podeUsarAcoesDaFicha = canRollOnSheet && Boolean(gameplayMesaId);
   const abrirTesteAtributo = (attributeCode: string, group: 'Principal' | 'Secundario') => {
     if (!podeUsarAcoesDaFicha) return;
     setActionCenterInitial({ type: 'attribute', attributeCode, group });
@@ -839,7 +871,7 @@ const PersonagemPage: React.FC = () => {
   ].filter((entry): entry is { label: string; value: string } => entry !== null) : [];
   const detailAttributeEntries = [...selectedAttributeEntries, ...selectedAbilityEntries];
   const selectedGameplaySource: GameplaySheetActionSource | null = (() => {
-    if (!selectedInventoryItem || !ownsPlayerCharacter || !selectedInventoryItem.id) return null;
+    if (!selectedInventoryItem || !canRollOnSheet || !selectedInventoryItem.id) return null;
     const actionType = (selectedInventoryItem as any).__gameplayActionType as string | undefined;
     if (actionType === 'SKILL' || actionType === 'MAGIA') {
       return actionType === 'SKILL'
@@ -848,7 +880,7 @@ const PersonagemPage: React.FC = () => {
     }
     return getItemGameplayAction(selectedInventoryItem);
   })();
-  const gameplayCharacter = ownsPlayerCharacter && personagem
+  const gameplayCharacter = canRollOnSheet && personagem
     ? { personagem: personagem as any }
     : null;
   const comparisonCurrentCharacter = createCharacterComparisonData({
@@ -860,7 +892,9 @@ const PersonagemPage: React.FC = () => {
     indiceVariante: activeVariant ? variantIndex + 1 : undefined,
     totalVariantes: activeVariant ? variants.length : undefined,
     imagem,
-    idMesa: characterSource === 'player' ? Number((personagem as any)?.idmesa) || null : null,
+    idMesa: characterSource === 'player'
+      ? Number((personagem as any)?.idmesa) || null
+      : sourceMesaId,
     mesaNome: (personagem as any)?.mesaNome,
     quantidadeSkills: skills.length,
     status: (personagem as any)?.statusJson,
@@ -917,6 +951,12 @@ const PersonagemPage: React.FC = () => {
                       <HudLeftLine $isActive={neon === 'on'} $neon={neon === 'on'} />
                       <HudRightLine $isActive={neon === 'on'} $neon={neon === 'on'} />
                       <InfoControllers>
+                        {isAdmin && (
+                          <CloneCharacterButton type="button" onClick={handleCloneCharacter}
+                            aria-label="Clonar personagem" title="Clonar personagem">
+                            <ContentCopyOutlinedIcon fontSize="small" /> Clonar
+                          </CloneCharacterButton>
+                        )}
                         <TitleDiv>
                             <TitleGlitch theme={theme} neon={neon} text={activeVariant?.nome || nome} fontSize="20px" />
                         </TitleDiv>
@@ -927,12 +967,7 @@ const PersonagemPage: React.FC = () => {
                           onUpdate={characterSource === 'player' ? updatePlayerSystem : undefined}
                           updating={updatingSystem}
                         />
-                        {perfilOculto && (
-                          <InfoSpan title="Este personagem está oculto para outros usuários.">
-                            <VisibilityOffOutlinedIcon aria-hidden="true" />
-                            Perfil oculto
-                          </InfoSpan>
-                        )}
+                        {perfilOculto && <ContentVisibilityNotice visible={false} />}
                         <MetaRow>
                             <HeaderStatusController>
                                 <MetaContent as={FlexRow} gap={12} alignItems="flex-start">
@@ -1152,13 +1187,14 @@ const PersonagemPage: React.FC = () => {
                         </HeaderStatusController>
                       )}
 
-                      {(hasVinculados || relacionadosOcultos) && (
+                      {(hasVinculados || relacionadosOcultos || quantidadeRelacionadosOcultos > 0) && (
                         <HeaderStatusController>
                             <InfoList>
                                 <InfoItem>
                                   <BoldLabel>Personagens Relacionados:</BoldLabel>{' '}
-                                  {relacionadosOcultos ? CHARACTER_INFORMATION_BLOCKED : personagensVinculadosNomes.length > 0 ? (
-                                    personagensVinculadosNomes.map((p, idx) => (
+                                  {relacionadosOcultos ? CHARACTER_INFORMATION_BLOCKED : (personagensVinculadosNomes.length > 0 || quantidadeRelacionadosOcultos > 0) ? (
+                                    <>
+                                    {personagensVinculadosNomes.map((p, idx) => (
                                       <React.Fragment key={p.id}>
                                         {idx > 0 && <span> | </span>}
                                         <RelatedLink>
@@ -1166,17 +1202,26 @@ const PersonagemPage: React.FC = () => {
                                             theme={theme}
                                             neon={neon}
                                             colorScheme="bluePink"
-                                            link={`/personagem/${p.id}`}
+                                            link={sourceMesaId
+                                              ? `/mesa/${sourceMesaId}/wiki/personagem/${p.id}`
+                                              : `/personagem/${p.id}`}
                                             textSize="14px"
                                             className="inline-link"
                                           >
                                             {p.nome}
                                           </SpanLink>
+                                          {!p.visivel && <InfoSpan title="Este personagem só é visível para você.">Só você vê</InfoSpan>}
                                         </RelatedLink>
                                       </React.Fragment>
-                                    ))
-                                  ) : (
+                                    ))}
+                                    {Array.from({ length: quantidadeRelacionadosOcultos }, (_, idx) => (
+                                      <RelatedHiddenCard key={`oculto-${idx}`} aria-label="Personagem oculto" />
+                                    ))}
+                                    </>
+                                  ) : relatedCharactersLoading ? (
                                     <LoadingIndicator compact label="Carregando relacionados" />
+                                  ) : (
+                                    <MutedText>Nenhum relacionado disponível.</MutedText>
                                   )}
                                 </InfoItem>
                             </InfoList>

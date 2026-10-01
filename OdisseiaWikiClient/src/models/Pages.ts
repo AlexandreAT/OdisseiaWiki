@@ -84,13 +84,14 @@ export interface InfoLoreBlockContent {
   imagem?: string;
 }
 
-export type EntityKind = 'Cidade' | 'Personagem' | 'Item' | 'Raca' | 'Page';
+export type EntityKind = 'Cidade' | 'Personagem' | 'Item' | 'Raca' | 'Page' | 'Oculto';
 
 export interface RelatedEntityReference {
   idEntidade: number | string;
   tipoEntidade: EntityKind;
   nome?: string;
   imagem?: string;
+  oculto?: boolean;
 }
 
 // Um bloco de relação agora contém uma LISTA de referências

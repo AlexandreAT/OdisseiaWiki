@@ -19,9 +19,10 @@ namespace OdisseiaWiki.Repositories
             _context = context;
         }
 
-        public async Task<List<Raca>> GetAllAsync(bool? visivel = null)
+        public async Task<List<Raca>> GetAllAsync(bool? visivel = null, int? idWikiEscopo = null)
         {
-            var query = _context.Racas.AsNoTracking();
+            var query = _context.Racas.AsNoTracking()
+                .Where(raca => raca.IdWikiEscopo == (idWikiEscopo ?? WikiEscopo.IdOficial));
 
             if (visivel.HasValue)
                 query = query.Where(r => r.Visivel == visivel.Value);
@@ -29,8 +30,12 @@ namespace OdisseiaWiki.Repositories
             return await query.ToListAsync();
         }
 
-        public async Task<Raca?> GetByIdAsync(int id)
-            => await _context.Racas.FindAsync(id);
+        public Task<Raca?> GetByIdAsync(int id) => GetByIdAsync(id, null);
+
+        public async Task<Raca?> GetByIdAsync(int id, int? idWikiEscopo)
+            => await _context.Racas.FirstOrDefaultAsync(raca =>
+                raca.Idraca == id &&
+                raca.IdWikiEscopo == (idWikiEscopo ?? WikiEscopo.IdOficial));
 
         public async Task<Raca> CreateAsync(Raca raca)
         {
@@ -56,12 +61,13 @@ namespace OdisseiaWiki.Repositories
             return true;
         }
 
-        public async Task<List<Raca>> SearchAsync(string termo)
+        public async Task<List<Raca>> SearchAsync(string termo, int? idWikiEscopo = null)
         {
             var termoLower = termo.ToLower();
 
             var racas = await _context.Racas
                 .AsNoTracking()
+                .Where(raca => raca.IdWikiEscopo == (idWikiEscopo ?? WikiEscopo.IdOficial))
                 .ToListAsync();
 
             return racas.Where(i =>
@@ -71,17 +77,19 @@ namespace OdisseiaWiki.Repositories
             ).ToList();
         }
 
-        public async Task<List<Raca>> GetBatchAsync(List<int> ids)
+        public async Task<List<Raca>> GetBatchAsync(List<int> ids, int? idWikiEscopo = null)
         {
             return await _context.Racas
                 .AsNoTracking()
-                .Where(r => ids.Contains(r.Idraca))
+                .Where(r => ids.Contains(r.Idraca) &&
+                    r.IdWikiEscopo == (idWikiEscopo ?? WikiEscopo.IdOficial))
                 .ToListAsync();
         }
 
         public async Task<List<RacaPassivaDto>> SyncPassivasAsync(
             int idRaca,
-            IReadOnlyCollection<RacaPassivaDto> passivas)
+            IReadOnlyCollection<RacaPassivaDto> passivas,
+            int? idWikiEscopo = null)
         {
             List<Passivaraca> links = await _context.Passivaracas
                 .Include(link => link.Passiva)
@@ -96,7 +104,12 @@ namespace OdisseiaWiki.Repositories
                     ? links.FirstOrDefault(link => link.Idpassiva == dto.IdPassiva.Value)?.Passiva
                     : links.Select(link => link.Passiva).FirstOrDefault(entry =>
                         string.Equals(entry.Nome, nome, StringComparison.OrdinalIgnoreCase));
-                passive ??= new Passiva { Nome = nome, DataCriacao = DateTime.UtcNow };
+                passive ??= new Passiva
+                {
+                    Nome = nome,
+                    IdWikiEscopo = idWikiEscopo ?? WikiEscopo.IdOficial,
+                    DataCriacao = DateTime.UtcNow,
+                };
                 passive.Nome = nome;
                 passive.Descricao = dto.Efeito;
                 passive.Visivel = true;

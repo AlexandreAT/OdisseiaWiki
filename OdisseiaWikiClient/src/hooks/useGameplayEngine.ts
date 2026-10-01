@@ -17,6 +17,7 @@ import {
   simularRolagemGameplay,
 } from '../services/gameplayService';
 import { getApiErrorMessage } from '../utils/apiError';
+import { hasNewGameplayEvents } from '../utils/gameplayRealtime';
 
 interface UseGameplayEngineOptions {
   idMesa?: number;
@@ -59,7 +60,11 @@ export const useGameplayEngine = ({
   const cursorRef = useRef<string | null>(null);
   const eventIdsRef = useRef(new Set<number>());
   const sessionIdRef = useRef<number | null>(null);
+  const sessionEventSequenceRef = useRef<number | null>(null);
   const sessionLoadSequenceRef = useRef(0);
+  const refreshPromiseRef = useRef<Promise<void> | null>(null);
+  const queuedRefreshRef = useRef({ requested: false, announceRealtime: false });
+  const latestRefreshRef = useRef<(showError?: boolean, announceRealtime?: boolean) => Promise<void>>();
 
   const consumePage = useCallback((page: Awaited<ReturnType<typeof listarEventosGameplay>>) => {
     const items = page.itens ?? [];
@@ -91,30 +96,35 @@ export const useGameplayEngine = ({
   const loadSession = useCallback(async (resetHistory = false) => {
     const sequence = ++sessionLoadSequenceRef.current;
     if (!enabled || !idMesa || idMesa <= 0 || !mesaAoVivo) {
-      setSession(null);
-      setEvents([]);
-      setRealtimeEvents([]);
+      setSession((current) => current === null ? current : null);
+      setEvents((current) => current.length === 0 ? current : []);
+      setRealtimeEvents((current) => current.length === 0 ? current : []);
       eventIdsRef.current.clear();
       sessionIdRef.current = null;
+      sessionEventSequenceRef.current = null;
       cursorRef.current = null;
       setHasMore(false);
       setLoading(false);
-      return { session: null, loadedHistory: false };
+      return { session: null, loadedHistory: false, changedEvents: false };
     }
 
     const currentSession = await obterSessaoGameplayAtual(idMesa);
-    if (sequence !== sessionLoadSequenceRef.current) return { session: null, loadedHistory: false };
+    if (sequence !== sessionLoadSequenceRef.current) return { session: null, loadedHistory: false, changedEvents: false };
     const changedSession = currentSession?.idMesaSessao !== sessionIdRef.current;
+    const changedEvents = hasNewGameplayEvents(
+      currentSession, sessionIdRef.current, sessionEventSequenceRef.current,
+    );
     setSession((current) => sameSession(current, currentSession) ? current : currentSession);
 
     if (!currentSession) {
       sessionIdRef.current = null;
+      sessionEventSequenceRef.current = null;
       cursorRef.current = null;
-      setEvents([]);
-      setRealtimeEvents([]);
+      setEvents((current) => current.length === 0 ? current : []);
+      setRealtimeEvents((current) => current.length === 0 ? current : []);
       eventIdsRef.current.clear();
       setHasMore(false);
-      return { session: null, loadedHistory: false };
+      return { session: null, loadedHistory: false, changedEvents: false };
     }
 
     if (resetHistory || changedSession) {
@@ -124,25 +134,54 @@ export const useGameplayEngine = ({
       setRealtimeEvents([]);
       eventIdsRef.current.clear();
       await loadNewEvents(idMesa, currentSession.idMesaSessao, sequence);
+      sessionEventSequenceRef.current = currentSession.ultimaSequenciaEvento;
     }
 
-    return { session: currentSession, loadedHistory: resetHistory || changedSession };
+    return {
+      session: currentSession,
+      loadedHistory: resetHistory || changedSession,
+      changedEvents,
+    };
   }, [enabled, idMesa, loadNewEvents, mesaAoVivo]);
 
-  const refresh = useCallback(async (showError = true, announceRealtime = false) => {
-    if (!enabled || !idMesa || idMesa <= 0) return;
-    try {
-      const { session: currentSession, loadedHistory } = await loadSession(false);
-      setError(null);
-      if (!currentSession || loadedHistory || currentSession.idMesaSessao !== sessionIdRef.current) return;
-      const fresh = await loadNewEvents(idMesa, currentSession.idMesaSessao, sessionLoadSequenceRef.current);
-      if (announceRealtime && fresh.length > 0) {
-        setRealtimeEvents((current) => mergeEvents(current, fresh));
-      }
-    } catch (requestError) {
-      if (showError) setError(getApiErrorMessage(requestError, 'Não foi possível atualizar as ações.'));
+  const refresh = useCallback((showError = true, announceRealtime = false): Promise<void> => {
+    if (!enabled || !idMesa || idMesa <= 0) return Promise.resolve();
+    if (refreshPromiseRef.current) {
+      queuedRefreshRef.current.requested = true;
+      queuedRefreshRef.current.announceRealtime ||= announceRealtime;
+      return refreshPromiseRef.current;
     }
+
+    const request = (async () => {
+      try {
+        const { session: currentSession, loadedHistory, changedEvents } = await loadSession(false);
+        setError(null);
+        if (!currentSession || loadedHistory || !changedEvents || currentSession.idMesaSessao !== sessionIdRef.current) return;
+        const loadSequence = sessionLoadSequenceRef.current;
+        const fresh = await loadNewEvents(idMesa, currentSession.idMesaSessao, loadSequence);
+        if (loadSequence !== sessionLoadSequenceRef.current) return;
+        // Só confirma a sequência depois de ler o feed. Falhas de rede devem
+        // permitir que a próxima invalidação tente novamente.
+        sessionEventSequenceRef.current = currentSession.ultimaSequenciaEvento;
+        if (announceRealtime && fresh.length > 0) {
+          setRealtimeEvents((current) => mergeEvents(current, fresh));
+        }
+      } catch (requestError) {
+        if (showError) setError(getApiErrorMessage(requestError, 'Não foi possível atualizar as ações.'));
+      }
+    })();
+    refreshPromiseRef.current = request;
+    const finish = () => {
+      if (refreshPromiseRef.current !== request) return;
+      refreshPromiseRef.current = null;
+      const queued = queuedRefreshRef.current;
+      queuedRefreshRef.current = { requested: false, announceRealtime: false };
+      if (queued.requested) void latestRefreshRef.current?.(false, queued.announceRealtime);
+    };
+    void request.then(finish, finish);
+    return request;
   }, [enabled, idMesa, loadNewEvents, loadSession]);
+  latestRefreshRef.current = refresh;
 
   useEffect(() => {
     let disposed = false;
@@ -160,19 +199,13 @@ export const useGameplayEngine = ({
     return () => { disposed = true; };
   }, [loadSession]);
 
-  useEffect(() => {
-    if (!enabled || !idMesa) return undefined;
-    const timer = window.setInterval(() => {
-      if (document.visibilityState === 'visible') void refresh(false);
-    }, 30_000);
-    return () => window.clearInterval(timer);
-  }, [enabled, idMesa, refresh]);
-
   const consumeCommand = useCallback((response: GameplayCommandResponse) => {
     if (response.evento) {
       eventIdsRef.current.add(response.evento.idEvento);
       setEvents((current) => mergeEvents(current, [response.evento as GameplayEvent]));
     }
+    // A resposta local não prova que eventos anteriores de outros jogadores
+    // chegaram ao cursor. Só a leitura paginada pode avançar a sequência lida.
     setSession((current) => current ? {
       ...current,
       revisaoEstado: response.revisaoSessao,

@@ -51,6 +51,8 @@ public partial class OdisseiaContext : DbContext
 
     public DbSet<PageBlock> PageBlocks { get; set; }
 
+    public DbSet<WikiEscopo> WikiEscopos { get; set; }
+
     public virtual DbSet<Passiva> Passivas { get; set; }
 
     public virtual DbSet<Passivaraca> Passivaracas { get; set; }
@@ -71,6 +73,46 @@ public partial class OdisseiaContext : DbContext
             .HasForeignKey(b => b.IdPage)
             .OnDelete(DeleteBehavior.Cascade);
 
+        modelBuilder.Entity<WikiEscopo>(entity =>
+        {
+            entity.ToTable("wikiescopos");
+            entity.HasKey(item => item.IdWikiEscopo);
+            entity.HasIndex(item => item.Chave).IsUnique()
+                .HasDatabaseName("UX_WikiEscopo_Chave");
+            entity.HasIndex(item => item.IdMesa).IsUnique()
+                .HasDatabaseName("UX_WikiEscopo_Mesa");
+            entity.Property(item => item.IdWikiEscopo).HasColumnName("IDWikiEscopo");
+            entity.Property(item => item.IdMesa).HasColumnName("IDMesa");
+            entity.Property(item => item.Tipo).HasConversion<string>().HasMaxLength(20);
+            entity.Property(item => item.Chave).HasMaxLength(80);
+            entity.Property(item => item.DataCriacao).HasColumnType("datetime");
+            entity.HasOne(item => item.Mesa)
+                .WithOne(mesa => mesa.WikiEscopo)
+                .HasForeignKey<WikiEscopo>(item => item.IdMesa)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_WikiEscopo_Mesa");
+        });
+
+        modelBuilder.Entity<Page>(entity =>
+        {
+            entity.Property(item => item.IdWikiEscopo).HasColumnName("IDWikiEscopo");
+            entity.Property(item => item.IdSistemaRpg).HasColumnName("IDSistemaRpg");
+            entity.HasIndex(item => item.IdWikiEscopo).HasDatabaseName("IX_Page_WikiEscopo");
+            entity.HasIndex(item => new { item.IdWikiEscopo, item.Slug })
+                .IsUnique()
+                .HasDatabaseName("UX_Page_WikiEscopo_Slug");
+            entity.HasOne(item => item.WikiEscopo)
+                .WithMany(scope => scope.Pages)
+                .HasForeignKey(item => item.IdWikiEscopo)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_Page_WikiEscopo");
+            entity.HasOne(item => item.SistemaRpg)
+                .WithMany()
+                .HasForeignKey(item => item.IdSistemaRpg)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_Page_SistemaRpg");
+        });
+
         modelBuilder.Entity<Cidade>(entity =>
         {
             entity.HasKey(e => e.Idcidade).HasName("PRIMARY");
@@ -88,6 +130,16 @@ public partial class OdisseiaContext : DbContext
             entity.Property(e => e.Tags).HasColumnType("longtext");
             entity.Property(e => e.PontosDeInteresse).HasColumnType("longtext");
             entity.Property(e => e.Visivel).HasColumnType("tinyint(1)");
+            entity.Property(e => e.IdWikiEscopo).HasColumnName("IDWikiEscopo");
+            entity.Property(e => e.IdSistemaRpg).HasColumnName("IDSistemaRpg");
+            entity.HasIndex(e => e.IdWikiEscopo).HasDatabaseName("IX_Cidade_WikiEscopo");
+            entity.HasIndex(e => e.IdSistemaRpg).HasDatabaseName("IX_Cidade_SistemaRpg");
+            entity.HasOne(e => e.WikiEscopo).WithMany(scope => scope.Cidades)
+                .HasForeignKey(e => e.IdWikiEscopo).OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_Cidade_WikiEscopo");
+            entity.HasOne(e => e.SistemaRpg).WithMany()
+                .HasForeignKey(e => e.IdSistemaRpg).OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_Cidade_SistemaRpg");
         });
 
         modelBuilder.Entity<Infolore>(entity =>
@@ -310,6 +362,11 @@ public partial class OdisseiaContext : DbContext
             entity.Property(e => e.Tracos).HasColumnType("text");
             entity.Property(e => e.Tags).HasColumnType("longtext");
             entity.Property(e => e.Visivel).HasColumnType("tinyint(1)");
+            entity.Property(e => e.IdWikiEscopo).HasColumnName("IDWikiEscopo");
+            entity.HasIndex(e => e.IdWikiEscopo).HasDatabaseName("IX_Personagem_WikiEscopo");
+            entity.HasOne(e => e.WikiEscopo).WithMany(scope => scope.Personagens)
+                .HasForeignKey(e => e.IdWikiEscopo).OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_Personagem_WikiEscopo");
 
             entity.HasOne(d => d.IdcidadeNavigation).WithMany(p => p.Personagens)
                 .HasForeignKey(d => d.Idcidade)
@@ -403,6 +460,11 @@ public partial class OdisseiaContext : DbContext
             entity.Property(e => e.Tags).HasColumnType("longtext");
             entity.Property(e => e.Variacoes).HasColumnType("longtext");
             entity.Property(e => e.Visivel).HasColumnType("tinyint(1)");
+            entity.Property(e => e.IdWikiEscopo).HasColumnName("IDWikiEscopo");
+            entity.HasIndex(e => e.IdWikiEscopo).HasDatabaseName("IX_Raca_WikiEscopo");
+            entity.HasOne(e => e.WikiEscopo).WithMany(scope => scope.Racas)
+                .HasForeignKey(e => e.IdWikiEscopo).OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_Raca_WikiEscopo");
         });
 
         modelBuilder.Entity<Usuario>(entity =>
@@ -488,6 +550,20 @@ public partial class OdisseiaContext : DbContext
             
             entity.Property(e => e.Tags).HasColumnType("longtext");
             entity.Property(e => e.Visivel).HasColumnType("tinyint(1)");
+            entity.Property(e => e.IdWikiEscopo).HasColumnName("IDWikiEscopo");
+            entity.HasIndex(e => e.IdWikiEscopo).HasDatabaseName("IX_Item_WikiEscopo");
+            entity.HasOne(e => e.WikiEscopo).WithMany(scope => scope.Itens)
+                .HasForeignKey(e => e.IdWikiEscopo).OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_Item_WikiEscopo");
+        });
+
+        modelBuilder.Entity<Passiva>(entity =>
+        {
+            entity.Property(e => e.IdWikiEscopo).HasColumnName("IDWikiEscopo");
+            entity.HasIndex(e => e.IdWikiEscopo).HasDatabaseName("IX_Passiva_WikiEscopo");
+            entity.HasOne(e => e.WikiEscopo).WithMany(scope => scope.Passivas)
+                .HasForeignKey(e => e.IdWikiEscopo).OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_Passiva_WikiEscopo");
         });
 
         modelBuilder.Entity<PersonagemJogador>(entity =>
@@ -500,6 +576,8 @@ public partial class OdisseiaContext : DbContext
             entity.HasIndex(e => e.Idusuario, "ID_usuarios");
             entity.HasIndex(e => e.Idraca, "ID_racas");
             entity.HasIndex(e => e.Idcidade, "ID_cidades");
+            entity.HasIndex(e => new { e.Idmesa, e.IdPersonagemOrigem })
+                .HasDatabaseName("IX_PersonagemJogador_Mesa_NpcOrigem");
 
             entity.Property(e => e.IdpersonagemJogador)
                 .HasColumnType("int(11)")
@@ -525,6 +603,8 @@ public partial class OdisseiaContext : DbContext
             entity.Property(e => e.Alinhamento).HasMaxLength(50);
             entity.Property(e => e.Imagem).HasMaxLength(255);
             entity.Property(e => e.Nanites).HasMaxLength(50);
+            entity.Property(e => e.IdPersonagemOrigem).HasColumnName("IDPersonagemOrigem");
+            entity.Property(e => e.IdVarianteOrigem).HasMaxLength(100);
 
             entity.Property(e => e.Costumes).HasColumnType("text");
             entity.Property(e => e.Tracos).HasColumnType("text");
@@ -554,6 +634,23 @@ public partial class OdisseiaContext : DbContext
             entity.HasOne(d => d.IdcidadeNavigation).WithMany()
                 .HasForeignKey(d => d.Idcidade)
                 .HasConstraintName("FK_PersonagensJogador_Cidade");
+
+            entity.HasOne(d => d.PersonagemOrigem).WithMany()
+                .HasForeignKey(d => d.IdPersonagemOrigem)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_PersonagensJogador_PersonagemOrigem");
+        });
+
+        modelBuilder.Entity<MesaCombateParticipante>(entity =>
+        {
+            entity.Property(e => e.IdPersonagemOrigem).HasColumnName("IDPersonagemOrigem");
+            entity.Property(e => e.IdVarianteOrigem).HasMaxLength(100);
+            entity.HasIndex(e => e.IdPersonagemOrigem)
+                .HasDatabaseName("IX_MesaCombateParticipante_PersonagemOrigem");
+            entity.HasOne(e => e.PersonagemOrigem).WithMany()
+                .HasForeignKey(e => e.IdPersonagemOrigem)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_MesaCombateParticipante_PersonagemOrigem");
         });
 
         OnModelCreatingPartial(modelBuilder);

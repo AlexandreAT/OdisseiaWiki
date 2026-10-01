@@ -21,7 +21,7 @@ function App() {
   const location = useLocation();
 
   const isLoginPage = location.pathname === "/login";
-  const isWikiPage = location.pathname.startsWith('/wiki');
+  const isWikiPage = location.pathname.startsWith('/wiki') || /^\/mesa\/\d+\/wiki(?:\/|$)/.test(location.pathname);
 
   useEffect(() => {
     if (location.hash) {

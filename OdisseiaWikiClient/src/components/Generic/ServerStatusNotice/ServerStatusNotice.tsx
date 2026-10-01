@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import {
   wakeApiServer,
@@ -25,7 +25,6 @@ interface RootState {
 export const ServerStatusNotice = () => {
   const status = useApiAvailabilityStatus();
   const [showServerInfo, setShowServerInfo] = useState(false);
-  const previousStatusRef = useRef(status);
   const { theme, neon } = useSelector((state: RootState) => state.themesReducer);
 
   useEffect(() => {
@@ -34,21 +33,11 @@ export const ServerStatusNotice = () => {
     }
   }, []);
 
-  useEffect(() => {
-    const previousStatus = previousStatusRef.current;
-    previousStatusRef.current = status;
-
-    if (previousStatus === 'starting' && status === 'idle') {
-      window.location.reload();
-    }
-  }, [status]);
-
   if (status === 'idle') return null;
 
   const handleRetry = async () => {
     try {
       await wakeApiServer({ announceDelayMs: 0 });
-      window.location.reload();
     } catch {
       // The shared service keeps the controlled unavailable state visible.
     }

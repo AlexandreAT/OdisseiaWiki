@@ -254,7 +254,7 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
           onChange={(e) => searchPersonagens(e.target.value)}
           icon={<BiSearchAlt className="icon" />}
           iconSize={20}
-          disabled={!allPersonagens.length}
+          disabled={loadingPersonagens}
           suggestions={personagens.map(p => `${p.idpersonagem}|${p.nome}`)}
           onSelectSuggestion={(suggestion) => {
             const [idStr] = suggestion.split('|');

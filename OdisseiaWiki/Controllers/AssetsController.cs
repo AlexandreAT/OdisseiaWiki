@@ -26,21 +26,27 @@ namespace OdisseiaWiki.Controllers
         public async Task<IActionResult> UploadImage([FromForm] IFormFile file, [FromForm] string type, [FromForm] string entityName, [FromForm] string? folderName = null)
         {
             if (file == null || file.Length == 0)
-                return BadRequest("Nenhum arquivo enviado.");
+                return BadRequest(new { mensagemErro = "Nenhum arquivo enviado." });
 
             if (string.IsNullOrWhiteSpace(type) || string.IsNullOrWhiteSpace(entityName))
-                return BadRequest("Tipo e entidade são obrigatórios.");
+                return BadRequest(new { mensagemErro = "Tipo e entidade são obrigatórios." });
 
             string normalizedType = type.Trim().ToLowerInvariant();
             // O próprio mestre pode enviar o banner da Mesa que está criando/editando.
             // A associação do arquivo à Mesa continua protegida nos endpoints de Mesa.
             if (!User.IsAdmin() && normalizedType is not ("player" or "perfil" or "personagemjogador" or "mesa" or "mesas"))
-                return Forbid();
+                return StatusCode(StatusCodes.Status403Forbidden, new
+                {
+                    mensagemErro = "Você não possui permissão para enviar este tipo de imagem."
+                });
 
             ResultSaveImage result = await _assetService.SaveImageAsync(file, type, entityName, folderName);
 
             if (!result.Sucesso)
-                return BadRequest(result.MensagemErro);
+                return BadRequest(new
+                {
+                    mensagemErro = result.MensagemErro ?? "Não foi possível salvar a imagem."
+                });
 
             return Ok(new
             {

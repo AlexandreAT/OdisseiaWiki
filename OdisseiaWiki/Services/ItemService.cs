@@ -12,31 +12,34 @@ namespace OdisseiaWiki.Services
     {
         private readonly IItemRepository _repository;
         private readonly IAssetService _assetService;
+        private readonly IPersonagemRepository _personagens;
         private readonly ISistemaRpgResolver _sistemaRpgResolver;
         private readonly ISistemaEntidadeVinculoService _sistemaEntidadeVinculoService;
 
         public ItemService(
             IItemRepository repository,
+            IPersonagemRepository personagens,
             IAssetService assetService,
             ISistemaRpgResolver sistemaRpgResolver,
             ISistemaEntidadeVinculoService sistemaEntidadeVinculoService)
         {
             _repository = repository;
+            _personagens = personagens;
             _assetService = assetService;
             _sistemaRpgResolver = sistemaRpgResolver;
             _sistemaEntidadeVinculoService = sistemaEntidadeVinculoService;
         }
 
-        public async Task<IEnumerable<ItemDto>> GetAllAsync(bool? visivel = null)
+        public async Task<IEnumerable<ItemDto>> GetAllAsync(bool? visivel = null, int? idWikiEscopo = null)
         {
-            var items = await _repository.GetAllAsync(visivel);
+            var items = await _repository.GetAllAsync(visivel, idWikiEscopo);
             
             return items.Select(MapToDto);
         }
 
-        public async Task<ItemDto?> GetByIdAsync(string id)
+        public async Task<ItemDto?> GetByIdAsync(string id, int? idWikiEscopo = null)
         {
-            var item = await _repository.GetByIdAsync(id);
+            var item = await ObterPorIdAsync(id, idWikiEscopo);
             if (item is null) return null;
             
             ItemDto dto = MapToDto(item);
@@ -48,10 +51,10 @@ namespace OdisseiaWiki.Services
             return dto;
         }
 
-        public async Task<string> CreateAsync(ItemCreateDto dto) =>
-            (await CreateWithRuntimeAsync(dto)).Id;
+        public async Task<string> CreateAsync(ItemCreateDto dto, int? idWikiEscopo = null) =>
+            (await CreateWithRuntimeAsync(dto, idWikiEscopo)).Id;
 
-        public async Task<ItemSaveResultDto> CreateWithRuntimeAsync(ItemCreateDto dto)
+        public async Task<ItemSaveResultDto> CreateWithRuntimeAsync(ItemCreateDto dto, int? idWikiEscopo = null)
         {
             SistemaEntidadeVinculoResultado vinculo = await _sistemaEntidadeVinculoService.ValidarAsync(
                 dto.IdSistemaRpg,
@@ -78,6 +81,7 @@ namespace OdisseiaWiki.Services
                 Tags = JsonSerializer.Serialize(ContentCategoryHelper.EnsureCategoryTag(dto.Tags, ContentCategoryHelper.Item)),
                 Visivel = dto.Visivel,
                 Destaque = dto.Destaque,
+                IdWikiEscopo = idWikiEscopo ?? WikiEscopo.IdOficial,
                 IdSistemaRpg = vinculo.IdSistemaRpg,
                 IdSistemaVersao = vinculo.IdSistemaVersao,
                 AcompanharPublicacaoAtual = vinculo.AcompanharPublicacaoAtual,
@@ -91,12 +95,12 @@ namespace OdisseiaWiki.Services
             return ItemSaveResultDto.Ok(salvo);
         }
 
-        public async Task<bool> UpdateAsync(ItemUpdateDto dto) =>
-            await UpdateWithRuntimeAsync(dto) is not null;
+        public async Task<bool> UpdateAsync(ItemUpdateDto dto, int? idWikiEscopo = null) =>
+            await UpdateWithRuntimeAsync(dto, idWikiEscopo) is not null;
 
-        public async Task<ItemSaveResultDto?> UpdateWithRuntimeAsync(ItemUpdateDto dto)
+        public async Task<ItemSaveResultDto?> UpdateWithRuntimeAsync(ItemUpdateDto dto, int? idWikiEscopo = null)
         {
-            var item = await _repository.GetByIdAsync(dto.Iditem);
+            var item = await ObterPorIdAsync(dto.Iditem, idWikiEscopo);
             if (item is null) return null;
 
             bool alterarVinculo = dto.AcompanharPublicacaoAtual.HasValue ||
@@ -155,9 +159,9 @@ namespace OdisseiaWiki.Services
             return ItemSaveResultDto.Ok(salvo);
         }
 
-        public async Task<bool> DeleteAsync(string id)
+        public async Task<bool> DeleteAsync(string id, int? idWikiEscopo = null)
         {
-            var item = await _repository.GetByIdAsync(id);
+            var item = await ObterPorIdAsync(id, idWikiEscopo);
             if (item is null) return false;
 
             HashSet<string> assets = AssetReferenceHelper.Extract(
@@ -167,12 +171,44 @@ namespace OdisseiaWiki.Services
             return true;
         }
 
-        public async Task<List<ItemDto>> GetBatchAsync(List<string> ids)
+        public async Task<List<ItemDto>> GetBatchAsync(List<string> ids, int? idWikiEscopo = null)
         {
-            List<Item> items = await _repository.GetBatchAsync(ids);
+            List<Item> items = await _repository.GetBatchAsync(ids, idWikiEscopo);
 
             return items.Select(MapToDto).ToList();
         }
+
+        public async Task<ItemDto> SanitizarReferenciasPublicasAsync(ItemDto item)
+        {
+            if (!string.IsNullOrWhiteSpace(item.IditemBase))
+            {
+                Item? itemBase = await _repository.GetByIdAsync(item.IditemBase, WikiEscopo.IdOficial);
+                if (itemBase is null || !itemBase.Visivel)
+                {
+                    item.IditemBase = null;
+                    item.SistemaRuntime = null;
+                }
+            }
+
+            if (item.Idpersonagem is int idPersonagem)
+            {
+                Personagen? personagem = await _personagens.GetByIdAsync(idPersonagem, WikiEscopo.IdOficial);
+                if (personagem is null || !personagem.Visivel ||
+                    !PersonagemVisibilidadeDefaults.FromEntity(
+                        personagem.ConfiguracaoVisibilidade, personagemJogador: false).Nome)
+                {
+                    item.Idpersonagem = null;
+                    item.SistemaRuntime = null;
+                }
+            }
+
+            return item;
+        }
+
+        private Task<Item?> ObterPorIdAsync(string id, int? idWikiEscopo) =>
+            idWikiEscopo.HasValue
+                ? _repository.GetByIdAsync(id, idWikiEscopo)
+                : _repository.GetByIdAsync(id);
 
         private Task<SistemaRuntimeContextoDto> ResolverRuntimeAsync(Item item) =>
             _sistemaRpgResolver.ResolverContextoAsync(

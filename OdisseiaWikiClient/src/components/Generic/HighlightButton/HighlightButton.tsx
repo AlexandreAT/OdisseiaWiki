@@ -1,6 +1,5 @@
 import React, { memo } from 'react';
 import { ButtonClipController, ButtonBoxShadow, ButtonClipBorder, ButtonContentContainer } from './HighlightButton.styles';
-import { useApiRequestActivity } from '../../../services/apiRequestActivity';
 import { LoadingIndicator } from '../LoadingIndicator';
 
 interface CyberButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -36,8 +35,7 @@ const CyberButtonComponent = ({
   loading = false,
   ...rest
 }: CyberButtonProps) => {
-  const hasActiveApiRequest = useApiRequestActivity();
-  const isDisabledState = disabled || loading || hasActiveApiRequest;
+  const isDisabledState = disabled || loading;
   
   return (
     <ButtonClipController
@@ -64,10 +62,10 @@ const CyberButtonComponent = ({
         onClick={onClick}
         type={type}
         disabled={isDisabledState}
-        aria-busy={loading || hasActiveApiRequest}
+        aria-busy={loading}
         {...rest}
       >
-        {loading || hasActiveApiRequest ? (
+        {loading ? (
           <LoadingIndicator compact label={text || 'Processando'} />
         ) : (
           children || text

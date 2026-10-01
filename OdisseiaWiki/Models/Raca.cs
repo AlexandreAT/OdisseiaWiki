@@ -32,6 +32,8 @@ public partial class Raca
     public bool Visivel { get; set; } = true;
     public bool Destaque { get; set; } = false;
 
+    public int IdWikiEscopo { get; set; } = WikiEscopo.IdOficial;
+
     public int? IdSistemaRpg { get; set; }
 
     public int? IdSistemaVersao { get; set; }
@@ -46,5 +48,9 @@ public partial class Raca
     [JsonIgnore]
     public virtual SistemaVersao? SistemaVersao { get; set; }
 
+    [JsonIgnore]
+    public virtual WikiEscopo WikiEscopo { get; set; } = null!;
+
+    [JsonIgnore]
     public virtual ICollection<Personagen> Personagens { get; set; } = new List<Personagen>();
 }

@@ -108,6 +108,12 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
   const initialSkillLimit = runtimeContext?.criacao?.maximoSkillsIniciais;
   const filledMagicCount = magias.filter((magia) => magia.nome?.trim()).length;
   const filledSkillCount = skills.filter((skill) => skill.nome?.trim()).length;
+  const relatedId = (entry: typeof personagens[number]) => Number(
+    entry.Idpersonagem ?? (entry as unknown as { idpersonagem?: number }).idpersonagem,
+  );
+  const relatedName = (entry: typeof personagens[number]) => String(
+    entry.Nome ?? (entry as unknown as { nome?: string }).nome ?? 'Sem nome',
+  );
 
   const handleCharacterAvatarUpload = (result: CropResult) => {
     setAvatarUrl(result.preview);
@@ -259,19 +265,19 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
           onChange={(e) => searchPersonagens(e.target.value)}
           icon={<BiSearchAlt className="icon" />}
           iconSize={20}
-          disabled={!allPersonagens.length}
-          suggestions={personagens.map(p => `${p.Idpersonagem}|${p.Nome}`)}
+          disabled={loadingPersonagens}
+          suggestions={personagens.map((personagem) => `${relatedId(personagem)}|${relatedName(personagem)}`)}
           onSelectSuggestion={(suggestion) => {
             const [idStr] = suggestion.split('|');
             const id = parseInt(idStr);
-            const personagem = allPersonagens.find(p => p.Idpersonagem === id);
+            const personagem = allPersonagens.find((entry) => relatedId(entry) === id);
             if (personagem) {
               setListPersonagemRelacionado(prev => {
-                if (prev.some(item => item.id === personagem.Idpersonagem)) {
+                if (prev.some(item => item.id === relatedId(personagem))) {
                   toast.error("Esse personagem já está vinculado.");
                   return prev;
                 }
-                return [...prev, { id: personagem.Idpersonagem, nome: personagem.Nome }];
+                return [...prev, { id: relatedId(personagem), nome: relatedName(personagem) }];
               });
             }
           }}
@@ -289,7 +295,7 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
         <InputText
           theme={theme}
           neon={neon}
-          label="Idpassiva"
+          label="Passiva"
           value={String(idpassiva ?? '')}
           onChange={(e) => setIdpassiva(e.target.value ? Number(e.target.value) : undefined)}
           width="100%"

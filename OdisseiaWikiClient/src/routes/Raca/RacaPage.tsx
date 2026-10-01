@@ -18,6 +18,8 @@ import { ListModal } from '../../components/Generic/ListModal';
 import { Modal } from '../../components/Generic/Modal/Modal';
 import { GalleryModal } from '../../components/Generic/GalleryModal';
 import { OdisseiaAnimatedTitle } from '../../components/Generic/OdisseiaAnimatedTitle';
+import { ContentVisibilityNotice } from '../../components/Generic/ContentVisibilityNotice/ContentVisibilityNotice';
+import { getMesaWikiRoute } from '../../services/wikiContext';
 import { SystemRuntimeIndicator } from '../../components/Generic/SystemRuntimeIndicator/SystemRuntimeIndicator';
 import { RichTextDisplay } from '../../components/Generic/RichTextDisplay/RichTextDisplay';
 import { PersonagemPayload } from '../../services/personagensService';
@@ -144,6 +146,7 @@ const CharacterCardContent = ({ character, onSelect, modal = false }: CharacterC
         fallbackIcon={<BiUserCircle aria-hidden="true" />}
       />
       <CharacterName>{character.nome}</CharacterName>
+      <ContentVisibilityNotice visible={character.visivel} />
     </Card>
   );
 };
@@ -307,6 +310,7 @@ const RacaPage = () => {
               <RaceIdentity>
                 <RaceTitleSlot>
                   <OdisseiaAnimatedTitle key={race.nome} theme={theme} neon={neon} text={race.nome} />
+                  <ContentVisibilityNotice visible={race.visivel} />
                 </RaceTitleSlot>
                 {visibleTags.length > 0 && (
                   <RaceTagList aria-label="Categorias da raça">
@@ -477,8 +481,9 @@ const RacaPage = () => {
               <RelatedPages>
                 <RelatedPagesTitle>PÃ¡ginas que fazem referÃªncia a esta raÃ§a</RelatedPagesTitle>
                 {relatedPages.map((page) => (
-                  <RelatedPageLink key={page.idPage ?? page.slug} to={`/wiki/${encodeURIComponent(page.slug)}`}>
+                  <RelatedPageLink key={page.idPage ?? page.slug} to={getMesaWikiRoute(`/wiki/${encodeURIComponent(page.slug)}`)}>
                     <span>{page.titulo}</span>
+                    <ContentVisibilityNotice visible={page.visivel} />
                   </RelatedPageLink>
                 ))}
               </RelatedPages>

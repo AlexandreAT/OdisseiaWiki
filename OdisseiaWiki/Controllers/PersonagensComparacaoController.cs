@@ -43,14 +43,16 @@ public sealed class PersonagensComparacaoController : ControllerBase
     public async Task<IActionResult> Get(
         PersonagemComparacaoOrigem origem,
         int id,
-        [FromQuery] string? idVariante)
+        [FromQuery] string? idVariante,
+        [FromQuery] int? idMesa)
     {
         PersonagemComparacaoPesquisaResultadoDto result = await _service.GetAsync(
             origem,
             id,
             User.GetUserId(),
             User.IsAdmin(),
-            idVariante);
+            idVariante,
+            idMesa);
 
         if (!result.AcessoPermitido) return Forbid();
         return result.Personagens.FirstOrDefault() is { } personagem

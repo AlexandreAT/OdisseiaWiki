@@ -33,6 +33,7 @@ export interface RawPersonagemApi {
   idpersonagemJogador: number;
   idusuario?: number;
   idmesa?: number;
+  idPersonagemOrigem?: number | null;
   idSistemaVersao?: number | null;
   revisaoRuntime?: number;
   nome: string;
@@ -51,6 +52,7 @@ export interface RawPersonagemApi {
   skills?: string | any[];
   magia?: string | any[];
   personagemsVinculados?: string | any[];
+  quantidadeRelacionadosOcultos?: number;
   // ... outros campos que o back enviar
   galeriaImagem?: string | GalleryImage[];
   tags?: string | string[];
@@ -128,6 +130,7 @@ export function normalizePersonagem(raw: RawPersonagemApi) {
     idpersonagemJogador: raw.idpersonagemJogador,
     idusuario: raw.idusuario,
     idmesa: raw.idmesa,
+    idPersonagemOrigem: raw.idPersonagemOrigem ?? null,
     idSistemaVersao: raw.idSistemaVersao ?? null,
     revisaoRuntime: raw.revisaoRuntime,
     nome: raw.nome,
@@ -147,6 +150,7 @@ export function normalizePersonagem(raw: RawPersonagemApi) {
     skills,
     magia: magias,
     personagemsVinculados: relacionados,
+    quantidadeRelacionadosOcultos: Number(raw.quantidadeRelacionadosOcultos) || 0,
     tags,
     racaNome: raw.racaNome,
     cidadeNome: raw.cidadeNome,

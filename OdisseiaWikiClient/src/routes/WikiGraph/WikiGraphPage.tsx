@@ -18,6 +18,7 @@ import { GraphCanvas, GraphCanvasHandle } from './components/GraphCanvas/GraphCa
 import { GraphStatsPanel } from './components/GraphStatsPanel/GraphStatsPanel';
 import { GraphToolbar } from './components/GraphToolbar/GraphToolbar';
 import { useWikiGraph } from './useWikiGraph';
+import { getMesaWikiIdFromPath } from '../../services/wikiContext';
 import {
   AssistiveInstructions,
   GraphBackground,
@@ -42,12 +43,14 @@ const WikiGraphPage = () => {
   const [headerExpanded, setHeaderExpanded] = useState(true);
   const [activeTypes, setActiveTypes] = useState<Set<WikiGraphEntityType>>(() => new Set());
   const [layoutMode, setLayoutMode] = useState<WikiGraphLayoutMode>('free');
+  const isMesaWiki = getMesaWikiIdFromPath() !== null;
+  const [incluirWikiGeral, setIncluirWikiGeral] = useState(false);
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const graphCanvasRef = useRef<GraphCanvasHandle>(null);
   const searchBlurTimerRef = useRef<number | null>(null);
-  const { graph, loading, error, retry } = useWikiGraph();
+  const { graph, loading, error, retry } = useWikiGraph(isMesaWiki && incluirWikiGeral);
   const {
     catalogLoading,
     catalogError,
@@ -131,6 +134,8 @@ const WikiGraphPage = () => {
           searchOpen={searchOpen}
           neon={neon === 'on'}
           layoutMode={layoutMode}
+          mostrarControleEscopo={isMesaWiki}
+          incluirWikiGeral={incluirWikiGeral}
           onToggleType={toggleType}
           onQueryChange={setQuery}
           onSearchFocus={() => {
@@ -147,6 +152,7 @@ const WikiGraphPage = () => {
           onSearchDismiss={() => setSearchOpen(false)}
           onSelectResult={selectSearchResult}
           onLayoutModeChange={setLayoutMode}
+          onIncluirWikiGeralChange={setIncluirWikiGeral}
           onCentralize={() => graphCanvasRef.current?.centralize()}
         />
 
@@ -180,6 +186,7 @@ const WikiGraphPage = () => {
           {!loading && !error && graph && graph.nodes.length > 0 && (
             <>
               <GraphCanvas
+                key={incluirWikiGeral ? 'mesa-e-geral' : 'somente-mesa'}
                 ref={graphCanvasRef}
                 graph={graph}
                 activeTypes={activeTypes}

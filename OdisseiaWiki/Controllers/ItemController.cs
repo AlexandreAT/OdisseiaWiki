@@ -15,14 +15,20 @@ namespace OdisseiaWiki.Controllers
         public ItemController(IItemService service) => _service = service;
 
         [HttpGet]
-        public async Task<IActionResult> GetAll() =>
-            Ok(await _service.GetAllAsync(User.IsAdmin() ? null : true));
+        public async Task<IActionResult> GetAll()
+        {
+            IEnumerable<ItemDto> items = await _service.GetAllAsync(User.IsAdmin() ? null : true);
+            return Ok(User.IsAdmin()
+                ? items
+                : await Task.WhenAll(items.Select(_service.SanitizarReferenciasPublicasAsync)));
+        }
 
         [HttpGet("{id:guid}")]
         public async Task<IActionResult> GetById(string id)
         {
             ItemDto? item = await _service.GetByIdAsync(id);
-            return item is null || (!item.Visivel && !User.IsAdmin()) ? NotFound() : Ok(item);
+            if (item is null || (!item.Visivel && !User.IsAdmin())) return NotFound();
+            return Ok(User.IsAdmin() ? item : await _service.SanitizarReferenciasPublicasAsync(item));
         }
 
         [HttpPost]
@@ -77,7 +83,9 @@ namespace OdisseiaWiki.Controllers
             if (!User.IsAdmin())
                 items = items.Where(item => item.Visivel).ToList();
 
-            return Ok(items);
+            return Ok(User.IsAdmin()
+                ? items
+                : await Task.WhenAll(items.Select(_service.SanitizarReferenciasPublicasAsync)));
         }
     }
 }

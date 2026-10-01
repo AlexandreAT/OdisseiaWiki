@@ -19,7 +19,10 @@ namespace OdisseiaWiki.Services
             _assetService = assetService;
         }
 
-        public async Task<ResultCidade> CreateAsync(CidadeDto dto)
+        public async Task<ResultCidade> CreateAsync(
+            CidadeDto dto,
+            int? idWikiEscopo = null,
+            int? idSistemaRpg = null)
         {
             if (string.IsNullOrWhiteSpace(dto.Nome))
                 return ResultCidade.Fail("O nome é obrigatório.");
@@ -44,6 +47,8 @@ namespace OdisseiaWiki.Services
                     : null,
                 Visivel = dto.Visivel,
                 Destaque = dto.Destaque,
+                IdWikiEscopo = idWikiEscopo ?? WikiEscopo.IdOficial,
+                IdSistemaRpg = idSistemaRpg,
                 DataCriacao = DateTime.UtcNow
             };
 
@@ -51,9 +56,9 @@ namespace OdisseiaWiki.Services
             return ResultCidade.Ok(criada);
         }
 
-        public async Task<ResultCidade> UpdateAsync(int id, CidadeDto dto)
+        public async Task<ResultCidade> UpdateAsync(int id, CidadeDto dto, int? idWikiEscopo = null)
         {
-            var cidade = await _repository.GetByIdAsync(id);
+            var cidade = await _repository.GetByIdAsync(id, idWikiEscopo);
             if (cidade == null)
                 return ResultCidade.Fail($"Cidade com id {id} não encontrada.");
 
@@ -93,31 +98,31 @@ namespace OdisseiaWiki.Services
             return ResultCidade.Ok(atualizada);
         }
 
-        public async Task<ResultCidade> GetAllAsync(bool? visivel = null)
+        public async Task<ResultCidade> GetAllAsync(bool? visivel = null, int? idWikiEscopo = null)
         {
-            var cidades = await _repository.GetAllAsync(visivel);
+            var cidades = await _repository.GetAllAsync(visivel, idWikiEscopo);
 
             var dtos = cidades.Select(MapToDto).ToList();
 
             return ResultCidade.Ok(dtos);
         }
 
-        public async Task<List<CidadeDto>> GetBatchAsync(List<int> ids)
+        public async Task<List<CidadeDto>> GetBatchAsync(List<int> ids, int? idWikiEscopo = null)
         {
-            List<Cidade> cidades = await _repository.GetBatchAsync(ids);
+            List<Cidade> cidades = await _repository.GetBatchAsync(ids, idWikiEscopo);
 
             return cidades.Select(MapToDto).ToList();
         }
 
-        public async Task<CidadeDto?> GetByIdAsync(int id)
+        public async Task<CidadeDto?> GetByIdAsync(int id, int? idWikiEscopo = null)
         {
-            Cidade? cidade = await _repository.GetByIdAsync(id);
+            Cidade? cidade = await _repository.GetByIdAsync(id, idWikiEscopo);
             return cidade is null ? null : MapToDto(cidade);
         }
 
-        public async Task<bool> DeleteAsync(int id)
+        public async Task<bool> DeleteAsync(int id, int? idWikiEscopo = null)
         {
-            Cidade? cidade = await _repository.GetByIdAsync(id);
+            Cidade? cidade = await _repository.GetByIdAsync(id, idWikiEscopo);
             if (cidade is null)
                 return false;
 
@@ -146,6 +151,7 @@ namespace OdisseiaWiki.Services
                 PontosDeInteresse = DeserializePontosDeInteresse(cidade.PontosDeInteresse),
                 Visivel = cidade.Visivel,
                 Destaque = cidade.Destaque,
+                IdSistemaRpg = cidade.IdSistemaRpg,
                 DataCriacao = cidade.DataCriacao
             };
         }

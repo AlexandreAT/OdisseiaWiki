@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace OdisseiaWiki.Models
 {
@@ -42,9 +43,13 @@ namespace OdisseiaWiki.Models
         public int? Idpassiva { get; set; }
         public string? Ultimate { get; set; }
 
+        [JsonIgnore]
         public virtual Cidade? IdcidadeNavigation { get; set; }
+        [JsonIgnore]
         public virtual Raca IdracaNavigation { get; set; } = null!;
+        [JsonIgnore]
         public virtual Passiva? Passiva { get; set; }
+        [JsonIgnore]
         public virtual ICollection<PersonagemProficiencia> PersonagemProficiencias { get; set; }
             = new List<PersonagemProficiencia>();
     }

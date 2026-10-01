@@ -58,7 +58,7 @@ export const useCidadePage = () => {
 
       const [cityResult, characterResult, pageResult] = await Promise.allSettled([
         getCidadeById(cityId),
-        getPersonagens(true),
+        getPersonagens(),
         getPagesReferencingEntity('Cidade', cityId),
       ]);
 
@@ -83,7 +83,7 @@ export const useCidadePage = () => {
 
       if (characterResult.status === 'fulfilled' && Array.isArray(characterResult.value)) {
         setCharacters(characterResult.value
-          .filter((character) => character.visivel !== false && Number(character.idcidade) === cityId)
+          .filter((character) => Number(character.idcidade) === cityId)
           .sort(compareByName((character) => character.nome)));
       } else {
         setCharacters([]);

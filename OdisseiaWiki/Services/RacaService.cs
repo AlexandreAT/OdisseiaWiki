@@ -34,7 +34,7 @@ namespace OdisseiaWiki.Services
             _sistemaEntidadeVinculoService = sistemaEntidadeVinculoService;
         }
 
-        public async Task<ResultRaca> CreateAsync(RacaDto dto)
+        public async Task<ResultRaca> CreateAsync(RacaDto dto, int? idWikiEscopo = null)
         {
             if (string.IsNullOrWhiteSpace(dto.Nome))
                 return ResultRaca.Fail("O nome é obrigatório.");
@@ -69,6 +69,7 @@ namespace OdisseiaWiki.Services
                 Tags = JsonSerializer.Serialize(ContentCategoryHelper.EnsureCategoryTag(dto.Tags, ContentCategoryHelper.Raca)),
                 Visivel = dto.Visivel,
                 Destaque = dto.Destaque,
+                IdWikiEscopo = idWikiEscopo ?? WikiEscopo.IdOficial,
                 IdSistemaRpg = vinculo.IdSistemaRpg,
                 IdSistemaVersao = vinculo.IdSistemaVersao,
                 AcompanharPublicacaoAtual = vinculo.AcompanharPublicacaoAtual,
@@ -78,16 +79,19 @@ namespace OdisseiaWiki.Services
             var criada = await _repository.CreateAsync(raca);
             if (status?.passivas is { Count: > 0 })
             {
-                status.passivas = await _repository.SyncPassivasAsync(criada.Idraca, status.passivas);
+                status.passivas = await _repository.SyncPassivasAsync(
+                    criada.Idraca,
+                    status.passivas,
+                    idWikiEscopo);
                 criada.StatusJson = JsonSerializer.Serialize(status);
                 criada = await _repository.UpdateAsync(criada);
             }
             return ResultRaca.Ok(MapToDto(criada));
         }
 
-        public async Task<ResultRaca> UpdateAsync(int id, RacaDto dto)
+        public async Task<ResultRaca> UpdateAsync(int id, RacaDto dto, int? idWikiEscopo = null)
         {
-            var raca = await _repository.GetByIdAsync(id);
+            var raca = await ObterPorIdAsync(id, idWikiEscopo);
             if (raca == null)
                 return ResultRaca.Fail($"Raça com id {id} não encontrada.");
 
@@ -181,7 +185,8 @@ namespace OdisseiaWiki.Services
             {
                 updatedStatus.passivas = await _repository.SyncPassivasAsync(
                     atualizada.Idraca,
-                    updatedStatus.passivas ?? new List<RacaPassivaDto>());
+                    updatedStatus.passivas ?? new List<RacaPassivaDto>(),
+                    idWikiEscopo);
                 atualizada.StatusJson = JsonSerializer.Serialize(updatedStatus);
                 atualizada = await _repository.UpdateAsync(atualizada);
             }
@@ -193,9 +198,12 @@ namespace OdisseiaWiki.Services
             return ResultRaca.Ok(MapToDto(atualizada));
         }
 
-        public async Task<ResultRaca> GetAllAsync(bool? visivel = null, int? idMesa = null)
+        public async Task<ResultRaca> GetAllAsync(
+            bool? visivel = null,
+            int? idMesa = null,
+            int? idWikiEscopo = null)
         {
-            var racas = await _repository.GetAllAsync(visivel);
+            var racas = await _repository.GetAllAsync(visivel, idWikiEscopo);
             SistemaRuntimeContextoDto contexto = await _sistemaRpgResolver.ResolverContextoAsync(
                 new SistemaRuntimeConsultaDto { IdMesa = idMesa });
             bool sistemaPadrao = string.Equals(
@@ -221,15 +229,18 @@ namespace OdisseiaWiki.Services
                 .ToList());
         }
 
-        public async Task<RacaDto?> GetByIdAsync(int id, int? idMesa = null)
+        public async Task<RacaDto?> GetByIdAsync(
+            int id,
+            int? idMesa = null,
+            int? idWikiEscopo = null)
         {
-            var raca = await _repository.GetByIdAsync(id);
+            var raca = await ObterPorIdAsync(id, idWikiEscopo);
             return raca != null ? await MapToDtoAsync(raca, idMesa) : null;
         }
 
-        public async Task<bool> DeleteAsync(int id)
+        public async Task<bool> DeleteAsync(int id, int? idWikiEscopo = null)
         {
-            Raca? raca = await _repository.GetByIdAsync(id);
+            Raca? raca = await ObterPorIdAsync(id, idWikiEscopo);
             if (raca is null)
                 return false;
 
@@ -320,9 +331,9 @@ namespace OdisseiaWiki.Services
             return dto;
         }
 
-        public async Task<List<RacaDto>> GetBatchAsync(List<int> ids)
+        public async Task<List<RacaDto>> GetBatchAsync(List<int> ids, int? idWikiEscopo = null)
         {
-            List<Raca> racas = await _repository.GetBatchAsync(ids);
+            List<Raca> racas = await _repository.GetBatchAsync(ids, idWikiEscopo);
 
             return racas
                 .Select(MapToDto)
@@ -370,6 +381,11 @@ namespace OdisseiaWiki.Services
                 return null;
             }
         }
+
+        private Task<Raca?> ObterPorIdAsync(int id, int? idWikiEscopo) =>
+            idWikiEscopo.HasValue
+                ? _repository.GetByIdAsync(id, idWikiEscopo)
+                : _repository.GetByIdAsync(id);
 
         private static bool TryNormalizeStatus(
             RacaStatusDto? source,

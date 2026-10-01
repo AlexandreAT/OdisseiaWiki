@@ -29,6 +29,7 @@ import {
 import { useSelector } from 'react-redux';
 import backgroundVideo from '../../assets/backgroundLinesScifiAnimation.mp4';
 import { OdisseiaAnimatedTitle } from '../../components/Generic/OdisseiaAnimatedTitle';
+import { ContentVisibilityNotice } from '../../components/Generic/ContentVisibilityNotice/ContentVisibilityNotice';
 import { SystemRuntimeIndicator } from '../../components/Generic/SystemRuntimeIndicator/SystemRuntimeIndicator';
 import { Modal } from '../../components/Generic/Modal/Modal';
 import { RichTextDisplay } from '../../components/Generic/RichTextDisplay/RichTextDisplay';
@@ -917,6 +918,7 @@ const ItemPage = () => {
               <ItemIdentity>
                 <ItemTitleSlot>
                   <OdisseiaAnimatedTitle key={item.nome} theme={theme} neon={neon} text={item.nome} />
+                  <ContentVisibilityNotice visible={item.visivel} />
                 </ItemTitleSlot>
                 {hasText(item.dataCriacao) && (
                   <ItemCreationDate>

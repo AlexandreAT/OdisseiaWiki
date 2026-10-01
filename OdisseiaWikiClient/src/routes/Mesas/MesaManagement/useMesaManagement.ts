@@ -41,6 +41,7 @@ export const useMesaManagement = (idMesa?: number, tab: MesaManagementTab = 'ger
   const [players, setPlayers] = useState<MesaJogador[]>([]);
   const [characters, setCharacters] = useState<MesaPersonagemResumo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tabLoading, setTabLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
 
@@ -70,14 +71,34 @@ export const useMesaManagement = (idMesa?: number, tab: MesaManagementTab = 'ger
     if (tab === 'personagens') setCharacters((await obterPersonagensMesaGerenciamento(idMesa)).personagens);
   }, [idMesa, tab]);
 
-  const load = useCallback(async () => {
+  const loadInitial = useCallback(async () => {
     setLoading(true);
-    try { await Promise.all([loadMesa(), loadTab()]); }
+    try { await loadMesa(); }
     catch (error) { toast.error(getApiErrorMessage(error, 'Não foi possível carregar o gerenciamento da Mesa.')); }
     finally { setLoading(false); }
-  }, [loadMesa, loadTab]);
+  }, [loadMesa]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { void loadInitial(); }, [loadInitial]);
+
+  useEffect(() => {
+    let active = true;
+
+    if (tab === 'geral') {
+      setTabLoading(false);
+      return () => { active = false; };
+    }
+
+    setTabLoading(true);
+    void loadTab()
+      .catch((error) => {
+        if (active) toast.error(getApiErrorMessage(error, 'Não foi possível carregar esta seção da Mesa.'));
+      })
+      .finally(() => {
+        if (active) setTabLoading(false);
+      });
+
+    return () => { active = false; };
+  }, [loadTab, tab]);
 
   const updateForm = <K extends keyof MesaGeneralForm>(key: K, value: MesaGeneralForm[K]) => {
     setForm((current) => current ? { ...current, [key]: value } : current);
@@ -126,7 +147,7 @@ export const useMesaManagement = (idMesa?: number, tab: MesaManagementTab = 'ger
   };
 
   return {
-    mesa, form, versions, requests, players, characters, loading, saving,
+    mesa, form, versions, requests, players, characters, loading, tabLoading, saving,
     updateForm,
     setBanner: (file: File, preview: string) => { setBannerFile(file); updateForm('imagem', preview); },
     removeBanner: () => { setBannerFile(null); updateForm('imagem', undefined); },

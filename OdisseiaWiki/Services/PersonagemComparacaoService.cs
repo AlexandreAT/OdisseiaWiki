@@ -15,17 +15,20 @@ public sealed class PersonagemComparacaoService : IPersonagemComparacaoService
     private readonly IPersonagemJogadorRepository _jogadores;
     private readonly IMesaService _mesas;
     private readonly ISistemaRpgResolver _resolver;
+    private readonly IWikiMesaService? _wikiMesa;
 
     public PersonagemComparacaoService(
         IPersonagemRepository personagens,
         IPersonagemJogadorRepository jogadores,
         IMesaService mesas,
-        ISistemaRpgResolver resolver)
+        ISistemaRpgResolver resolver,
+        IWikiMesaService? wikiMesa = null)
     {
         _personagens = personagens;
         _jogadores = jogadores;
         _mesas = mesas;
         _resolver = resolver;
+        _wikiMesa = wikiMesa;
     }
 
     public async Task<PersonagemComparacaoPesquisaResultadoDto> SearchAsync(
@@ -55,13 +58,56 @@ public sealed class PersonagemComparacaoService : IPersonagemComparacaoService
                 return Denied();
         }
 
-        List<PersonagemComparacaoRegistro> registros = await _personagens
-            .SearchVisibleForComparisonAsync(
-                normalizedTerm,
-                origem == PersonagemComparacaoOrigem.Npc && string.IsNullOrWhiteSpace(idVarianteAtual)
-                    ? idPersonagemAtual
-                    : null,
-                ResultLimit);
+        int? wikiMesaId = origem == PersonagemComparacaoOrigem.Jogador ? effectiveTableId : idMesa;
+        List<PersonagemComparacaoRegistro> registros;
+        if (wikiMesaId.HasValue && _wikiMesa is not null)
+        {
+            if (!idUsuario.HasValue)
+                return Denied();
+
+            WikiMesaOperacaoResultado<List<Personagen>> catalogo = await _wikiMesa.GetPersonagensAsync(
+                wikiMesaId.Value, idUsuario.Value, administrador, somenteProprios: false, visivel: null);
+            if (!catalogo.Sucesso || catalogo.Dados is null)
+                return Denied();
+
+            bool podeGerenciar = administrador ||
+                (await _wikiMesa.PodeGerenciarAsync(wikiMesaId.Value, idUsuario.Value, administrador)).Dados == true;
+            registros = catalogo.Dados
+                .Where(personagem => personagem.Nome.Contains(normalizedTerm, StringComparison.OrdinalIgnoreCase) ||
+                    (personagem.StatusJson?.Contains(normalizedTerm, StringComparison.OrdinalIgnoreCase) ?? false))
+                .Select(personagem => new PersonagemComparacaoRegistro
+                {
+                    Id = personagem.Idpersonagem,
+                    Jogador = false,
+                    Visivel = personagem.Visivel,
+                    AcessoCompleto = administrador ||
+                        (podeGerenciar && personagem.IdWikiEscopo != WikiEscopo.IdOficial),
+                    Nome = personagem.Nome,
+                    Imagem = personagem.Imagem,
+                    IdRaca = personagem.Idraca,
+                    IdMesa = wikiMesaId,
+                    StatusJson = personagem.StatusJson ?? "{}",
+                    SkillsJson = personagem.Skills,
+                    ConfiguracaoVisibilidade = personagem.ConfiguracaoVisibilidade,
+                })
+                .ToList();
+        }
+        else
+        {
+            registros = await (administrador
+                ? _personagens.SearchAllOfficialForComparisonAsync(
+                    normalizedTerm,
+                    origem == PersonagemComparacaoOrigem.Npc && string.IsNullOrWhiteSpace(idVarianteAtual)
+                        ? idPersonagemAtual
+                        : null,
+                    ResultLimit)
+                : _personagens.SearchVisibleForComparisonAsync(
+                    normalizedTerm,
+                    origem == PersonagemComparacaoOrigem.Npc && string.IsNullOrWhiteSpace(idVarianteAtual)
+                        ? idPersonagemAtual
+                        : null,
+                    ResultLimit));
+        }
 
         if (origem == PersonagemComparacaoOrigem.Jogador && effectiveTableId.HasValue)
         {
@@ -107,12 +153,43 @@ public sealed class PersonagemComparacaoService : IPersonagemComparacaoService
         int id,
         int? idUsuario,
         bool administrador,
-        string? idVariante = null)
+        string? idVariante = null,
+        int? idMesa = null)
     {
         PersonagemComparacaoRegistro? registro;
         if (origem == PersonagemComparacaoOrigem.Npc)
         {
-            registro = await _personagens.GetForComparisonAsync(id, requireVisible: !administrador);
+            if (idMesa.HasValue)
+            {
+                if (!idUsuario.HasValue || _wikiMesa is null)
+                    return Denied();
+                WikiMesaOperacaoResultado<Personagen> result = await _wikiMesa.GetPersonagemAsync(
+                    idMesa.Value, idUsuario.Value, administrador, id);
+                if (!result.Sucesso || result.Dados is null)
+                    return new PersonagemComparacaoPesquisaResultadoDto();
+                Personagen personagem = result.Dados;
+                bool podeGerenciar = administrador ||
+                    (await _wikiMesa.PodeGerenciarAsync(idMesa.Value, idUsuario.Value, administrador)).Dados == true;
+                registro = new PersonagemComparacaoRegistro
+                {
+                    Id = personagem.Idpersonagem,
+                    Jogador = false,
+                    Visivel = personagem.Visivel,
+                    AcessoCompleto = administrador ||
+                        (podeGerenciar && personagem.IdWikiEscopo != WikiEscopo.IdOficial),
+                    Nome = personagem.Nome,
+                    Imagem = personagem.Imagem,
+                    IdRaca = personagem.Idraca,
+                    IdMesa = idMesa,
+                    StatusJson = personagem.StatusJson ?? "{}",
+                    SkillsJson = personagem.Skills,
+                    ConfiguracaoVisibilidade = personagem.ConfiguracaoVisibilidade,
+                };
+            }
+            else
+            {
+                registro = await _personagens.GetForComparisonAsync(id, requireVisible: !administrador);
+            }
         }
         else
         {
@@ -180,7 +257,7 @@ public sealed class PersonagemComparacaoService : IPersonagemComparacaoService
             PersonagemVisibilidadeDto visibilidade = PersonagemVisibilidadeDefaults.FromEntity(
                 registro.ConfiguracaoVisibilidade,
                 registro.Jogador);
-            bool podeVerDadosCompletos = administrador ||
+            bool podeVerDadosCompletos = administrador || registro.AcessoCompleto ||
                 (registro.Jogador && idUsuario.HasValue && registro.Idusuario == idUsuario.Value);
             List<ComparacaoVariante> variantes = registro.Jogador
                 ? new List<ComparacaoVariante>()

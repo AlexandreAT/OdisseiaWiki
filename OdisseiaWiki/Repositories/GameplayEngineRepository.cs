@@ -130,7 +130,7 @@ public sealed class GameplayEngineRepository : IGameplayEngineRepository
     public Task<SistemaVersao?> GetSystemVersionAsync(
         int idSistemaVersao,
         CancellationToken cancellationToken = default)
-        => _context.SistemaVersoes.AsNoTracking()
+        => _context.SistemaVersoes.AsNoTracking().AsSplitQuery()
             .Include(item => item.SistemaRpg)
             .Include(item => item.Modulos)
             .Include(item => item.FontesExperiencia)

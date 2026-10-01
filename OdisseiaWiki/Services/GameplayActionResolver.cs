@@ -255,11 +255,13 @@ public sealed class GameplayActionResolver
         }
         if (!TryGetAttributeValue(character.StatusJson, expectedGroup.ToString(), attributeCode, out int value))
             return Failure("ATRIBUTO_NAO_ENCONTRADO", "O atributo não foi encontrado nesta ficha.");
-        if (value < attribute.ValorMinimo ||
-            (attribute.ValorMaximoAbsoluto.HasValue && value > attribute.ValorMaximoAbsoluto.Value))
-        {
-            return Failure("ATRIBUTO_FORA_LIMITE", "O valor do atributo está fora dos limites publicados pelo Sistema.");
-        }
+        // NPCs copiados para a Mesa podem ter atributos publicados pelo mestre
+        // acima do teto de criação de jogadores. A rolagem usa esse snapshot,
+        // sem relaxar o limite das fichas comuns ou inventar outro valor.
+        if (value < attribute.ValorMinimo || value > 1000 ||
+            (!character.IdPersonagemOrigem.HasValue &&
+             attribute.ValorMaximoAbsoluto.HasValue && value > attribute.ValorMaximoAbsoluto.Value))
+            return Failure("ATRIBUTO_FORA_LIMITE", "O valor do atributo não pode ser usado neste teste.");
         if (!TryReadConfiguredDice(attribute.ConfiguracaoJson, attribute.FormulaTeste, out int quantity, out int faces))
             return Failure("FORMULA_ATRIBUTO_INVALIDA", "A fórmula de teste deste atributo não é executável.");
 
@@ -285,8 +287,13 @@ public sealed class GameplayActionResolver
             }
             : Array.Empty<GameplayModifierDto>();
         List<SistemaResultadoDado> rows = FindResultRows(version, testCode);
-        IReadOnlyList<GameplayResolvedResultRange> ranges = rows.Count > 0
-            ? MapRanges(rows)
+        // FORMULA é uma instrução para avaliar a condição da fórmula, não uma
+        // classificação de resultado. Faixas explícitas continuam prioritárias.
+        List<SistemaResultadoDado> explicitRows = rows
+            .Where(row => NormalizeCode(row.CodigoResultado) != "FORMULA")
+            .ToList();
+        IReadOnlyList<GameplayResolvedResultRange> ranges = explicitRows.Count > 0
+            ? MapRanges(explicitRows)
             : BuildFormulaRanges(attribute.FormulaTeste, configured);
         var notices = new List<GameplayExecutionNoticeDto>();
         if (ranges.Count == 0)

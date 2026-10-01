@@ -38,6 +38,7 @@ public sealed class RuntimeSaveWarningTests
 
         ItemService service = new(
             repository.Object,
+            Mock.Of<IPersonagemRepository>(),
             Mock.Of<IAssetService>(),
             resolver.Object,
             vinculo.Object);
@@ -114,7 +115,9 @@ public sealed class RuntimeSaveWarningTests
             repository.Object,
             Mock.Of<IAssetService>(),
             resolver.Object,
-            vinculo.Object);
+            vinculo.Object,
+            Mock.Of<IRacaRepository>(),
+            Mock.Of<ICidadeRepository>());
         PersonagemDto dto = NovoNpcDto(nivel: 25);
 
         ResultPersonagem resultado;
@@ -178,7 +181,9 @@ public sealed class RuntimeSaveWarningTests
             repository.Object,
             Mock.Of<IAssetService>(),
             resolver.Object,
-            vinculo.Object);
+            vinculo.Object,
+            Mock.Of<IRacaRepository>(),
+            Mock.Of<ICidadeRepository>());
         PersonagemDto dto = NovoNpcDto(nivel: 1);
         dto.InventarioJson = new List<OdisseiaWiki.Dtos.Item>
         {

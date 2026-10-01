@@ -19,7 +19,8 @@ public sealed record MesaPresencaAtualizadaDto(
 /// </summary>
 public sealed record MesaInvalidadaDto(
     int IdMesa,
-    DateTime AtualizadoEmUtc);
+    DateTime AtualizadoEmUtc,
+    string Secao = "mesa");
 
 /// <summary>
 /// Informa somente à conexão removida que ela perdeu acesso à experiência ao vivo.

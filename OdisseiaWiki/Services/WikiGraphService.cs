@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using OdisseiaWiki.Dtos;
+using OdisseiaWiki.Models;
 using OdisseiaWiki.Repositories;
 using OdisseiaWiki.Repositories.Interfaces;
 using OdisseiaWiki.Services.Interfaces;
@@ -20,13 +21,30 @@ public sealed class WikiGraphService : IWikiGraphService
 
     public async Task<WikiGraphDto> GetAsync(
         bool includeHiddenMetadata,
+        CancellationToken cancellationToken = default) =>
+        await GetComContextoAsync(includeHiddenMetadata, cancellationToken: cancellationToken);
+
+    public async Task<WikiGraphDto> GetComContextoAsync(
+        bool includeHiddenMetadata,
+        IReadOnlyCollection<int>? idWikiEscopos = null,
+        string? mesaRoutePrefix = null,
+        int? idWikiEscopoMesa = null,
+        int? idSistemaRpg = null,
+        int? idSistemaVersao = null,
+        bool permitirOcultosDaMesa = false,
         CancellationToken cancellationToken = default)
     {
-        WikiGraphSnapshot snapshot = await _repository.GetSnapshotAsync(cancellationToken);
-        Dictionary<NodeKey, GraphEntity> entities = BuildEntities(snapshot, includeHiddenMetadata);
-        HashSet<GraphLink> links = BuildLinks(snapshot, entities, includeHiddenMetadata);
+        WikiGraphSnapshot snapshot = idWikiEscopos is null
+            ? await _repository.GetSnapshotAsync(cancellationToken)
+            : await _repository.GetSnapshotAsync(idWikiEscopos, cancellationToken);
+        snapshot = RestringirAosEscoposSolicitados(snapshot, idWikiEscopos);
+        snapshot = FiltrarCatalogoDaMesa(snapshot, idWikiEscopoMesa, idSistemaRpg, idSistemaVersao);
+        Dictionary<NodeKey, GraphEntity> entities = BuildEntities(
+            snapshot, includeHiddenMetadata, permitirOcultosDaMesa ? idWikiEscopoMesa : null);
+        HashSet<GraphLink> links = BuildLinks(snapshot, entities);
         (entities, links) = ConsolidateDuplicateEntities(entities, links);
         RemoveOrphanCharacters(entities, links);
+        RemoveUnconnectedHiddenPlaceholders(entities, links);
         NodeKey? centralKey = FindCentralNode(entities, links);
 
         Dictionary<NodeKey, string> graphIds = entities.Keys.ToDictionary(
@@ -38,7 +56,7 @@ public sealed class WikiGraphService : IWikiGraphService
                 pair.Key,
                 pair.Value,
                 graphIds[pair.Key],
-                includeHiddenMetadata))
+                mesaRoutePrefix))
             .ToList();
         Shuffle(nodes);
 
@@ -65,24 +83,111 @@ public sealed class WikiGraphService : IWikiGraphService
         };
     }
 
+    private static WikiGraphSnapshot FiltrarCatalogoDaMesa(
+        WikiGraphSnapshot snapshot,
+        int? idWikiEscopoMesa,
+        int? idSistemaRpg,
+        int? idSistemaVersao)
+    {
+        if (!idWikiEscopoMesa.HasValue)
+            return snapshot;
+
+        bool Compativel(int escopo, int? sistema, int? versao = null, bool acompanhaAtual = true)
+        {
+            if (escopo == idWikiEscopoMesa.Value)
+                return true;
+
+            if (escopo != WikiEscopo.IdOficial)
+                return false;
+
+            if (!idSistemaRpg.HasValue)
+                return !sistema.HasValue;
+            if (sistema.HasValue && sistema != idSistemaRpg)
+                return false;
+
+            return acompanhaAtual || !versao.HasValue || versao == idSistemaVersao;
+        }
+
+        List<WikiGraphCityRecord> cities = snapshot.Cities
+            .Where(item => Compativel(item.IdWikiEscopo, item.IdSistemaRpg))
+            .ToList();
+        List<WikiGraphPageRecord> pages = snapshot.Pages
+            .Where(item => Compativel(item.IdWikiEscopo, item.IdSistemaRpg))
+            .ToList();
+        List<WikiGraphCharacterRecord> characters = snapshot.Characters
+            .Where(item => Compativel(
+                item.IdWikiEscopo,
+                item.IdSistemaRpg,
+                item.IdSistemaVersao,
+                item.AcompanharPublicacaoAtual))
+            .ToList();
+        List<WikiGraphRaceRecord> races = snapshot.Races
+            .Where(item => Compativel(
+                item.IdWikiEscopo,
+                item.IdSistemaRpg,
+                item.IdSistemaVersao,
+                item.AcompanharPublicacaoAtual))
+            .ToList();
+        HashSet<int> pageIds = pages.Select(item => item.Id).ToHashSet();
+        List<WikiGraphPageRelationRecord> relations = snapshot.PageRelations
+            .Where(item => pageIds.Contains(item.PageId))
+            .ToList();
+
+        return new WikiGraphSnapshot
+        {
+            Cities = cities,
+            Pages = pages,
+            Characters = characters,
+            Races = races,
+            PageRelations = relations,
+        };
+    }
+
+    private static WikiGraphSnapshot RestringirAosEscoposSolicitados(
+        WikiGraphSnapshot snapshot,
+        IReadOnlyCollection<int>? idWikiEscopos)
+    {
+        if (idWikiEscopos is not { Count: > 0 })
+            return snapshot;
+
+        HashSet<int> escopos = idWikiEscopos.ToHashSet();
+        List<WikiGraphPageRecord> pages = snapshot.Pages
+            .Where(item => escopos.Contains(item.IdWikiEscopo))
+            .ToList();
+        HashSet<int> pageIds = pages.Select(item => item.Id).ToHashSet();
+
+        return new WikiGraphSnapshot
+        {
+            Cities = snapshot.Cities.Where(item => escopos.Contains(item.IdWikiEscopo)).ToList(),
+            Pages = pages,
+            Characters = snapshot.Characters.Where(item => escopos.Contains(item.IdWikiEscopo)).ToList(),
+            Races = snapshot.Races.Where(item => escopos.Contains(item.IdWikiEscopo)).ToList(),
+            PageRelations = snapshot.PageRelations.Where(item => pageIds.Contains(item.PageId)).ToList(),
+        };
+    }
+
     private static Dictionary<NodeKey, GraphEntity> BuildEntities(
         WikiGraphSnapshot snapshot,
-        bool includeHiddenMetadata)
+        bool includeHiddenMetadata,
+        int? escopoMesaGerenciavel)
     {
         Dictionary<NodeKey, GraphEntity> entities = new();
 
         foreach (WikiGraphCityRecord city in snapshot.Cities)
         {
+            bool revealHidden = includeHiddenMetadata || city.IdWikiEscopo == escopoMesaGerenciavel;
             entities[new NodeKey(GraphEntityType.City, city.Id)] = new GraphEntity(
                 city.Name,
                 city.Image,
                 city.Visible,
                 $"/cidade/{city.Id}",
-                NormalizeIdentity(city.Name));
+                city.Visible || revealHidden ? NormalizeIdentity(city.Name) : null,
+                revealHidden);
         }
 
         foreach (WikiGraphPageRecord page in snapshot.Pages)
         {
+            bool revealHidden = includeHiddenMetadata || page.IdWikiEscopo == escopoMesaGerenciavel;
             entities[new NodeKey(GraphEntityType.Page, page.Id)] = new GraphEntity(
                 page.Title,
                 page.Image,
@@ -90,29 +195,34 @@ public sealed class WikiGraphService : IWikiGraphService
                 !string.IsNullOrWhiteSpace(page.Slug)
                     ? $"/wiki/{Uri.EscapeDataString(page.Slug)}"
                     : null,
-                NormalizeIdentity(page.Slug));
+                page.Visible || revealHidden ? NormalizeIdentity(page.Slug) : null,
+                revealHidden);
         }
 
         foreach (WikiGraphCharacterRecord character in snapshot.Characters)
         {
-            bool exibirNome = includeHiddenMetadata || character.NomeVisivel;
-            bool exibirImagem = includeHiddenMetadata || character.ImagemVisivel;
+            bool podeGerenciar = includeHiddenMetadata || character.IdWikiEscopo == escopoMesaGerenciavel;
+            bool exibirNome = podeGerenciar || character.NomeVisivel;
+            bool exibirImagem = podeGerenciar || character.ImagemVisivel;
             entities[new NodeKey(GraphEntityType.Character, character.Id)] = new GraphEntity(
                 exibirNome ? character.Name : null,
                 exibirImagem ? character.Image : null,
                 character.Visible,
                 $"/personagem/{character.Id}",
-                NormalizeIdentity(exibirNome ? character.Name : null));
+                character.Visible || podeGerenciar ? NormalizeIdentity(exibirNome ? character.Name : null) : null,
+                podeGerenciar);
         }
 
         foreach (WikiGraphRaceRecord race in snapshot.Races)
         {
+            bool revealHidden = includeHiddenMetadata || race.IdWikiEscopo == escopoMesaGerenciavel;
             entities[new NodeKey(GraphEntityType.Race, race.Id)] = new GraphEntity(
                 race.Name,
                 race.Image,
                 race.Visible,
                 $"/raca/{race.Id}",
-                NormalizeIdentity(race.Name));
+                race.Visible || revealHidden ? NormalizeIdentity(race.Name) : null,
+                revealHidden);
         }
 
         return entities;
@@ -120,18 +230,21 @@ public sealed class WikiGraphService : IWikiGraphService
 
     private static HashSet<GraphLink> BuildLinks(
         WikiGraphSnapshot snapshot,
-        IReadOnlyDictionary<NodeKey, GraphEntity> entities,
-        bool includeHiddenMetadata)
+        IReadOnlyDictionary<NodeKey, GraphEntity> entities)
     {
         HashSet<GraphLink> links = new();
 
         foreach (WikiGraphCharacterRecord character in snapshot.Characters)
         {
             NodeKey characterKey = new(GraphEntityType.Character, character.Id);
-            if (includeHiddenMetadata || character.RacaVisivel)
+            if (!entities.TryGetValue(characterKey, out GraphEntity? origem) ||
+                (!origem.Visible && !origem.RevealHidden))
+                continue;
+
+            if (origem.RevealHidden || character.RacaVisivel)
                 AddLink(links, entities, characterKey, new NodeKey(GraphEntityType.Race, character.RaceId));
 
-            if ((includeHiddenMetadata || character.CidadeVisivel) && character.CityId.HasValue)
+            if ((origem.RevealHidden || character.CidadeVisivel) && character.CityId.HasValue)
             {
                 AddLink(
                     links,
@@ -140,7 +253,8 @@ public sealed class WikiGraphService : IWikiGraphService
                     new NodeKey(GraphEntityType.City, character.CityId.Value));
             }
 
-            if (!includeHiddenMetadata && !character.PersonagensRelacionadosVisivel)
+            if (!origem.RevealHidden &&
+                (!character.NomeVisivel || !character.PersonagensRelacionadosVisivel))
                 continue;
 
             foreach (int linkedCharacterId in ParseLinkedCharacterIds(character.LinkedCharactersJson))
@@ -156,10 +270,13 @@ public sealed class WikiGraphService : IWikiGraphService
         foreach (WikiGraphPageRelationRecord relationBlock in snapshot.PageRelations)
         {
             NodeKey pageKey = new(GraphEntityType.Page, relationBlock.PageId);
+            if (!entities.TryGetValue(pageKey, out GraphEntity? pagina) ||
+                (!pagina.Visible && !pagina.RevealHidden))
+                continue;
 
             foreach (NodeKey target in ParsePageReferences(relationBlock.Content))
             {
-                if (!includeHiddenMetadata &&
+                if (!pagina.RevealHidden &&
                     target.Type == GraphEntityType.Character &&
                     !CanExposeCharacterRelations(snapshot.Characters, target.Id))
                 {
@@ -178,7 +295,7 @@ public sealed class WikiGraphService : IWikiGraphService
         int id)
     {
         WikiGraphCharacterRecord? character = characters.FirstOrDefault(item => item.Id == id);
-        return character?.PersonagensRelacionadosVisivel ?? true;
+        return character is null || !character.Visible || character.PersonagensRelacionadosVisivel;
     }
 
     private static (Dictionary<NodeKey, GraphEntity> Entities, HashSet<GraphLink> Links)
@@ -233,11 +350,29 @@ public sealed class WikiGraphService : IWikiGraphService
             .ToHashSet();
 
         NodeKey[] orphanCharacters = entities.Keys
-            .Where(key => key.Type == GraphEntityType.Character && !connectedNodes.Contains(key))
+            .Where(key => key.Type == GraphEntityType.Character
+                && entities[key].Visible
+                && !connectedNodes.Contains(key))
             .ToArray();
 
         foreach (NodeKey orphanCharacter in orphanCharacters)
             entities.Remove(orphanCharacter);
+    }
+
+    private static void RemoveUnconnectedHiddenPlaceholders(
+        IDictionary<NodeKey, GraphEntity> entities,
+        IReadOnlyCollection<GraphLink> links)
+    {
+        HashSet<NodeKey> connectedNodes = links
+            .SelectMany(link => new[] { link.Source, link.Target })
+            .ToHashSet();
+
+        foreach (NodeKey key in entities.Keys
+            .Where(key => !entities[key].Visible && !entities[key].RevealHidden && !connectedNodes.Contains(key))
+            .ToArray())
+        {
+            entities.Remove(key);
+        }
     }
 
     private static Dictionary<NodeKey, int> CalculateDegree(
@@ -275,9 +410,9 @@ public sealed class WikiGraphService : IWikiGraphService
         NodeKey key,
         GraphEntity entity,
         string graphId,
-        bool includeHiddenMetadata)
+        string? mesaRoutePrefix)
     {
-        if (!entity.Visible && !includeHiddenMetadata)
+        if (!entity.Visible && !entity.RevealHidden)
         {
             return new WikiGraphNodeDto
             {
@@ -300,8 +435,17 @@ public sealed class WikiGraphService : IWikiGraphService
             },
             Title = entity.Title ?? "Conteúdo sem título",
             Image = string.IsNullOrWhiteSpace(entity.Image) ? null : entity.Image,
-            Route = entity.Route ?? "/wiki"
+            Route = MontarRota(entity.Route, mesaRoutePrefix)
         };
+    }
+
+    private static string MontarRota(string? route, string? mesaRoutePrefix)
+    {
+        string rota = route ?? "/wiki";
+        if (string.IsNullOrWhiteSpace(mesaRoutePrefix)) return rota;
+        return rota.StartsWith("/wiki/", StringComparison.OrdinalIgnoreCase)
+            ? $"{mesaRoutePrefix}/{rota["/wiki/".Length..]}"
+            : $"{mesaRoutePrefix}{rota}";
     }
 
     private static void AddLink(
@@ -311,6 +455,10 @@ public sealed class WikiGraphService : IWikiGraphService
         NodeKey second)
     {
         if (first == second || !entities.ContainsKey(first) || !entities.ContainsKey(second))
+            return;
+
+        if ((!entities[first].Visible && !entities[first].RevealHidden) &&
+            (!entities[second].Visible && !entities[second].RevealHidden))
             return;
 
         links.Add(NodeKey.Compare(first, second) <= 0
@@ -504,7 +652,8 @@ public sealed class WikiGraphService : IWikiGraphService
         string? Image,
         bool Visible,
         string? Route,
-        string? Identity);
+        string? Identity,
+        bool RevealHidden);
 
     private readonly record struct EntityIdentity(GraphEntityType Type, string Value);
 

@@ -3,11 +3,31 @@ import assert from 'node:assert/strict';
 import { build } from 'esbuild';
 
 const bundle = await build({
-  stdin: { contents: `export * from './src/utils/characterVariants'; export * from './src/utils/normalizePersonagem';`, resolveDir: process.cwd(), loader: 'ts' },
+  stdin: { contents: `export * from './src/utils/characterVariants'; export * from './src/utils/normalizePersonagem'; export * from './src/utils/characterClone';`, resolveDir: process.cwd(), loader: 'ts' },
   bundle: true, write: false, format: 'esm', platform: 'node',
 });
 const { getCharacterVariants, createCharacterVariant, findInvalidVariant, buildCharacterVariantFields,
-  normalizeVariantForEditing, normalizePersonagem } = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
+  normalizeVariantForEditing, normalizePersonagem, cloneCharacterEntries, cloneCharacterName, cloneCharacterVariants,
+  detachUnavailableBaseItems } = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
+
+test('clone cria identidades novas e preserva os valores da ficha original', () => {
+  const original = sheet();
+  const entries = cloneCharacterEntries(original.inventarioJson);
+  assert.notEqual(entries[0].id, original.inventarioJson[0].id);
+  assert.deepEqual(entries[0].atributos, original.inventarioJson[0].atributos);
+  entries[0].atributos.modificadores.ataque = 10;
+  assert.equal(original.inventarioJson[0].atributos.modificadores.ataque, -2);
+
+  const variants = cloneCharacterVariants([{ ...original, id: 'original', nome: 'Espadachim' }]);
+  assert.notEqual(variants[0].id, 'original');
+  assert.notEqual(variants[0].skills[0].id, original.skills[0].id);
+  assert.equal(variants[0].statusJson.status.vida, original.statusJson.status.vida);
+  assert.equal(cloneCharacterName('Espadachim'), 'Clone Espadachim');
+  assert.equal(cloneCharacterName('x'.repeat(100)).length, 100);
+  const detached = detachUnavailableBaseItems([{ idItemBase: 'outro', nome: 'Espada' }], new Set(['disponivel']));
+  assert.equal(detached[0].idItemBase, undefined);
+  assert.equal(detached[0].nome, 'Espada');
+});
 
 const sheet = () => ({
   statusJson: { status: { vida: 20, vidaMaxima: 30, energia: 7 },

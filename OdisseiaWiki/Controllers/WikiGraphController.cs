@@ -23,7 +23,7 @@ public sealed class WikiGraphController : ControllerBase
     public async Task<ActionResult<WikiGraphDto>> Get(CancellationToken cancellationToken)
     {
         bool includeHiddenMetadata = User.Identity?.IsAuthenticated == true && User.IsAdmin();
-        WikiGraphDto graph = await _service.GetAsync(includeHiddenMetadata, cancellationToken);
+        WikiGraphDto graph = await _service.GetAsync(includeHiddenMetadata, cancellationToken: cancellationToken);
         return Ok(graph);
     }
 }

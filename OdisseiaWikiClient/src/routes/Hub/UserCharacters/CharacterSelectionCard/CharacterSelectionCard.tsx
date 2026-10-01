@@ -1,11 +1,15 @@
 import React from 'react';
 import EditIcon from '@mui/icons-material/Edit';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
 import CheckBoxIcon from '@mui/icons-material/CheckBox';
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
 import CasinoOutlinedIcon from '@mui/icons-material/CasinoOutlined';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import MoreVertOutlinedIcon from '@mui/icons-material/MoreVertOutlined';
+import PublishOutlinedIcon from '@mui/icons-material/PublishOutlined';
 import { useNavigate } from 'react-router-dom';
 import dnaIcon from '../../../../assets/svg/dna1.svg';
 import scalesIcon from '../../../../assets/svg/scales.svg';
@@ -68,6 +72,7 @@ import {
   StatusItem,
   StatusLabel,
   VisibilityState,
+  CardUtilityActions,
   XpSection,
 } from './CharacterSelectionCard.style';
 
@@ -81,6 +86,7 @@ interface CharacterSelectionCardProps {
   onView: () => void;
   onSheet: () => void;
   onEdit: () => void;
+  onClone?: () => void;
   onActions?: () => void;
   onUpdateSystem?: () => void;
   updatingSystem?: boolean;
@@ -97,6 +103,11 @@ interface CharacterSelectionCardProps {
     estamina?: number;
     xp?: number;
   }) => void | Promise<void>;
+  visibleToPlayers?: boolean;
+  onToggleVisibility?: () => void;
+  onRemove?: () => void;
+  onPublish?: () => void;
+  publishing?: boolean;
 }
 
 const emptyComparisonStatus = (
@@ -178,7 +189,6 @@ interface EditableResourceProps {
   theme: 'dark' | 'light';
   neon: 'on' | 'off';
   onUpdate?: CharacterSelectionCardProps['onQuickStatusUpdate'];
-  compact?: boolean;
 }
 
 const EditableResource = ({
@@ -189,7 +199,6 @@ const EditableResource = ({
   theme,
   neon,
   onUpdate,
-  compact = false,
 }: EditableResourceProps) => {
   const [editing, setEditing] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
@@ -224,7 +233,7 @@ const EditableResource = ({
   };
 
   if (!onUpdate) {
-    return <StatusBar theme={theme} neon={neon} type={type} value={value} maxValue={maxValue} height={compact ? "15px" : "18px"} />;
+    return <StatusBar theme={theme} neon={neon} type={type} value={value} maxValue={maxValue} height="18px" />;
   }
 
   return editing ? (
@@ -260,7 +269,7 @@ const EditableResource = ({
         setEditing(true);
       }}
     >
-      <StatusBar theme={theme} neon={neon} type={type} value={value} maxValue={maxValue} height="15px" />
+      <StatusBar theme={theme} neon={neon} type={type} value={value} maxValue={maxValue} height="18px" />
       {saving && <QuickSaveIndicator role="status" aria-label={`Salvando ${field}`} />}
     </QuickResourceButton>
   );
@@ -285,6 +294,7 @@ export const CharacterSelectionCard = ({
   onView,
   onSheet,
   onEdit,
+  onClone,
   onActions,
   onUpdateSystem,
   updatingSystem = false,
@@ -296,14 +306,21 @@ export const CharacterSelectionCard = ({
   online = false,
   variant = 'default',
   onQuickStatusUpdate,
+  visibleToPlayers,
+  onToggleVisibility,
+  onRemove,
+  onPublish,
+  publishing = false,
 }: CharacterSelectionCardProps) => {
   const navigate = useNavigate();
   const [comparisonOpen, setComparisonOpen] = React.useState(false);
   const [editingXp, setEditingXp] = React.useState(false);
   const [savingXp, setSavingXp] = React.useState(false);
+  const [sceneActionsOpen, setSceneActionsOpen] = React.useState(false);
   const [xpDraft, setXpDraft] = React.useState(String(xp));
   const xpInputRef = React.useRef<HTMLInputElement | null>(null);
   const xpCommitted = React.useRef(false);
+  const sceneActionsRef = React.useRef<HTMLDivElement | null>(null);
   const isMesaGame = variant === 'mesa-game';
   const Header = isMesaGame ? MesaGameCharacterHeader : CharacterHeader;
   const Statuses = isMesaGame ? MesaGameStatusColumn : StatusColumn;
@@ -351,6 +368,23 @@ export const CharacterSelectionCard = ({
     .filter(Boolean)
     .join(', ');
   React.useEffect(() => setXpDraft(String(xp)), [xp]);
+  React.useEffect(() => {
+    if (!sceneActionsOpen) return undefined;
+
+    const closeWhenClickingAway = (event: MouseEvent) => {
+      if (!sceneActionsRef.current?.contains(event.target as Node)) setSceneActionsOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setSceneActionsOpen(false);
+    };
+
+    document.addEventListener('mousedown', closeWhenClickingAway);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('mousedown', closeWhenClickingAway);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [sceneActionsOpen]);
   React.useEffect(() => {
     if (!editingXp) return;
     xpInputRef.current?.focus();
@@ -424,6 +458,66 @@ export const CharacterSelectionCard = ({
           onClick={() => setComparisonOpen(true)}
         />
       )}
+      {!selectionMode && (onToggleVisibility || onRemove || onPublish) && (
+        <CardUtilityActions ref={sceneActionsRef}>
+          <button
+            className="scene-actions-trigger"
+            type="button"
+            aria-label="Mais opções do NPC"
+            aria-expanded={sceneActionsOpen}
+            aria-haspopup="menu"
+            title="Mais opções"
+            onClick={() => setSceneActionsOpen((current) => !current)}
+          >
+            <MoreVertOutlinedIcon />
+          </button>
+          {sceneActionsOpen && (
+            <div className="scene-actions-menu" role="menu" aria-label="Opções do NPC">
+              {onToggleVisibility && (
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setSceneActionsOpen(false);
+                    onToggleVisibility();
+                  }}
+                >
+                  {visibleToPlayers ? <VisibilityIcon /> : <VisibilityOffOutlinedIcon />}
+                  {visibleToPlayers ? 'Ocultar dos jogadores' : 'Mostrar aos jogadores'}
+                </button>
+              )}
+              {onPublish && (
+                <button
+                  type="button"
+                  role="menuitem"
+                  disabled={publishing}
+                  onClick={() => {
+                    setSceneActionsOpen(false);
+                    onPublish();
+                  }}
+                >
+                  <PublishOutlinedIcon />
+                  Atualizar ficha original
+                </button>
+              )}
+              {onRemove && (
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="danger"
+                  onClick={() => {
+                    setSceneActionsOpen(false);
+                    onRemove();
+                  }}
+                >
+                  <DeleteOutlineIcon />
+                  Remover da Mesa
+                </button>
+              )}
+            </div>
+          )}
+        </CardUtilityActions>
+      )}
       <Header>
         <CharacterAvatar
           src={normalizeImagePath(personagem.imagem)}
@@ -449,15 +543,15 @@ export const CharacterSelectionCard = ({
           )}
           <Resource>
             <StatusLabel>{getRuntimeResourceLabel(runtimeContext, 'vida', 'Vida')}</StatusLabel>
-            <EditableResource field="vida" value={status.vida} maxValue={status.vidaMaxima || undefined} type="vida" theme={theme} neon={neon} onUpdate={onQuickStatusUpdate} compact={isMesaGame} />
+            <EditableResource field="vida" value={status.vida} maxValue={status.vidaMaxima || undefined} type="vida" theme={theme} neon={neon} onUpdate={onQuickStatusUpdate} />
           </Resource>
           <Resource>
             <StatusLabel>{getRuntimeResourceLabel(runtimeContext, 'mana', 'Mana')}</StatusLabel>
-            <EditableResource field="mana" value={status.mana} maxValue={status.manaMaxima || undefined} type="mana" theme={theme} neon={neon} onUpdate={onQuickStatusUpdate} compact={isMesaGame} />
+            <EditableResource field="mana" value={status.mana} maxValue={status.manaMaxima || undefined} type="mana" theme={theme} neon={neon} onUpdate={onQuickStatusUpdate} />
           </Resource>
           <Resource>
             <StatusLabel>{getRuntimeResourceLabel(runtimeContext, 'estamina', 'Estamina')}</StatusLabel>
-            <EditableResource field="estamina" value={status.estamina} maxValue={status.estaminaMaxima || undefined} type="estamina" theme={theme} neon={neon} onUpdate={onQuickStatusUpdate} compact={isMesaGame} />
+            <EditableResource field="estamina" value={status.estamina} maxValue={status.estaminaMaxima || undefined} type="estamina" theme={theme} neon={neon} onUpdate={onQuickStatusUpdate} />
           </Resource>
         </Statuses>
       </Header>
@@ -560,7 +654,8 @@ export const CharacterSelectionCard = ({
         {onActions && <ActionButton type="button" onClick={onActions}><CasinoOutlinedIcon />Ações</ActionButton>}
         <ActionButton type="button" onClick={onView}><VisibilityIcon />Visualizar</ActionButton>
         {context !== 'mesa-other' && <ActionButton type="button" onClick={onSheet}><MenuBookIcon />Ficha</ActionButton>}
-        {(context === 'owner' || context === 'mesa-own') && <ActionButton type="button" onClick={onEdit}><EditIcon />Editar</ActionButton>}
+        {(context === 'owner' || context === 'mesa-own' || context === 'mesa-master') && <ActionButton type="button" onClick={onEdit}><EditIcon />Editar</ActionButton>}
+        {(context === 'owner' || context === 'mesa-own') && onClone && <ActionButton type="button" onClick={onClone}><ContentCopyIcon />Clonar</ActionButton>}
       </Actions>
       <CharacterComparisonModal
         open={comparisonOpen}

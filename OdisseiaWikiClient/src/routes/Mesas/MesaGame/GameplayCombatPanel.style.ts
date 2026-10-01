@@ -24,7 +24,7 @@ export const CombatHeader = styled.header`
   padding: 16px 16px 12px;
   border-bottom: 1px solid rgba(57, 211, 255, .27);
 
-  h2 { margin: 0; color: var(--clearneonBlue); font-family: 'DO Futuristic', sans-serif; font-size: 1.05rem; font-weight: 100; }
+  h2 { margin: 0; color: var(--clearneonBlue); font-family: 'DO Futuristic', sans-serif; font-size: 1.05rem; font-weight: 100; letter-spacing: .045em; }
   small { color: var(--lightGrey); font-size: .7rem; }
 `;
 

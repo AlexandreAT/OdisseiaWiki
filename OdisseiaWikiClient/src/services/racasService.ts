@@ -3,6 +3,7 @@ import { ServiceRequestOptions } from './serviceRequestOptions';
 import { GalleryImage } from '../models/GalleryImage';
 import { JSONContent } from '../models/Cities';
 import type { SistemaRuntimeContexto } from '../models/SistemaRpg';
+import { getMesaWikiApiPath, getMesaWikiApiPathForMesa, getMesaWikiIdFromPath } from './wikiContext';
 
 export interface StatusBase {
   vida: number;
@@ -196,42 +197,56 @@ export const resolveRacaCharacterStatus = (value: unknown): RacaCharacterStatusD
 export const getRacas = async (
   visivel?: boolean,
   idMesa?: number,
-  requestOptions: ServiceRequestOptions = {}
+  requestOptions: ServiceRequestOptions = {},
+  somenteProprias = false,
 ): Promise<ResultRacas> => {
   const params = {
     ...(visivel !== undefined ? { visivel } : {}),
-    ...(idMesa !== undefined ? { idMesa } : {}),
+    ...(getMesaWikiIdFromPath() && somenteProprias ? { proprias: true } : {}),
   };
-  const response = await api.get("/racas", { params, ...requestOptions });
-  return response.data;
+  if (idMesa !== undefined && !getMesaWikiIdFromPath()) {
+    const response = await api.get(getMesaWikiApiPathForMesa(idMesa, 'racas'), { params, ...requestOptions });
+    return { sucesso: true, racas: response.data };
+  }
+
+  const response = await api.get(getMesaWikiApiPath('racas', '/racas'), { params, ...requestOptions });
+  return getMesaWikiIdFromPath() ? { sucesso: true, racas: response.data } : response.data;
 };
 
 export const getRacaById = async (id: number, idMesa?: number): Promise<ResultRaca | RacaPayload> => {
-  const response = await api.get(`/racas/${id}`, {
+  if (idMesa !== undefined && !getMesaWikiIdFromPath()) {
+    const response = await api.get(`${getMesaWikiApiPathForMesa(idMesa, 'racas')}/${id}`);
+    return { sucesso: true, raca: response.data };
+  }
+  const response = await api.get(`${getMesaWikiApiPath('racas', '/racas')}/${id}`, {
     params: idMesa !== undefined ? { idMesa } : {},
   });
-  return response.data;
+  return getMesaWikiIdFromPath() ? { sucesso: true, raca: response.data } : response.data;
 };
 
 export const getRacasByIds = async (ids: number[]): Promise<RacaPayload[]> => {
+  if (getMesaWikiIdFromPath()) {
+    const racas = await getRacas();
+    return (racas.racas ?? []).filter((raca) => ids.includes(raca.idraca));
+  }
   const response = await api.post(`/racas/batch`, { ids });
   return response.data;
 };
 
 // CREATE
 export const createRaca = async (dto: CreateRacaDto): Promise<ResultRaca> => {
-  const response = await api.post("/racas", dto);
+  const response = await api.post(getMesaWikiApiPath('racas', '/racas'), dto);
   return response.data;
 };
 
 // UPDATE
 export const updateRaca = async (id: number, dto: CreateRacaDto): Promise<ResultRaca> => {
-  const response = await api.put(`/racas/${id}`, dto);
+  const response = await api.put(`${getMesaWikiApiPath('racas', '/racas')}/${id}`, dto);
   return response.data;
 };
 
 // DELETE
 export const deleteRaca = async (id: number): Promise<boolean> => {
-  const response = await api.delete(`/racas/${id}`);
+  const response = await api.delete(`${getMesaWikiApiPath('racas', '/racas')}/${id}`);
   return response.status === 204 || response.status === 200;
 };

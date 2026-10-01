@@ -1,6 +1,6 @@
 import { mapToItem } from './../../../../utils/mapItem';
 import { getRacas, normalizeRacaStatus, resolveRacaCharacterStatus, RacaPayload, RacaStatus } from './../../../../services/racasService';
-import { CidadePayload, getCidades } from './../../../../services/cidadesService';
+import { CidadePayload, getCidades, getCidadesDaMesa } from './../../../../services/cidadesService';
 import { saveAsset } from './../../../../services/assetsService';
 import { persistCharacterEntryImages } from '../../../../services/characterEntryImageService';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -11,8 +11,8 @@ import { Principais, Secundarios, JSONContent } from '../../../../models/Charact
 import { Skills } from '../../../../models/Skills';
 import { Item } from '../../../../models/Itens';
 import { Magia } from '../../../../models/Magias';
-import { getItens } from '../../../../services/itensService';
-import { getPersonagens } from '../../../../services/personagensService';
+import { getItens, getItensDaMesa } from '../../../../services/itensService';
+import { getPersonagens, getPersonagensDaMesa } from '../../../../services/personagensService';
 import { Mesa } from '../../../../models/Mesa';
 import { getMesas } from '../../../../services/mesaService';
 import { atualizarPersonagemJogador, criarPersonagemJogador, PersonagemJogadorPayload } from '../../../../services/personagemJogadorService';
@@ -24,6 +24,7 @@ import { CharacterStatusExtras, DEFAULT_CHARACTER_STATUS_EXTRAS, normalizeCharac
 import { getApiErrorMessage } from '../../../../utils/apiError';
 import { addOrReplaceEmptyItem } from '../../../../utils/itemInventorySections';
 import { ensureGameplayEntryIds } from '../../../../utils/gameplayIdentity';
+import { cloneCharacterEntries, cloneCharacterName, detachUnavailableBaseItems } from '../../../../utils/characterClone';
 import { useSistemaRuntimeContexto } from '../../../../hooks/useSistemaRuntimeContexto';
 import {
   applyRuntimeInitialAttribute,
@@ -77,7 +78,7 @@ const tryParseRichText = (value: any) => {
   return current;
 };
 
-export const useFormUserCharacter = (userId: number, onSave?: () => void, personagem?: PersonagemJogador) => {
+export const useFormUserCharacter = (userId: number, onSave?: () => void, personagem?: PersonagemJogador, cloning = false) => {
   // --- step ---
   const [step, setStep] = useState(1);
   // --- dados do formulário ---
@@ -225,7 +226,9 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     const fetchCities = async () => {
       setLoadingCities(true);
       try {
-        const result = await getCidades(true); // Personagem Jogador: apenas visíveis
+        const result = selectedMesa
+          ? await getCidadesDaMesa(selectedMesa)
+          : await getCidades(true);
         if (result.sucesso && result.cidades) {
           setListCities(result.cidades);
         } else {
@@ -238,7 +241,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
       }
     };
     fetchCities();
-  }, []);
+  }, [selectedMesa]);
 
   useEffect(() => {
     const fetchRaces = async () => {
@@ -263,7 +266,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     const fetchItens = async () => {
       setLoadingItens(true);
       try {
-        const result = await getItens();
+        const result = selectedMesa ? await getItensDaMesa(selectedMesa) : await getItens();
         const itens: Item[] = result.map(mapToItem);
         setAllItens(itens);
         setListItens(itens);
@@ -274,12 +277,14 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
       }
     };
     fetchItens();
-  }, []);
+  }, [selectedMesa]);
 
   useEffect(() => {
     const fetchPersonagens = async () => {
       try {
-        const personagensData = await getPersonagens(true); // Personagem Jogador: apenas visíveis
+        const personagensData = selectedMesa
+          ? await getPersonagensDaMesa(selectedMesa)
+          : await getPersonagens(true);
         
         if (personagensData && Array.isArray(personagensData)) {
           const mappedPersonagens = personagensData.map(p => {
@@ -326,7 +331,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
       }
     };
     fetchPersonagens();
-  }, []);
+  }, [selectedMesa]);
 
   useEffect(() => {
     const fetchMesas = async () => {
@@ -559,7 +564,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     }
 
     // --- setando os states ---
-    setUserName(personagem.nome || '');
+    setUserName(cloning ? cloneCharacterName(personagem.nome || '') : personagem.nome || '');
     setRace(personagem.idraca);
     setCity(personagem.idcidade || undefined);
     setAvatarUrl(personagem.imagem || '');
@@ -614,15 +619,25 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
         ...normalizeRuntimeAttributeValues(status.atributos?.secundarios),
     } as Secundarios);
 
-    setSkills(ensureGameplayEntryIds(skills));
-    setMagias(ensureGameplayEntryIds(magias));
-    setItens(ensureGameplayEntryIds(inventario));
-    setListPersonagemRelacionado(relacionados);
+    setSkills(cloning ? cloneCharacterEntries(ensureGameplayEntryIds(skills)) : ensureGameplayEntryIds(skills));
+    setMagias(cloning ? cloneCharacterEntries(ensureGameplayEntryIds(magias)) : ensureGameplayEntryIds(magias));
+    setItens(cloning ? cloneCharacterEntries(ensureGameplayEntryIds(inventario)) : ensureGameplayEntryIds(inventario));
+    if (!cloning) setListPersonagemRelacionado(relacionados);
 
     setXp(status.xp ?? 0);
     setLevel(status.nivel ?? 1);
 
-  }, [personagem]);
+  }, [personagem, cloning]);
+
+  useEffect(() => {
+    if (!cloning || !personagem) return;
+    const rawIds = parseJson<Array<string | number>>(personagem.personagemsVinculados, []);
+    const sourceIds = (Array.isArray(rawIds) ? rawIds : [])
+      .map(Number).filter((id) => Number.isInteger(id) && id > 0);
+    setListPersonagemRelacionado(allPersonagens
+      .filter((candidate) => sourceIds.includes(Number(candidate.Idpersonagem)))
+      .map((candidate) => ({ id: Number(candidate.Idpersonagem), nome: candidate.Nome })));
+  }, [allPersonagens, cloning, personagem]);
 
   const handleGaleriaUpload = useCallback((files: File[], shapes: string[]) => {
     const nextUrls = files.map((file) => URL.createObjectURL(file));
@@ -846,6 +861,32 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
       return;
     }
 
+    if (cloning) {
+      if (loadingMesas || loadingRaces || loadingCities || loadingItens || runtimeLoading) {
+        toast.error('Aguarde as regras e o catálogo da mesa carregarem.');
+        return;
+      }
+      if (!listMesas.some((mesa) => mesa.idmesa === selectedMesa)) {
+        toast.error('A mesa de destino não está disponível.');
+        return;
+      }
+      if (!listRaces.some((entry) => entry.idraca === race)) {
+        setStep(1);
+        setRaceError(true);
+        toast.error('Escolha uma raça disponível na mesa de destino.');
+        return;
+      }
+      if (city && !listCities.some((entry) => entry.idcidade === city)) {
+        setStep(1);
+        toast.error('Escolha uma cidade disponível na mesa de destino.');
+        return;
+      }
+      if (runtimeError || !runtimeContext) {
+        toast.error('Não foi possível validar as regras do sistema da mesa.');
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     try {
       let avatarPath = avatarUrl;
@@ -893,7 +934,10 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
         resolveFolderName: () => 'skills',
       });
 
-      const inventarioMapped = mapInventoryForPayload(inventarioComImagens);
+      const validBaseIds = new Set(allItens.map((item) => String(item.id)));
+      const inventarioMapped = cloning
+        ? detachUnavailableBaseItems(mapInventoryForPayload(inventarioComImagens), validBaseIds)
+        : mapInventoryForPayload(inventarioComImagens);
       const magiaMapped = mapMagiasForPayload(magiasComImagens);
       const skillMapped = mapSkillsForPayload(skillsComImagens);
 
@@ -904,6 +948,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
         idusuario: userId,
         idmesa: selectedMesa!,
         visivel,
+        ...(cloning && personagem?.visibilidade ? { visibilidadeInicial: personagem.visibilidade } : {}),
         historia: prepareForAPI(history),
         imagem: avatarPath,
         galeriaImagem: galeriaFinal,
@@ -947,7 +992,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     } finally {
       setIsSubmitting(false);
     }
-  }, [avatarUrl, avatarFile, galeriaUrls, galeriaShapes, galeriaPreviewFileMap, userName, itens, magias, skills, race, city, userId, selectedMesa, history, costumes, extraInformation, nanites, alignment, traits, idpassiva, ultimate, visivel, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, statusExtras, defesas, buildStatusForPayload, onSave, validateStepOne]);
+  }, [avatarUrl, avatarFile, galeriaUrls, galeriaShapes, galeriaPreviewFileMap, userName, itens, magias, skills, race, city, userId, selectedMesa, history, costumes, extraInformation, nanites, alignment, traits, idpassiva, ultimate, visivel, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, statusExtras, defesas, buildStatusForPayload, onSave, validateStepOne, cloning, loadingMesas, loadingRaces, loadingCities, loadingItens, runtimeLoading, runtimeError, runtimeContext, listMesas, listRaces, listCities, allItens, personagem]);
 
   return {
     step,

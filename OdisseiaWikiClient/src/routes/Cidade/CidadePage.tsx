@@ -10,6 +10,8 @@ import {
   BiUserCircle,
 } from 'react-icons/bi';
 import { OdisseiaAnimatedTitle } from '../../components/Generic/OdisseiaAnimatedTitle';
+import { ContentVisibilityNotice } from '../../components/Generic/ContentVisibilityNotice/ContentVisibilityNotice';
+import { getMesaWikiRoute } from '../../services/wikiContext';
 import { RichTextDisplay } from '../../components/Generic/RichTextDisplay/RichTextDisplay';
 import { ListModal } from '../../components/Generic/ListModal';
 import { Modal } from '../../components/Generic/Modal/Modal';
@@ -124,6 +126,7 @@ const CharacterCardContent = ({ character, onSelect, modal = false }: CharacterC
         fallbackIcon={<BiUserCircle aria-hidden="true" />}
       />
       <CharacterName>{character.nome}</CharacterName>
+      <ContentVisibilityNotice visible={character.visivel} />
     </Card>
   );
 };
@@ -271,6 +274,7 @@ const CidadePage = () => {
           <HudCorners neon={isNeonActive} />
           <BannerContent>
             <OdisseiaAnimatedTitle key={city.nome} theme={theme} neon={neon} text={city.nome} />
+            <ContentVisibilityNotice visible={city.visivel} />
             {visibleTags.length > 0 && (
               <BannerTagList aria-label="Categorias da cidade">
                 {visibleTags.map((tag) => <BannerTag key={tag}>{tag}</BannerTag>)}
@@ -409,8 +413,9 @@ const CidadePage = () => {
               <RelatedPages>
                 <RelatedPagesTitle>Páginas que fazem referência a esta cidade</RelatedPagesTitle>
                 {relatedPages.map((page) => (
-                  <RelatedPageLink key={page.idPage} to={`/wiki/${encodeURIComponent(page.slug)}`}>
+                  <RelatedPageLink key={page.idPage} to={getMesaWikiRoute(`/wiki/${encodeURIComponent(page.slug)}`)}>
                     <span>{page.titulo}</span>
+                    <ContentVisibilityNotice visible={page.visivel} />
                   </RelatedPageLink>
                 ))}
               </RelatedPages>

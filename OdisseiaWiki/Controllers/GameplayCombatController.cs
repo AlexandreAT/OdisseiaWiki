@@ -44,6 +44,10 @@ public sealed class GameplayCombatController : ControllerBase
     public Task<IActionResult> AddNpc(int idMesa, long idMesaSessao, [FromBody] GameplayCombatAddNpcRequestDto request, CancellationToken token)
         => Execute(idMesa, idMesaSessao, (userId) => _service.AddNpcAsync(idMesa, idMesaSessao, userId, request, token));
 
+    [HttpPost("participantes/remover")]
+    public Task<IActionResult> RemoveParticipant(int idMesa, long idMesaSessao, [FromBody] GameplayCombatRemoveParticipantRequestDto request, CancellationToken token)
+        => Execute(idMesa, idMesaSessao, (userId) => _service.RemoveParticipantAsync(idMesa, idMesaSessao, userId, request, token));
+
     [HttpPost("iniciativa")]
     public Task<IActionResult> RollInitiative(int idMesa, long idMesaSessao, [FromBody] GameplayCombatInitiativeRequestDto request, CancellationToken token)
         => Execute(idMesa, idMesaSessao, (userId) => _service.RollInitiativeAsync(idMesa, idMesaSessao, userId, request, token));

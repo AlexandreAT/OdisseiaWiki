@@ -109,12 +109,15 @@ public sealed partial class GameplayCombatService : IGameplayCombatService
                 };
                 foreach (PersonagemJogador character in characters.OrderBy(item => item.Nome))
                 {
+                    bool npcInstance = character.IdPersonagemOrigem.HasValue;
                     combat.Participantes.Add(new MesaCombateParticipante
                     {
-                        Tipo = MesaCombateParticipanteTipo.PersonagemJogador,
+                        Tipo = npcInstance ? MesaCombateParticipanteTipo.Npc : MesaCombateParticipanteTipo.PersonagemJogador,
                         Status = MesaCombateParticipanteStatus.AguardandoIniciativa,
                         IdPersonagemJogador = character.IdpersonagemJogador,
-                        IdUsuarioControlador = character.Idusuario,
+                        IdPersonagemOrigem = character.IdPersonagemOrigem,
+                        IdVarianteOrigem = character.IdVarianteOrigem,
+                        IdUsuarioControlador = npcInstance ? idUsuario : character.Idusuario,
                         NomeSnapshot = character.Nome,
                         ImagemSnapshot = character.Imagem,
                         CriadoEmUtc = scope.Now,
@@ -132,26 +135,71 @@ public sealed partial class GameplayCombatService : IGameplayCombatService
         int idMesa, long idMesaSessao, int idUsuario, GameplayCombatAddNpcRequestDto request,
         CancellationToken cancellationToken = default)
         => ExecuteAsync(idMesa, idMesaSessao, idUsuario, request, "COMBATE_ADICIONAR_NPC", true, true,
-            (scope, _) =>
+            async (scope, token) =>
             {
                 if (scope.Combat!.Status != MesaCombateStatus.Preparacao)
-                    return Task.FromResult(Invalid("COMBATE_JA_INICIADO", "NPCs devem ser adicionados antes de confirmar a ordem."));
+                    return Invalid("COMBATE_JA_INICIADO", "NPCs devem ser adicionados antes de confirmar a ordem.");
                 string name = request.Nome.Trim();
+                PersonagemJogador? linkedCharacter = null;
+                if (request.IdPersonagemJogador.HasValue)
+                {
+                    linkedCharacter = await _context.PersonagemJogadores.FirstOrDefaultAsync(item =>
+                        item.IdpersonagemJogador == request.IdPersonagemJogador.Value &&
+                        item.Idmesa == idMesa && item.IdPersonagemOrigem.HasValue, token);
+                    if (linkedCharacter is null)
+                        return Invalid("NPC_MESA_INVALIDO", "A cÃ³pia de NPC selecionada nÃ£o pertence a esta Mesa.");
+                    name = linkedCharacter.Nome;
+                }
                 if (name.Length == 0)
-                    return Task.FromResult(Invalid("NOME_NPC_OBRIGATORIO", "Informe o nome do NPC."));
+                    return Invalid("NOME_NPC_OBRIGATORIO", "Informe o nome do NPC.");
+
+                MesaCombateParticipante? detached = linkedCharacter is null ? null : scope.Combat.Participantes.FirstOrDefault(item =>
+                    item.Status != MesaCombateParticipanteStatus.Removido &&
+                    !item.IdPersonagemJogador.HasValue &&
+                    item.IdPersonagemOrigem == linkedCharacter.IdPersonagemOrigem &&
+                    string.Equals(item.IdVarianteOrigem, linkedCharacter.IdVarianteOrigem, StringComparison.Ordinal));
+                if (detached is not null)
+                {
+                    detached.IdPersonagemJogador = linkedCharacter!.IdpersonagemJogador;
+                    detached.PersonagemJogador = linkedCharacter;
+                    detached.NomeSnapshot = linkedCharacter.Nome;
+                    detached.ImagemSnapshot = linkedCharacter.Imagem;
+                    detached.IdUsuarioControlador = idUsuario;
+                    return Mutation("NPC_VINCULADO", "NPC vinculado", $"{linkedCharacter.Nome} foi vinculado Ã  cÃ³pia da Mesa.", participant: detached);
+                }
                 var participant = new MesaCombateParticipante
                 {
                     IdMesaCombate = scope.Combat.IdMesaCombate,
                     Tipo = MesaCombateParticipanteTipo.Npc,
                     Status = MesaCombateParticipanteStatus.AguardandoIniciativa,
+                    IdPersonagemJogador = linkedCharacter?.IdpersonagemJogador,
+                    IdPersonagemOrigem = linkedCharacter?.IdPersonagemOrigem ?? request.IdPersonagemOrigem,
+                    IdVarianteOrigem = linkedCharacter?.IdVarianteOrigem ?? request.IdVarianteOrigem,
                     IdUsuarioControlador = idUsuario,
                     NomeSnapshot = name,
-                    ImagemSnapshot = string.IsNullOrWhiteSpace(request.Imagem) ? null : request.Imagem.Trim(),
+                    ImagemSnapshot = linkedCharacter?.Imagem ?? (string.IsNullOrWhiteSpace(request.Imagem) ? null : request.Imagem.Trim()),
                     ModificadorIniciativa = request.ModificadorIniciativa,
                     CriadoEmUtc = scope.Now,
                 };
                 scope.Combat.Participantes.Add(participant);
-                return Task.FromResult(Mutation("NPC_ADICIONADO", "NPC adicionado", $"{name} aguarda a iniciativa.", participant: participant));
+                return Mutation("NPC_ADICIONADO", "NPC adicionado", $"{name} aguarda a iniciativa.", participant: participant);
+            }, cancellationToken);
+
+    public Task<GameplayOperationResult<GameplayCombatCommandResponseDto>> RemoveParticipantAsync(
+        int idMesa, long idMesaSessao, int idUsuario, GameplayCombatRemoveParticipantRequestDto request,
+        CancellationToken cancellationToken = default)
+        => ExecuteAsync(idMesa, idMesaSessao, idUsuario, request, "COMBATE_REMOVER_PARTICIPANTE", true, true,
+            (scope, _) =>
+            {
+                if (scope.Combat!.Status != MesaCombateStatus.Preparacao)
+                    return Task.FromResult(Invalid("ORDEM_CONFIRMADA", "Participantes sÃ³ podem ser removidos durante a preparaÃ§Ã£o."));
+                MesaCombateParticipante? participant = scope.Combat.Participantes.FirstOrDefault(item =>
+                    item.IdMesaCombateParticipante == request.IdParticipante &&
+                    item.Status != MesaCombateParticipanteStatus.Removido);
+                if (participant is null)
+                    return Task.FromResult(Invalid("PARTICIPANTE_NAO_ENCONTRADO", "Participante nÃ£o encontrado."));
+                participant.Status = MesaCombateParticipanteStatus.Removido;
+                return Task.FromResult(Mutation("PARTICIPANTE_REMOVIDO", "Participante removido", participant.NomeSnapshot, participant));
             }, cancellationToken);
 
     public Task<GameplayOperationResult<GameplayCombatCommandResponseDto>> RollInitiativeAsync(
@@ -201,8 +249,8 @@ public sealed partial class GameplayCombatService : IGameplayCombatService
                     return Task.FromResult(Invalid("COMBATE_JA_INICIADO", "Este combate já foi iniciado."));
                 List<MesaCombateParticipante> active = combat.Participantes
                     .Where(item => item.Status != MesaCombateParticipanteStatus.Removido).ToList();
-                if (active.Count == 0 || active.Any(item => !item.Iniciativa.HasValue))
-                    return Task.FromResult(Invalid("INICIATIVAS_PENDENTES", "Todos os participantes precisam rolar iniciativa."));
+                if (active.Count == 0)
+                    return Task.FromResult(Invalid("SEM_PARTICIPANTES", "Adicione ao menos um participante antes de confirmar a ordem."));
                 long[] order = request.OrdemParticipantes.Distinct().ToArray();
                 if (order.Length != active.Count || order.Except(active.Select(item => item.IdMesaCombateParticipante)).Any())
                     return Task.FromResult(Invalid("ORDEM_INVALIDA", "Confirme uma ordem contendo todos os participantes."));
@@ -700,7 +748,7 @@ public sealed partial class GameplayCombatService : IGameplayCombatService
         }
         if (notify)
         {
-            await _realtime.NotificarMesaAlteradaAsync(idMesa, cancellationToken);
+            await _realtime.NotificarMesaSecaoAlteradaAsync(idMesa, "combate", cancellationToken);
             foreach (int changedCharacterId in changedCharacterIds)
                 await _realtime.NotificarPersonagemAlteradoAsync(idMesa, changedCharacterId, cancellationToken);
         }
@@ -765,6 +813,8 @@ public sealed partial class GameplayCombatService : IGameplayCombatService
                 Tipo = item.Tipo,
                 Status = item.Status,
                 IdPersonagemJogador = item.IdPersonagemJogador,
+                IdPersonagemOrigem = item.IdPersonagemOrigem,
+                IdVarianteOrigem = item.IdVarianteOrigem,
                 IdUsuarioControlador = item.IdUsuarioControlador,
                 Nome = item.NomeSnapshot,
                 Imagem = item.ImagemSnapshot,

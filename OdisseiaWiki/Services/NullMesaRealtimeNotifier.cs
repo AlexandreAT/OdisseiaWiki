@@ -19,6 +19,12 @@ public sealed class NullMesaRealtimeNotifier : IMesaRealtimeNotifier
         CancellationToken cancellationToken = default)
         => Task.CompletedTask;
 
+    public Task NotificarMesaSecaoAlteradaAsync(
+        int idMesa,
+        string secao,
+        CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+
     public Task RevogarAcessoUsuarioAsync(
         int idMesa,
         int idUsuario,
