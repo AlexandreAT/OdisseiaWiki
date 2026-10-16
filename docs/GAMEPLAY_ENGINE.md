@@ -2837,6 +2837,7 @@ Validacao desta entrega: build do backend e TypeScript; testes de gameplay para 
 | `GE-D029` | 27/09/2026 | Descanso altera a ficha somente depois da confirmacao explicita do dono ou mestre | O tempo de jogo nao aplica recuperacao silenciosa e regras temporais ambiguas permanecem assistidas | `GE-D024` |
 | `GE-D030` | 27/09/2026 | Reducoes percentuais simultaneas de limite sao compostas sequencialmente pela ordem publicada, respeitando valor sobrescrito e acumulos ativos | A versao do Sistema determina uma operacao reproduzivel sem esconder do mestre as condicoes que a produziram | `GE-D003` |
 | `GE-D031` | 27/09/2026 | A iniciativa calculada e apenas uma sugestao ate o mestre confirmar ou reordenar todos os participantes | Empates e excecoes narrativas continuam sob controle da Mesa antes de iniciar os turnos persistentes | `GE-D025` |
+| `GE-D032` | 14/10/2026 | Atributo com valor zero nao permite teste voluntario nem novo favorito de atributo | A ficha e a Central desabilitam o lancamento; o servidor rejeita rolagem e favorito direto. Favoritos antigos ficam ocultos enquanto o atributo estiver zerado. A pedido do mestre, usa-se a rolagem generica, sem modificador de atributo. | - |
 
 Novas decisoes devem receber ID sequencial, data, justificativa, impacto e referencia a decisao substituida. Nao apagar decisoes antigas.
 

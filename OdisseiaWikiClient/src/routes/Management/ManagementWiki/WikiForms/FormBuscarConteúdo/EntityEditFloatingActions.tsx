@@ -5,6 +5,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import {
   FloatingActions,
   FloatingSaveButton,
+  FloatingSaveSpinner,
   SyncIconBadge,
 } from '../../../../Hub/UserCharacters/CharacterEdit/CharacterEdit.style';
 
@@ -40,8 +41,9 @@ export const EntityEditFloatingActions: React.FC<EntityEditFloatingActionsProps>
       title="Salvar alterações e continuar editando"
       aria-label="Salvar alterações e continuar editando"
       disabled={saving}
+      aria-busy={saving}
     >
-      <SaveIcon className="icon" />
+      {saving ? <FloatingSaveSpinner role="status" aria-label="Salvando" /> : <SaveIcon className="icon" />}
     </FloatingSaveButton>
   </FloatingActions>
 );

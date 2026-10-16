@@ -164,10 +164,12 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
 
   // --- cidades ---
   const [listCities, setListCities] = useState<CidadePayload[]>([]);
+  const [cityCatalogReady, setCityCatalogReady] = useState(false);
   const [loadingCities, setLoadingCities] = useState(true);
 
   // --- raças ---
   const [listRaces, setListRaces] = useState<RacaPayload[]>([]);
+  const [raceCatalogReady, setRaceCatalogReady] = useState(false);
   const [loadingRaces, setLoadingRaces] = useState(true);
 
   // --- itens ---
@@ -185,7 +187,10 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
 
   // --- mesas ---
   const [listMesas, setListMesas] = useState<Mesa[]>([]);
-  const [selectedMesa, setSelectedMesa] = useState<number | undefined>(undefined);
+  const [mesaCatalogReady, setMesaCatalogReady] = useState(false);
+  // A ficha existente sempre começa na mesa persistida. A lista de mesas pode
+  // chegar depois (ou falhar), mas nunca deve mover a ficha silenciosamente.
+  const [selectedMesa, setSelectedMesa] = useState<number | undefined>(personagem?.idmesa || undefined);
   const [loadingMesas, setLoadingMesas] = useState(true);
   const [mesaError, setMesaError] = useState(false);
   const {
@@ -223,43 +228,51 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
   );
 
   useEffect(() => {
+    let active = true;
     const fetchCities = async () => {
       setLoadingCities(true);
+      setCityCatalogReady(false);
       try {
         const result = selectedMesa
           ? await getCidadesDaMesa(selectedMesa)
           : await getCidades(true);
-        if (result.sucesso && result.cidades) {
+        if (active && result.sucesso && result.cidades) {
           setListCities(result.cidades);
+          setCityCatalogReady(true);
         } else {
           console.error("Erro ao carregar cidades:", result.mensagemErro);
         }
       } catch (err) {
         console.error("Erro ao buscar cidades:", err);
       } finally {
-        setLoadingCities(false);
+        if (active) setLoadingCities(false);
       }
     };
     fetchCities();
+    return () => { active = false; };
   }, [selectedMesa]);
 
   useEffect(() => {
+    let active = true;
     const fetchRaces = async () => {
       setLoadingRaces(true);
+      setRaceCatalogReady(false);
       try {
         const result = await getRacas(undefined, selectedMesa);
-        if (result.sucesso && result.racas) {
+        if (active && result.sucesso && result.racas) {
           setListRaces(result.racas);
+          setRaceCatalogReady(true);
         } else {
           console.error("Erro ao carregar raças:", result.mensagemErro);
         }
       } catch (err) {
         console.error("Erro ao buscar raças:", err);
       } finally {
-        setLoadingRaces(false);
+        if (active) setLoadingRaces(false);
       }
     };
     fetchRaces();
+    return () => { active = false; };
   }, [selectedMesa]);
 
   useEffect(() => {
@@ -334,24 +347,25 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
   }, [selectedMesa]);
 
   useEffect(() => {
+    let active = true;
     const fetchMesas = async () => {
         setLoadingMesas(true);
         try {
           const mesas = await getMesas();
+          if (!active) return;
           setListMesas(mesas);
-          const mesaAtual = personagem?.idmesa
-            ? mesas.find((mesa) => mesa.idmesa === personagem.idmesa)
-            : undefined;
+          setMesaCatalogReady(true);
           const mesaPadrao = mesas.find((mesa) => mesa.padraoSistema);
 
-          setSelectedMesa(mesaAtual?.idmesa ?? mesaPadrao?.idmesa ?? mesas[0]?.idmesa);
+          setSelectedMesa((current) => current ?? personagem?.idmesa ?? mesaPadrao?.idmesa ?? mesas[0]?.idmesa);
         } catch (err) {
           
         } finally {
-          setLoadingMesas(false);
+          if (active) setLoadingMesas(false);
         }
     };
     fetchMesas();
+    return () => { active = false; };
   }, [personagem?.idmesa]);
 
   const hasInitializedRef = useRef(false);
@@ -1059,8 +1073,10 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     setRaceError,
     statusError,
     listCities,
+    cityCatalogReady,
     loadingCities,
     listRaces,
+    raceCatalogReady,
     loadingRaces,
     selectedRace,
     personagens,
@@ -1077,6 +1093,7 @@ export const useFormUserCharacter = (userId: number, onSave?: () => void, person
     mesaError,
     setMesaError,
     listMesas,
+    mesaCatalogReady,
     loadingMesas,
     runtimeContext,
     runtimeLoading,

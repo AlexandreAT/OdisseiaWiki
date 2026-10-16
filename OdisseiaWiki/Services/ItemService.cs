@@ -56,6 +56,8 @@ namespace OdisseiaWiki.Services
 
         public async Task<ItemSaveResultDto> CreateWithRuntimeAsync(ItemCreateDto dto, int? idWikiEscopo = null)
         {
+            if (dto.Valor is < 0 or > 9999999999999999.99m)
+                throw new ArgumentOutOfRangeException(nameof(dto.Valor), "O valor do item deve ser positivo ou zero.");
             SistemaEntidadeVinculoResultado vinculo = await _sistemaEntidadeVinculoService.ValidarAsync(
                 dto.IdSistemaRpg,
                 dto.IdSistemaVersao,
@@ -70,6 +72,7 @@ namespace OdisseiaWiki.Services
                 Tipo = dto.Tipo,
                 Descricao = RichTextHelper.SerializeRichText(dto.Descricao),
                 Peso = dto.Peso,
+                Valor = dto.Valor,
                 Discricao = dto.Discricao,
                 Quantidade = dto.Quantidade,
                 Efeito = dto.Efeito,
@@ -134,6 +137,9 @@ namespace OdisseiaWiki.Services
                 ? RichTextHelper.SerializeRichText(dto.Descricao)
                 : item.Descricao;
             item.Peso = dto.Peso;
+            if (dto.Valor is < 0 or > 9999999999999999.99m)
+                throw new ArgumentOutOfRangeException(nameof(dto.Valor), "O valor do item deve ser positivo ou zero.");
+            item.Valor = dto.Valor;
             item.Discricao = dto.Discricao;
             item.Quantidade = dto.Quantidade;
             item.Efeito = dto.Efeito;
@@ -235,6 +241,7 @@ namespace OdisseiaWiki.Services
                 Tipo = i.Tipo,
                 Quantidade = i.Quantidade,
                 Peso = i.Peso,
+                Valor = i.Valor,
                 Discricao = i.Discricao,
                 Descricao = RichTextHelper.DeserializeRichText(i.Descricao),
                 Efeito = i.Efeito,

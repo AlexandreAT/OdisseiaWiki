@@ -23,6 +23,7 @@ export const isEmptyItemRow = (item: Item): boolean => (
   && !hasMeaningfulValue(item.atributos)
   && !hasMeaningfulValue(item.tags)
   && !hasMeaningfulValue(item.peso)
+  && !hasMeaningfulValue(item.valor)
   && !hasMeaningfulValue(item.discricao)
 );
 

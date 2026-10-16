@@ -2,7 +2,7 @@ import styled from 'styled-components';
 import { FallbackImage } from '../../../../../../components/Generic/FallbackImage/FallbackImage';
 import { EntityType } from '../types';
 
-interface StyledCardProps {
+export interface StyledCardProps {
   theme: 'dark' | 'light';
   neon: 'on' | 'off';
 }

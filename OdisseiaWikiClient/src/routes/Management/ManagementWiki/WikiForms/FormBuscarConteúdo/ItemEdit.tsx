@@ -176,6 +176,8 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
     setQuantidade,
     peso,
     setPeso,
+    valor,
+    setValor,
     discricao,
     setDiscricao,
     imagemUrl,
@@ -216,13 +218,14 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
     descricao,
     quantidade,
     peso,
+    valor,
     discricao,
     imagemUrl,
     atributos,
     tags,
     visivel,
     sistema: sistema.vinculo,
-  }), [nome, tipo, descricao, quantidade, peso, discricao, imagemUrl, atributos, tags, visivel, sistema.vinculo]);
+  }), [nome, tipo, descricao, quantidade, peso, valor, discricao, imagemUrl, atributos, tags, visivel, sistema.vinculo]);
   const { isSynced, markSaved } = useEntityEditSync({
     snapshot,
     identity: initialItem.iditem,
@@ -330,6 +333,13 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
               onFocus={handleNumericInputFocus}
               onChange={(e) => setPeso(Number(e.target.value) || undefined)}
             />
+          </LabelInfoBox>
+
+          <LabelInfoBox theme={theme} neon={neon}>
+            <LabelStatus>Valor de compra (opcional)</LabelStatus>
+            <MinimalInput value={valor ?? ''} type="number" min="0" step="0.01"
+              onFocus={handleNumericInputFocus}
+              onChange={(e) => setValor(e.target.value === '' ? undefined : Math.max(0, Number(e.target.value)))} />
           </LabelInfoBox>
 
           <LabelInfoBox theme={theme} neon={neon}>

@@ -71,9 +71,9 @@ export const CustomSelect = styled.select<Props>`
   font-size: 0.9em;
   padding: 25px 10px 10px;
   font-weight: 600;
-  color: ${({ theme, disabled }) => disabled
-    ? 'var(--grey)'
-    : theme === 'dark' ? 'var(--whitesmoke)' : 'var(--deepgrey)'};
+  color: ${({ theme, neon, disabled }) => disabled
+    ? 'var(--lightGrey)'
+    : theme === 'light' && neon === 'on' ? 'var(--deepgray)' : 'var(--whitesmoke)'};
   transition: background-color 0.2s, border 0.2s;
   box-shadow: 0 0 1px 1px rgba(50, 50, 50, 0.8);
   appearance: none;
@@ -90,6 +90,7 @@ export const CustomSelect = styled.select<Props>`
 
   &:focus {
     background-color: var(--black-blue);
+    color: var(--whitesmoke);
     border-color: ${({ theme, neon, typeStyle }) =>
       theme === 'dark'
         ? neon === 'on'
@@ -144,9 +145,9 @@ export const SelectControl = styled.button<Props>`
           ? 'var(--clearWhite)'
           : 'var(--clearblack)'};
   box-shadow: 0 0 1px 1px rgba(50, 50, 50, 0.8);
-  color: ${({ theme, disabled }) => disabled
-    ? 'var(--grey)'
-    : theme === 'dark' ? 'var(--whitesmoke)' : 'var(--deepgrey)'};
+  color: ${({ theme, neon, disabled }) => disabled
+    ? 'var(--lightGrey)'
+    : theme === 'light' && neon === 'on' ? 'var(--deepgray)' : 'var(--whitesmoke)'};
   font-size: 0.9em;
   font-weight: 600;
   text-align: left;
@@ -156,6 +157,7 @@ export const SelectControl = styled.button<Props>`
   &:focus-visible,
   &[aria-expanded='true'] {
     background-color: var(--black-blue);
+    color: var(--whitesmoke);
     border-color: ${({ theme, neon, typeStyle }) =>
       theme === 'dark'
         ? neon === 'on' ? '#fff' : getBlue(typeStyle)

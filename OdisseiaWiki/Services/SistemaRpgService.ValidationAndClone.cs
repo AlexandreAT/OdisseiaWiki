@@ -105,6 +105,13 @@ public sealed partial class SistemaRpgService
     private static List<string> ValidarProgressao(SistemaProgressaoConfigDto dto)
     {
         List<string> erros = new();
+        if (dto.DadoLootFaces is not (null or 4 or 6 or 8 or 10 or 12 or 20))
+            erros.Add("O dado de loot deve ser D4, D6, D8, D10, D12 ou D20.");
+        if (dto.InfluenciasAtributos is null || dto.InfluenciasAtributos.Count > 100 ||
+            dto.InfluenciasAtributos.Any(rule => rule is null || string.IsNullOrWhiteSpace(rule.CodigoAtributo) ||
+                rule.Recurso is not ("vida" or "mana" or "estamina") || rule.PercentualPorValor is < 0 or > 100) ||
+            dto.InfluenciasAtributos.GroupBy(rule => (SistemaRpgConfiguration.NormalizarCodigo(rule.CodigoAtributo, string.Empty), rule.Recurso)).Any(group => group.Count() > 1))
+            erros.Add("Informe influências distintas de atributos sobre vida, mana ou estamina, com percentuais de 0 a 100.");
         if (dto.NivelMaximo < 1)
             erros.Add("O nível máximo deve ser maior que zero.");
         if (dto.Niveis.Any(n => n.Nivel < 1 || n.XpParaProximoNivel < 0 || n.PontosNivel < 0 ||
@@ -163,6 +170,13 @@ public sealed partial class SistemaRpgService
     private static List<string> ValidarCombate(SistemaCombateConfigDto dto)
     {
         List<string> erros = new();
+        if (dto.EstaminaPorAtaqueAdicional is < 0 or > 1000)
+            erros.Add("O custo de estamina por ataque adicional deve estar entre 0 e 1000.");
+        if (dto.LimitesAcoesPorArma is null || dto.LimitesAcoesPorArma.Any(rule =>
+            string.IsNullOrWhiteSpace(rule.TipoArma) || rule.MaximoTiros is < 0 or > 100 ||
+            rule.MaximoRajadas is < 0 or > 100 || rule.MaximoGolpes is < 0 or > 100) ||
+            dto.LimitesAcoesPorArma.Select(rule => rule.TipoArma.Trim().ToUpperInvariant()).Distinct().Count() != dto.LimitesAcoesPorArma.Count)
+            erros.Add("Os limites por arma precisam ter tipos únicos e valores de 0 a 100 (0 = sem limite adicional).");
         if (dto.SegundosPorTurno <= 0)
             erros.Add("A duração do turno deve ser maior que zero.");
         foreach (SistemaResultadoDadoDto resultado in dto.ResultadosDado)
@@ -312,6 +326,16 @@ public sealed partial class SistemaRpgService
 
         erros.AddRange(ValidarGeral(SistemaRpgMapper.ToGeral(versao)));
         erros.AddRange(ValidarProgressao(SistemaRpgMapper.ToProgressao(versao)));
+        var progressionRules = SistemaRpgMapper.ToProgressao(versao);
+        foreach (var influence in progressionRules.InfluenciasAtributos ?? [])
+        {
+            if (influence is null) continue;
+            if (!versao.Atributos.Any(attribute => attribute.Ativo &&
+                attribute.Grupo is SistemaAtributoGrupo.Principal or SistemaAtributoGrupo.Secundario &&
+                SistemaRpgConfiguration.NormalizarCodigo(attribute.CodigoAtributo, string.Empty) ==
+                SistemaRpgConfiguration.NormalizarCodigo(influence.CodigoAtributo, string.Empty)))
+                erros.Add($"O atributo {influence.CodigoAtributo} das influências não existe nesta versão do Sistema.");
+        }
         erros.AddRange(ValidarExploracao(SistemaRpgMapper.ToExploracao(versao)));
         erros.AddRange(ValidarCombate(SistemaRpgMapper.ToCombate(versao)));
         erros.AddRange(ValidarPoderes(SistemaRpgMapper.ToPoderes(versao)));

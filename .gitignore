@@ -30,6 +30,8 @@ dist/
 
 # Local build outputs
 /artifacts/
+/OdisseiaWiki/artifacts/
+/OdisseiaWiki.Tests/artifacts/
 
 # Environment / Secrets
 .env

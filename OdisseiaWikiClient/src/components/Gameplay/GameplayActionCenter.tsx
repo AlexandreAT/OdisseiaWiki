@@ -485,7 +485,7 @@ export const GameplayActionCenter = ({
     const code = normalizeRuntimeCode(initialAction.attributeCode);
     const field = fields.find((entry) => normalizeRuntimeCode(entry.code) === code
       || normalizeRuntimeCode(entry.key) === code);
-    if (!field) return;
+    if (!field || (Number(values[field.key]) || 0) <= 0) return;
 
     requestedInitialActionRef.current = actionKey;
     setTab('attributes');
@@ -517,7 +517,7 @@ export const GameplayActionCenter = ({
   };
 
   const handleAttributeFavorite = async () => {
-    if (!selectedAttribute || !selectedCharacter) return;
+    if (!selectedAttribute || !selectedCharacter || selectedAttribute.value <= 0) return;
     setSubmitError(null);
     try {
       if (selectedAttributeFavorite) {
@@ -936,6 +936,8 @@ export const GameplayActionCenter = ({
                       type="button"
                       $selected={selected}
                       aria-pressed={selected}
+                      disabled={value <= 0}
+                      title={value <= 0 ? 'Atributo zerado: use a rolagem genérica se o mestre pedir.' : `Testar ${field.label}`}
                       onClick={() => {
                         setSelectedAttribute({ ...field, group, value });
                         setAttributeDialogOpen(true);
@@ -1202,7 +1204,7 @@ export const GameplayActionCenter = ({
                 <FavoriteRollButton
                   type="button"
                   $active={Boolean(selectedAttributeFavorite)}
-                  disabled={favoriteSaving}
+                  disabled={favoriteSaving || selectedAttribute.value <= 0}
                   title={selectedAttributeFavorite ? 'Remover dos favoritos' : 'Favoritar esta configuração'}
                   aria-label={selectedAttributeFavorite ? 'Remover dos favoritos' : 'Favoritar esta configuração'}
                   aria-pressed={Boolean(selectedAttributeFavorite)}
@@ -1228,7 +1230,7 @@ export const GameplayActionCenter = ({
             </ComposerGrid>
             <SubmitButton
               type="button"
-              disabled={submitting}
+              disabled={submitting || selectedAttribute.value <= 0}
               onClick={() => void submitRoll(
                 selectedAttribute.group === 'Principal' ? 'ATRIBUTO_PRINCIPAL' : 'ATRIBUTO_SECUNDARIO',
                 selectedAttributeGroups,

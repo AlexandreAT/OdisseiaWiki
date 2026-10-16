@@ -1226,6 +1226,23 @@ public sealed class GameplayEngineService : IGameplayEngineService
         if (!access.Sucesso || access.Dados is null)
             return ConvertFailure<PersonagemJogador, GameplayFavoriteRollDto>(access);
 
+        if (sourceType == "ATRIBUTO")
+        {
+            string actionCode = NormalizeCode(request.Configuracao.CodigoAcao);
+            string? attributeCode = NormalizeOptionalCode(request.Configuracao.CodigoAtributo);
+            string group = actionCode switch
+            {
+                "ATRIBUTO_PRINCIPAL" => "principais",
+                "ATRIBUTO_SECUNDARIO" => "secundarios",
+                _ => string.Empty,
+            };
+            if (group.Length == 0 || attributeCode is null ||
+                !string.Equals(sourceId, $"{(group == "principais" ? "PRINCIPAL" : "SECUNDARIO")}:{attributeCode}", StringComparison.OrdinalIgnoreCase))
+                return Validation<GameplayFavoriteRollDto>("FAVORITO_INCOMPLETO", "Informe um atributo válido para favoritar.");
+            if (!TryGetAttributeValue(access.Dados.StatusJson, group, attributeCode, out int value) || value <= 0)
+                return RuleFailure<GameplayFavoriteRollDto>("ATRIBUTO_ZERO", "Atributos zerados não podem ser favoritados. Use a rolagem genérica se o mestre pedir.");
+        }
+
         List<GameplayFavoriteRollDto> favorites = ReadFavoriteRolls(access.Dados).ToList();
         GameplayFavoriteRollDto? current = favorites.FirstOrDefault(item =>
             string.Equals(item.TipoOrigem, sourceType, StringComparison.Ordinal) &&

@@ -90,6 +90,9 @@ namespace OdisseiaWiki.Migrations
                     b.Property<decimal?>("Peso")
                         .HasColumnType("decimal(65,30)");
 
+                    b.Property<decimal?>("Valor")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<int>("Quantidade")
                         .HasColumnType("int");
 
@@ -182,6 +185,257 @@ namespace OdisseiaWiki.Migrations
                         .HasDatabaseName("IX_Cidade_WikiEscopo");
 
                     b.ToTable("cidades", (string)null);
+                });
+
+            modelBuilder.Entity("OdisseiaWiki.Models.GameModeVersion", b =>
+                {
+                    b.Property<int>("IdGameModeVersion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("IDGameModeVersion");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("IdGameModeVersion"));
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("ConfiguracaoJson")
+                        .IsRequired()
+                        .HasColumnType("json");
+
+                    b.Property<DateTime>("CriadaEmUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("IdSistemaVersao")
+                        .HasColumnType("int")
+                        .HasColumnName("IDSistemaVersao");
+
+                    b.Property<string>("NumeroVersao")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<DateTime?>("PublicadaEmUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("SchemaVersion")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.HasKey("IdGameModeVersion");
+
+                    b.HasIndex("IdSistemaVersao", "Codigo", "NumeroVersao")
+                        .IsUnique()
+                        .HasDatabaseName("UX_GameModeVersion_Sistema_Codigo_Versao");
+
+                    b.ToTable("gamemodeversions", (string)null);
+                });
+
+            modelBuilder.Entity("OdisseiaWiki.Models.GameRun", b =>
+                {
+                    b.Property<long>("IdGameRun")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("IDGameRun");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("IdGameRun"));
+
+                    b.Property<DateTime>("AtualizadaEmUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("ChaveAtiva")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("int")
+                        .HasComputedColumnSql("CASE WHEN `Status` = 'Ativa' THEN 1 ELSE NULL END", true);
+
+                    b.Property<DateTime>("CriadaEmUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("EncerradaEmUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("EstadoAtualJson")
+                        .IsRequired()
+                        .HasColumnType("json");
+
+                    b.Property<int>("Fase")
+                        .HasColumnType("int");
+
+                    b.Property<int>("IdGameModeVersion")
+                        .HasColumnType("int")
+                        .HasColumnName("IDGameModeVersion");
+
+                    b.Property<int>("IdPersonagemJogadorOrigem")
+                        .HasColumnType("int")
+                        .HasColumnName("IDPersonagemJogadorOrigem");
+
+                    b.Property<int>("IdSistemaVersao")
+                        .HasColumnType("int")
+                        .HasColumnName("IDSistemaVersao");
+
+                    b.Property<int>("IdUsuario")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("IDUsuario");
+
+                    b.Property<string>("LoadoutJson")
+                        .HasColumnType("json");
+
+                    b.Property<string>("MapaJson")
+                        .HasColumnType("json");
+
+                    b.Property<string>("NoAtualId")
+                        .HasMaxLength(80)
+                        .HasColumnType("varchar(80)");
+
+                    b.Property<long>("Revisao")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("Seed")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("SnapshotInicialJson")
+                        .IsRequired()
+                        .HasColumnType("json");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.HasKey("IdGameRun");
+
+                    b.HasIndex("IdGameModeVersion");
+
+                    b.HasIndex("IdSistemaVersao");
+
+                    b.HasIndex("IdUsuario", "ChaveAtiva")
+                        .IsUnique()
+                        .HasDatabaseName("UX_GameRun_Usuario_Ativa");
+
+                    b.HasIndex("IdUsuario", "CriadaEmUtc")
+                        .HasDatabaseName("IX_GameRun_Usuario_Criacao");
+
+                    b.ToTable("gameruns", (string)null);
+                });
+
+            modelBuilder.Entity("OdisseiaWiki.Models.GameRunBattle", b =>
+                {
+                    b.Property<long>("IdGameRunBattle")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("IDGameRunBattle");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("IdGameRunBattle"));
+
+                    b.Property<DateTime>("CriadaEmUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("EstadoAntesJson")
+                        .IsRequired()
+                        .HasColumnType("json");
+
+                    b.Property<string>("EstadoDepoisJson")
+                        .IsRequired()
+                        .HasColumnType("json");
+
+                    b.Property<long>("IdGameRun")
+                        .HasColumnType("bigint")
+                        .HasColumnName("IDGameRun");
+
+                    b.Property<string>("NoId")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("varchar(80)");
+
+                    b.Property<int>("Ordem")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ResultadoJson")
+                        .IsRequired()
+                        .HasColumnType("json");
+
+                    b.Property<int>("Seed")
+                        .HasColumnType("int");
+
+                    b.Property<string>("VencedorId")
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.HasKey("IdGameRunBattle");
+
+                    b.HasIndex("IdGameRun", "NoId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_GameRunBattle_Run_No");
+
+                    b.ToTable("gamerunbattles", (string)null);
+                });
+
+            modelBuilder.Entity("OdisseiaWiki.Models.GameRunCommand", b =>
+                {
+                    b.Property<long>("IdGameRunCommand")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("IDGameRunCommand");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("IdGameRunCommand"));
+
+                    b.Property<string>("ChaveIdempotencia")
+                        .IsRequired()
+                        .HasMaxLength(36)
+                        .HasColumnType("varchar(36)");
+
+                    b.Property<DateTime>("ConcluidoEmUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("CriadoEmUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("HashPayload")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<long>("IdGameRun")
+                        .HasColumnType("bigint")
+                        .HasColumnName("IDGameRun");
+
+                    b.Property<int>("IdUsuario")
+                        .HasColumnType("int")
+                        .HasColumnName("IDUsuario");
+
+                    b.Property<string>("RespostaJson")
+                        .IsRequired()
+                        .HasColumnType("json");
+
+                    b.Property<long?>("RevisaoEsperada")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("varchar(40)");
+
+                    b.HasKey("IdGameRunCommand");
+
+                    b.HasIndex("IdGameRun");
+
+                    b.HasIndex("IdUsuario", "ChaveIdempotencia")
+                        .IsUnique()
+                        .HasDatabaseName("UX_GameRunCommand_Usuario_Chave");
+
+                    b.ToTable("gameruncommands", (string)null);
                 });
 
             modelBuilder.Entity("OdisseiaWiki.Models.Infolore", b =>
@@ -3518,6 +3772,72 @@ namespace OdisseiaWiki.Migrations
                     b.Navigation("WikiEscopo");
                 });
 
+            modelBuilder.Entity("OdisseiaWiki.Models.GameModeVersion", b =>
+                {
+                    b.HasOne("OdisseiaWiki.Models.SistemaVersao", "SistemaVersao")
+                        .WithMany()
+                        .HasForeignKey("IdSistemaVersao")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_GameModeVersion_SistemaVersao");
+
+                    b.Navigation("SistemaVersao");
+                });
+
+            modelBuilder.Entity("OdisseiaWiki.Models.GameRun", b =>
+                {
+                    b.HasOne("OdisseiaWiki.Models.GameModeVersion", "GameModeVersion")
+                        .WithMany("Runs")
+                        .HasForeignKey("IdGameModeVersion")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_GameRun_ModeVersion");
+
+                    b.HasOne("OdisseiaWiki.Models.SistemaVersao", "SistemaVersao")
+                        .WithMany()
+                        .HasForeignKey("IdSistemaVersao")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_GameRun_SistemaVersao");
+
+                    b.HasOne("OdisseiaWiki.Models.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("IdUsuario")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_GameRun_Usuario");
+
+                    b.Navigation("GameModeVersion");
+
+                    b.Navigation("SistemaVersao");
+
+                    b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("OdisseiaWiki.Models.GameRunBattle", b =>
+                {
+                    b.HasOne("OdisseiaWiki.Models.GameRun", "Run")
+                        .WithMany("Batalhas")
+                        .HasForeignKey("IdGameRun")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_GameRunBattle_Run");
+
+                    b.Navigation("Run");
+                });
+
+            modelBuilder.Entity("OdisseiaWiki.Models.GameRunCommand", b =>
+                {
+                    b.HasOne("OdisseiaWiki.Models.GameRun", "Run")
+                        .WithMany("Comandos")
+                        .HasForeignKey("IdGameRun")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_GameRunCommand_Run");
+
+                    b.Navigation("Run");
+                });
+
             modelBuilder.Entity("OdisseiaWiki.Models.Mesa", b =>
                 {
                     b.HasOne("OdisseiaWiki.Models.MesaSessao", "SessaoAtiva")
@@ -4529,6 +4849,18 @@ namespace OdisseiaWiki.Migrations
             modelBuilder.Entity("OdisseiaWiki.Models.Cidade", b =>
                 {
                     b.Navigation("Personagens");
+                });
+
+            modelBuilder.Entity("OdisseiaWiki.Models.GameModeVersion", b =>
+                {
+                    b.Navigation("Runs");
+                });
+
+            modelBuilder.Entity("OdisseiaWiki.Models.GameRun", b =>
+                {
+                    b.Navigation("Batalhas");
+
+                    b.Navigation("Comandos");
                 });
 
             modelBuilder.Entity("OdisseiaWiki.Models.Mesa", b =>

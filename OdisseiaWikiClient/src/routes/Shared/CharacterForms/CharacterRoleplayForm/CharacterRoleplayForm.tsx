@@ -104,8 +104,11 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
     [raceChangeMode, selectedRace?.nome]
   );
   const raceOptions = React.useMemo(() => {
+    const originalOption = race && !listRaces.some((entry) => entry.idraca === race)
+      ? [{ value: race, label: `Raça original #${race} (legada)` }]
+      : [];
     if (raceChangeMode !== 'current-or-android') {
-      return listRaces.map((r) => ({ value: r.idraca, label: r.nome }));
+      return [...originalOption, ...listRaces.map((r) => ({ value: r.idraca, label: r.nome }))];
     }
 
     const currentRace = listRaces.find((r) => r.idraca === race);
@@ -116,9 +119,9 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
       .filter((r, index, arr) => arr.findIndex((x) => x.idraca === r.idraca) === index)
       .map((r) => ({ value: r.idraca, label: r.nome }));
 
-    if (options.length > 0) return options;
+    if (options.length > 0) return [...originalOption, ...options];
 
-    return listRaces.map((r) => ({ value: r.idraca, label: r.nome }));
+    return [...originalOption, ...listRaces.map((r) => ({ value: r.idraca, label: r.nome }))];
   }, [listRaces, race, raceChangeMode]);
   const passiveOptions = React.useMemo(() => (
     selectedRace?.statusJson?.passivas
@@ -127,10 +130,10 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
   ), [selectedRace?.statusJson?.passivas]);
 
   React.useEffect(() => {
-    if (idpassiva && !passiveOptions.some((option) => option.value === idpassiva)) {
+    if (selectedRace && idpassiva && !passiveOptions.some((option) => option.value === idpassiva)) {
       setIdpassiva(undefined);
     }
-  }, [idpassiva, passiveOptions, setIdpassiva]);
+  }, [idpassiva, passiveOptions, selectedRace, setIdpassiva]);
 
   return (
     <RoleplayContainer>
@@ -178,7 +181,12 @@ export const CharacterRoleplayForm: React.FC<CharacterRoleplayFormProps> = ({
             theme={theme}
             neon={neon}
             label="Cidade"
-            options={listCities.map(c => ({ value: c.idcidade, label: c.nome }))}
+            options={[
+              ...(city && !listCities.some((entry) => entry.idcidade === city)
+                ? [{ value: city, label: `Cidade original #${city} (legada)` }]
+                : []),
+              ...listCities.map(c => ({ value: c.idcidade, label: c.nome })),
+            ]}
             value={city}
             onChange={(e) => setCity(Number(e.target.value))}
             width="100%"

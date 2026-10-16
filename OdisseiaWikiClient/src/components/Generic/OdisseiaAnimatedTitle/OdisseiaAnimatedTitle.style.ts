@@ -4,6 +4,7 @@ interface TitleStyleProps {
   theme: 'dark' | 'light';
   neon: 'on' | 'off';
   $wide?: boolean;
+  $compact?: boolean;
 }
 
 const drawOutline = keyframes`
@@ -32,8 +33,8 @@ const getTitleColor = ({ theme, neon }: TitleStyleProps) => {
 };
 
 export const AnimatedTitleSvg = styled.svg<TitleStyleProps>`
-  width: ${({ $wide }) => ($wide ? 'min(88vw, 1100px)' : 'clamp(240px, 22vw, 340px)')};
-  height: ${({ $wide }) => ($wide ? 'clamp(52px, 8vw, 92px)' : 'clamp(38px, 3.5vw, 54px)')};
+  width: ${({ $wide, $compact }) => $compact ? 'min(100%, 320px)' : $wide ? 'min(88vw, 1100px)' : 'clamp(240px, 22vw, 340px)'};
+  height: ${({ $wide, $compact }) => $compact ? '30px' : $wide ? 'clamp(52px, 8vw, 92px)' : 'clamp(38px, 3.5vw, 54px)'};
   display: block;
   overflow: visible;
 
@@ -41,8 +42,8 @@ export const AnimatedTitleSvg = styled.svg<TitleStyleProps>`
     font-family: 'DO Futuristic', sans-serif;
     font-size: 30px;
     font-weight: 100;
-    letter-spacing: 3px;
-    text-anchor: ${({ $wide }) => $wide ? 'middle' : 'start'};
+    letter-spacing: ${({ $compact }) => $compact ? '1px' : '3px'};
+    text-anchor: ${({ $wide, $compact }) => $wide && !$compact ? 'middle' : 'start'};
   }
 
   .title-outline {
@@ -54,27 +55,27 @@ export const AnimatedTitleSvg = styled.svg<TitleStyleProps>`
     stroke-dasharray: 0 160;
     stroke-dashoffset: 0;
     opacity: 0;
-    animation: ${({ $wide }) => $wide
-      ? css`${drawOutline} 5.6s linear forwards`
-      : css`${drawOutline} 4.1s linear forwards`};
+    animation: ${({ $wide, $compact }) => $compact
+      ? css`${drawOutline} 1.5s ease-out forwards`
+      : $wide ? css`${drawOutline} 5.6s linear forwards` : css`${drawOutline} 4.1s linear forwards`};
   }
 
   .title-fill {
     fill: ${getTitleColor};
     opacity: 0;
-    animation: ${({ $wide }) => $wide
-      ? css`${revealFill} 90ms linear 5.22s forwards`
-      : css`${revealFill} 320ms ease-out 3.85s forwards`};
+    animation: ${({ $wide, $compact }) => $compact
+      ? css`${revealFill} 180ms ease-out 1.35s forwards`
+      : $wide ? css`${revealFill} 90ms linear 5.22s forwards` : css`${revealFill} 320ms ease-out 3.85s forwards`};
   }
 
   @media (max-width: 768px) {
-    width: ${({ $wide }) => ($wide ? '86vw' : '220px')};
-    height: ${({ $wide }) => ($wide ? '58px' : '35px')};
+    width: ${({ $wide, $compact }) => $compact ? 'min(100%, 320px)' : $wide ? '86vw' : '220px'};
+    height: ${({ $wide, $compact }) => $compact ? '30px' : $wide ? '58px' : '35px'};
   }
 
   @media (max-width: 480px) {
-    width: ${({ $wide }) => ($wide ? '90vw' : '190px')};
-    height: ${({ $wide }) => ($wide ? '46px' : '30px')};
+    width: ${({ $wide, $compact }) => $compact ? 'min(100%, 300px)' : $wide ? '90vw' : '190px'};
+    height: ${({ $wide, $compact }) => $compact ? '28px' : $wide ? '46px' : '30px'};
   }
 
   @media (prefers-reduced-motion: reduce) {

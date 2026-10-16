@@ -6,15 +6,17 @@ import { MainContainer, MainContent, Options, OptionsController, OptionButton, C
 import { ManagementWiki } from './ManagementWiki/ManagementWiki';
 import { AnimatedBackground } from '../../components/Generic/AnimatedBackground/AnimatedBackground';
 import { ManagementSystem } from './ManagementSystem/ManagementSystem';
+import { ManagementGame } from './ManagementGame/ManagementGame';
 
 const OPTIONS = [
     { key: 'wiki', label: 'Wiki' },
     { key: 'sistema', label: 'Sistema' },
+    { key: 'jogo', label: 'Jogo' },
     { key: 'mesas', label: 'Mesas' },
     { key: 'jogadores', label: 'Jogadores' }
 ];
 
-type ManagementArea = 'wiki' | 'sistema' | 'mesas' | 'jogadores';
+type ManagementArea = 'wiki' | 'sistema' | 'jogo' | 'mesas' | 'jogadores';
 
 interface ManagementThemeState {
     themesReducer: {
@@ -71,6 +73,8 @@ export const Management = () => {
                 return <ManagementWiki theme={theme} neon={neon} />;
             case 'sistema':
                 return <ManagementSystem theme={theme} neon={neon} onDirtyChange={setSystemDirty} />;
+            case 'jogo':
+                return <ManagementGame theme={theme} neon={neon} />;
             case 'mesas':
                 return <p>Conteúdo das Mesas</p>;
             case 'jogadores':

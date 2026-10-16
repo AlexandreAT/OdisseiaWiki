@@ -296,7 +296,8 @@ export const StatusForm: React.FC<StatusFormProps> = ({
                       theme={theme}
                       neon={neon}
                       onClick={() => onGameplayAttributeAction(field.code, 'Principal')}
-                      title={`Rolar teste de ${field.label}`}
+                      disabled={(Number(atributosPrincipais[field.key]) || 0) <= 0}
+                      title={(Number(atributosPrincipais[field.key]) || 0) <= 0 ? 'Atributo zerado: use a rolagem genérica se o mestre pedir.' : `Rolar teste de ${field.label}`}
                       aria-label={`Rolar teste de ${field.label}`}
                     >
                       <CasinoOutlinedIcon aria-hidden="true" />
@@ -380,7 +381,8 @@ export const StatusForm: React.FC<StatusFormProps> = ({
                     theme={theme}
                     neon={neon}
                     onClick={() => onGameplayAttributeAction(field.code, 'Secundario')}
-                    title={`Rolar teste de ${field.label}`}
+                    disabled={(Number(atributosSecundarios[field.key]) || 0) <= 0}
+                    title={(Number(atributosSecundarios[field.key]) || 0) <= 0 ? 'Atributo zerado: use a rolagem genérica se o mestre pedir.' : `Rolar teste de ${field.label}`}
                     aria-label={`Rolar teste de ${field.label}`}
                   >
                     <CasinoOutlinedIcon aria-hidden="true" />

@@ -255,6 +255,8 @@ public sealed class GameplayActionResolver
         }
         if (!TryGetAttributeValue(character.StatusJson, expectedGroup.ToString(), attributeCode, out int value))
             return Failure("ATRIBUTO_NAO_ENCONTRADO", "O atributo não foi encontrado nesta ficha.");
+        if (value <= 0)
+            return Failure("ATRIBUTO_ZERO", "Este atributo precisa ter ao menos 1 para um teste voluntário. Use a rolagem genérica se o mestre pedir.");
         // NPCs copiados para a Mesa podem ter atributos publicados pelo mestre
         // acima do teto de criação de jogadores. A rolagem usa esse snapshot,
         // sem relaxar o limite das fichas comuns ou inventar outro valor.
@@ -418,14 +420,18 @@ public sealed class GameplayActionResolver
         SistemaVersao version,
         GameplayActionReferenceDto reference)
     {
-        JsonObject? item = FindEntry(character.InventarioJson, reference.IdInstancia!)
-            ?? FindEntry(character.Implantes, reference.IdInstancia!);
+        bool prosthesis = NormalizeCode(reference.Tipo) is "PROTESE" or "PROTESES";
+        JsonObject? item = prosthesis
+            ? FindEntry(character.Implantes, reference.IdInstancia!)
+                ?? FindEntry(character.InventarioJson, reference.IdInstancia!)
+            : FindEntry(character.InventarioJson, reference.IdInstancia!);
         if (item is null)
             return Failure("ITEM_NAO_ENCONTRADO", "O item não foi encontrado nesta ficha.");
 
         string itemType = NormalizeCode(ReadString(item, "tipo"));
-        bool isWeapon = itemType == "ARMA";
         JsonObject? attributes = GetObject(item, "atributos");
+        bool isWeapon = itemType == "ARMA" || itemType == "OUTRO" &&
+            (ReadInt(attributes, "dano") ?? 0) > 0;
         GameplayStoredTestSpec? test = ReadTestSpec(item, attributes);
         bool appliesTest = ReadBool(item, "aplicaTeste")
             ?? ReadBool(attributes, "aplicaTeste")
@@ -552,6 +558,13 @@ public sealed class GameplayActionResolver
 
         JsonObject? attributes = GetObject(power, "atributos");
         GameplayStoredTestSpec? test = ReadTestSpec(power, attributes);
+        // Fichas antigas registravam o ataque apenas como acerto D20 + dano.
+        // O fallback só usa a tabela publicada do Odisseia, nunca texto livre.
+        if (test is null && IsOdisseia(version) &&
+            string.Equals(ReadString(power, "tipo"), "ataque", StringComparison.OrdinalIgnoreCase) &&
+            IsLegacySingleD20(ReadString(attributes, "acerto") ?? ReadString(power, "acerto")) &&
+            ReadInt(attributes, "dano") is > 0)
+            test = new GameplayStoredTestSpec { CodigoTeste = "ATAQUE_COMUM" };
         if (test is null || string.IsNullOrWhiteSpace(test.CodigoTeste))
         {
             return Failure(
@@ -854,7 +867,7 @@ public sealed class GameplayActionResolver
 
         int? baseDamage = mode == "DISTANCIA"
             ? ReadInt(GetObject(attributes, "danoPorAlcance"), RangeDamageProperty(range!)) ?? ReadInt(attributes, "danoBase")
-            : ReadInt(attributes, "danoBase");
+            : ReadInt(attributes, "danoBase") ?? ReadInt(attributes, "dano");
         int? damagePerHit = baseDamage.HasValue ? Math.Max(0, baseDamage.Value + damageModifier) : null;
         int? stamina = ReadInt(attributes, "gastoEstaminaPorAtaque");
         int? staminaPerUse = stamina.HasValue ? Math.Max(0, stamina.Value + staminaModifier) : null;
@@ -876,6 +889,9 @@ public sealed class GameplayActionResolver
             int configuredCost = fireMode == "RAJADA"
                 ? ReadInt(attributes, "custoMunicaoRajada") ?? 0
                 : ReadInt(attributes, "custoMunicaoTiro") ?? 0;
+            if (fireMode == "RAJADA" && configuredCost <= 0 &&
+                (ReadInt(attributes, "cadencia") ?? 0) > 0)
+                configuredCost = ReadInt(attributes, "cadencia")!.Value;
             if (configuredCost <= 0)
             {
                 return Failure<WeaponContext>(
@@ -1246,7 +1262,11 @@ public sealed class GameplayActionResolver
             };
             foreach (string currentGroup in groups)
             {
-                int? candidate = ReadInt(GetObject(attributes, currentGroup), code);
+                JsonObject? values = GetObject(attributes, currentGroup);
+                string? storedCode = values?.Select(pair => pair.Key).FirstOrDefault(key =>
+                    SistemaRpgConfiguration.NormalizarCodigo(key, string.Empty) ==
+                    SistemaRpgConfiguration.NormalizarCodigo(code, string.Empty));
+                int? candidate = ReadInt(values, storedCode ?? code);
                 if (candidate.HasValue)
                 {
                     value = candidate.Value;
@@ -1309,6 +1329,8 @@ public sealed class GameplayActionResolver
         if (explicitMode is "DISTANCIA" or "CORPO_A_CORPO") return explicitMode;
         string type = ReadString(attributes, "tipoArma") ?? string.Empty;
         if (RangedWeaponTypes.Contains(type)) return "DISTANCIA";
+        if (string.IsNullOrWhiteSpace(type) && (ReadInt(attributes, "dano") ?? 0) > 0)
+            return "CORPO_A_CORPO";
         return string.IsNullOrWhiteSpace(type) ? string.Empty : "CORPO_A_CORPO";
     }
 
@@ -1327,6 +1349,10 @@ public sealed class GameplayActionResolver
         return value.Length > 1 && value[0] == 'D' && int.TryParse(value[1..], out faces) && faces is >= 2 and <= 1000;
     }
 
+    private static bool IsLegacySingleD20(string? source) =>
+        Regex.IsMatch(source ?? string.Empty, @"^\s*1?\s*D20\s*$",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
     private static bool IsOdisseia(SistemaVersao version)
         => string.Equals(version.SistemaRpg?.Codigo, SistemaRpgConfiguration.CodigoPadrao, StringComparison.OrdinalIgnoreCase);
 
@@ -1336,7 +1362,7 @@ public sealed class GameplayActionResolver
     private static bool IsCriticalFailure(string code)
         => NormalizeCode(code) is "FALHA_CRITICA" or "ERRO_CRITICO";
 
-    private static bool IsNaturalOnlyOutcome(string code)
+    internal static bool IsNaturalOnlyOutcome(string code)
         => NormalizeCode(code) is
             "CRITICO" or "ACERTO_CRITICO" or
             "FALHA_CRITICA" or "ERRO_CRITICO" or

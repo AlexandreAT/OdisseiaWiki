@@ -22,9 +22,21 @@ export const Overlay = styled.div`
   &::after { right: max(3px, env(safe-area-inset-right)); }
 `;
 
-export const DiceStage = styled.div`
+export const DiceStage = styled.div<{ $contained?: boolean }>`
   position: absolute;
-  inset: 0;
+  ${({ $contained }) => $contained ? `
+    width: min(680px, calc(100vw - 32px));
+    height: min(530px, calc(100dvh - 32px));
+    left: 50%; top: 50%; transform: translate(-50%, -50%);
+    border: 1px solid var(--clearneonBlue);
+    border-radius: 6px;
+    background: rgba(0, 11, 21, .9);
+    box-shadow: 0 0 25px rgba(0, 194, 255, .2);
+    @media (max-width: 767px) {
+      inset: 0; transform: none; width: 100%; height: 100%; border: 0; border-radius: 0;
+      box-shadow: none;
+    }
+  ` : 'inset: 0;'}
   overflow: hidden;
   pointer-events: none;
 `;
@@ -99,13 +111,21 @@ export const DiceFace = styled.div<{ $discarded: boolean; $selected: boolean }>`
   }
 `;
 
-export const ResultStrip = styled.div<{ $tone: 'success' | 'failure' | 'neutral' | 'error'; $atTop: boolean }>`
+export const ResultStrip = styled.div<{ $tone: 'success' | 'failure' | 'neutral' | 'error'; $atTop: boolean; $contained?: boolean }>`
   --result-color: ${({ $tone }) => $tone === 'success' ? 'var(--clearneonGreen)'
     : $tone === 'failure' || $tone === 'error' ? 'var(--clearneonRed)' : 'var(--clearneonBlue)'};
   position: absolute;
   z-index: 2;
   top: ${({ $atTop }) => $atTop ? 'max(24px, env(safe-area-inset-top))' : 'auto'};
   bottom: ${({ $atTop }) => $atTop ? 'auto' : 'max(clamp(72px, 12dvh, 150px), calc(env(safe-area-inset-bottom) + 20px))'};
+  ${({ $contained, $atTop }) => $contained ? `
+    top: ${$atTop ? 'calc(50% - min(265px, calc(50dvh - 16px)) + 18px)' : 'auto'};
+    bottom: ${$atTop ? 'auto' : 'calc(50% - min(265px, calc(50dvh - 16px)) + 18px)'};
+    @media (max-width: 767px) {
+      top: ${$atTop ? 'max(24px, env(safe-area-inset-top))' : 'auto'};
+      bottom: ${$atTop ? 'auto' : 'max(clamp(72px, 12dvh, 150px), calc(env(safe-area-inset-bottom) + 20px))'};
+    }
+  ` : ''}
   left: 50%;
   display: flex;
   align-items: center;

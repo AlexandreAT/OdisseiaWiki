@@ -45,6 +45,8 @@ const createCreationConfig = (): ConfiguracaoCriacaoSistema => ({
 });
 
 const createProgressionConfig = (): ConfiguracaoProgressaoSistema => ({
+  dadoLootFaces: null,
+  influenciasAtributos: [],
   nivelMaximo: 20,
   permiteXpExcedente: true,
   niveis: [],
@@ -79,6 +81,8 @@ const createCombatConfig = (): ConfiguracaoCombateSistema => ({
   usaIniciativa: true,
   formulaIniciativa: '',
   segundosPorTurno: 6,
+  estaminaPorAtaqueAdicional: 0,
+  limitesAcoesPorArma: [],
   regraDeclaracaoAcoes: '',
   resultadosDado: [],
   tiposDano: [],
@@ -189,6 +193,7 @@ export const normalizeModuleConfig = <K extends SistemaModuloKey>(
       return {
         ...fallback,
         ...source,
+        limitesAcoesPorArma: Array.isArray(source.limitesAcoesPorArma) ? source.limitesAcoesPorArma : [],
         resultadosDado: Array.isArray(source.resultadosDado) ? source.resultadosDado : [],
         tiposDano: Array.isArray(source.tiposDano) ? source.tiposDano : [],
         tiposDefesa: Array.isArray(source.tiposDefesa) ? source.tiposDefesa : [],

@@ -644,14 +644,15 @@ export const GameplayRollButton = styled.button<Props & { $matchComparison?: boo
       height: 17px;
     }
 
-    &:hover,
-    &:focus-visible {
+    &:hover:not(:disabled),
+    &:focus-visible:not(:disabled) {
       border-color: var(--clearneonPink);
       color: var(--clearneonPink);
       transform: translateY(-1px) scale(1.06);
       box-shadow: 0 0 8px color-mix(in srgb, var(--clearneonPink) 48%, transparent);
       outline: none;
     }
+    &:disabled { cursor: not-allowed; opacity: .45; }
 
     @media (max-width: 768px) {
       width: ${({ $matchComparison }) => $matchComparison ? '34px' : '22px'};

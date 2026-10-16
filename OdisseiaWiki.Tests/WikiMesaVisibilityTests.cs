@@ -159,6 +159,34 @@ public sealed class WikiMesaVisibilityTests
     }
 
     [Fact]
+    public async Task EdicaoPreservaReferenciasLegadasMasNaoAceitaNovaRacaIndisponivel()
+    {
+        Mock<IPersonagemService> personagens = new();
+        personagens.Setup(item => item.GetByIdAsync(12, EscopoMesaId)).ReturnsAsync(new Personagen
+        {
+            Idpersonagem = 12,
+            Idraca = 7,
+            Idcidade = 55,
+            PersonagemsVinculados = "[19]",
+        });
+        personagens.Setup(item => item.UpdateAsync(12, It.IsAny<PersonagemDto>(), EscopoMesaId))
+            .ReturnsAsync((int _, PersonagemDto __, int? ___) => ResultPersonagem.Ok(new Personagen { Idpersonagem = 12 }));
+        WikiMesaService service = CreateService(personagens: personagens.Object);
+
+        WikiMesaOperacaoResultado<ResultPersonagem> mantido = await service.AtualizarPersonagemAsync(
+            MesaId, MestreId, admin: false, 12,
+            new PersonagemDto { Idraca = 7, Idcidade = 55, PersonagemsVinculados = new List<int> { 19 } });
+        WikiMesaOperacaoResultado<ResultPersonagem> alterado = await service.AtualizarPersonagemAsync(
+            MesaId, MestreId, admin: false, 12,
+            new PersonagemDto { Idraca = 8, Idcidade = 55, PersonagemsVinculados = new List<int> { 19 } });
+
+        Assert.True(mantido.Sucesso);
+        Assert.False(alterado.Sucesso);
+        Assert.Equal(WikiMesaOperacaoErro.Validacao, alterado.Erro);
+        personagens.Verify(item => item.UpdateAsync(12, It.IsAny<PersonagemDto>(), EscopoMesaId), Times.Once);
+    }
+
+    [Fact]
     public async Task ListaDePaginasNaoExpoeReferenciaOficialOculta()
     {
         Mock<IPageService> paginas = new();

@@ -166,7 +166,9 @@ const countSkills = (raw?: string) => {
   try {
     const skills = JSON.parse(raw);
     return Array.isArray(skills)
-      ? skills.filter((entry) => (entry !== null && typeof entry === 'object') || Boolean(String(entry).trim())).length
+      ? skills.filter((entry) => entry !== null && typeof entry === 'object'
+        ? typeof entry.nome === 'string' && Boolean(entry.nome.trim())
+        : Boolean(String(entry).trim())).length
       : 0;
   } catch {
     return 0;

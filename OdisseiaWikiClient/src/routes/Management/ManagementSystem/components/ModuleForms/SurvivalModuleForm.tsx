@@ -146,6 +146,7 @@ export const SurvivalModuleForm = ({
   readOnly,
   theme,
   neon,
+  references,
 }: ModuleFormProps<'sobrevivencia'>) => {
   const morte = value.morte ?? {
     limiteBeiraDaMorte: 0,
@@ -178,7 +179,9 @@ export const SurvivalModuleForm = ({
         title="Condições"
         description="Definições globais. A condição aplicada ao personagem manterá duração, origem e valor próprios."
         rows={value.condicoes}
-        columns={conditionColumns}
+        columns={conditionColumns.map((column) =>
+          column.key === 'codigoRecurso' || column.key === 'codigoRecursoGatilho'
+            ? { ...column, suggestions: references?.resources } : column)}
         createRow={createCondition}
         onChange={(condicoes) => onChange({ ...value, condicoes })}
         theme={theme}

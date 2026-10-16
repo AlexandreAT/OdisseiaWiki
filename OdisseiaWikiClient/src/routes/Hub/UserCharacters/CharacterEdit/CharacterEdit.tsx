@@ -23,9 +23,11 @@ import {
   CharacterOptionButton,
   FloatingActions,
   FloatingSaveButton,
+  FloatingSaveSpinner,
   SyncIconBadge,
 } from './CharacterEdit.style';
 import { SystemRuntimeIndicator } from '../../../../components/Generic/SystemRuntimeIndicator';
+import { CharacterLegacyNotice } from '../../../../components/Generic/CharacterLegacyNotice/CharacterLegacyNotice';
 import { CharacterVisibilityModal } from '../../../../components/CharacterVisibility';
 import { atualizarVisibilidadeGeralPersonagem } from '../../../../services/personagemVisibilidadeService';
 import {
@@ -138,10 +140,28 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, initialStep = 1
         defesas, setDefesas,
         listItens, handleSelectItem,
         selectedMesa,
+        listMesas,
+        mesaCatalogReady,
+        raceCatalogReady,
+        cityCatalogReady,
         runtimeContext, runtimeLoading, runtimeError,
         visivel,
         setVisivel,
     } = useFormUserCharacter(userId, onSave, personagem);
+
+    const legacyReasons = React.useMemo(() => {
+      const reasons: string[] = [];
+      if (mesaCatalogReady && !listMesas.some((mesa) => mesa.idmesa === personagem.idmesa)) {
+        reasons.push('A Mesa original não aparece entre as Mesas disponíveis. A ficha não foi movida automaticamente.');
+      }
+      if (raceCatalogReady && race && !listRaces.some((entry) => entry.idraca === race)) {
+        reasons.push('A raça original não está no catálogo atual desta Mesa. Ela pode ser mantida ao editar a ficha.');
+      }
+      if (cityCatalogReady && city && !listCities.some((entry) => entry.idcidade === city)) {
+        reasons.push('A cidade original não está no catálogo atual desta Mesa. Ela pode ser mantida ao editar a ficha.');
+      }
+      return reasons;
+    }, [mesaCatalogReady, listMesas, personagem.idmesa, raceCatalogReady, race, listRaces, cityCatalogReady, city, listCities]);
 
     const gameplay = useGameplayEngine({
       idMesa: Number(personagem.idmesa) || undefined,
@@ -428,6 +448,7 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, initialStep = 1
                 mesaAoVivo={Boolean(gameplay.session)}
               />
             )}
+            <CharacterLegacyNotice contexto={runtimeContext} catalogReasons={legacyReasons} />
 
             <FormEditController>
               {editStep === 2 && (
@@ -572,9 +593,10 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, initialStep = 1
                 neon={neon}
                 onClick={() => handleSave(false)}
                 disabled={isSubmitting}
+                aria-busy={isSubmitting}
                 title="Salvar alterações"
               >
-                <SaveIcon className="icon" />
+                {isSubmitting ? <FloatingSaveSpinner role="status" aria-label="Salvando" /> : <SaveIcon className="icon" />}
               </FloatingSaveButton>
             </FloatingActions>
             <ConfirmDialog

@@ -32,11 +32,20 @@ public sealed class SistemaCriacaoConfigDto
 
 public sealed class SistemaProgressaoConfigDto
 {
+    public int? DadoLootFaces { get; set; }
+    public List<SistemaAtributoRecursoDto> InfluenciasAtributos { get; set; } = [];
     public int NivelMaximo { get; set; } = 20;
     public bool PermiteXpExcedente { get; set; }
     public List<SistemaNivelDto> Niveis { get; set; } = new();
     public List<SistemaMarcoNivelDto> Marcos { get; set; } = new();
     public List<SistemaFonteExperienciaDto> FontesExperiencia { get; set; } = new();
+}
+
+public sealed class SistemaAtributoRecursoDto
+{
+    public string CodigoAtributo { get; set; } = string.Empty;
+    public string Recurso { get; set; } = "mana";
+    public decimal PercentualPorValor { get; set; }
 }
 
 public sealed class SistemaExploracaoConfigDto
@@ -54,10 +63,20 @@ public sealed class SistemaCombateConfigDto
     public bool UsaIniciativa { get; set; } = true;
     public string? FormulaIniciativa { get; set; }
     public int SegundosPorTurno { get; set; } = 6;
+    public int EstaminaPorAtaqueAdicional { get; set; }
+    public List<SistemaLimiteAcoesArmaDto> LimitesAcoesPorArma { get; set; } = new();
     public string? RegraDeclaracaoAcoes { get; set; }
     public List<SistemaResultadoDadoDto> ResultadosDado { get; set; } = new();
     public List<SistemaTipoDanoDto> TiposDano { get; set; } = new();
     public List<SistemaTipoDefesaDto> TiposDefesa { get; set; } = new();
+}
+
+public sealed class SistemaLimiteAcoesArmaDto
+{
+    public string TipoArma { get; set; } = string.Empty;
+    public int MaximoTiros { get; set; }
+    public int MaximoRajadas { get; set; }
+    public int MaximoGolpes { get; set; }
 }
 
 public sealed class SistemaPoderesConfigDto

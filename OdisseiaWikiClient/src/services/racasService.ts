@@ -204,7 +204,9 @@ export const getRacas = async (
     ...(visivel !== undefined ? { visivel } : {}),
     ...(getMesaWikiIdFromPath() && somenteProprias ? { proprias: true } : {}),
   };
-  if (idMesa !== undefined && !getMesaWikiIdFromPath()) {
+  // Um destino explícito prevalece sobre a rota atual (ex.: edição/clonagem
+  // aberta a partir da Wiki de outra Mesa).
+  if (idMesa !== undefined) {
     const response = await api.get(getMesaWikiApiPathForMesa(idMesa, 'racas'), { params, ...requestOptions });
     return { sucesso: true, racas: response.data };
   }
@@ -214,7 +216,7 @@ export const getRacas = async (
 };
 
 export const getRacaById = async (id: number, idMesa?: number): Promise<ResultRaca | RacaPayload> => {
-  if (idMesa !== undefined && !getMesaWikiIdFromPath()) {
+  if (idMesa !== undefined) {
     const response = await api.get(`${getMesaWikiApiPathForMesa(idMesa, 'racas')}/${id}`);
     return { sucesso: true, raca: response.data };
   }

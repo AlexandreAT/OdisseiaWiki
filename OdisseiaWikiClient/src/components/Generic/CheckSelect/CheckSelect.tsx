@@ -33,6 +33,7 @@ interface CheckSelectProps {
   width?: string;
   height?: string;
   options: Option[];
+  compactPreview?: boolean;
 }
 
 const CheckSelectComponent = ({
@@ -47,7 +48,8 @@ const CheckSelectComponent = ({
   typeStyle = 'primary',
   width,
   height,
-  options
+  options,
+  compactPreview = false,
 }: CheckSelectProps) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
@@ -59,6 +61,11 @@ const CheckSelectComponent = ({
   const [rect, setRect] = useState<{ top: number; bottom: number; left: number; width: number } | null>(null);
 
   const [finalTop, setFinalTop] = useState<number | null>(null);
+  const selectedLabels = selectedValues
+    .map((selected) => options.find((option) => option.value === selected)?.label)
+    .filter((selected): selected is string => Boolean(selected));
+  const preview = compactPreview && selectedLabels.length > 1
+    ? `${selectedLabels[0]}, ...` : selectedLabels.join(', ');
 
 
   useEffect(() => {
@@ -219,13 +226,10 @@ const CheckSelectComponent = ({
           focus={focus}
           error={error}
           height={height}
+          $compactPreview={compactPreview}
+          title={compactPreview ? selectedLabels.join(', ') : undefined}
         >
-          {selectedValues.length > 0
-            ? selectedValues
-                .map(v => options.find(o => o.value === v)?.label)
-                .filter(Boolean)
-                .join(', ')
-            : ''}
+          {preview}
         </CheckDisplay>
         <LabelSpan active={focus || selectedValues.length > 0} typeStyle={typeStyle}>
           <FormLabelText label={label} required={required} />

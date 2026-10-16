@@ -242,6 +242,8 @@ export interface SistemaFonteExperiencia {
 }
 
 export interface ConfiguracaoProgressaoSistema {
+  dadoLootFaces?: number | null;
+  influenciasAtributos?: { codigoAtributo: string; recurso: string; percentualPorValor: number }[];
   nivelMaximo: number;
   permiteXpExcedente: boolean;
   niveis: SistemaNivelProgressao[];
@@ -306,6 +308,7 @@ export interface SistemaResultadoDado {
   codigoResultado: string;
   nomeResultado: string;
   descricao?: string;
+  efeitoJson?: string | null;
   ordem: number;
 }
 
@@ -337,6 +340,13 @@ export interface ConfiguracaoCombateSistema {
   usaIniciativa: boolean;
   formulaIniciativa?: string;
   segundosPorTurno: number;
+  estaminaPorAtaqueAdicional: number;
+  limitesAcoesPorArma: {
+    tipoArma: string;
+    maximoTiros: number;
+    maximoRajadas: number;
+    maximoGolpes: number;
+  }[];
   regraDeclaracaoAcoes?: string;
   resultadosDado: SistemaResultadoDado[];
   tiposDano: SistemaTipoDano[];

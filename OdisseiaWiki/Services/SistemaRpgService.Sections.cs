@@ -225,6 +225,8 @@ public sealed partial class SistemaRpgService
         SistemaRpgConfiguration.GravarRegras(versao, SistemaModuloTipo.Progressao, new SistemaRpgConfiguration.RegrasProgressao
         {
             NivelMaximo = dto.NivelMaximo,
+            DadoLootFaces = dto.DadoLootFaces,
+            InfluenciasAtributos = dto.InfluenciasAtributos,
             PermiteXpExcedente = dto.PermiteXpExcedente,
         }, 3);
         await SalvarRascunhoAsync(versao);
@@ -367,6 +369,8 @@ public sealed partial class SistemaRpgService
             UsaIniciativa = dto.UsaIniciativa,
             FormulaIniciativa = Limpar(dto.FormulaIniciativa),
             SegundosPorTurno = dto.SegundosPorTurno,
+            EstaminaPorAtaqueAdicional = dto.EstaminaPorAtaqueAdicional,
+            LimitesAcoesPorArma = dto.LimitesAcoesPorArma,
             RegraDeclaracaoAcoes = Limpar(dto.RegraDeclaracaoAcoes),
         }, 5);
         await SalvarRascunhoAsync(versao);

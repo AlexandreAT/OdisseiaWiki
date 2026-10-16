@@ -26,6 +26,7 @@ export interface DiceRollOverlayProps {
   hasDice?: boolean;
   requestedFaces?: number;
   requestedDiceCount?: number;
+  contained?: boolean;
 }
 
 const DIE_SIZE = 112;
@@ -112,9 +113,11 @@ const smoothStep = (amount: number) => {
 };
 
 export const DiceRollOverlay = ({ open, result, error, onClose, title = 'Rolagem de dado',
-  onThrow, onResultRevealed, autoThrow = false, hasDice = true, requestedFaces, requestedDiceCount = 1 }: DiceRollOverlayProps) => {
+  onThrow, onResultRevealed, autoThrow = false, hasDice = true, requestedFaces, requestedDiceCount = 1,
+  contained = false }: DiceRollOverlayProps) => {
   const titleId = useId();
   const overlayRef = useRef<HTMLDivElement | null>(null);
+  const stageRef = useRef<HTMLDivElement | null>(null);
   const resultStripRef = useRef<HTMLDivElement | null>(null);
   const dieRefs = useRef<Array<HTMLDivElement | null>>([]);
   const meshRefs = useRef<Array<HTMLDivElement | null>>([]);
@@ -331,11 +334,17 @@ export const DiceRollOverlay = ({ open, result, error, onClose, title = 'Rolagem
   useEffect(() => {
     if (!open || !visualDie || error) return undefined;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const arena = () => ({
+      width: stageRef.current?.clientWidth ?? window.innerWidth,
+      height: stageRef.current?.clientHeight ?? window.innerHeight,
+      rect: stageRef.current?.getBoundingClientRect(),
+    });
     const flights: Flight[] = Array.from({ length: visualCount }, (_, index) => {
       const lane = visualCount === 1 ? .5 : (index === 0 ? .32 : .68);
-      const x = clamp(window.innerWidth * lane - DIE_SIZE / 2, 12, Math.max(12, window.innerWidth - DIE_SIZE - 12));
-      const y = clamp(window.innerHeight * .36 - DIE_SIZE / 2,
-        12, Math.max(12, window.innerHeight - DIE_SIZE - 12));
+      const { width, height } = arena();
+      const x = clamp(width * lane - DIE_SIZE / 2, 12, Math.max(12, width - DIE_SIZE - 12));
+      const y = clamp(height * .36 - DIE_SIZE / 2,
+        12, Math.max(12, height - DIE_SIZE - 12));
       return {
         x, y,
         vx: 0,
@@ -360,17 +369,18 @@ export const DiceRollOverlay = ({ open, result, error, onClose, title = 'Rolagem
       const dt = Math.min((now - previous) / 1000, .04);
       previous = now;
       const minX = 12;
-      const maxX = Math.max(minX, window.innerWidth - DIE_SIZE - 12);
+      const bounds = arena();
+      const maxX = Math.max(minX, bounds.width - DIE_SIZE - 12);
       const minY = 12;
-      const maxY = Math.max(minY, window.innerHeight - DIE_SIZE - 12);
+      const maxY = Math.max(minY, bounds.height - DIE_SIZE - 12);
       const currentResult = resultRef.current;
       const values = getVisualDiceResults(currentResult);
       const drag = dragRef.current;
       if (throwStartedAt === null && drag) {
         const dragged = flights[drag.dieIndex];
         if (dragged) {
-          dragged.x = clamp(drag.currentX - drag.offsetX, minX, maxX);
-          dragged.y = clamp(drag.currentY - drag.offsetY, minY, maxY);
+          dragged.x = clamp(drag.currentX - drag.offsetX - (bounds.rect?.left ?? 0), minX, maxX);
+          dragged.y = clamp(drag.currentY - drag.offsetY - (bounds.rect?.top ?? 0), minY, maxY);
         }
       }
       const command = throwCommandRef.current;
@@ -542,12 +552,12 @@ export const DiceRollOverlay = ({ open, result, error, onClose, title = 'Rolagem
         const strip = resultStripRef.current?.getBoundingClientRect();
         if (strip) {
           const stripHeight = Math.max(strip.height, visualCount > 1 ? 100 : 76);
-          const collides = (top: number) => flights.some((flight) => flight.x < strip.right + 8
-            && flight.x + DIE_SIZE > strip.left - 8
-            && flight.y < top + stripHeight + 8
-            && flight.y + DIE_SIZE > top - 8);
+          const collides = (top: number) => flights.some((flight) => flight.x < strip.right - (bounds.rect?.left ?? 0) + 8
+            && flight.x + DIE_SIZE > strip.left - (bounds.rect?.left ?? 0) - 8
+            && flight.y < top - (bounds.rect?.top ?? 0) + stripHeight + 8
+            && flight.y + DIE_SIZE > top - (bounds.rect?.top ?? 0) - 8);
           // Move only the information strip, never a die that has already stopped.
-          setResultStripAtTop(collides(strip.top) && !collides(24));
+          setResultStripAtTop(collides(strip.top) && !collides((bounds.rect?.top ?? 0) + 24));
         }
         throwPhaseRef.current = 'settled';
         setThrowPhase('settled');
@@ -557,7 +567,7 @@ export const DiceRollOverlay = ({ open, result, error, onClose, title = 'Rolagem
     };
     frame = requestAnimationFrame(paint);
     return () => cancelAnimationFrame(frame);
-  }, [error, open, visualDie, visualCount]);
+  }, [contained, error, open, visualDie, visualCount]);
 
   if (!open) return null;
   const settledResult = settled || !visualDie ? result : null;
@@ -572,7 +582,7 @@ export const DiceRollOverlay = ({ open, result, error, onClose, title = 'Rolagem
 
   return createPortal(
     <Overlay ref={overlayRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby={titleId} onClick={onClose}>
-      <DiceStage aria-hidden="true">
+      <DiceStage ref={stageRef} $contained={contained} aria-hidden="true">
         {showDie && Array.from({ length: visualCount }, (_, dieIndex) => (
           <Dice key={dieIndex} ref={(element) => { dieRefs.current[dieIndex] = element; }}
             $interactive={throwPhase === 'settled'
@@ -605,7 +615,7 @@ export const DiceRollOverlay = ({ open, result, error, onClose, title = 'Rolagem
           </Dice>
         ))}
       </DiceStage>
-      <ResultStrip ref={resultStripRef} $tone={tone} $atTop={resultStripAtTop}
+      <ResultStrip ref={resultStripRef} $tone={tone} $atTop={resultStripAtTop} $contained={contained}
         role={error ? 'alert' : 'status'} aria-live="polite">
         <div>
           <small id={titleId}>{title}</small>

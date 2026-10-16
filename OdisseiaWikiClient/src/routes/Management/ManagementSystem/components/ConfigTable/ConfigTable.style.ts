@@ -1,5 +1,41 @@
 import styled, { css } from 'styled-components';
 
+export const ReferenceSuggestions = styled.div<{ $top: number; $left: number; $width: number }>`
+  position: fixed;
+  z-index: 15000;
+  top: ${({ $top }) => `${$top}px`};
+  left: ${({ $left }) => `${$left}px`};
+  width: ${({ $width }) => `${$width}px`};
+  max-height: min(220px, calc(100vh - 16px));
+  overflow-y: auto;
+  border: 1px solid var(--clearneonBlue);
+  border-radius: 5px;
+  background: #061622;
+  box-shadow: 0 10px 24px #000a;
+  scrollbar-width: thin;
+  scrollbar-color: var(--clearneonBlue) #061622;
+`;
+
+export const ReferenceSuggestion = styled.button`
+  display: block;
+  width: 100%;
+  padding: 7px 9px;
+  border: 0;
+  border-bottom: 1px solid #325166;
+  background: transparent;
+  color: #d9f4ff;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  &:hover, &:focus-visible { background: rgba(0, 174, 255, .2); color: var(--clearneonBlue); }
+`;
+
+export const ReferenceHint = styled.small`
+  color: #a9c0cc;
+  font-size: 10px;
+`;
+
 interface ThemeProps {
   theme: 'dark' | 'light';
   neon: 'on' | 'off';

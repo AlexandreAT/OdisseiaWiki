@@ -130,6 +130,17 @@ const parseStatus = (raw: unknown): PersonagemStatus | null => {
   }
 };
 
+const canRollFavoriteAttribute = (statusJson: unknown, favorite: GameplayFavoriteRoll): boolean => {
+  if (favorite.tipoOrigem !== 'ATRIBUTO') return true;
+  const group = favorite.configuracao.codigoAcao === 'ATRIBUTO_PRINCIPAL' ? 'principais'
+    : favorite.configuracao.codigoAcao === 'ATRIBUTO_SECUNDARIO' ? 'secundarios' : '';
+  const code = favorite.configuracao.codigoAtributo;
+  if (!group || !code) return false;
+  const status = parseStatus(statusJson);
+  const attributes = asRecord(status?.atributos);
+  return (getNumber(asRecord(getProperty(attributes, group)), code) ?? 0) > 0;
+};
+
 type DisplayCharacter = MesaPersonagemResumo & { exiting?: boolean };
 
 interface DeferredMesaSynchronization {
@@ -229,6 +240,14 @@ const MesaGame = () => {
   const favoriteCharacterId = actionCharacterId ?? gameplayCharacters[0]?.personagem.idpersonagemJogador ?? null;
   const gameplayFavorites = useGameplayFavorites(favoriteCharacterId, Boolean(favoriteCharacterId));
   const gameplayFavoriteGroups = useGameplayFavoriteGroups(favoriteCharacters, favoriteCharacters.length > 0);
+  const availableFavoriteGroups = useMemo(() => gameplayFavoriteGroups.groups.map((group) => {
+    const character = gameplayCharacters.find((entry) => entry.personagem.idpersonagemJogador === group.idPersonagemJogador);
+    return {
+      ...group,
+      favorites: group.favorites.filter((favorite) => character
+        && canRollFavoriteAttribute(character.personagem.statusJson, favorite)),
+    };
+  }), [gameplayCharacters, gameplayFavoriteGroups.groups]);
   const visibleGameplayEvents = useMemo(() => {
     const quickRollEventId = quickRoll?.resultRevealed === false
       ? quickRoll.response?.evento?.idEvento
@@ -384,6 +403,10 @@ const MesaGame = () => {
       toast.error('Este personagem não está disponível na Mesa.');
       return;
     }
+    if (!canRollFavoriteAttribute(character.personagem.statusJson, favorite)) {
+      toast.error('Este atributo está zerado. Use a rolagem genérica se o mestre pedir.');
+      return;
+    }
     if (favorite.tipoOrigem === 'ITEM' || favorite.tipoOrigem === 'PROTESE') {
       const source = getCharacterItemGameplayAction(
         character.personagem,
@@ -424,6 +447,14 @@ const MesaGame = () => {
       setQuickRoll((current) => current ? {
         ...current,
         error: 'Este personagem não está disponível na Mesa.',
+        requestStarted: true,
+      } : current);
+      return;
+    }
+    if (!canRollFavoriteAttribute(character.personagem.statusJson, favorite)) {
+      setQuickRoll((current) => current ? {
+        ...current,
+        error: 'Este atributo está zerado. Use a rolagem genérica se o mestre pedir.',
         requestStarted: true,
       } : current);
       return;
@@ -633,7 +664,7 @@ const MesaGame = () => {
           </MesaGameActivityMain>
           <MesaGameActivitySidebar>
             <GameplayFavoriteRolls
-              groups={gameplayFavoriteGroups.groups}
+              groups={availableFavoriteGroups}
               loading={gameplayFavoriteGroups.loading}
               rolling={gameplay.submitting}
               neon={isNeonActive}

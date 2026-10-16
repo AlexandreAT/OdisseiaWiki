@@ -20,6 +20,12 @@ public sealed class AssetReferenceRepository : IAssetReferenceRepository
         if (string.IsNullOrWhiteSpace(assetUrl))
             return false;
 
+        var gameModes = await _context.GameModeVersions.AsNoTracking()
+            .Select(entity => entity.ConfiguracaoJson)
+            .ToListAsync(cancellationToken);
+        if (gameModes.Any(value => ContainsAsset(assetUrl, value)))
+            return true;
+
         // Comparações exatas permanecem no banco. As buscas dentro de JSON/texto são
         // feitas após a projeção: o Pomelo traduzia string.Contains em colunas JSON
         // para CAST_AS_JSON e tentava interpretar a URL como um documento JSON.

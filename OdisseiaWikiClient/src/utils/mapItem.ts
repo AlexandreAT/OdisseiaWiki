@@ -84,6 +84,7 @@ export const mapToItem = (payload: ItemPayload): Item => {
     tipo: normalizeTipo(payload.tipo),
     quantidade: payload.quantidade,
     peso: payload.peso ?? undefined,
+    valor: payload.valor ?? undefined,
     discricao: payload.discricao ?? 0,
     descricao,
     efeito: typeof atributos.efeito === 'string' && atributos.efeito
@@ -116,6 +117,7 @@ export const mapToPayload = (item: Item): ItemPayload => {
     tipo: String(item.tipo),
     quantidade: item.quantidade,
     peso: item.peso,
+    valor: item.valor,
     discricao: item.discricao ?? 0,
     descricao: item.descricao,
     efeito: undefined,
