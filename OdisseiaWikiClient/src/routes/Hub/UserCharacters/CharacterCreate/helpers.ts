@@ -3,12 +3,15 @@ import { Skills, SkillTipoString, SkillElemento } from '../../../../models/Skill
 import { Magia, MagiaTipoString, MagiaElemento } from '../../../../models/Magias';
 
 export const generateId = () =>
-  (typeof crypto !== "undefined" && (crypto as any).randomUUID)
-    ? (crypto as any).randomUUID()
+  (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
+    ? crypto.randomUUID()
     : Math.random().toString(36).slice(2, 10);
 
 export const mapInventoryForPayload = (itens: Item[]): Item[] => {
-  return itens.map(({ imagemArquivo: _imagemArquivo, ...it }) => ({
+  return itens.map((item) => {
+    const it = { ...item };
+    delete it.imagemArquivo;
+    return {
     ...it,
     id: it.id ?? generateId(),
     idItemBase: it.idItemBase ?? undefined,
@@ -16,16 +19,21 @@ export const mapInventoryForPayload = (itens: Item[]): Item[] => {
     tipo: (it.tipo as ItemTipo) ?? "outro",
     quantidade: Number(it.quantidade) || 1,
     peso: it.peso !== undefined && it.peso !== 0 ? Number(it.peso) : undefined,
+    valor: it.valor === undefined ? undefined : Number(it.valor),
     discricao: Number(it.discricao) || 0,
     descricao: it.descricao ?? "",
     efeito: ((it.atributos as Record<string, unknown> | undefined)?.efeito as string | undefined) ?? it.efeito,
     imagem: it.imagem ?? undefined,
     atributos: it.atributos ?? {},
-  }));
+    };
+  });
 };
 
 export const mapMagiasForPayload = (magias: Magia[]): Magia[] => {
-  return magias.map(({ imagemArquivo: _imagemArquivo, ...magia }) => ({
+  return magias.filter((magia) => Boolean(magia.nome?.trim())).map((entry) => {
+    const magia = { ...entry };
+    delete magia.imagemArquivo;
+    return {
     ...magia,
     id: magia.id ?? generateId(),
     nome: magia.nome ?? "Magia",
@@ -35,11 +43,15 @@ export const mapMagiasForPayload = (magias: Magia[]): Magia[] => {
     custo: magia.custo ?? "",
     imagem: magia.imagem ?? undefined,
     atributos: magia.atributos ?? {},
-  }));
+    };
+  });
 };
 
 export const mapSkillsForPayload = (skills: Skills[]): Skills[] => {
-  return skills.map(({ imagemArquivo: _imagemArquivo, ...skill }) => ({
+  return skills.filter((skill) => Boolean(skill.nome?.trim())).map((entry) => {
+    const skill = { ...entry };
+    delete skill.imagemArquivo;
+    return {
     ...skill,
     id: skill.id ?? generateId(),
     nome: skill.nome ?? "Skill",
@@ -50,5 +62,6 @@ export const mapSkillsForPayload = (skills: Skills[]): Skills[] => {
     nivel: skill.nivel ?? 1,
     imagem: skill.imagem ?? undefined,
     atributos: skill.atributos ?? {},
-  }));
+    };
+  });
 };

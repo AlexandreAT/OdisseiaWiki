@@ -955,13 +955,14 @@ export const SheetAttributeRollButton = styled.button`
     font-size: 16px;
   }
 
-  &:hover,
-  &:focus-visible {
+  &:hover:not(:disabled),
+  &:focus-visible:not(:disabled) {
     border-color: var(--clearneonBlue);
     background: rgba(0, 46, 75, 0.48);
     box-shadow: 0 0 8px rgba(0, 204, 255, 0.36);
     outline: none;
   }
+  &:disabled { cursor: not-allowed; opacity: .48; }
 `;
 
 export const StatusList = styled.div`

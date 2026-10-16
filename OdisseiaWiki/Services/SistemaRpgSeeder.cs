@@ -196,6 +196,12 @@ public sealed partial class SistemaRpgSeeder : ISistemaRpgSeeder
         {
             NivelMaximo = 20,
             PermiteXpExcedente = true,
+            InfluenciasAtributos =
+            [
+                new() { CodigoAtributo = "RESISTENCIA", Recurso = "vida", PercentualPorValor = 10 },
+                new() { CodigoAtributo = "AGILIDADE", Recurso = "estamina", PercentualPorValor = 10 },
+                new() { CodigoAtributo = "SABEDORIA", Recurso = "mana", PercentualPorValor = 10 },
+            ],
         }, 3);
         SistemaRpgConfiguration.GravarRegras(versao, SistemaModuloTipo.Exploracao, new SistemaRpgConfiguration.RegrasExploracao
         {
@@ -208,6 +214,7 @@ public sealed partial class SistemaRpgSeeder : ISistemaRpgSeeder
             UsaIniciativa = true,
             FormulaIniciativa = "1D6 + Agilidade + modificadores",
             SegundosPorTurno = 100,
+            EstaminaPorAtaqueAdicional = 5,
             RegraDeclaracaoAcoes = "Ações e combos devem ser declarados antes da execução; ataques normalmente encerram o turno.",
         }, 5);
         SistemaRpgConfiguration.GravarRegras(versao, SistemaModuloTipo.Poderes, new SistemaRpgConfiguration.RegrasPoderes

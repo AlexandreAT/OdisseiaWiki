@@ -9,6 +9,15 @@ export interface RaceOption {
   nome: string;
 }
 
+export interface SystemReferenceOption { value: string; label: string }
+export interface SystemReferenceCatalog {
+  attributes: SystemReferenceOption[];
+  resources: SystemReferenceOption[];
+  conditions: SystemReferenceOption[];
+  testCodes: SystemReferenceOption[];
+  weaponTypes: SystemReferenceOption[];
+}
+
 export interface ModuleFormProps<K extends SistemaModuloKey> {
   value: SistemaModuloConfigMap[K];
   onChange: (value: SistemaModuloConfigMap[K]) => void;
@@ -18,4 +27,5 @@ export interface ModuleFormProps<K extends SistemaModuloKey> {
   neon: 'on' | 'off';
   raceOptions?: RaceOption[];
   systemCode?: string;
+  references?: SystemReferenceCatalog;
 }

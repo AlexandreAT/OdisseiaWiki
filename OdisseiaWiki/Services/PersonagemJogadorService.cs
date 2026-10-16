@@ -94,7 +94,9 @@ namespace OdisseiaWiki.Services
             bool mesaAlterada = personagem.Idmesa != validacaoMesa.Idmesa;
             personagemDto.Idmesa = validacaoMesa.Idmesa;
             personagemDto.Idusuario = idUsuario;
-            string? erroCatalogo = await ValidarCatalogoDaMesaAsync(personagemDto);
+            string? erroCatalogo = await ValidarCatalogoDaMesaAsync(
+                personagemDto,
+                mesaAlterada ? null : personagem);
             if (erroCatalogo is not null)
                 return ResultFail(erroCatalogo);
 
@@ -613,7 +615,9 @@ namespace OdisseiaWiki.Services
                 IdRaca = idRaca > 0 ? idRaca : null,
             });
 
-        private async Task<string?> ValidarCatalogoDaMesaAsync(PersonagemJogadorDto personagem)
+        private async Task<string?> ValidarCatalogoDaMesaAsync(
+            PersonagemJogadorDto personagem,
+            PersonagemJogador? fichaExistente = null)
         {
             if (_wikiMesaService is null)
                 return null;
@@ -623,7 +627,9 @@ namespace OdisseiaWiki.Services
                 personagem.Idusuario,
                 admin: false,
                 personagem.Idraca);
-            if (!raca.Sucesso)
+            // Uma ficha existente pode manter a referência histórica mesmo após
+            // a raça deixar de integrar o catálogo. Uma nova escolha não pode.
+            if (!raca.Sucesso && fichaExistente?.Idraca != personagem.Idraca)
                 return "A raça selecionada não está disponível para esta Mesa.";
 
             if (personagem.Idcidade is > 0)
@@ -633,7 +639,7 @@ namespace OdisseiaWiki.Services
                     personagem.Idusuario,
                     admin: false,
                     personagem.Idcidade.Value);
-                if (!cidade.Sucesso)
+                if (!cidade.Sucesso && fichaExistente?.Idcidade != personagem.Idcidade)
                     return "A cidade selecionada não está disponível para esta Mesa.";
             }
 

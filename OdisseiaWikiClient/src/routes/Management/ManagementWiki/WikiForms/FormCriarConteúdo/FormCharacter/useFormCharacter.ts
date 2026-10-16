@@ -1,8 +1,8 @@
 import { mapToItem } from './../../../../../../utils/mapItem';
 import { getRacas, normalizeRacaStatus, resolveRacaCharacterStatus, RacaStatus } from './../../../../../../services/racasService';
 import { RacaPayload } from './../../../../../../services/racasService';
-import { CidadePayload, getCidades } from './../../../../../../services/cidadesService';
-import { PersonagemCreatePayload, getPersonagens } from './../../../../../../services/personagensService';
+import { CidadePayload, getCidades, getCidadesDaMesa } from './../../../../../../services/cidadesService';
+import { PersonagemCreatePayload, getPersonagens, getPersonagensDaMesa } from './../../../../../../services/personagensService';
 import { saveAsset } from './../../../../../../services/assetsService';
 import { persistCharacterEntryImages } from './../../../../../../services/characterEntryImageService';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -16,7 +16,7 @@ import { SkillElemento, Skills, SkillTipoString } from '../../../../../../models
 import { Item, ItemTipo } from '../../../../../../models/Itens';
 import { Magia, MagiaElemento, MagiaTipoString } from '../../../../../../models/Magias';
 import { salvarPersonagem } from '../../../../../../services/personagensService';
-import { getItens } from '../../../../../../services/itensService';
+import { getItens, getItensDaMesa } from '../../../../../../services/itensService';
 import { prepareForAPI } from '../../../../../../utils/richTextHelpers';
 import { TOTAL_STEPS } from '../../../../../../constants';
 import { ensureContentCategoryTag, isContentCategoryTag } from '../../../../../../utils/contentCategoryTag';
@@ -36,7 +36,7 @@ const serializeRichText = (value: any): string => {
   }
 };
 
-export const useFormCharacter = ({ applyRaceDefaults = true, contentType, idEntidade }: { applyRaceDefaults?: boolean; contentType?: string; idEntidade?: string } = {}) => {
+export const useFormCharacter = ({ applyRaceDefaults = true, contentType, idEntidade, idMesa }: { applyRaceDefaults?: boolean; contentType?: string; idEntidade?: string; idMesa?: number | null } = {}) => {
   // --- step ---
   const [step, setStep] = useState(1);
   // --- dados do formulário ---
@@ -142,10 +142,12 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType, idEnti
 
   // --- cidades ---
   const [listCities, setListCities] = useState<CidadePayload[]>([]);
+  const [cityCatalogReady, setCityCatalogReady] = useState(false);
   const [loadingCities, setLoadingCities] = useState(true);
 
   // --- raças ---
   const [listRaces, setListRaces] = useState<RacaPayload[]>([]);
+  const [raceCatalogReady, setRaceCatalogReady] = useState(false);
   const [loadingRaces, setLoadingRaces] = useState(true);
 
   // --- itens ---
@@ -227,65 +229,78 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType, idEnti
   }, [contentType]);
 
   useEffect(() => {
+    let active = true;
     const fetchCities = async () => {
       setLoadingCities(true);
+      setCityCatalogReady(false);
       try {
-        const result = await getCidades();
-        if (result.sucesso && result.cidades) {
+        const result = idMesa ? await getCidadesDaMesa(idMesa) : await getCidades();
+        if (active && result.sucesso && result.cidades) {
           setListCities(result.cidades);
+          setCityCatalogReady(true);
         } else {
           console.error("Erro ao carregar cidades:", result.mensagemErro);
         }
       } catch (err) {
         console.error("Erro ao buscar cidades:", err);
       } finally {
-        setLoadingCities(false);
+        if (active) setLoadingCities(false);
       }
     };
     fetchCities();
-  }, []);
+    return () => { active = false; };
+  }, [idMesa]);
 
   useEffect(() => {
+    let active = true;
     const fetchRaces = async () => {
       setLoadingRaces(true);
+      setRaceCatalogReady(false);
       try {
-        const result = await getRacas();
-        if (result.sucesso && result.racas) {
+        const result = await getRacas(undefined, idMesa ?? undefined);
+        if (active && result.sucesso && result.racas) {
           setListRaces(result.racas);
+          setRaceCatalogReady(true);
         } else {
           console.error("Erro ao carregar raças:", result.mensagemErro);
         }
       } catch (err) {
         console.error("Erro ao buscar raças:", err);
       } finally {
-        setLoadingRaces(false);
+        if (active) setLoadingRaces(false);
       }
     };
     fetchRaces();
-  }, []);
+    return () => { active = false; };
+  }, [idMesa]);
 
   useEffect(() => {
+    let active = true;
     const fetchItens = async () => {
       setLoadingItens(true);
       try {
-        const result = await getItens();
+        const result = idMesa ? await getItensDaMesa(idMesa) : await getItens();
         const itens: Item[] = result.map(mapToItem);
-        setAllItens(itens);
-        setListItens(itens);
+        if (active) {
+          setAllItens(itens);
+          setListItens(itens);
+        }
       } catch (err) {
         console.error("Erro ao buscar itens:", err);
       } finally {
-        setLoadingItens(false);
+        if (active) setLoadingItens(false);
       }
     };
     fetchItens();
-  }, []);
+    return () => { active = false; };
+  }, [idMesa]);
 
 
   useEffect(() => {
+    let active = true;
     const fetchPersonagens = async () => {
       try {
-        const result = await getPersonagens();
+        const result = idMesa ? await getPersonagensDaMesa(idMesa) : await getPersonagens();
         // API pode retornar array diretamente ou { personagens: [...] }
         const rawList = Array.isArray(result)
           ? result
@@ -296,14 +311,15 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType, idEnti
           idpersonagem: p.idpersonagem ?? p.Idpersonagem ?? p.id,
           nome: p.nome ?? p.Nome ?? 'Sem nome'
         }));
-        setAllPersonagens(normalized);
+        if (active) setAllPersonagens(normalized);
       } catch (err) {
         console.error("Erro ao buscar personagens:", err);
       }
     };
     setLoadingPersonagens(true);
-    void fetchPersonagens().finally(() => setLoadingPersonagens(false));
-  }, []);
+    void fetchPersonagens().finally(() => { if (active) setLoadingPersonagens(false); });
+    return () => { active = false; };
+  }, [idMesa]);
 
   useEffect(() => {
     if (!applyRaceDefaults || !selectedRace || !selectedRaceStatus) return;
@@ -534,6 +550,7 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType, idEnti
           it.peso !== undefined && it.peso !== 0
             ? Number(it.peso)
             : undefined,
+        valor: it.valor === undefined ? undefined : Number(it.valor),
         descricao: serializeRichText(it.descricao),
         efeito: ((it.atributos as Record<string, unknown> | undefined)?.efeito as string | undefined) ?? it.efeito,
         imagem: it.imagem ?? undefined,
@@ -675,8 +692,8 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType, idEnti
     statusError,
 
     // listas
-    listCities, loadingCities,
-    listRaces, loadingRaces, selectedRace,
+    listCities, loadingCities, cityCatalogReady,
+    listRaces, loadingRaces, raceCatalogReady, selectedRace,
     personagens, allPersonagens, searchTerm, loadingPersonagens,
     listItens, loadingItens, searchItensTerm, setSearchItensTerm,
     sistema,

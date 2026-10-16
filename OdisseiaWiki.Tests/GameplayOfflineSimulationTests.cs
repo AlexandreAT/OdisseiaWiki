@@ -590,6 +590,30 @@ public sealed class GameplayOfflineSimulationTests
     }
 
     [Fact]
+    public async Task FavoriteRollsAsync_NaoPermiteFavoritarAtributoZerado()
+    {
+        var fixture = new Fixture();
+        fixture.Character.StatusJson = """{"atributos":{"principais":{"forca":0}}}""";
+        GameplayFavoriteRollUpsertDto request = new()
+        {
+            TipoOrigem = "ATRIBUTO",
+            IdOrigem = "PRINCIPAL:FORCA",
+            Nome = "Força",
+            Configuracao = new GameplayFavoriteRollConfigurationDto
+            {
+                CodigoAcao = "ATRIBUTO_PRINCIPAL",
+                CodigoAtributo = "forca",
+            },
+        };
+
+        GameplayOperationResult<GameplayFavoriteRollDto> result = await fixture.Service.UpsertFavoriteRollAsync(7, 12, request);
+
+        Assert.False(result.Sucesso);
+        Assert.Equal("ATRIBUTO_ZERO", result.Codigo);
+        fixture.Repository.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task DeleteFavoriteRollAsync_RemoveSomenteAPreferencia()
     {
         var fixture = new Fixture();
@@ -663,6 +687,20 @@ public sealed class GameplayOfflineSimulationTests
         Assert.Equal("REGRA_NAO_ESTRUTURADA", result.Codigo);
         fixture.Dice.VerifyNoOtherCalls();
         fixture.AssertReadOnly();
+    }
+
+    [Fact]
+    public async Task SimulateAsync_AtributoZerado_NaoRola()
+    {
+        var fixture = new Fixture();
+        fixture.Character.StatusJson = """{"atributos":{"principais":{"forca":0}}}""";
+
+        GameplayOperationResult<GameplaySimulationResponseDto> attribute = await fixture.Service.SimulateAsync(
+            7, 12, Request("ATRIBUTO_PRINCIPAL", "forca"));
+
+        Assert.False(attribute.Sucesso);
+        Assert.Equal("ATRIBUTO_ZERO", attribute.Codigo);
+        fixture.Dice.VerifyNoOtherCalls();
     }
 
     private static GameplayRollRequestDto Request(string action, string? attribute = null) => new()

@@ -132,6 +132,48 @@ public sealed class RuntimeConsumerIntegrationTests
     }
 
     [Fact]
+    public async Task EdicaoDaFichaPreservaRacaLegadaSemPermitirTrocaParaOutraIndisponivel()
+    {
+        Mock<IPersonagemJogadorRepository> personagens = new();
+        Mock<IMesaRepository> mesas = MesaValida();
+        Mock<IWikiMesaService> wiki = new();
+        PersonagemJogador existente = new()
+        {
+            IdpersonagemJogador = 8,
+            Idusuario = 3,
+            Idmesa = 7,
+            Idraca = 4,
+            Nome = "Veterano",
+        };
+        personagens.Setup(item => item.GetByIdAsync(8)).ReturnsAsync(existente);
+        personagens.Setup(item => item.UpdateWithRuntimeAuditAsync(
+                It.IsAny<PersonagemJogador>(), It.IsAny<long>(), It.IsAny<PersonagemRuntimeWriteAudit>()))
+            .ReturnsAsync((PersonagemJogador item, long _, PersonagemRuntimeWriteAudit __) => item);
+        wiki.Setup(item => item.GetRacaAsync(7, 3, false, It.IsAny<int>()))
+            .ReturnsAsync(WikiMesaOperacaoResultado<RacaDto>.Falha(WikiMesaOperacaoErro.NaoEncontrado, "Raça fora do catálogo."));
+        PersonagemJogadorService service = new(
+            personagens.Object, mesas.Object, Mock.Of<IMesaService>(), Mock.Of<IAssetService>(),
+            Mock.Of<ISistemaRpgResolver>(), wikiMesaService: wiki.Object);
+
+        ResultPersonagemJogador mantido = await service.UpdateAsync(8, new PersonagemJogadorDto
+        {
+            Nome = "Veterano editado", Idusuario = 3, Idmesa = 7, Idraca = 4,
+            RevisaoRuntime = 0, ChaveIdempotencia = Guid.NewGuid(),
+        });
+        ResultPersonagemJogador alterado = await service.UpdateAsync(8, new PersonagemJogadorDto
+        {
+            Nome = "Veterano editado", Idusuario = 3, Idmesa = 7, Idraca = 9,
+            RevisaoRuntime = 0, ChaveIdempotencia = Guid.NewGuid(),
+        });
+
+        Assert.True(mantido.Sucesso);
+        Assert.False(alterado.Sucesso);
+        Assert.Equal(4, existente.Idraca);
+        personagens.Verify(item => item.UpdateWithRuntimeAuditAsync(
+            It.IsAny<PersonagemJogador>(), It.IsAny<long>(), It.IsAny<PersonagemRuntimeWriteAudit>()), Times.Once);
+    }
+
+    [Fact]
     public async Task LeituraDeFicha_PreservaEstadoEExplicitaDivergenciasComoWarning()
     {
         Mock<IPersonagemJogadorRepository> personagens = new();

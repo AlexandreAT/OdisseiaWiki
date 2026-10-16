@@ -13,6 +13,9 @@ import { RouteLoading } from './components/Generic/RouteLoading/RouteLoading.tsx
 import { ManagementAccessGuard } from './routes/Management/ManagementAccessGuard.tsx';
 import { MesaAccessGuard } from './routes/Mesas/MesaAccessGuard.tsx';
 import MesaSearch from './routes/Mesas/MesaSearch/MesaSearch.tsx';
+import { installNumericInputSelection } from './utils/numericInput.ts';
+
+installNumericInputSelection();
 
 const Home = lazy(() => import('./routes/Home/Home.tsx'));
 const Login = lazy(() => import('./routes/Login/Login.tsx'));
@@ -35,6 +38,8 @@ const MesaGame = lazy(() => import('./routes/Mesas/MesaGame/MesaGame'));
 const MesaNpcSheet = lazy(() => import('./routes/Mesas/MesaGame/MesaNpcSheet').then(module => ({ default: module.MesaNpcSheet })));
 const MesaWikiManagement = lazy(() => import('./routes/Mesas/MesaWiki/MesaWikiManagement'));
 const Profile = lazy(() => import('./routes/Profile/Profile'));
+const GameLanding = lazy(() => import('./routes/Game/GameLanding/GameLanding'));
+const GameRunShell = lazy(() => import('./routes/Game/GameRunShell/GameRunShell'));
 
 const withRouteLoading = (element: React.ReactNode) => (
   <Suspense fallback={<RouteLoading />}>{element}</Suspense>
@@ -91,6 +96,14 @@ const router = createBrowserRouter([{
         {
           path: 'perfil',
           element: <MesaAccessGuard>{withRouteLoading(<Profile />)}</MesaAccessGuard>
+        },
+        {
+          path: 'jogo',
+          element: <MesaAccessGuard>{withRouteLoading(<GameLanding />)}</MesaAccessGuard>
+        },
+        {
+          path: 'jogo/run/:id',
+          element: <MesaAccessGuard>{withRouteLoading(<GameRunShell />)}</MesaAccessGuard>
         },
         {
           path: 'mesas/pesquisar',

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { CheckBox } from '../../../../../components/Generic/CheckBox/CheckBox';
 import { InputText } from '../../../../../components/Generic/InputText/InputText';
+import { Select } from '../../../../../components/Generic/Select/Select';
 import {
   SistemaFonteExperiencia,
   SistemaMarcoProgressao,
@@ -93,6 +94,7 @@ export const ProgressionModuleForm = ({
   readOnly,
   theme,
   neon,
+  references,
 }: ModuleFormProps<'progressao'>) => {
   const [range, setRange] = useState({ from: 1, to: 1, xp: 0, points: 0 });
   const maximumXp = useMemo(() => Math.max(
@@ -182,6 +184,31 @@ export const ProgressionModuleForm = ({
         )}
       </SectionCard>
 
+      <SectionCard theme={theme} neon={neon}>
+        <h4>Recompensas do jogo</h4>
+        <Select theme={theme} neon={neon} label="Dado de loot"
+          value={value.dadoLootFaces?.toString() ?? ''}
+          options={[{ label: 'Não configurado', value: '' }, ...[4, 6, 8, 10, 12, 20].map((faces) => ({ label: `D${faces}`, value: String(faces) }))]}
+          onChange={(event) => onChange({ ...value, dadoLootFaces: Number(event.target.value) || null })} />
+        <p>Apenas o dado vem do Sistema. A quantidade e os pesos dos itens são definidos por encontro no gerenciamento do jogo.</p>
+      </SectionCard>
+      <ConfigTable
+        title="Influências dos atributos nos recursos"
+        description="Ao investir um ponto, o máximo atual do recurso recebe o percentual × novo valor do atributo. Ex.: 10% e Sabedoria 3 concedem +30%. Não recupera o recurso atual. Sem regra, o atributo só altera os testes que o utilizam."
+        rows={value.influenciasAtributos ?? []}
+        columns={[
+          { key: 'codigoAtributo', label: 'Código do atributo', type: 'text', suggestions: references?.attributes },
+          { key: 'recurso', label: 'Recurso', type: 'select', options: [
+            { label: 'Vida', value: 'vida' }, { label: 'Mana', value: 'mana' },
+            { label: 'Estamina', value: 'estamina' },
+          ] },
+          { key: 'percentualPorValor', label: '% por valor', type: 'number', min: 0 },
+        ]}
+        createRow={() => ({ codigoAtributo: '', recurso: 'mana', percentualPorValor: 10 })}
+        onChange={(influenciasAtributos) => onChange({ ...value, influenciasAtributos })}
+        theme={theme} neon={neon} readOnly={readOnly} errors={errors} errorPath="influenciasAtributos" />
+      {(value.influenciasAtributos?.length ?? 0) === 0 &&
+        <p role="status">Nenhuma influência foi configurada nesta versão. Evoluir atributos não aumentará vida, mana ou estamina no jogo; apenas os testes que usam esses atributos mudarão. Adicione as regras desejadas antes de publicar uma nova versão.</p>}
       <ConfigTable
         title="Níveis e XP"
         description="Gere a curva completa ou aplique XP e pontos gerais a um intervalo. Depois, ajuste os níveis individualmente."
@@ -226,7 +253,8 @@ export const ProgressionModuleForm = ({
         title="Fontes de experiência"
         description="Missões, combates, MVP e outras fontes com valores ou fórmulas próprias."
         rows={value.fontesExperiencia}
-        columns={xpSourceColumns}
+        columns={xpSourceColumns.map((column) => column.key === 'tipoTeste'
+          ? { ...column, suggestions: references?.testCodes } : column)}
         createRow={createXpSource}
         onChange={(fontesExperiencia) => onChange({ ...value, fontesExperiencia })}
         theme={theme}

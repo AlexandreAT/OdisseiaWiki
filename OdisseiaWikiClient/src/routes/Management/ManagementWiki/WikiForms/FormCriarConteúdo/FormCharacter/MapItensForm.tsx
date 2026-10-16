@@ -322,6 +322,11 @@ export const ArmaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme,
           <InputText label="Usos até a pausa" type="number" theme={theme} neon={neon} value={local.capacidadeUso ?? ''} onChange={e => handleChange('capacidadeUso', e.target.value === '' ? undefined : Number(e.target.value))} />
           <InputText label="Capacidade de munição" type="number" theme={theme} neon={neon} value={local.capacidadeMunicao ?? ''} onChange={e => handleChange('capacidadeMunicao', e.target.value === '' ? undefined : Number(e.target.value))} />
         </AttributeRow>
+        <AttributeRow $columns={3}>
+          <InputText label="Limite de ataques por turno (0 = livre)" type="number" theme={theme} neon={neon} value={local.limiteAtaquesPorTurno ?? ''} onChange={e => handleChange('limiteAtaquesPorTurno', e.target.value === '' ? undefined : Number(e.target.value))} />
+          <InputText label="Limite de tiros por turno (0 = livre)" type="number" theme={theme} neon={neon} value={local.limiteTirosPorTurno ?? ''} onChange={e => handleChange('limiteTirosPorTurno', e.target.value === '' ? undefined : Number(e.target.value))} />
+          <InputText label="Limite de rajadas por turno (0 = livre)" type="number" theme={theme} neon={neon} value={local.limiteRajadasPorTurno ?? ''} onChange={e => handleChange('limiteRajadasPorTurno', e.target.value === '' ? undefined : Number(e.target.value))} />
+        </AttributeRow>
         <AttributeRow $columns={2}>
           <InputText label={`Estamina por ação${getPrimeiroAtaqueComGastoEstamina(local.tipoArma) === 2 ? ' (2ª+)' : ''}`} type="number" theme={theme} neon={neon} value={local.gastoEstaminaPorAtaque ?? ''} onChange={e => handleChange('gastoEstaminaPorAtaque', e.target.value === '' ? undefined : Number(e.target.value))} />
           <Select label="Acerto" theme={theme} neon={neon} value={normalizeDadoAcerto(local.acerto)} onChange={e => handleChange('acerto', e.target.value as DadoAcerto)} options={catalogReferenceOptions(sistemaItemCatalogo, 'Outro', ACERTO_DADO_OPTIONS).filter((option) => /^d\d+$/i.test(option.value)).map((option) => ({ ...option, value: option.value.toUpperCase() }))} width="100%" />
@@ -597,6 +602,16 @@ export const AcessorioAtributosForm: React.FC<BaseProps> = ({ value, onChange, t
 
 export const OutrosAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon, sistemaItemCatalogo }) => (
   <FormItemAtributos>
+    <AttributeRow>
+      {([
+        ['dano', 'Dano'], ['protecao', 'Proteção'], ['armadura', 'Armadura'],
+        ['escudo', 'Escudo'], ['recuperacaoVida', 'Recuperação de vida'],
+        ['recuperacaoMana', 'Recuperação de mana'], ['recuperacaoEstamina', 'Recuperação de estamina'],
+      ] as const).map(([key, label]) => <InputText key={key} label={label} type="number"
+        theme={theme} neon={neon} value={value?.[key] ?? ''}
+        onChange={event => onChange({ ...value,
+          [key]: event.target.value === '' ? undefined : Math.max(0, Number(event.target.value)) })} />)}
+    </AttributeRow>
     <AttributeRow>
       <InputText label="Duração" theme={theme} neon={neon} value={value?.duracao || ""} onChange={e => onChange({ ...value, duracao: e.target.value })} />
     </AttributeRow>

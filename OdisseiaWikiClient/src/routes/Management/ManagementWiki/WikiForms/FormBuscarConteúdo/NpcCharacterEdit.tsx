@@ -20,7 +20,7 @@ import { CharacterStepDots } from '../../../../Shared/CharacterForms/CharacterSt
 import { CharacterSystemForm } from '../../../../Shared/CharacterForms/CharacterSystemForm';
 import { createItemColumns, createMagiasColumns, createSkillsColumns } from '../../../../Hub/UserCharacters/CharacterCreate/tableColumnsConfig';
 import { generateId } from '../../../../Hub/UserCharacters/CharacterCreate/helpers';
-import { FloatingActions, FloatingSaveButton, SyncIconBadge } from '../../../../Hub/UserCharacters/CharacterEdit/CharacterEdit.style';
+import { FloatingActions, FloatingSaveButton, FloatingSaveSpinner, SyncIconBadge } from '../../../../Hub/UserCharacters/CharacterEdit/CharacterEdit.style';
 import { FormController, FormEditController } from '../../../../Hub/UserCharacters/CharacterCreate/FormUserCharacter/FormUserCharacter.style';
 import { saveAsset } from '../../../../../services/assetsService';
 import { persistCharacterEntryImages } from '../../../../../services/characterEntryImageService';
@@ -34,6 +34,7 @@ import { normalizeGalleryImages } from '../../../../../models/GalleryImage';
 import { cloneCharacterEntries, cloneCharacterName, detachUnavailableBaseItems } from '../../../../../utils/characterClone';
 import { SystemEntityBinding } from '../../../../../components/Generic/SystemEntityBinding';
 import { LoadingIndicator } from '../../../../../components/Generic/LoadingIndicator';
+import { CharacterLegacyNotice } from '../../../../../components/Generic/CharacterLegacyNotice/CharacterLegacyNotice';
 import { CharacterVisibilityModal } from '../../../../../components/CharacterVisibility';
 import {
   normalizeRuntimeAttributeValues,
@@ -210,9 +211,11 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
     setStatusBasico,
     listRaces,
     loadingRaces,
+    raceCatalogReady,
     selectedRace,
     listCities,
     loadingCities,
+    cityCatalogReady,
     personagens,
     allPersonagens,
     searchTerm,
@@ -236,12 +239,23 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
     avatarFile,
     sistema,
     variants,
-  } = useFormCharacter({ applyRaceDefaults: false, idEntidade: clone ? undefined : characterId });
+  } = useFormCharacter({ applyRaceDefaults: false, idEntidade: clone ? undefined : characterId, idMesa: targetMesaId });
   const targetRuntime = useSistemaRuntimeContexto({
     idMesa: clone && targetMesaId ? targetMesaId : undefined,
     idRaca: race,
     enabled: Boolean(clone && targetMesaId && race),
   });
+  const legacyReasons = React.useMemo(() => {
+    if (clone || isLoadingCharacter) return [];
+    const reasons: string[] = [];
+    if (raceCatalogReady && race && !listRaces.some((entry) => entry.idraca === race)) {
+      reasons.push('A raça original não está no catálogo atual. Ela pode ser mantida ao editar o personagem.');
+    }
+    if (cityCatalogReady && city && !listCities.some((entry) => entry.idcidade === city)) {
+      reasons.push('A cidade original não está no catálogo atual. Ela pode ser mantida ao editar o personagem.');
+    }
+    return reasons;
+  }, [clone, isLoadingCharacter, raceCatalogReady, race, listRaces, cityCatalogReady, city, listCities]);
   const hydrateVariants = variants.hydrate;
   const hydrateSistemaVinculo = sistema.hydrateVinculo;
   const npcId = Number(characterId);
@@ -700,6 +714,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
         peso: item.peso !== undefined && item.peso !== null && Number(item.peso) !== 0
           ? Number(item.peso)
           : undefined,
+        valor: item.valor === undefined ? undefined : Number(item.valor),
         discricao: Number(item.discricao) || 0,
         descricao: serializeRichText(item.descricao),
         efeito: ((item.atributos as Record<string, unknown> | undefined)?.efeito as string | undefined) ?? item.efeito,
@@ -976,6 +991,8 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
         </div>
       )}
 
+      {!clone && <CharacterLegacyNotice contexto={sistema.contexto} catalogReasons={legacyReasons} />}
+
       <FormEditController>
         <CharacterVariantType generico={variants.generico} count={variants.variants.length}
           onChange={variants.setGenerico} neon={neon} />
@@ -1139,8 +1156,9 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
           }}
           title="Salvar alterações"
           disabled={isSaving}
+          aria-busy={isSaving}
         >
-          <SaveIcon className="icon" />
+          {isSaving ? <FloatingSaveSpinner role="status" aria-label="Salvando" /> : <SaveIcon className="icon" />}
         </FloatingSaveButton>
       </FloatingActions>
 

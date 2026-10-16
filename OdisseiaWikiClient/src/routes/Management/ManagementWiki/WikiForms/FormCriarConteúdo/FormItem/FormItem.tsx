@@ -53,6 +53,8 @@ export const FormItem = ({ theme, neon, contentType }: FormItemProps) => {
     setQuantidade,
     peso,
     setPeso,
+    valor,
+    setValor,
     discricao,
     setDiscricao,
     imagemUrl,
@@ -154,6 +156,13 @@ export const FormItem = ({ theme, neon, contentType }: FormItemProps) => {
               onFocus={handleNumericInputFocus}
               onChange={(e) => setPeso(Number(e.target.value) || undefined)}
             />
+          </LabelInfoBox>
+
+          <LabelInfoBox theme={theme} neon={neon}>
+            <LabelStatus>Valor de compra (opcional)</LabelStatus>
+            <MinimalInput value={valor ?? ''} type="number" min="0" step="0.01"
+              onFocus={handleNumericInputFocus}
+              onChange={(e) => setValor(e.target.value === '' ? undefined : Math.max(0, Number(e.target.value)))} />
           </LabelInfoBox>
 
           <LabelInfoBox theme={theme} neon={neon}>

@@ -133,7 +133,8 @@ export const StatusInputField = styled.input<Props>`
 
       border: 2px solid ${neon === "on" ? "#fff" : colors.clear};
 
-      color: var(--deepgrey);
+      color: ${theme === 'light' && neon === 'on'
+        ? 'var(--deepgray)' : 'var(--whitesmoke)'};
 
       box-shadow: ${neon === "on"
         ? `0 0 8px 1px ${colors.neon}, inset 0 0 8px 1px ${colors.neon}`

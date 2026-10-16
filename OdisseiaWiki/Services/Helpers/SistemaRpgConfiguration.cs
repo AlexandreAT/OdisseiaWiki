@@ -144,6 +144,8 @@ internal static partial class SistemaRpgConfiguration
 
     internal sealed class RegrasProgressao
     {
+        public int? DadoLootFaces { get; set; }
+        public List<OdisseiaWiki.Dtos.SistemaAtributoRecursoDto> InfluenciasAtributos { get; set; } = [];
         public int NivelMaximo { get; set; } = 20;
         public bool PermiteXpExcedente { get; set; }
     }
@@ -160,6 +162,8 @@ internal static partial class SistemaRpgConfiguration
         public bool UsaIniciativa { get; set; } = true;
         public string? FormulaIniciativa { get; set; }
         public int SegundosPorTurno { get; set; } = 6;
+        public int EstaminaPorAtaqueAdicional { get; set; }
+        public List<SistemaLimiteAcoesArmaDto> LimitesAcoesPorArma { get; set; } = new();
         public string? RegraDeclaracaoAcoes { get; set; }
     }
 

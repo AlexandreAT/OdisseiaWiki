@@ -1,5 +1,7 @@
 import RefreshIcon from '@mui/icons-material/Refresh';
 import SettingsSuggestOutlinedIcon from '@mui/icons-material/SettingsSuggestOutlined';
+import { useEffect, useState } from 'react';
+import { obterCatalogoItensSistemaRpg, obterConfiguracaoSistemaRpg } from '../../../../../services/sistemasRpgService';
 import { LoadingIndicator } from '../../../../../components/Generic/LoadingIndicator';
 import {
   SistemaModuloConfigMap,
@@ -16,7 +18,7 @@ import { CombatModuleForm } from '../ModuleForms/CombatModuleForm';
 import { CreationModuleForm } from '../ModuleForms/CreationModuleForm';
 import { ExplorationModuleForm } from '../ModuleForms/ExplorationModuleForm';
 import { GeneralModuleForm } from '../ModuleForms/GeneralModuleForm';
-import { RaceOption } from '../ModuleForms/ModuleForm.types';
+import { RaceOption, type SystemReferenceCatalog, type SystemReferenceOption } from '../ModuleForms/ModuleForm.types';
 import { PowersModuleForm } from '../ModuleForms/PowersModuleForm';
 import { ProgressionModuleForm } from '../ModuleForms/ProgressionModuleForm';
 import { SurvivalModuleForm } from '../ModuleForms/SurvivalModuleForm';
@@ -34,6 +36,7 @@ interface ModuleEditorProps {
   neon: 'on' | 'off';
   systemCode: string;
   raceOptions: RaceOption[];
+  idSistemaVersao: number;
   onChange: (config: AnyModuleConfig) => void;
   onRetry: () => void;
   onCreateEmpty: () => void;
@@ -50,10 +53,39 @@ export const ModuleEditor = ({
   neon,
   systemCode,
   raceOptions,
+  idSistemaVersao,
   onChange,
   onRetry,
   onCreateEmpty,
 }: ModuleEditorProps) => {
+  const [references, setReferences] = useState<SystemReferenceCatalog>({
+    attributes: [], resources: [], conditions: [], testCodes: [], weaponTypes: [],
+  });
+  useEffect(() => {
+    let active = true;
+    const options = (entries: { codigo: string; nome: string }[]): SystemReferenceOption[] =>
+      entries.filter((entry) => entry.codigo).map((entry) => ({ value: entry.codigo, label: entry.nome || entry.codigo }));
+    void Promise.allSettled([
+      obterConfiguracaoSistemaRpg(idSistemaVersao, 'criacao'),
+      obterConfiguracaoSistemaRpg(idSistemaVersao, 'sobrevivencia'),
+      obterConfiguracaoSistemaRpg(idSistemaVersao, 'combate'),
+      obterCatalogoItensSistemaRpg(idSistemaVersao),
+    ]).then(([creation, survival, combat, items]) => {
+      if (!active) return;
+      const weaponTypes = items.status === 'fulfilled' ? items.value.tipos.flatMap((type) =>
+        type.filhos.flatMap((category) => category.filhos.map((archetype) =>
+          ({ value: archetype.codigo, label: archetype.nome })))) : [];
+      setReferences({
+        attributes: creation.status === 'fulfilled' ? options(creation.value.atributos) : [],
+        resources: creation.status === 'fulfilled' ? options(creation.value.recursos) : [],
+        conditions: survival.status === 'fulfilled' ? options(survival.value.condicoes) : [],
+        testCodes: combat.status === 'fulfilled' ? options(combat.value.resultadosDado.map((entry) =>
+          ({ codigo: entry.codigoTeste, nome: entry.nomeTeste }))) : [],
+        weaponTypes: [{ value: 'arma_de_fogo', label: 'Armas de fogo (geral)' }, ...weaponTypes],
+      });
+    });
+    return () => { active = false; };
+  }, [idSistemaVersao]);
   if (loading) {
     return (
       <ModuleContent>
@@ -109,6 +141,7 @@ export const ModuleEditor = ({
       )}
       {moduleKey === 'criacao' && (
         <CreationModuleForm
+          references={references}
           value={config as SistemaModuloConfigMap['criacao']}
           onChange={onChange}
           errors={errors}
@@ -121,6 +154,7 @@ export const ModuleEditor = ({
       )}
       {moduleKey === 'progressao' && (
         <ProgressionModuleForm
+          references={references}
           value={config as SistemaModuloConfigMap['progressao']}
           onChange={onChange}
           errors={errors}
@@ -141,6 +175,7 @@ export const ModuleEditor = ({
       )}
       {moduleKey === 'combate' && (
         <CombatModuleForm
+          references={references}
           value={config as SistemaModuloConfigMap['combate']}
           onChange={onChange}
           errors={errors}
@@ -161,6 +196,7 @@ export const ModuleEditor = ({
       )}
       {moduleKey === 'sobrevivencia' && (
         <SurvivalModuleForm
+          references={references}
           value={config as SistemaModuloConfigMap['sobrevivencia']}
           onChange={onChange}
           errors={errors}

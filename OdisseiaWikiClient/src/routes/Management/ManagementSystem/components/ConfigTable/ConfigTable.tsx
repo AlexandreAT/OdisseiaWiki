@@ -5,6 +5,7 @@ import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { selectNumericInputValue } from '../../../../../utils/numericInput';
+import { ReferenceCodeInput, type ReferenceOption } from './ReferenceCodeInput';
 import { SistemaValidationErrors } from '../../systemValidation';
 import {
   CellError,
@@ -32,6 +33,7 @@ export interface ConfigTableColumn<T extends object> {
   maxLength?: number;
   nullable?: boolean;
   options?: Array<{ label: string; value: string | number }>;
+  suggestions?: ReferenceOption[];
   placeholder?: string;
   render?: (
     value: T[keyof T],
@@ -182,6 +184,14 @@ export const ConfigTable = <T extends object>({
     }
 
     const isNumber = column.type === 'number';
+    if (!isNumber && column.suggestions?.length) return (
+      <TableCellControl $error={Boolean(error)} data-validation-error={error || undefined}>
+        <ReferenceCodeInput value={String(value ?? '')} label={column.label}
+          options={column.suggestions} disabled={readOnly} maxLength={column.maxLength}
+          placeholder={column.placeholder} onChange={(next) => update(next as T[keyof T])} />
+        {error && <CellError role="alert">{error}</CellError>}
+      </TableCellControl>
+    );
     return (
       <TableCellControl $error={Boolean(error)} data-validation-error={error || undefined}>
         <input

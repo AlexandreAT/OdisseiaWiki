@@ -59,7 +59,9 @@ export const SearchField = styled.input.attrs({ type: 'search' })<Props>`
   font-size: 0.9em;
   padding: 25px 10px 10px;
   font-weight: 600;
-  color: ${({ disabled }) => (disabled ? 'var(--black)' : 'var(--deepgrey)')};
+  color: ${({ theme, neon, disabled }) => disabled
+    ? 'var(--lightGrey)'
+    : theme === 'light' && neon === 'on' ? 'var(--deepgray)' : 'var(--whitesmoke)'};
   transition: background-color 0.2s, border 0.2s;
   box-shadow: 0 0 1px 1px rgba(50, 50, 50, 0.8);
   cursor: ${({ disabled }) => (disabled ? 'not-allowed' : 'text')};
@@ -72,6 +74,7 @@ export const SearchField = styled.input.attrs({ type: 'search' })<Props>`
 
   &:focus {
     background-color: var(--black-blue);
+    color: var(--whitesmoke);
     border-color: ${({ theme, neon, typeStyle }) =>
       theme === 'dark'
         ? neon === 'on'

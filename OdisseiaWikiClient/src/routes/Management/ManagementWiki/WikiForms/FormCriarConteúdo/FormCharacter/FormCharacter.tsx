@@ -18,6 +18,7 @@ import { DataTable } from '../../../../../../components/Generic/DataTable/DataTa
 import { HorizontalList } from '../../../../../../components/Generic/HorizontalList/HorizontalList';
 import { StatusInput } from '../../../../../../components/Generic/StatusInput/StatusInput';
 import { useFormCharacter } from './useFormCharacter';
+import { getMesaWikiIdFromPath } from '../../../../../../services/wikiContext';
 import { CropPreset } from '../../../../../../components/Generic/ImageUploader/types';
 import toast from 'react-hot-toast';
 import { LabelInfoBox } from '../../../../../../components/Generic/LabelInfoBox/LabelInfoBox';
@@ -100,7 +101,7 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
     listItens, handleSelectItem,
     sistema,
     variants,
-  } = useFormCharacter({ contentType });
+  } = useFormCharacter({ contentType, idMesa: getMesaWikiIdFromPath() });
   
   const tagInputRef = useRef<HTMLInputElement>(null);
 

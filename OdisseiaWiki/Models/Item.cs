@@ -21,6 +21,9 @@ public partial class Item
 
     public decimal? Peso { get; set; }
 
+    [Column(TypeName = "decimal(18,2)")]
+    public decimal? Valor { get; set; }
+
     public int Discricao { get; set; } = 0;
 
     public int Quantidade { get; set; } = 1;

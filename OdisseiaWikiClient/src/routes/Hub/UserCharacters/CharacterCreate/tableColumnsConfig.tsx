@@ -202,6 +202,12 @@ const ItemAtributosEditor = memo(({
           mobileInset
         >
           <ItemTableGeneralAttributes theme={theme} neon={neon}>
+            <InputText label="Valor de compra (opcional)" type="number"
+              value={row.valor ?? ''}
+              onChange={(event) => onRowChange({ ...row,
+                valor: event.target.value === '' ? undefined : Math.max(0, Number(event.target.value)),
+              })}
+              theme={theme} neon={neon} width="100%" />
             <InputText
               label="Discrição (-/+)"
               type="number"
@@ -228,6 +234,7 @@ const ItemAtributosEditor = memo(({
          prevProps.row.nome === nextProps.row.nome &&
          prevProps.row.efeito === nextProps.row.efeito &&
          prevProps.row.discricao === nextProps.row.discricao &&
+         prevProps.row.valor === nextProps.row.valor &&
          prevProps.row.imagem === nextProps.row.imagem &&
          prevProps.row.imagemArquivo === nextProps.row.imagemArquivo;
 });

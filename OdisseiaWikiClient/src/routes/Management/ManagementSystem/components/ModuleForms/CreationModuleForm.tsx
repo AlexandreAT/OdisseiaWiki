@@ -113,6 +113,7 @@ export const CreationModuleForm = ({
   neon,
   raceOptions = [],
   systemCode,
+  references,
 }: ModuleFormProps<'criacao'>) => {
   const mirrorsWikiRaces = systemCode?.toUpperCase() === 'ODISSEIA';
   const raceColumns = useMemo<ConfigTableColumn<SistemaRacaConfig>[]>(() => [
@@ -192,7 +193,8 @@ export const CreationModuleForm = ({
         title="Recursos"
         description="Vida, estamina, mana, carga e outros recursos configuráveis da ficha."
         rows={value.recursos}
-        columns={resourceColumns}
+        columns={resourceColumns.map((column) => column.key === 'condicaoAoZerar'
+          ? { ...column, suggestions: references?.conditions } : column)}
         createRow={createResource}
         onChange={(recursos) => onChange({ ...value, recursos })}
         theme={theme}

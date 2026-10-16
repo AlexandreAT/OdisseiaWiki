@@ -33,8 +33,11 @@ export const LoadingWrapper = styled.span<{ $compact: boolean }>`
   align-items: center;
   justify-content: center;
   gap: ${({ $compact }) => ($compact ? '0' : '18px')};
+  width: fit-content;
   max-width: 100%;
   min-width: 0;
+  margin-inline: auto;
+  justify-self: center;
   white-space: nowrap;
   color: ${({ $compact }) => $compact ? 'inherit' : 'var(--clearneonBlue)'} !important;
 
@@ -71,7 +74,7 @@ export const LoadingIcon = styled.span`
 export const LoadingText = styled.span<{ $compact: boolean }>`
   display: inline-flex;
   align-items: center;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   max-width: 100%;
   min-width: 0;
   color: inherit !important;
@@ -89,7 +92,7 @@ export const LoadingText = styled.span<{ $compact: boolean }>`
 export const LoadingLabel = styled.span`
   font: inherit;
   display: block;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-width: 3.5em;
   overflow: hidden;
   color: inherit !important;

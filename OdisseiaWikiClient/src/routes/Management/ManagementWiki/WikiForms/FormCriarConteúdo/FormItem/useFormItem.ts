@@ -137,6 +137,7 @@ export const useFormItem = (initialItem?: ItemPayload, contentType?: string) => 
   );
 
   const [peso, setPeso] = useState<number | undefined>(initialItem?.peso);
+  const [valor, setValor] = useState<number | undefined>(initialItem?.valor);
   const [discricao, setDiscricao] = useState<number>(initialItem?.discricao ?? 0);
   const [quantidade, setQuantidade] = useState(initialItem?.quantidade || 1);
 
@@ -325,6 +326,7 @@ export const useFormItem = (initialItem?: ItemPayload, contentType?: string) => 
     setDescricao("");
 
     setPeso(undefined);
+    setValor(undefined);
     setDiscricao(0);
     setQuantidade(1);
     setImagemUrl("");
@@ -386,6 +388,7 @@ export const useFormItem = (initialItem?: ItemPayload, contentType?: string) => 
         tipo: capitalizeFirst(tipo),
         descricao: prepareForAPI(descricao),
         peso,
+        valor,
         discricao,
         quantidade,
         efeito: undefined,
@@ -464,6 +467,8 @@ export const useFormItem = (initialItem?: ItemPayload, contentType?: string) => 
     setDescricao,
     peso,
     setPeso,
+    valor,
+    setValor,
     discricao,
     setDiscricao,
     quantidade,

@@ -5,6 +5,7 @@ export interface ItemFormData {
   tipo: ItemTipo;
   descricao?: JSONContent | string;
   peso?: number;
+  valor?: number;
   discricao?: number;
   quantidade: number;
   imagem?: string;
@@ -27,6 +28,7 @@ export interface ItemDto {
   tipo: ItemTipo;
   descricao?: JSONContent | string;
   peso?: number;
+  valor?: number;
   discricao?: number;
   quantidade: number;
   imagem?: string;

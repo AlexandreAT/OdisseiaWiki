@@ -1091,7 +1091,8 @@ const PersonagemPage: React.FC = () => {
                                     key={`principal-${field.code}`}
                                     type="button"
                                     onClick={() => abrirTesteAtributo(field.code, 'Principal')}
-                                    title={`Testar ${field.label}`}
+                                    disabled={(Number(atributosPrincipaisAtuais[field.key]) || 0) <= 0}
+                                    title={(Number(atributosPrincipaisAtuais[field.key]) || 0) <= 0 ? 'Atributo zerado: use a rolagem genérica se o mestre pedir.' : `Testar ${field.label}`}
                                   >
                                     <span>{field.label}</span>
                                     <strong>{Number(atributosPrincipaisAtuais[field.key]) || 0}</strong>
@@ -1108,7 +1109,8 @@ const PersonagemPage: React.FC = () => {
                                     key={`secundario-${field.code}`}
                                     type="button"
                                     onClick={() => abrirTesteAtributo(field.code, 'Secundario')}
-                                    title={`Testar ${field.label}`}
+                                    disabled={(Number(atributosSecundariosAtuais[field.key]) || 0) <= 0}
+                                    title={(Number(atributosSecundariosAtuais[field.key]) || 0) <= 0 ? 'Atributo zerado: use a rolagem genérica se o mestre pedir.' : `Testar ${field.label}`}
                                   >
                                     <span>{field.label}</span>
                                     <strong>{Number(atributosSecundariosAtuais[field.key]) || 0}</strong>

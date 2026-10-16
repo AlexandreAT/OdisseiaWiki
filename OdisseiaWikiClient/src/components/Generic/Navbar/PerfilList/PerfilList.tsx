@@ -76,6 +76,7 @@ export const PerfilList = ({ usuario, onClose, avatarRef, theme }: Props) => {
         >
             <PerfilOption to="/perfil" themeMode={theme} onClick={onClose}>Perfil</PerfilOption>
             <PerfilOption to="/hub" themeMode={theme} onClick={onClose}>Mesas e personagens</PerfilOption>
+            <PerfilOption to="/jogo" themeMode={theme} onClick={onClose}>Roguelike</PerfilOption>
             {usuario.role === 'Admin' && (
                 <PerfilOption to="/management" themeMode={theme} onClick={onClose}>Gerenciamento</PerfilOption>
             )}

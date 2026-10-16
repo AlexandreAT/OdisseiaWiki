@@ -1,4 +1,4 @@
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
 
 interface ThemeProps {
   theme: 'dark' | 'light';
@@ -151,6 +151,28 @@ export const SyncIconBadge = styled.div<ThemeProps & { synced: boolean }>`
   }
 `;
 
+const floatingSaveSpin = keyframes`
+  to { transform: rotate(360deg); }
+`;
+
+export const FloatingSaveSpinner = styled.span`
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  box-sizing: border-box;
+  animation: ${floatingSaveSpin} .75s linear infinite;
+
+  @media (max-width: 768px) {
+    width: 17px;
+    height: 17px;
+    flex-basis: 17px;
+  }
+  @media (prefers-reduced-motion: reduce) { animation-duration: 1.5s; }
+`;
+
 export const FloatingSaveButton = styled.button<ThemeProps>`
   width: 44px;
   height: 44px;
@@ -198,6 +220,8 @@ export const FloatingSaveButton = styled.button<ThemeProps>`
   .icon {
     font-size: 18px;
   }
+
+  &:disabled { cursor: wait; }
 
   @media (max-width: 768px) {
     width: 40px;

@@ -145,6 +145,8 @@ internal static class SistemaRpgMapper
         return new SistemaProgressaoConfigDto
         {
             NivelMaximo = regras.NivelMaximo,
+            DadoLootFaces = regras.DadoLootFaces,
+            InfluenciasAtributos = regras.InfluenciasAtributos ?? [],
             PermiteXpExcedente = regras.PermiteXpExcedente,
             Niveis = entity.Niveis.OrderBy(n => n.Ordem).ThenBy(n => n.Nivel).Select(n => new SistemaNivelDto
             {
@@ -246,6 +248,8 @@ internal static class SistemaRpgMapper
             UsaIniciativa = regras.UsaIniciativa,
             FormulaIniciativa = regras.FormulaIniciativa,
             SegundosPorTurno = regras.SegundosPorTurno,
+            EstaminaPorAtaqueAdicional = regras.EstaminaPorAtaqueAdicional,
+            LimitesAcoesPorArma = regras.LimitesAcoesPorArma ?? new(),
             RegraDeclaracaoAcoes = regras.RegraDeclaracaoAcoes,
             ResultadosDado = entity.ResultadosDado.OrderBy(r => r.Ordem).Select(r => new SistemaResultadoDadoDto
             {

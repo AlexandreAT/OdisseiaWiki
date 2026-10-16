@@ -34,6 +34,7 @@ public partial class OdisseiaContext
 
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder)
     {
+        ConfigureGameRuns(modelBuilder);
         ConfigureGameplay(modelBuilder);
         ConfigureSistemaRpg(modelBuilder);
         ConfigureProgressao(modelBuilder);

@@ -6,6 +6,7 @@
   "scripts": {
     "test:items": "node --test tests/weaponModifiers.test.mjs",
     "test:variants": "node --test tests/characterVariants.test.mjs",
+    "test:battle": "node --test tests/battlePresentation.test.mjs",
     "test:visual-stability": "node --test tests/visualStability.test.mjs",
     "dev": "vite",
     "build": "tsc -b && vite build",

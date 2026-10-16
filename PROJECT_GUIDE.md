@@ -944,6 +944,8 @@ Regras:
 - Não misturar estilo com lógica;
 - Manter nomes semânticos;
 - Não criar tags HTML sem estilo quando já existe componente estilizado adequado.
+- Antes de estilizar um novo modal ou fluxo, localizar um equivalente já usado no site e reaproveitar seus componentes, hierarquia, espaçamentos, tipografia e disposição das ações. Não criar um padrão visual paralelo para a mesma função.
+- Nos modais de item da run, manter informações relacionadas em um bloco compacto e as ações principais e secundárias no mesmo rodapé, lado a lado quando houver espaço. Textos de apoio devem ser curtos e visualmente subordinados; validar também a composição no mobile.
 
 ---
 

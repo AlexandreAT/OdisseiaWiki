@@ -23,3 +23,21 @@ export const selectNumericInputValue = (input: HTMLInputElement) => {
 export const handleNumericInputFocus = (event: React.FocusEvent<HTMLInputElement>) => {
   selectNumericInputValue(event.currentTarget);
 };
+
+/** Event delegation also covers numeric fields outside the shared form components. */
+export const installNumericInputSelection = () => {
+  const selectTarget = (target: EventTarget | null) => {
+    if (target instanceof HTMLInputElement &&
+        (target.type === 'number' || target.inputMode === 'numeric' || target.inputMode === 'decimal')) {
+      selectNumericInputValue(target);
+    }
+  };
+  const onFocus = (event: FocusEvent) => selectTarget(event.target);
+  const onPointerUp = (event: PointerEvent) => selectTarget(event.target);
+  document.addEventListener('focusin', onFocus);
+  document.addEventListener('pointerup', onPointerUp);
+  return () => {
+    document.removeEventListener('focusin', onFocus);
+    document.removeEventListener('pointerup', onPointerUp);
+  };
+};

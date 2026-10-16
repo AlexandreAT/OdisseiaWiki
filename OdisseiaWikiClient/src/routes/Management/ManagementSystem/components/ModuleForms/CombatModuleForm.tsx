@@ -2,6 +2,7 @@ import { CheckBox } from '../../../../../components/Generic/CheckBox/CheckBox';
 import { InputText } from '../../../../../components/Generic/InputText/InputText';
 import { TextArea } from '../../../../../components/Generic/TextArea/TextArea';
 import {
+  ConfiguracaoCombateSistema,
   SistemaResultadoDado,
   SistemaTipoDano,
   SistemaTipoDefesa,
@@ -27,6 +28,7 @@ const resultColumns: ConfigTableColumn<SistemaResultadoDado>[] = [
   { key: 'codigoResultado', label: 'Cód. resultado', type: 'text', maxLength: 50 },
   { key: 'nomeResultado', label: 'Resultado', type: 'text', maxLength: 120 },
   { key: 'descricao', label: 'Descrição', type: 'textarea', maxLength: 1000 },
+  { key: 'efeitoJson', label: 'Efeito JSON', type: 'textarea', maxLength: 1000 },
   { key: 'ordem', label: 'Ordem', type: 'number', min: 0 },
 ];
 
@@ -52,6 +54,14 @@ const defenseColumns: ConfigTableColumn<SistemaTipoDefesa>[] = [
   { key: 'ordem', label: 'Ordem visual', type: 'number', min: 0 },
 ];
 
+type WeaponLimit = ConfiguracaoCombateSistema['limitesAcoesPorArma'][number];
+const weaponLimitColumns: ConfigTableColumn<WeaponLimit>[] = [
+  { key: 'tipoArma', label: 'Tipo de arma', type: 'text', maxLength: 80 },
+  { key: 'maximoTiros', label: 'Tiros/turno', type: 'number', min: 0 },
+  { key: 'maximoRajadas', label: 'Rajadas/turno', type: 'number', min: 0 },
+  { key: 'maximoGolpes', label: 'Golpes/turno', type: 'number', min: 0 },
+];
+
 const createResult = (): SistemaResultadoDado => ({
   codigoTeste: '',
   nomeTeste: '',
@@ -63,6 +73,7 @@ const createResult = (): SistemaResultadoDado => ({
   codigoResultado: '',
   nomeResultado: '',
   descricao: '',
+  efeitoJson: null,
   ordem: 1,
 });
 
@@ -103,6 +114,7 @@ export const CombatModuleForm = ({
   readOnly,
   theme,
   neon,
+  references,
 }: ModuleFormProps<'combate'>) => (
   <ModuleFieldset disabled={readOnly}>
     <ModuleIntro theme={theme} neon={neon}>
@@ -127,11 +139,35 @@ export const CombatModuleForm = ({
       <TextArea theme={theme} neon={neon} label="Declaração e ordem das ações" value={value.regraDeclaracaoAcoes ?? ''} onChange={(event) => onChange({ ...value, regraDeclaracaoAcoes: event.target.value })} fullWidth />
     </SectionCard>
 
+    <SectionCard theme={theme} neon={neon}>
+      <h4>Custos de ataques múltiplos</h4>
+      <p>Valor cobrado por cada tiro ou rajada além do primeiro. Armas de fogo usam o maior valor entre esta regra e o custo adicional definido no item; 0 não cobra custo extra. Publique uma nova versão para aplicar a regra em novas jornadas.</p>
+      <FieldGrid $columns={2}>
+        <InputText theme={theme} neon={neon} label="Estamina por ataque adicional" type="number" value={value.estaminaPorAtaqueAdicional ?? 0} onChange={(event) => onChange({ ...value, estaminaPorAtaqueAdicional: Number(event.target.value) })} error={Boolean(errors.estaminaPorAtaqueAdicional)} errorMessage={errors.estaminaPorAtaqueAdicional} />
+      </FieldGrid>
+    </SectionCard>
+
+    <ConfigTable
+      title="Limites por tipo de arma"
+      description="Use o código do arquétipo ou arma_de_fogo para um limite geral de armas de fogo. O arquétipo específico tem prioridade; 0 deixa sem limite adicional. O pente e os recursos ainda podem impor limites menores."
+      rows={value.limitesAcoesPorArma ?? []}
+      columns={weaponLimitColumns.map((column) => column.key === 'tipoArma'
+        ? { ...column, suggestions: references?.weaponTypes } : column)}
+      createRow={() => ({ tipoArma: '', maximoTiros: 0, maximoRajadas: 0, maximoGolpes: 0 })}
+      onChange={(limitesAcoesPorArma) => onChange({ ...value, limitesAcoesPorArma })}
+      theme={theme} neon={neon} readOnly={readOnly} errors={errors}
+      errorPath="limitesAcoesPorArma"
+    />
+
     <ConfigTable
       title="Resultados de dados"
-      description="Agrupe intervalos pelo mesmo código de teste e dado. Intervalos precisam cobrir resultados sem sobreposição."
+      description={'Agrupe intervalos pelo mesmo código de teste e dado. Para permitir revidar na falha crítica de ATAQUE_COMUM, configure Efeito JSON como {"reacao":"REVIDAR"}.'}
       rows={value.resultadosDado}
-      columns={resultColumns}
+      columns={resultColumns.map((column) => column.key === 'codigoTeste'
+        ? { ...column, suggestions: [...new Map(value.resultadosDado
+          .filter((entry) => entry.codigoTeste).map((entry) => [entry.codigoTeste,
+            { value: entry.codigoTeste, label: entry.nomeTeste || entry.codigoTeste }])).values()] }
+        : column)}
       createRow={createResult}
       onChange={(resultadosDado) => onChange({ ...value, resultadosDado })}
       theme={theme}

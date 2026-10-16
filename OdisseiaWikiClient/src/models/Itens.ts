@@ -59,6 +59,7 @@ export interface Item {
   tipo: ItemTipo;
   quantidade: number;
   peso?: number;
+  valor?: number;
   discricao?: number;
   descricao?: JSONContent | string;
   /** @deprecated O valor canônico agora fica em atributos.efeito. */
@@ -125,6 +126,9 @@ export interface ArmaAtributos {
     preciso?: number;
   };
   cadencia?: number;
+  limiteAtaquesPorTurno?: number;
+  limiteTirosPorTurno?: number;
+  limiteRajadasPorTurno?: number;
   capacidadeUso?: number;
   capacidadeMunicao?: number;
   /** Habilita a proposta autoritativa de consumo após uma rolagem. */
@@ -220,6 +224,13 @@ export interface OutrosAtributos {
   condicoes?: GameplayConditionEffectConfig[];
   especial?: string;
   duracao?: string;
+  dano?: number;
+  protecao?: number;
+  armadura?: number;
+  escudo?: number;
+  recuperacaoVida?: number;
+  recuperacaoMana?: number;
+  recuperacaoEstamina?: number;
 }
 
 export interface ImplanteAtributos {

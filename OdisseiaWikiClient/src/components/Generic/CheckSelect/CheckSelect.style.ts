@@ -22,7 +22,7 @@ interface DisplayProps {
 export const CheckListDropdown = styled.div<DropdownProps>`
   position: absolute;
   top: calc(100% + 2px);
-  min-width: 100%;
+  min-width: 0;
   width: fit-content;
   z-index: 1000;
   max-height: 230px;
@@ -45,7 +45,7 @@ export const CheckListContainer = styled.div`
   }
 `;
 
-export const CheckDisplay = styled.div<DisplayProps & { height?: string }>`
+export const CheckDisplay = styled.div<DisplayProps & { height?: string; $compactPreview?: boolean }>`
   padding: 25px 10px 10px;
   min-height: ${({ height }) => height || '54.2px'};
   border-radius: 7px;
@@ -58,13 +58,19 @@ export const CheckDisplay = styled.div<DisplayProps & { height?: string }>`
                 : 'var(--clearblack)'};
   border: 2px solid var(--black-blue);
   box-shadow: 0 0 1px 1px rgba(50,50,50,0.8);
-  color: ${({ theme }) => theme === 'dark' ? 'var(--whitesmoke)' : 'var(--deepgrey)'};
+  color: ${({ theme, neon }) => theme === 'light' && neon === 'on'
+    ? 'var(--deepgray)' : 'var(--whitesmoke)'};
   transition: border 0.2s, box-shadow 0.2s;
   width: 100%;
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
   overflow-wrap: anywhere;
+  ${({ $compactPreview }) => $compactPreview && css`
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  `}
 
   ${({ focus }) =>
     focus &&

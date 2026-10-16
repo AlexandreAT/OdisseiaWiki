@@ -206,6 +206,24 @@ const validateCreation = (config: ConfiguracaoCriacaoSistema): SistemaValidation
 const validateProgression = (config: ConfiguracaoProgressaoSistema): SistemaValidationErrors => {
   const errors: SistemaValidationErrors = {};
   addPositive(errors, 'nivelMaximo', config.nivelMaximo, 'Nível máximo');
+  if (config.dadoLootFaces != null && ![4, 6, 8, 10, 12, 20].includes(config.dadoLootFaces)) {
+    errors.dadoLootFaces = 'Escolha um dado de loot válido.';
+  }
+  const resourceRules = new Set<string>();
+  (config.influenciasAtributos ?? []).forEach((row, index) => {
+    addCode(errors, `influenciasAtributos.${index}.codigoAtributo`, row.codigoAtributo);
+    if (!['vida', 'mana', 'estamina'].includes(row.recurso)) {
+      errors[`influenciasAtributos.${index}.recurso`] = 'Escolha um recurso válido.';
+    }
+    if (!Number.isFinite(row.percentualPorValor) || row.percentualPorValor < 0 || row.percentualPorValor > 100) {
+      errors[`influenciasAtributos.${index}.percentualPorValor`] = 'Informe um percentual de 0 a 100.';
+    }
+    const key = `${row.codigoAtributo.trim().toLowerCase()}:${row.recurso}`;
+    if (resourceRules.has(key)) {
+      errors[`influenciasAtributos.${index}.codigoAtributo`] = 'Esta influência já foi configurada.';
+    }
+    resourceRules.add(key);
+  });
 
   config.niveis.forEach((row, index) => {
     addPositive(errors, `niveis.${index}.nivel`, row.nivel, 'Nível');
@@ -289,9 +307,27 @@ const getDiceMaximum = (dice: string): number | null => {
 
 const validateCombat = (config: ConfiguracaoCombateSistema): SistemaValidationErrors => {
   const errors: SistemaValidationErrors = {};
+  if (!Number.isInteger(config.estaminaPorAtaqueAdicional ?? 0) ||
+      (config.estaminaPorAtaqueAdicional ?? 0) < 0 || (config.estaminaPorAtaqueAdicional ?? 0) > 1000)
+    errors.estaminaPorAtaqueAdicional = 'Informe de 0 a 1000 de estamina por ataque adicional.';
+  const weaponTypes = new Set<string>();
+  (config.limitesAcoesPorArma ?? []).forEach((rule, index) => {
+    const type = rule.tipoArma.trim().toLowerCase();
+    if (!type || weaponTypes.has(type))
+      errors[`limitesAcoesPorArma.${index}.tipoArma`] = 'Informe um tipo de arma único.';
+    weaponTypes.add(type);
+    (['maximoTiros', 'maximoRajadas', 'maximoGolpes'] as const).forEach((key) => {
+      if (!Number.isInteger(rule[key]) || rule[key] < 0 || rule[key] > 100)
+        errors[`limitesAcoesPorArma.${index}.${key}`] = 'Informe de 0 a 100 (0 = sem limite).';
+    });
+  });
   addPositive(errors, 'segundosPorTurno', config.segundosPorTurno, 'Duração do turno');
 
   config.resultadosDado.forEach((row, index) => {
+    if (row.efeitoJson?.trim()) {
+      try { JSON.parse(row.efeitoJson); }
+      catch { errors[`resultadosDado.${index}.efeitoJson`] = 'Informe um JSON válido para o efeito.'; }
+    }
     addCode(errors, `resultadosDado.${index}.codigoTeste`, row.codigoTeste, 'Código do teste');
     addRequired(errors, `resultadosDado.${index}.nomeTeste`, row.nomeTeste, 'Nome do teste');
     addRequired(errors, `resultadosDado.${index}.dado`, row.dado, 'Dado');

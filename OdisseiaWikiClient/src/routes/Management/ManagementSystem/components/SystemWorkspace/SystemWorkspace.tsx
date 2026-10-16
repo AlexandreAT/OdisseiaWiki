@@ -316,6 +316,7 @@ export const SystemWorkspace = ({
             </ModuleNav>
 
             <ModuleEditor
+              idSistemaVersao={selectedVersion.idSistemaVersao}
               moduleKey={activeModule}
               systemCode={system.codigo}
               config={moduleConfig}

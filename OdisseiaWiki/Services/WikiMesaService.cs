@@ -495,10 +495,11 @@ public sealed class WikiMesaService : IWikiMesaService
         if (!contexto.Sucesso)
             return Falha<ResultPersonagem>(contexto);
 
-        if (await _personagemService.GetByIdAsync(idPersonagem, contexto.Dados!.IdWikiEscopo) is null)
+        Personagen? existente = await _personagemService.GetByIdAsync(idPersonagem, contexto.Dados!.IdWikiEscopo);
+        if (existente is null)
             return NaoEncontrado<ResultPersonagem>();
 
-        string? erro = await ValidarReferenciasPersonagemAsync(contexto.Dados, dto);
+        string? erro = await ValidarReferenciasPersonagemAsync(contexto.Dados, dto, existente);
         if (erro is not null)
             return Validacao<ResultPersonagem>(erro);
 
@@ -811,25 +812,46 @@ public sealed class WikiMesaService : IWikiMesaService
         }
     }
 
-    private async Task<string?> ValidarReferenciasPersonagemAsync(Contexto contexto, PersonagemDto dto)
+    private async Task<string?> ValidarReferenciasPersonagemAsync(
+        Contexto contexto, PersonagemDto dto, Personagen? existente = null)
     {
         RacaDto? raca = await EncontrarRacaEfetivaAsync(contexto, dto.Idraca);
-        if (raca is null)
+        if (raca is null && existente?.Idraca != dto.Idraca)
             return "A raça selecionada não pertence ao catálogo desta Mesa.";
 
-        if (dto.Idcidade.HasValue && !contexto.Admin && await EncontrarCidadeEfetivaAsync(contexto, dto.Idcidade.Value) is null)
+        if (dto.Idcidade.HasValue && !contexto.Admin &&
+            await EncontrarCidadeEfetivaAsync(contexto, dto.Idcidade.Value) is null &&
+            existente?.Idcidade != dto.Idcidade)
             return "A cidade selecionada não pertence ao catálogo desta Mesa.";
 
         if (dto.PersonagemsVinculados is not null)
         {
             foreach (int idPersonagem in dto.PersonagemsVinculados.Distinct())
             {
-                if (!contexto.Admin && await EncontrarPersonagemEfetivoAsync(contexto, idPersonagem) is null)
+                if (!contexto.Admin && await EncontrarPersonagemEfetivoAsync(contexto, idPersonagem) is null &&
+                    !ReferenciaPreservada(existente?.PersonagemsVinculados, idPersonagem))
                     return "Um personagem relacionado não pertence ao catálogo desta Mesa.";
             }
         }
 
         return null;
+    }
+
+    private static bool ReferenciaPreservada(string? referencias, int idPersonagem)
+    {
+        if (string.IsNullOrWhiteSpace(referencias)) return false;
+        try
+        {
+            using JsonDocument documento = JsonDocument.Parse(referencias);
+            if (documento.RootElement.ValueKind != JsonValueKind.Array) return false;
+            return documento.RootElement.EnumerateArray().Any(item =>
+                item.ValueKind == JsonValueKind.Number && item.TryGetInt32(out int numero) && numero == idPersonagem ||
+                item.ValueKind == JsonValueKind.String && int.TryParse(item.GetString(), out int texto) && texto == idPersonagem);
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 
     private async Task<string?> ValidarReferenciasItemAsync(Contexto contexto, int? idPersonagem, string? idItemBase)

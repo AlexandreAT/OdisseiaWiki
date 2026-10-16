@@ -410,6 +410,7 @@ export const AttributeButton = styled.button<{ $selected: boolean }>`
 
   span { min-width: 0; overflow-wrap: anywhere; }
   strong { color: var(--clearneonBlue); font-size: 1.05rem; }
+  &:disabled { cursor: not-allowed; opacity: .48; }
   &:focus-visible { outline: 2px solid var(--clearneonYellow); outline-offset: 2px; }
 `;
 

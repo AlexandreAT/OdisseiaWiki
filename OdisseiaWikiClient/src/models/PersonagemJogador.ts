@@ -71,6 +71,8 @@ export interface PersonagemStatus {
   pontosAtributo?: number;
   pontosSkill?: number;
   pontosUltimate?: number;
+  lootItensObtidos?: number;
+  xpConquistadoRun?: number;
   condicioes?: string[];
   defesas: Defesas;
 }
