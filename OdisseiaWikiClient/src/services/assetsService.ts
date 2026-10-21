@@ -7,6 +7,7 @@ export interface SaveAssetPayload {
     type: string;
     entityName: string;
     folderName?: string;
+    mesaId?: number;
 }
 
 export interface SaveAssetResult {
@@ -18,8 +19,8 @@ export interface SaveAssetResult {
 
 const uploadCache = new WeakMap<File, Map<string, Promise<SaveAssetResult>>>();
 
-const getUploadKey = ({ type, entityName, folderName }: SaveAssetPayload) =>
-    `${type.trim().toLowerCase()}|${entityName.trim()}|${folderName?.trim() ?? ''}`;
+const getUploadKey = ({ type, entityName, folderName, mesaId }: SaveAssetPayload) =>
+    `${mesaId ?? 'global'}|${type.trim().toLowerCase()}|${entityName.trim()}|${folderName?.trim() ?? ''}`;
 
 /**
  * Salva uma imagem e retorna uma URL absoluta em produção.
@@ -37,9 +38,11 @@ export const saveAsset = (payload: SaveAssetPayload): Promise<SaveAssetResult> =
         formData.append('entityName', payload.entityName);
         if (payload.folderName) formData.append('folderName', payload.folderName);
 
-        const endpoint = getMesaWikiIdFromPath()
-            ? getMesaWikiApiPath('assets', '/assets/upload')
-            : '/assets/upload';
+        const endpoint = payload.mesaId
+            ? `/mesas/${payload.mesaId}/wiki/assets`
+            : getMesaWikiIdFromPath()
+              ? getMesaWikiApiPath('assets', '/assets/upload')
+              : '/assets/upload';
         try {
             const response = await api.postForm<SaveAssetResult>(endpoint, formData);
             return response.data;

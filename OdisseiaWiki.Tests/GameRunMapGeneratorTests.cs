@@ -372,6 +372,21 @@ public sealed class GameRunMapGeneratorTests
     }
 
     [Fact]
+    public void EventoCarregaDuracaoDeJogoNaRunSemDependerDoRelogioReal()
+    {
+        const string configuration = """
+            {"map":{"schemaVersion":5},"encounters":{},
+             "areas":[{"code":"F1","name":"Floresta","useBase":false,"finalOption":"ROTA:0",
+               "options":[{"type":"EVENTO","label":"Travessia","gameMinutes":90,"weight":1}]}]}
+            """;
+
+        GameRunMapDto map = new GameRunMapGenerator().Create(44, configuration);
+
+        Assert.All(map.Nodes.Where(node => node.Type == "EVENTO"),
+            node => Assert.Equal(90, node.Payload?.GameMinutes));
+    }
+
+    [Fact]
     public void CacadaFixaInimigoNaSeedSemRevelarSeuRetratoNoMapa()
     {
         const string configuration = """

@@ -571,7 +571,7 @@ public sealed partial class SistemaRpgSeeder : ISistemaRpgSeeder
                 CodigoRecursoGatilho = code == "PESADO" ? "EXCESSO_CARGA" : code == "FADIGA" ? "ESTAMINA" : code == "DEPENDENCIA_DE_MANA" ? "MANA" : null,
                 OperadorGatilho = code == "PESADO" ? ">" : code is "FADIGA" or "DEPENDENCIA_DE_MANA" ? "<=" : null,
                 ValorGatilho = code is "FADIGA" or "DEPENDENCIA_DE_MANA" or "PESADO" ? 0 : null,
-                RegraRemocao = code == "FADIGA" ? "Descanso normal ou longo" : code == "DEPENDENCIA_DE_MANA" ? "Após a duração configurada" : code == "PESADO" ? "Reduzir a carga até a capacidade" : null,
+                RegraRemocao = code == "FADIGA" ? "DESCANSO_NORMAL" : code == "DEPENDENCIA_DE_MANA" ? "DURACAO" : code == "PESADO" ? "GATILHO_CESSOU" : "MANUAL",
                 ConfiguracaoPadraoJson = dado.ConfiguracaoJson,
                 Ordem = indice + 1,
             };

@@ -1,4 +1,5 @@
 import styled from 'styled-components';
+import { cyberButtonsFillWidth } from '../../../components/Generic/HighlightButton/HighlightButton.styles';
 
 export const TargetSelectionIntro = styled.p`
   margin: 0;
@@ -80,4 +81,9 @@ export const TargetActions = styled.div`
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+  @media (max-width: 600px) {
+    flex-direction: column;
+    align-items: stretch;
+    ${cyberButtonsFillWidth}
+  }
 `;

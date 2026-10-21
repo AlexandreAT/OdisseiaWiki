@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { GameCharacterOption, GameRunDto } from '../../../models/GameRun';
-import { abandonGameRun, createGameRun, getActiveGameRun, getGameCharacters } from '../../../services/gameRunService';
+import type { GameAdventure } from '../../../models/GameModeManagement';
+import { abandonGameRun, createGameRun, getActiveGameRun, getGameCharacters, getCharacterGames } from '../../../services/gameRunService';
 import { getApiErrorMessage } from '../../../utils/apiError';
 
 const isConflict = (error: unknown) => (
@@ -14,13 +15,14 @@ export const useGameLanding = () => {
   const [activeRun, setActiveRun] = useState<GameRunDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [creatingCharacterId, setCreatingCharacterId] = useState<number | null>(null);
+  const [gameChoices, setGameChoices] = useState<{ characterId: number; games: GameAdventure[] } | null>(null);
   const [abandoning, setAbandoning] = useState(false);
   const [abandonDialogOpen, setAbandonDialogOpen] = useState(false);
   const [abandonError, setAbandonError] = useState<string | null>(null);
   const [charactersError, setCharactersError] = useState<string | null>(null);
   const [activeRunError, setActiveRunError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const pendingCreate = useRef<{ characterId: number; key: string } | null>(null);
+  const pendingCreate = useRef<{ characterId: number; code?: string; key: string } | null>(null);
   const creatingRef = useRef(false);
   const pendingAbandon = useRef<{ revision: number; key: string } | null>(null);
 
@@ -56,23 +58,24 @@ export const useGameLanding = () => {
 
   useEffect(() => { void reload(); }, [reload]);
 
-  const startRun = async (characterId: number) => {
-    if (creatingRef.current || loading || activeRun || activeRunError ||
-      !characters.some((character) => character.idPersonagemJogador === characterId)) return;
+  const commitRun = async (characterId: number, code?: string) => {
+    if (creatingRef.current) return;
     creatingRef.current = true;
     setCreatingCharacterId(characterId);
     setActionError(null);
-    const pending = pendingCreate.current?.characterId === characterId
+    const pending = pendingCreate.current?.characterId === characterId && pendingCreate.current.code === code
       ? pendingCreate.current
-      : { characterId, key: crypto.randomUUID() };
+      : { characterId, code, key: crypto.randomUUID() };
     pendingCreate.current = pending;
 
     try {
       const run = await createGameRun({
         idPersonagemJogador: characterId,
+        codigoJogo: code,
         chaveIdempotencia: pending.key,
       });
       pendingCreate.current = null;
+      setGameChoices(null);
       navigate(`/jogo/run/${run.idGameRun}`);
     } catch (error: unknown) {
       if (isConflict(error)) {
@@ -87,6 +90,29 @@ export const useGameLanding = () => {
       } else {
         setActionError(getApiErrorMessage(error, 'Não foi possível iniciar a run. Tente novamente.'));
       }
+    } finally {
+      creatingRef.current = false;
+      setCreatingCharacterId(null);
+    }
+  };
+
+  const startRun = async (characterId: number) => {
+    if (creatingRef.current || loading || activeRun || activeRunError ||
+      !characters.some((character) => character.idPersonagemJogador === characterId)) return;
+    creatingRef.current = true;
+    setCreatingCharacterId(characterId);
+    setActionError(null);
+    try {
+      const games = await getCharacterGames(characterId);
+      if (games.length === 0) {
+        setActionError('Ainda não há jogo publicado para o Sistema desta ficha.');
+      } else if (games.length > 1) setGameChoices({ characterId, games });
+      else {
+        creatingRef.current = false;
+        await commitRun(characterId, games[0]?.codigo);
+      }
+    } catch (error: unknown) {
+      setActionError(getApiErrorMessage(error, 'Não foi possível carregar os jogos desta mesa.'));
     } finally {
       creatingRef.current = false;
       setCreatingCharacterId(null);
@@ -126,6 +152,12 @@ export const useGameLanding = () => {
 
   return {
     characters,
+    gameChoices,
+    closeGameChoices: () => setGameChoices(null),
+    chooseGame: (code: string) => {
+      if (gameChoices?.games.some((game) => game.codigo === code))
+        void commitRun(gameChoices.characterId, code);
+    },
     activeRun,
     creatingCharacterId,
     loading,

@@ -321,6 +321,58 @@ public sealed class WikiMesaVisibilityTests
         Assert.Null(result.Dados!.IditemBase);
     }
 
+    [Fact]
+    public async Task MestreEditaNpcGlobalVisivelComoCopiaDaMesa()
+    {
+        Mock<IPersonagemService> personagens = new();
+        personagens.Setup(item => item.GetByIdAsync(12, EscopoMesaId)).ReturnsAsync((Personagen?)null);
+        personagens.Setup(item => item.GetByIdAsync(12, WikiEscopo.IdOficial)).ReturnsAsync(new Personagen
+        {
+            Idpersonagem = 12, IdWikiEscopo = WikiEscopo.IdOficial, Nome = "Original",
+            Idraca = 7, Visivel = true,
+        });
+        personagens.Setup(item => item.CreateAsync(It.IsAny<PersonagemDto>(), EscopoMesaId))
+            .ReturnsAsync((PersonagemDto _, int? __) => ResultPersonagem.Ok(new Personagen
+                { Idpersonagem = 88, IdWikiEscopo = EscopoMesaId }));
+        Mock<IRacaService> racas = new();
+        racas.Setup(item => item.GetByIdAsync(7, MesaId, WikiEscopo.IdOficial))
+            .ReturnsAsync(new RacaDto { Idraca = 7, Nome = "Raca", Visivel = true });
+        WikiMesaService service = CreateService(personagens: personagens.Object, racas: racas.Object);
+
+        var result = await service.AtualizarPersonagemAsync(MesaId, MestreId, false, 12,
+            new PersonagemDto { Nome = "Copia", Idraca = 7, Visivel = true });
+
+        Assert.True(result.Sucesso);
+        personagens.Verify(item => item.CreateAsync(It.Is<PersonagemDto>(dto =>
+            dto.IdOrigemGlobal == 12 && dto.Nome == "Copia"), EscopoMesaId), Times.Once);
+        personagens.Verify(item => item.UpdateAsync(12, It.IsAny<PersonagemDto>(),
+            WikiEscopo.IdOficial), Times.Never);
+    }
+
+    [Fact]
+    public async Task MestreEditaItemGlobalVisivelComoCopiaDaMesa()
+    {
+        Mock<IItemService> itens = new();
+        itens.Setup(item => item.GetByIdAsync("global", EscopoMesaId)).ReturnsAsync((ItemDto?)null);
+        itens.Setup(item => item.GetByIdAsync("global", WikiEscopo.IdOficial)).ReturnsAsync(new ItemDto
+        {
+            Iditem = "global", Nome = "Original", Visivel = true,
+        });
+        itens.Setup(item => item.CreateWithRuntimeAsync(It.IsAny<ItemCreateDto>(), EscopoMesaId))
+            .ReturnsAsync((ItemCreateDto _, int? __) => ItemSaveResultDto.Ok(new ItemDto
+                { Iditem = "copia", Nome = "Copia" }));
+        WikiMesaService service = CreateService(itens: itens.Object);
+
+        var result = await service.AtualizarItemAsync(MesaId, MestreId, false, "global",
+            new ItemUpdateDto { Iditem = "global", Nome = "Copia", Visivel = true });
+
+        Assert.True(result.Sucesso);
+        itens.Verify(item => item.CreateWithRuntimeAsync(It.Is<ItemCreateDto>(dto =>
+            dto.IdOrigemGlobal == "global" && dto.Nome == "Copia"), EscopoMesaId), Times.Once);
+        itens.Verify(item => item.UpdateWithRuntimeAsync(It.IsAny<ItemUpdateDto>(),
+            WikiEscopo.IdOficial), Times.Never);
+    }
+
     private static WikiMesaService CreateService(
         IPersonagemService? personagens = null,
         IRacaService? racas = null,

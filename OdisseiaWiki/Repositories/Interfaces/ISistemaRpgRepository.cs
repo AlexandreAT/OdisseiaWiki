@@ -23,6 +23,7 @@ public interface ISistemaRpgRepository
     Task<List<Mesa>> GetMesasWithoutVersionAsync();
     Task SynchronizeDefaultMesaVersionAsync(int idSistemaVersao);
     Task<List<Raca>> GetRacesAsync();
+    Task<IReadOnlyList<string>> GetConditionReferencesAsync(int idSistemaRpg, string codigo);
     Task<List<Passiva>> GetPassivasAsync();
     Task<SistemaEntidadeGlobalVinculoSnapshot?> GetGlobalEntityBindingAsync(
         SistemaEntidadeGlobalTipo tipoEntidade,

@@ -3,6 +3,7 @@ using OdisseiaWiki.Enums;
 using OdisseiaWiki.Services;
 using OdisseiaWiki.Services.Interfaces;
 using System.Text.Json;
+using OdisseiaWiki.Services.Helpers;
 
 namespace OdisseiaWiki.GameRuns.Battle;
 
@@ -39,6 +40,8 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
         int roundsWithoutProgress = 0;
         string? winnerId = null;
         GameBattleEndReason reason = GameBattleEndReason.EventLimit;
+        bool evaluatingAutomaticConditions = false;
+        bool roundHadProgress = false;
 
         Emit(GameBattleEventTypes.BattleStarted, null, null,
             new BattleStartedPayload(turnOrder.Select(index => actors[index].Spec.Id).ToArray()));
@@ -46,12 +49,13 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
             Emit(GameBattleEventTypes.InitiativeRolled, actors[entry.Index].Spec.Id, null,
                 new InitiativeRolledPayload(entry.Plan!.Formula, entry.Dice,
                     entry.Plan.Modifier, entry.Total));
+        foreach (ActorState actor in actors) EvaluateAutomaticConditions(actor);
 
         bool finished = false;
         bool[] pendingReaction = new bool[actors.Length];
         for (round = 1; !finished; round++)
         {
-            bool roundHadProgress = false;
+            roundHadProgress = false;
             int[] actionsThisRound = round == 1 && input.OpeningOpportunityAttack
                 ? [1, .. turnOrder] : turnOrder;
             for (int turnPosition = 0; turnPosition < actionsThisRound.Length; turnPosition++)
@@ -73,7 +77,11 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                 // The bound also covers an unavailable event for every action and every cooldown.
                 int worstCaseTurnEvents = (pendingReaction[actorIndex] ? 2 : 1) *
                     (12 + 2 * actor.Actions.Count +
-                     (actor.Spec.Rest is null ? 0 : 4 + 3 * actor.Actions.Count));
+                     (actor.Spec.Rest is null ? 0 : 4 + 3 * actor.Actions.Count) +
+                     4 * (actor.ActiveConditions.Count + actor.Actions.Sum(action => action.Spec.Conditions.Count)) +
+                     actor.Actions.Sum(action => action.Spec.Conditions.Sum(condition =>
+                         condition.Target == "TODOS_INIMIGOS" ? 4 * (actors.Length - 1) :
+                         condition.ResistanceTest is null ? 0 : 1)));
                 if (events.Count + worstCaseTurnEvents + 1 > input.MaxEvents)
                 {
                     reason = GameBattleEndReason.EventLimit;
@@ -91,6 +99,13 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                     actor.TurnCount++;
                     Emit(GameBattleEventTypes.TurnStarted, actor.Spec.Id, null,
                         new TurnStartedPayload(actor.TurnCount));
+                    TickConditions(actor, "INICIO_TURNO");
+                    if (actor.HitPoints == 0)
+                    {
+                        FinishIfDefeated(actorIndex);
+                        if (finished) break;
+                        continue;
+                    }
                     foreach (ActionState action in actor.Actions.Where(action => action.NextAvailableTurn > 0))
                     {
                         int remaining = Math.Max(0, action.NextAvailableTurn - actor.TurnCount);
@@ -98,6 +113,16 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                             new CooldownAdvancedPayload(action.Spec.Id, remaining));
                         if (remaining == 0)
                             action.NextAvailableTurn = 0;
+                    }
+                    if (actor.TurnsToSkip > 0)
+                    {
+                        actor.TurnsToSkip--;
+                        Emit(GameBattleEventTypes.TurnPassed, actor.Spec.Id, null,
+                            new TurnPassedPayload("CONDITION"));
+                        TickConditions(actor, "FIM_TURNO");
+                        AdvanceConditions(actor);
+                        if (actor.HitPoints == 0) FinishIfDefeated(actorIndex);
+                        continue;
                     }
                 }
                 bool acted = false;
@@ -117,6 +142,7 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                         Recover(actor, "hitPoints", rest.Life, rest.Percentage);
                         Recover(actor, "mana", rest.Mana, rest.Percentage);
                         Recover(actor, "stamina", rest.Stamina, rest.Percentage);
+                        RemoveConditions(actor, "DESCANSO_SIMPLES", "Descanso curto");
                         foreach (ActionState weapon in actor.Actions.Where(candidate => candidate.Spec.Magazine is not null))
                         {
                             int before = weapon.Loaded;
@@ -161,7 +187,8 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                         new ActionSelectedPayload(action.Spec.Id,
                             openingOpportunity ? $"Oportunidade · {action.Spec.Name}" :
                             reaction ? $"Revidar · {action.Spec.Name}" : action.Spec.Name, false)
-                        { Reaction = reaction, Quantity = quantity });
+                        { Reaction = reaction, Quantity = quantity,
+                          DirectUse = action.Spec.Utility is not null });
                     if (action.Spec.ManaCost > 0)
                     {
                         int before = actor.Mana;
@@ -183,12 +210,62 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                     if (action.Spec.UsesUntilRest > 0)
                         action.UsesRemaining -= quantity;
 
+                    if (action.Spec.Utility is { } utility)
+                    {
+                        if (action.RemainingQuantity is int remaining)
+                        {
+                            action.RemainingQuantity = remaining - 1;
+                            Emit(GameBattleEventTypes.ItemConsumed, actor.Spec.Id, null,
+                                new ItemConsumedPayload(action.Spec.Id, action.RemainingQuantity.Value));
+                        }
+                        Recover(actor, "hitPoints", utility.RestoreLife, false, action.Spec.Id, true);
+                        Recover(actor, "mana", utility.RestoreMana, false, action.Spec.Id);
+                        Recover(actor, "stamina", utility.RestoreStamina, false, action.Spec.Id);
+                        ApplyActionConditions(actor, action, null, null, target);
+                        if (action.Spec.CooldownTurns > 0)
+                        {
+                            action.NextAvailableTurn = actor.TurnCount + action.Spec.CooldownTurns + 1;
+                            Emit(GameBattleEventTypes.CooldownStarted, actor.Spec.Id, null,
+                                new CooldownStartedPayload(action.Spec.Id, action.Spec.CooldownTurns,
+                                    action.NextAvailableTurn));
+                        }
+                        acted = true;
+                        break;
+                    }
+
                     GameplayRollPlan rollPlan = openingOpportunity
                         ? action.Spec.Roll with { Mode = GameplayRollMode.Vantagem }
                         : action.Spec.Roll;
+                    int conditionModifier = actor.ActiveConditions.SelectMany(EffectiveEffects)
+                        .Where(effect => (effect.Operacao.Equals("MODIFICAR_ROLAGEM", StringComparison.OrdinalIgnoreCase) ||
+                            effect.Operacao.Equals("MODIFICAR_ATRIBUTO", StringComparison.OrdinalIgnoreCase)) &&
+                            (effect.Recurso.Equals("TODOS", StringComparison.OrdinalIgnoreCase) ||
+                             effect.Recurso.Equals(action.Spec.AttributeCode, StringComparison.OrdinalIgnoreCase)))
+                        .Sum(effect => effect.Valor);
+                    bool advantage = rollPlan.Mode == GameplayRollMode.Vantagem || actor.ActiveConditions
+                        .SelectMany(EffectiveEffects).Any(effect => effect.Operacao == "VANTAGEM");
+                    bool disadvantage = rollPlan.Mode == GameplayRollMode.Desvantagem || actor.ActiveConditions
+                        .SelectMany(EffectiveEffects).Any(effect => effect.Operacao == "DESVANTAGEM");
+                    if (conditionModifier != 0 || advantage || disadvantage)
+                        rollPlan = rollPlan with
+                        {
+                            Modifier = checked(rollPlan.Modifier + conditionModifier),
+                            Mode = advantage == disadvantage ? GameplayRollMode.Normal :
+                                advantage ? GameplayRollMode.Vantagem : GameplayRollMode.Desvantagem,
+                            ModifierDetails = conditionModifier == 0 ? rollPlan.ModifierDetails :
+                                (rollPlan.ModifierDetails ?? []).Concat([new GameplayModifierDto
+                                {
+                                    Codigo = "CONDICAO", Nome = "Condições ativas",
+                                    Origem = "CONDICAO", Valor = conditionModifier,
+                                }]).ToArray(),
+                        };
                     GameplayRollResultDto roll = evaluator.Evaluate(rollPlan);
                     GameplayResolvedResultRange range = ResolveRange(action.Spec, roll);
-                    int damage = checked(action.Spec.DamageByResultCode[range.Code] * quantity);
+                    int baseDamage = checked(action.Spec.DamageByResultCode[range.Code] * quantity);
+                    int damageModifier = actor.ActiveConditions.SelectMany(EffectiveEffects)
+                        .Where(effect => effect.Operacao == "MODIFICAR_DANO" && effect.Recurso == "TODOS")
+                        .Sum(effect => effect.Valor);
+                    int damage = baseDamage > 0 ? Math.Max(0, checked(baseDamage + damageModifier)) : 0;
                     Emit(GameBattleEventTypes.DiceRolled, actor.Spec.Id, target.Spec.Id,
                         new DiceRolledPayload(action.Spec.Id, rollPlan.Mode, roll, range.Code)
                         {
@@ -218,6 +295,12 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                             target.Shield != shieldBefore ||
                             target.Protection != protectionBefore;
                     }
+
+                    // Uma origem em área ainda alcança os outros inimigos vivos quando
+                    // o alvo primário cai pelo dano da mesma ação.
+                    ApplyActionConditions(actor, action, roll, range, target);
+                    if (action.Spec.RemovesConditions.Count > 0 && SuccessfulRange(range))
+                        RemoveConditions(actor, "MAGIA", "Magia", action.Spec.RemovesConditions);
 
                     if (target.HitPoints == 0)
                     {
@@ -262,6 +345,12 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                 if (!acted)
                     Emit(GameBattleEventTypes.TurnPassed, actor.Spec.Id, null,
                         new TurnPassedPayload("NO_AVAILABLE_ACTION"));
+                if (!openingOpportunity && actor.HitPoints > 0)
+                {
+                    TickConditions(actor, "FIM_TURNO");
+                    AdvanceConditions(actor);
+                    if (actor.HitPoints == 0) FinishIfDefeated(actorIndex);
+                }
                 }
                 if (finished)
                     break;
@@ -316,9 +405,9 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                         defender.Protection -= absorbed;
                         after = defender.Protection;
                         break;
-                    case GameBattleDefenseKind.Armor when defender.Armor > 0:
-                        absorbed = Math.Min(remaining, defender.Armor);
-                        after = defender.Armor;
+                    case GameBattleDefenseKind.Armor when defender.EffectiveArmor() > 0:
+                        absorbed = Math.Min(remaining, defender.EffectiveArmor());
+                        after = defender.EffectiveArmor();
                         break;
                     default:
                         continue;
@@ -330,20 +419,296 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
             return remaining;
         }
 
+        void FinishIfDefeated(int defeatedIndex)
+        {
+            ActorState defeated = actors[defeatedIndex];
+            Emit(GameBattleEventTypes.ActorDefeated, defeated.Spec.Id, null,
+                new ActorDefeatedPayload(defeated.Spec.Id));
+            if (defeatedIndex == 0 || actors.Skip(1).All(candidate => candidate.HitPoints == 0))
+            {
+                winnerId = defeatedIndex == 0 ? actors.Skip(1).First(candidate => candidate.HitPoints > 0).Spec.Id
+                    : actors[0].Spec.Id;
+                reason = GameBattleEndReason.ActorDefeated;
+                finished = true;
+            }
+        }
+
+        void ApplyActionConditions(ActorState source, ActionState action, GameplayRollResultDto? roll,
+            GameplayResolvedResultRange? range, ActorState target)
+        {
+            foreach (GameBattleConditionApplication origin in action.Spec.Conditions)
+            {
+                bool applies = origin.Trigger.ToUpperInvariant() switch
+                {
+                    "AO_USAR" => true,
+                    "RESULTADO_NATURAL" => roll?.ValorNatural.HasValue == true &&
+                        (origin.NaturalResults.Contains(roll.ValorNatural.Value) ||
+                         roll.ValorNatural.Value >= (origin.NaturalMinimum ?? 1) &&
+                         roll.ValorNatural.Value <= (origin.NaturalMaximum ?? 20) &&
+                         (origin.NaturalMinimum.HasValue || origin.NaturalMaximum.HasValue)),
+                    "RESULTADO_CLASSIFICADO" => !string.IsNullOrWhiteSpace(origin.OutcomeCode) &&
+                        range is not null && range.Code.Equals(origin.OutcomeCode, StringComparison.OrdinalIgnoreCase),
+                    _ => range is not null && SuccessfulRange(range),
+                };
+                if (!applies) continue;
+                IEnumerable<ActorState> recipients = origin.Target.Equals("USUARIO", StringComparison.OrdinalIgnoreCase)
+                    ? [source] : origin.Target.Equals("TODOS_INIMIGOS", StringComparison.OrdinalIgnoreCase)
+                        ? source == actors[0] ? actors.Skip(1) : [actors[0]] : [target];
+                GameBattleConditionRule rule = origin.Rule;
+                int value = origin.Value ?? rule.Value;
+                int? turns = origin.Unit.Equals("Turno", StringComparison.OrdinalIgnoreCase)
+                    ? origin.Duration : null;
+                int? hours = origin.Unit.Equals("Hora", StringComparison.OrdinalIgnoreCase)
+                    ? origin.Duration : null;
+                foreach (ActorState recipient in recipients.Where(candidate => candidate.HitPoints > 0))
+                {
+                    if (origin.ResistanceTest is { } resistance)
+                    {
+                        int[] dice = Enumerable.Range(0, resistance.Dice)
+                            .Select(_ => random.NextInclusive(resistance.Faces)).ToArray();
+                        bool advantage = recipient.ActiveConditions.SelectMany(EffectiveEffects)
+                            .Any(effect => effect.Operacao.Equals("VANTAGEM", StringComparison.OrdinalIgnoreCase));
+                        bool disadvantage = recipient.ActiveConditions.SelectMany(EffectiveEffects)
+                            .Any(effect => effect.Operacao.Equals("DESVANTAGEM", StringComparison.OrdinalIgnoreCase));
+                        GameplayRollMode mode = advantage == disadvantage ? GameplayRollMode.Normal :
+                            advantage ? GameplayRollMode.Vantagem : GameplayRollMode.Desvantagem;
+                        int[]? alternativeDice = mode == GameplayRollMode.Normal ? null :
+                            Enumerable.Range(0, resistance.Dice)
+                                .Select(_ => random.NextInclusive(resistance.Faces)).ToArray();
+                        int attribute = recipient.Spec.Attributes.FirstOrDefault(pair => pair.Key.Equals(
+                            resistance.AttributeCode, StringComparison.OrdinalIgnoreCase)).Value;
+                        int modifier = checked(attribute + recipient.ActiveConditions.SelectMany(EffectiveEffects)
+                            .Where(effect => effect.Operacao is ("MODIFICAR_ATRIBUTO" or "MODIFICAR_ROLAGEM") &&
+                                (effect.Recurso.Equals(resistance.AttributeCode, StringComparison.OrdinalIgnoreCase) ||
+                                 effect.Recurso.Equals("TODOS", StringComparison.OrdinalIgnoreCase)))
+                            .Sum(effect => effect.Valor));
+                        int rolled = alternativeDice is null ? dice.Sum() :
+                            mode == GameplayRollMode.Vantagem ? Math.Max(dice.Sum(), alternativeDice.Sum()) :
+                            Math.Min(dice.Sum(), alternativeDice.Sum());
+                        int total = checked(rolled + modifier);
+                        bool passed = total >= resistance.Difficulty;
+                        Emit(GameBattleEventTypes.ResistanceRolled, recipient.Spec.Id, source.Spec.Id,
+                            new ResistanceRolledPayload(rule.Code, dice, resistance.AttributeCode,
+                                modifier, total, resistance.Difficulty, passed)
+                            { AlternativeDice = alternativeDice, Mode = mode });
+                        if (passed) continue;
+                    }
+                    int previous = recipient.ActiveConditions.FindIndex(condition => condition.Rule.Code == rule.Code);
+                    if (previous >= 0 && !rule.Stackable && !rule.ReplaceExisting) continue;
+                    if (previous >= 0 && !rule.Stackable) recipient.ActiveConditions.RemoveAt(previous);
+                    recipient.ActiveConditions.Add(new GameBattleActiveCondition(rule, value, turns, hours)
+                    { RemainingMinutes = hours.HasValue ? checked(hours.Value * 60) : null,
+                      OverrideValue = origin.Value, EffectValues = origin.EffectValues });
+                    Emit(GameBattleEventTypes.ConditionApplied, source.Spec.Id, recipient.Spec.Id,
+                        new ConditionAppliedPayload(rule.Code, rule.Name, value, turns, hours));
+                    foreach (SistemaCondicaoEfeito effect in EffectiveEffects(recipient.ActiveConditions[^1])
+                        .Where(effect => effect.Momento.Equals("AO_APLICAR", StringComparison.OrdinalIgnoreCase)))
+                        ApplyConditionEffect(recipient, rule, effect);
+                    ClampToConditionLimits(recipient);
+                }
+            }
+        }
+
+        void TickConditions(ActorState target, string moment)
+        {
+            foreach (GameBattleActiveCondition condition in target.ActiveConditions.ToArray())
+                foreach (SistemaCondicaoEfeito effect in EffectiveEffects(condition)
+                    .Where(effect => effect.Momento.Equals(moment, StringComparison.OrdinalIgnoreCase)))
+                    ApplyConditionEffect(target, condition.Rule, effect);
+        }
+
+        void ApplyConditionEffect(ActorState target, GameBattleConditionRule rule, SistemaCondicaoEfeito effect)
+        {
+            if (effect.Operacao.Equals("PERDER_TURNOS", StringComparison.OrdinalIgnoreCase))
+            {
+                target.TurnsToSkip = Math.Clamp(checked(target.TurnsToSkip + effect.Valor), 0, 100);
+                return;
+            }
+            if (effect.Operacao.Equals("REDUZIR_LIMITE_PERCENTUAL", StringComparison.OrdinalIgnoreCase) ||
+                effect.Operacao.Equals("BLOQUEAR_RECUPERACAO", StringComparison.OrdinalIgnoreCase) ||
+                effect.Operacao.Equals("MODIFICAR_ROLAGEM", StringComparison.OrdinalIgnoreCase) ||
+                effect.Operacao.Equals("MODIFICAR_ATRIBUTO", StringComparison.OrdinalIgnoreCase) ||
+                effect.Operacao.Equals("MODIFICAR_DANO", StringComparison.OrdinalIgnoreCase) ||
+                effect.Operacao.Equals("MODIFICAR_DEFESA", StringComparison.OrdinalIgnoreCase) ||
+                effect.Operacao.Equals("MODIFICAR_LIMITE_PERCENTUAL", StringComparison.OrdinalIgnoreCase) ||
+                effect.Operacao.Equals("DESVANTAGEM", StringComparison.OrdinalIgnoreCase) ||
+                effect.Operacao.Equals("VANTAGEM", StringComparison.OrdinalIgnoreCase)) return;
+            string resource = effect.Recurso.ToUpperInvariant();
+            int before = resource switch
+            {
+                "VIDA" => target.HitPoints, "MANA" => target.Mana,
+                "ESTAMINA" => target.Stamina, _ => -1,
+            };
+            if (before < 0) return;
+            if (effect.Operacao.Equals("SOMAR", StringComparison.OrdinalIgnoreCase) &&
+                target.BlocksRecovery(resource)) return;
+            int maximum = target.EffectiveMaximum(resource);
+            int after = effect.Operacao.ToUpperInvariant() switch
+            {
+                "SUBTRAIR" => Math.Max(0, before - effect.Valor),
+                "SOMAR" => Math.Min(maximum, before + effect.Valor),
+                "DEFINIR" => Math.Clamp(effect.Valor, 0, maximum),
+                _ => before,
+            };
+            switch (resource)
+            {
+                case "VIDA": target.HitPoints = after; break;
+                case "MANA": target.Mana = after; break;
+                case "ESTAMINA": target.Stamina = after; break;
+            }
+            EmitChange(resource switch { "VIDA" => "hitPoints", "MANA" => "mana", _ => "stamina" },
+                before, after, $"condicao:{rule.Code}", target.Spec.Id, null);
+        }
+
+        void ClampToConditionLimits(ActorState target)
+        {
+            foreach (string resource in new[] { "VIDA", "MANA", "ESTAMINA" })
+            {
+                int maximum = target.EffectiveMaximum(resource);
+                int before = resource switch
+                {
+                    "VIDA" => target.HitPoints, "MANA" => target.Mana, _ => target.Stamina,
+                };
+                int after = Math.Min(before, maximum);
+                switch (resource)
+                {
+                    case "VIDA": target.HitPoints = after; break;
+                    case "MANA": target.Mana = after; break;
+                    default: target.Stamina = after; break;
+                }
+                EmitChange(resource switch { "VIDA" => "hitPoints", "MANA" => "mana", _ => "stamina" },
+                    before, after, null, target.Spec.Id, null);
+            }
+        }
+
+        void AdvanceConditions(ActorState actor)
+        {
+            for (int index = actor.ActiveConditions.Count - 1; index >= 0; index--)
+            {
+                GameBattleActiveCondition active = actor.ActiveConditions[index];
+                if (active.RemainingTurns is not > 0) continue;
+                int remaining = active.RemainingTurns.Value - 1;
+                // A duração explícita da origem é um prazo, independente de
+                // outras formas de recuperação marcadas no Sistema.
+                if (remaining == 0)
+                {
+                    actor.ActiveConditions.RemoveAt(index);
+                    Emit(GameBattleEventTypes.ConditionExpired, actor.Spec.Id, null,
+                        new ConditionExpiredPayload(active.Rule.Code, active.Rule.Name, "DURACAO"));
+                }
+                else actor.ActiveConditions[index] = active with { RemainingTurns = remaining };
+            }
+        }
+
+        void RemoveConditions(ActorState actor, string recoveryCode, string reason,
+            IReadOnlyList<string>? allowedCodes = null)
+        {
+            for (int index = actor.ActiveConditions.Count - 1; index >= 0; index--)
+            {
+                GameBattleActiveCondition active = actor.ActiveConditions[index];
+                if (allowedCodes is not null && !allowedCodes.Contains(active.Rule.Code,
+                    StringComparer.OrdinalIgnoreCase)) continue;
+                if (!active.Rule.Recovery.Split(';').Any(code =>
+                    code.Trim().Equals(recoveryCode, StringComparison.OrdinalIgnoreCase))) continue;
+                actor.ActiveConditions.RemoveAt(index);
+                Emit(GameBattleEventTypes.ConditionExpired, actor.Spec.Id, null,
+                    new ConditionExpiredPayload(active.Rule.Code, active.Rule.Name, reason));
+            }
+        }
+
+        void EvaluateAutomaticConditions(ActorState actor)
+        {
+            if (evaluatingAutomaticConditions || actor.HitPoints == 0) return;
+            evaluatingAutomaticConditions = true;
+            try
+            {
+                foreach (GameBattleAutomaticCondition automatic in input.AutomaticConditions)
+                {
+                    decimal? current = automatic.Resource.ToUpperInvariant() switch
+                    {
+                        "VIDA" => actor.HitPoints,
+                        "MANA" => actor.Mana,
+                        "ESTAMINA" => actor.Stamina,
+                        _ => null,
+                    };
+                    if (!current.HasValue) continue;
+                    bool triggered = automatic.Comparison switch
+                    {
+                        "<" => current.Value < automatic.Threshold,
+                        "<=" => current.Value <= automatic.Threshold,
+                        "==" => current.Value == automatic.Threshold,
+                        ">" => current.Value > automatic.Threshold,
+                        ">=" => current.Value >= automatic.Threshold,
+                        _ => false,
+                    };
+                    GameBattleActiveCondition? existing = actor.ActiveConditions.FirstOrDefault(item =>
+                        item.Rule.Code.Equals(automatic.Rule.Code, StringComparison.OrdinalIgnoreCase));
+                    if (!triggered)
+                    {
+                        if (existing is not null && automatic.Rule.Recovery.Split(';').Any(code =>
+                            code.Trim().Equals("GATILHO_CESSOU", StringComparison.OrdinalIgnoreCase)))
+                        {
+                            actor.ActiveConditions.Remove(existing);
+                            Emit(GameBattleEventTypes.ConditionExpired, actor.Spec.Id, null,
+                                new ConditionExpiredPayload(existing.Rule.Code, existing.Rule.Name, "GATILHO_CESSOU"));
+                        }
+                        continue;
+                    }
+                    if (existing is not null) continue;
+                    int? turns = automatic.Unit.Equals("Turno", StringComparison.OrdinalIgnoreCase)
+                        ? automatic.Duration : null;
+                    int? hours = automatic.Unit.Equals("Hora", StringComparison.OrdinalIgnoreCase)
+                        ? automatic.Duration : null;
+                    var active = new GameBattleActiveCondition(automatic.Rule,
+                        automatic.Rule.Value, turns, hours)
+                    { RemainingMinutes = hours.HasValue ? checked(hours.Value * 60) : null };
+                    actor.ActiveConditions.Add(active);
+                    Emit(GameBattleEventTypes.ConditionApplied, actor.Spec.Id, actor.Spec.Id,
+                        new ConditionAppliedPayload(automatic.Rule.Code, automatic.Rule.Name,
+                            automatic.Rule.Value, turns, hours));
+                    foreach (SistemaCondicaoEfeito effect in EffectiveEffects(active).Where(effect =>
+                        effect.Momento.Equals("AO_APLICAR", StringComparison.OrdinalIgnoreCase)))
+                        ApplyConditionEffect(actor, automatic.Rule, effect);
+                    ClampToConditionLimits(actor);
+                }
+            }
+            finally { evaluatingAutomaticConditions = false; }
+        }
+
         void EmitChange(string resource, int before, int after, string? actionId, string actorId, string? targetId)
         {
             if (before != after)
+            {
+                if (resource == "hitPoints") roundHadProgress = true;
                 Emit(GameBattleEventTypes.ResourceChanged, actorId, targetId,
                     new ResourceChangedPayload(resource, before, after, actionId));
+                if (resource is "hitPoints" or "mana" or "stamina")
+                {
+                    ActorState? recipient = actors.FirstOrDefault(candidate =>
+                        candidate.Spec.Id == (targetId ?? actorId));
+                    if (recipient is not null) EvaluateAutomaticConditions(recipient);
+                }
+            }
         }
 
-        void Recover(ActorState actor, string resource, decimal configured, bool percentage)
+        void Recover(ActorState actor, string resource, decimal configured, bool percentage,
+            string actionId = "descanso", bool cureAtFull = false)
         {
+            string resourceCode = resource switch
+            {
+                "hitPoints" => "VIDA", "mana" => "MANA", _ => "ESTAMINA",
+            };
+            if (actor.BlocksRecovery(resourceCode))
+            {
+                if (resource == "hitPoints" && cureAtFull && configured > 0)
+                    RemoveConditions(actor, "CURA", "Cura");
+                return;
+            }
             int maximum = resource switch
             {
-                "hitPoints" => actor.Spec.MaximumHitPoints,
-                "mana" => actor.Spec.MaximumMana,
-                _ => actor.Spec.MaximumStamina,
+                "hitPoints" => actor.EffectiveMaximum("VIDA"),
+                "mana" => actor.EffectiveMaximum("MANA"),
+                _ => actor.EffectiveMaximum("ESTAMINA"),
             };
             int before = resource switch
             {
@@ -362,7 +727,9 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                 case "mana": actor.Mana = after; break;
                 default: actor.Stamina = after; break;
             }
-            EmitChange(resource, before, after, "descanso", actor.Spec.Id, null);
+            EmitChange(resource, before, after, actionId, actor.Spec.Id, null);
+            if (resource == "hitPoints" && (after > before || cureAtFull && configured > 0))
+                RemoveConditions(actor, "CURA", "Cura");
         }
 
         void Emit(string type, string? actorId, string? targetId, GameBattleEventPayload payload, int? eventRound = null)
@@ -395,6 +762,8 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
 
     private static int EffectiveQuantity(ActionState action)
     {
+        if (action.Spec.Utility is not null)
+            return action.RemainingQuantity is <= 0 ? 0 : 1;
         int quantity = action.Spec.AttacksPerTurn;
         if (action.Spec.Magazine is { } magazine)
             quantity = Math.Min(quantity, action.Loaded / magazine.AmmoPerUse);
@@ -407,6 +776,20 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
     {
         if (action.NextAvailableTurn > actor.TurnCount)
             return "COOLDOWN";
+        if (action.Spec.Utility is { } utility)
+        {
+            if (quantity == 0) return "ITEM_ESGOTADO";
+            bool hasUseEffect = action.Spec.Conditions.Any(origin =>
+                origin.Trigger.Equals("AO_USAR", StringComparison.OrdinalIgnoreCase));
+            bool canCure = utility.RestoreLife > 0 && actor.ActiveConditions.Any(condition =>
+                condition.Rule.Recovery.Split(';').Any(code =>
+                    code.Trim().Equals("CURA", StringComparison.OrdinalIgnoreCase)));
+            if (!hasUseEffect && !canCure &&
+                (utility.RestoreLife == 0 || actor.HitPoints >= actor.EffectiveMaximum("VIDA")) &&
+                (utility.RestoreMana == 0 || actor.Mana >= actor.EffectiveMaximum("MANA")) &&
+                (utility.RestoreStamina == 0 || actor.Stamina >= actor.EffectiveMaximum("ESTAMINA")))
+                return "RECURSOS_CHEIOS";
+        }
         if (action.Spec.UsesUntilRest > 0 && action.UsesRemaining == 0)
             return "USES";
         if (quantity == 0 && action.Spec.Magazine is { } magazine &&
@@ -419,6 +802,24 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
             (long)action.Spec.AdditionalAttackStaminaCost * (quantity - 1))
             return "STAMINA";
         return null;
+    }
+
+    private static bool SuccessfulRange(GameplayResolvedResultRange range)
+    {
+        if (!string.IsNullOrWhiteSpace(range.EffectJson))
+        {
+            try
+            {
+                using JsonDocument document = JsonDocument.Parse(range.EffectJson);
+                if (document.RootElement.ValueKind == JsonValueKind.Object &&
+                    document.RootElement.TryGetProperty("aplicaCondicoes", out JsonElement enabled) &&
+                    enabled.ValueKind is JsonValueKind.True or JsonValueKind.False)
+                    return enabled.GetBoolean();
+            }
+            catch (JsonException) { /* Legacy free-form effects use the existing result code. */ }
+        }
+        return !range.CriticalFailure && (range.Critical ||
+            range.Code.StartsWith("ACERTO", StringComparison.OrdinalIgnoreCase));
     }
 
     private static GameplayResolvedResultRange ResolveRange(GameBattleActionSpec action, GameplayRollResultDto roll)
@@ -447,6 +848,37 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                 ?? throw new InvalidOperationException("Ação sem faixa de resultado executável.");
 
         throw new InvalidOperationException("A rolagem ficou fora das faixas configuradas.");
+    }
+
+    private static IEnumerable<SistemaCondicaoEfeito> EffectiveEffects(GameBattleActiveCondition condition)
+    {
+        IReadOnlyList<SistemaCondicaoEfeito> effects = condition.Rule.Effects.Count > 0
+            ? condition.Rule.Effects
+            : [new(condition.Rule.Operation, condition.Rule.Resource, condition.Value,
+                condition.Rule.Moment)];
+        bool usedOverride = false;
+        for (int index = 0; index < effects.Count; index++)
+        {
+            SistemaCondicaoEfeito effect = effects[index];
+            if (condition.EffectValues.TryGetValue(index, out int configured))
+            {
+                yield return effect with { Valor = configured };
+                continue;
+            }
+            if (!usedOverride && effect.Operacao is not ("DESVANTAGEM" or "VANTAGEM" or "BLOQUEAR_RECUPERACAO"))
+            {
+                usedOverride = true;
+                if (condition.OverrideValue.HasValue ||
+                    condition.Rule.Effects.Count == 0 || condition.Rule.Operation.Length > 0 &&
+                    effect.Operacao.Equals(condition.Rule.Operation, StringComparison.OrdinalIgnoreCase) &&
+                    effect.Recurso.Equals(condition.Rule.Resource, StringComparison.OrdinalIgnoreCase))
+                {
+                    yield return effect with { Valor = condition.OverrideValue ?? condition.Value };
+                    continue;
+                }
+            }
+            yield return effect;
+        }
     }
 
     private static void Validate(GameBattleInput input)
@@ -479,10 +911,12 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
         foreach (GameBattleActorSpec actor in new[] { input.FirstActor, input.SecondActor }
             .Concat(input.AdditionalEnemies))
         {
+            var initialState = new ActorState(actor);
             if (string.IsNullOrWhiteSpace(actor.Name) ||
-                actor.MaximumHitPoints < 1 || actor.HitPoints < 1 || actor.HitPoints > actor.MaximumHitPoints ||
-                actor.MaximumMana < 0 || actor.Mana < 0 || actor.Mana > actor.MaximumMana ||
-                actor.MaximumStamina < 0 || actor.Stamina < 0 || actor.Stamina > actor.MaximumStamina ||
+                actor.MaximumHitPoints < 1 || actor.HitPoints < 1 || actor.HitPoints > initialState.EffectiveMaximum("VIDA") ||
+                actor.MaximumMana < 0 || actor.Mana < 0 || actor.Mana > initialState.EffectiveMaximum("MANA") ||
+                actor.MaximumStamina < 0 || actor.Stamina < 0 || actor.Stamina > initialState.EffectiveMaximum("ESTAMINA") ||
+                actor.TurnsToSkip is < 0 or > 100 ||
                 actor.Defenses is null || actor.Defenses.Shield < 0 ||
                 actor.Defenses.Protection < 0 || actor.Defenses.Armor < 0 ||
                 actor.Actions is null || actor.Actions.Count is < 1 or > 8)
@@ -509,22 +943,32 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                     action.StaminaCost < 0 || action.CooldownTurns is < 0 or > 100 ||
                     action.AttacksPerTurn is < 1 or > 100 || action.AdditionalAttackStaminaCost < 0 ||
                     action.UsesUntilRest is < 0 or > 100000 ||
-                    action.Roll is null || action.Roll.Groups is null ||
-                    action.Roll.Groups.Count != 1 || action.Roll.Groups[0] != new GameplayDiceGroupSpec(1, 20) ||
-                    !Enum.IsDefined(action.Roll.Mode) ||
-                    action.ResultRanges is null || action.ResultRanges.Count == 0 ||
-                    action.ResultRanges.Any(range => range is null || string.IsNullOrWhiteSpace(range.Code) ||
-                        range.Minimum > range.Maximum) ||
-                    !action.ResultRanges.Any(range => !range.RequiresNatural) ||
-                    action.DamageByResultCode is null ||
-                    action.ResultRanges.Any(range => !action.DamageByResultCode.TryGetValue(range.Code, out int damage) || damage < 0))
+                    action.Utility is { } utility &&
+                        (utility.InitialQuantity is <= 0 or > 1000000 || utility.RestoreLife < 0 ||
+                         utility.RestoreMana < 0 || utility.RestoreStamina < 0) ||
+                    action.Utility is null &&
+                        (action.Roll is null || action.Roll.Groups is null ||
+                         action.Roll.Groups.Count != 1 || action.Roll.Groups[0] != new GameplayDiceGroupSpec(1, 20) ||
+                         !Enum.IsDefined(action.Roll.Mode) ||
+                         action.ResultRanges is null || action.ResultRanges.Count == 0 ||
+                         action.ResultRanges.Any(range => range is null || string.IsNullOrWhiteSpace(range.Code) ||
+                             range.Minimum > range.Maximum) ||
+                         !action.ResultRanges.Any(range => !range.RequiresNatural) ||
+                         action.DamageByResultCode is null ||
+                         action.ResultRanges.Any(range => !action.DamageByResultCode.TryGetValue(range.Code, out int damage) || damage < 0)))
                     throw new ArgumentException($"A ação {action.Id} não possui regra executável válida.", nameof(input));
                 if (action.Magazine is { } magazine &&
                     (magazine.Capacity < 1 || magazine.Loaded < 0 || magazine.Loaded > magazine.Capacity ||
                      magazine.Reserve < 0 || magazine.AmmoPerUse < 1 ||
                      (long)magazine.AmmoPerUse * action.AttacksPerTurn > magazine.Capacity))
                     throw new ArgumentException($"A ação {action.Id} tem munição inválida.", nameof(input));
+                if (action.Conditions.Any(origin => origin.Target is not ("ALVO" or "USUARIO" or "TODOS_INIMIGOS") ||
+                    origin.ResistanceTest is { } test && (test.Dice is < 1 or > 10 ||
+                        test.Faces is < 2 or > 1000 || test.Difficulty is < -1000000 or > 1000000 ||
+                        string.IsNullOrWhiteSpace(test.AttributeCode) || test.AttributeCode.Length > 50)))
+                    throw new ArgumentException($"A reação da ação {action.Id} é inválida.", nameof(input));
 
+                if (action.Utility is not null) continue;
                 for (int natural = 1; natural <= 20; natural++)
                 {
                     int metric = action.UseTotalForRanges
@@ -554,6 +998,8 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
             Protection = spec.Defenses.Protection;
             Armor = spec.Defenses.Armor;
             Actions = spec.Actions.Select(action => new ActionState(action)).ToArray();
+            ActiveConditions = spec.ActiveConditions.ToList();
+            TurnsToSkip = spec.TurnsToSkip;
         }
 
         public GameBattleActorSpec Spec { get; }
@@ -564,19 +1010,44 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
         public int Protection { get; set; }
         public int Armor { get; }
         public int TurnCount { get; set; }
+        public int TurnsToSkip { get; set; }
         public bool SkipRestNextTurn { get; set; }
         public IReadOnlyList<ActionState> Actions { get; }
+        public List<GameBattleActiveCondition> ActiveConditions { get; }
+
+        public bool BlocksRecovery(string resource) => ActiveConditions.SelectMany(EffectiveEffects).Any(effect =>
+            effect.Operacao.Equals("BLOQUEAR_RECUPERACAO", StringComparison.OrdinalIgnoreCase) &&
+            effect.Recurso.Equals(resource, StringComparison.OrdinalIgnoreCase));
+
+        public int EffectiveArmor() => Math.Max(0, checked(Armor + ActiveConditions.SelectMany(EffectiveEffects)
+            .Where(effect => effect.Operacao == "MODIFICAR_DEFESA" && effect.Recurso == "ARMADURA")
+            .Sum(effect => effect.Valor)));
+
+        public int EffectiveMaximum(string resource)
+        {
+            int maximum = resource switch
+            {
+                "VIDA" => Spec.MaximumHitPoints, "MANA" => Spec.MaximumMana,
+                "ESTAMINA" => Spec.MaximumStamina, _ => 0,
+            };
+            foreach (SistemaCondicaoEfeito effect in ActiveConditions.SelectMany(EffectiveEffects).Where(effect =>
+                effect.Recurso.Equals(resource, StringComparison.OrdinalIgnoreCase) &&
+                effect.Operacao is ("REDUZIR_LIMITE_PERCENTUAL" or "MODIFICAR_LIMITE_PERCENTUAL")))
+                maximum = (int)Math.Clamp(Math.Floor(maximum * (effect.Operacao == "REDUZIR_LIMITE_PERCENTUAL"
+                    ? 100 - Math.Clamp(effect.Valor, 0, 100) : 100 + effect.Valor) / 100m), 0, 1000000);
+            return maximum;
+        }
 
         public GameBattleActorState ToSnapshot() => new(
             Spec.Id,
             Spec.Name,
             HitPoints,
-            Spec.MaximumHitPoints,
+            EffectiveMaximum("VIDA"),
             Mana,
-            Spec.MaximumMana,
+            EffectiveMaximum("MANA"),
             Stamina,
-            Spec.MaximumStamina,
-            new GameBattleDefenses(Shield, Protection, Armor),
+            EffectiveMaximum("ESTAMINA"),
+            new GameBattleDefenses(Shield, Protection, EffectiveArmor()),
             Actions.Select(action => new GameBattleActionState(
                 action.Spec.Id,
                 action.Spec.Magazine?.Capacity,
@@ -585,7 +1056,8 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                 Math.Max(0, action.NextAvailableTurn - (TurnCount + 1)))
             {
                 RemainingUses = action.Spec.UsesUntilRest > 0 ? action.UsesRemaining : null,
-            }).ToArray());
+                RemainingQuantity = action.RemainingQuantity,
+            }).ToArray()) { ActiveConditions = ActiveConditions.ToArray(), TurnsToSkip = TurnsToSkip };
     }
 
     private sealed class ActionState
@@ -596,12 +1068,14 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
             Loaded = spec.Magazine?.Loaded ?? 0;
             Reserve = spec.Magazine?.Reserve ?? 0;
             UsesRemaining = Math.Clamp(spec.InitialUsesRemaining ?? spec.UsesUntilRest, 0, spec.UsesUntilRest);
+            RemainingQuantity = spec.Utility?.InitialQuantity;
         }
 
         public GameBattleActionSpec Spec { get; }
         public int Loaded { get; set; }
         public int Reserve { get; set; }
         public int UsesRemaining { get; set; }
+        public int? RemainingQuantity { get; set; }
         public int NextAvailableTurn { get; set; }
     }
 }

@@ -1,4 +1,4 @@
-import styled from 'styled-components';
+import styled, { css } from 'styled-components';
 
 interface Props {
   theme?: 'light' | 'dark';
@@ -149,5 +149,16 @@ export const ButtonContentContainer = styled.button<Props>`
 
   &:disabled {
     cursor: wait;
+  }
+`;
+
+// Use on action groups that fill their row on narrow screens. The clipped
+// controller has 15px more width than its visible button by design.
+export const cyberButtonsFillWidth = css`
+  > ${ButtonClipController} { width: 100%; min-width: 0; }
+  > ${ButtonClipController} > ${ButtonBoxShadow},
+  > ${ButtonClipController} > ${ButtonClipBorder},
+  > ${ButtonClipController} > ${ButtonContentContainer} {
+    width: calc(100% - 15px);
   }
 `;

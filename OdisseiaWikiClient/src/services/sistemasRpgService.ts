@@ -232,6 +232,14 @@ export const obterConfiguracaoSobrevivenciaSistemaRpg = (
   requestOptions,
 );
 
+export const obterReferenciasCondicaoSistemaRpg = async (
+  idSistemaVersao: number, codigo: string,
+): Promise<string[]> => {
+  const response = await api.get<string[]>(
+    `${BASE_PATH}/versoes/${idSistemaVersao}/condicoes/${encodeURIComponent(codigo)}/referencias`);
+  return response.data;
+};
+
 export const obterCatalogoItensSistemaRpg = async (
   idSistemaVersao: number,
   requestOptions: ServiceRequestOptions = {},

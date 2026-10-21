@@ -80,6 +80,36 @@ test('o replay apresenta as iniciativas de cada participante sem antecipar açõ
   assert.equal(beats[3].playerActor, false);
 });
 
+test('reação defensiva aparece fora do turno e não some dentro da ação de área', () => {
+  const preview = {
+    personagem: { id: 'hero', nome: 'Herói' },
+    oponente: { id: 'enemy', nome: 'Lobo' },
+    resultado: { winnerActorId: null, endReason: 'RoundLimit', events: [
+      { sequence: 1, round: 1, type: 'TURN_STARTED', actorId: 'hero', targetId: null, payload: {} },
+      { sequence: 2, round: 1, type: 'ACTION_SELECTED', actorId: 'hero', targetId: 'enemy',
+        payload: { actionName: 'Granada' } },
+      { sequence: 3, round: 1, type: 'DICE_ROLLED', actorId: 'hero', targetId: 'enemy',
+        payload: { resultCode: 'ACERTO', roll: { valorNatural: 12, total: 12 } } },
+      { sequence: 4, round: 1, type: 'DAMAGE_CALCULATED', actorId: 'hero', targetId: 'enemy',
+        payload: { damage: 0 } },
+      { sequence: 5, round: 1, type: 'RESISTANCE_ROLLED', actorId: 'enemy', targetId: 'hero',
+        payload: { attributeCode: 'AGILIDADE', dice: [2], alternativeDice: [4], mode: 'Desvantagem',
+          modifier: 1, total: 3, difficulty: 5, passed: false } },
+      { sequence: 6, round: 1, type: 'CONDITION_APPLIED', actorId: 'hero', targetId: 'enemy',
+        payload: { name: 'Cegueira' } },
+      { sequence: 7, round: 1, type: 'TURN_STARTED', actorId: 'enemy', targetId: null, payload: {} },
+      { sequence: 8, round: 1, type: 'TURN_PASSED', actorId: 'enemy', targetId: null,
+        payload: { reason: 'CONDITION' } },
+    ] },
+  };
+
+  const beats = buildBattleBeats(preview);
+  assert.deepEqual(beats.map((beat) => beat.turn), [1, 1, 1, 2]);
+  assert.match(beats[1].text, /reação de AGILIDADE/);
+  assert.match(beats[1].text, /desvantagem/);
+  assert.match(beats[2].text, /Cegueira/);
+});
+
 test('vários disparos aparecem como uma ação com quantidade e dano total', () => {
   const preview = previewFor('hero', 'ACERTO', 160, false, false);
   preview.resultado.events[1].payload.actionName = 'Pistola';
@@ -90,6 +120,29 @@ test('vários disparos aparecem como uma ação com quantidade e dano total', ()
   assert.equal(beats.length, 1);
   assert.equal(beats[0].action?.name, 'Pistola ×2');
   assert.equal(beats[0].action?.damage, 160);
+});
+
+test('consumível equipado mostra cura e quantidade restante sem inventar rolagem D20', () => {
+  const preview = {
+    personagem: { id: 'hero', nome: 'Herói' },
+    oponente: { id: 'enemy', nome: 'Inimigo' },
+    resultado: { winnerActorId: null, endReason: 'NoDamage', events: [
+      { sequence: 1, round: 1, type: 'TURN_STARTED', actorId: 'hero', targetId: null, payload: {} },
+      { sequence: 2, round: 1, type: 'ACTION_SELECTED', actorId: 'hero', targetId: 'enemy',
+        payload: { actionName: 'Seringa', directUse: true } },
+      { sequence: 3, round: 1, type: 'ITEM_CONSUMED', actorId: 'hero', targetId: null,
+        payload: { actionId: 'item:seringa', remainingQuantity: 1 } },
+      { sequence: 4, round: 1, type: 'RESOURCE_CHANGED', actorId: 'hero', targetId: null,
+        payload: { resource: 'hitPoints', before: 40, after: 65 } },
+    ] },
+  };
+
+  const beats = buildBattleBeats(preview);
+  assert.equal(beats.length, 1);
+  assert.match(beats[0].text, /usou Seringa/);
+  assert.match(beats[0].text, /\+25 vida/);
+  assert.match(beats[0].text, /restam 1/);
+  assert.doesNotMatch(beats[0].text, /D20/);
 });
 
 test('o replay mostra munição restante após tiro e rajada, inclusive quando erram', () => {

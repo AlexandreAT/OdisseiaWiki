@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using OdisseiaWiki.Dtos;
 using OdisseiaWiki.Enums;
 using OdisseiaWiki.Services;
+using OdisseiaWiki.Services.Helpers;
 
 namespace OdisseiaWiki.GameRuns.Battle;
 
@@ -21,7 +22,12 @@ public sealed record GameBattleInput(
     public bool UseInitiative { get; init; }
     public bool OpeningOpportunityAttack { get; init; }
     public IReadOnlyDictionary<string, string> PreferredTargets { get; init; } = new Dictionary<string, string>();
+    public IReadOnlyList<GameBattleAutomaticCondition> AutomaticConditions { get; init; } = [];
 }
+
+public sealed record GameBattleAutomaticCondition(
+    GameBattleConditionRule Rule, string Resource, string Comparison, decimal Threshold,
+    int? Duration = null, string Unit = "Turno");
 
 public sealed record GameBattleActorSpec(
     string Id,
@@ -38,6 +44,41 @@ public sealed record GameBattleActorSpec(
 {
     public GameBattleRestSpec? Rest { get; init; }
     public GameBattleInitiativeSpec? Initiative { get; init; }
+    public IReadOnlyList<GameBattleActiveCondition> ActiveConditions { get; init; } = [];
+    public IReadOnlyDictionary<string, int> Attributes { get; init; } = new Dictionary<string, int>();
+    public int TurnsToSkip { get; init; }
+}
+
+/// <summary>A defensive reaction, rolled immediately without granting the defender a turn.</summary>
+public sealed record GameBattleResistanceTest(int Dice, int Faces, string AttributeCode, int Difficulty);
+
+public sealed record GameBattleConditionRule(
+    string Code, string Name, string Operation, string Resource, int Value,
+    string Moment, bool Stackable, bool ReplaceExisting, string Recovery)
+{
+    public IReadOnlyList<SistemaCondicaoEfeito> Effects { get; init; } = [];
+}
+
+public sealed record GameBattleConditionApplication(
+    GameBattleConditionRule Rule, int? Value, int? Duration, string Unit,
+    string Trigger, IReadOnlyList<int> NaturalResults)
+{
+    public int? NaturalMinimum { get; init; }
+    public int? NaturalMaximum { get; init; }
+    public string Target { get; init; } = "ALVO";
+    public string? OutcomeCode { get; init; }
+    public IReadOnlyDictionary<int, int> EffectValues { get; init; } = new Dictionary<int, int>();
+    public GameBattleResistanceTest? ResistanceTest { get; init; }
+}
+
+public sealed record GameBattleActiveCondition(
+    GameBattleConditionRule Rule, int Value, int? RemainingTurns,
+    int? RemainingHours = null)
+{
+    public int? RemainingMinutes { get; init; }
+    public string? SourceItemId { get; init; }
+    public int? OverrideValue { get; init; }
+    public IReadOnlyDictionary<int, int> EffectValues { get; init; } = new Dictionary<int, int>();
 }
 
 public sealed record GameBattleInitiativeSpec(string Formula, int Quantity, int Faces, int Modifier);
@@ -86,12 +127,20 @@ public sealed record GameBattleActionSpec(
     int CooldownTurns = 0,
     GameBattleMagazineSpec? Magazine = null)
 {
+    public string? AttributeCode { get; init; }
+    public IReadOnlyList<GameBattleConditionApplication> Conditions { get; init; } = [];
+    public IReadOnlyList<string> RemovesConditions { get; init; } = [];
     public bool IsFallback { get; init; }
     public int AttacksPerTurn { get; init; } = 1;
     public int AdditionalAttackStaminaCost { get; init; }
     public int UsesUntilRest { get; init; }
     public int? InitialUsesRemaining { get; init; }
+    public GameBattleUtilitySpec? Utility { get; init; }
 }
+
+/// <summary>An action performed on the actor's turn without an attack roll.</summary>
+public sealed record GameBattleUtilitySpec(int? InitialQuantity, int RestoreLife = 0,
+    int RestoreMana = 0, int RestoreStamina = 0);
 
 public sealed record GameBattleMagazineSpec(
     int Capacity,
@@ -140,6 +189,7 @@ public enum GameBattleEndReason
 public sealed record GameBattleActionState(string ActionId, int? MagazineCapacity, int? Loaded, int? Reserve, int CooldownRemaining)
 {
     public int? RemainingUses { get; init; }
+    public int? RemainingQuantity { get; init; }
 }
 
 public sealed record GameBattleActorState(
@@ -152,7 +202,11 @@ public sealed record GameBattleActorState(
     int Stamina,
     int MaximumStamina,
     GameBattleDefenses Defenses,
-    IReadOnlyList<GameBattleActionState> Actions);
+    IReadOnlyList<GameBattleActionState> Actions)
+{
+    public IReadOnlyList<GameBattleActiveCondition> ActiveConditions { get; init; } = [];
+    public int TurnsToSkip { get; init; }
+}
 
 public sealed record GameBattleResult(
     string? WinnerActorId,
@@ -188,6 +242,10 @@ public static class GameBattleEventTypes
     public const string TurnPassed = "TURN_PASSED";
     public const string ActorDefeated = "ACTOR_DEFEATED";
     public const string BattleEnded = "BATTLE_ENDED";
+    public const string ConditionApplied = "CONDITION_APPLIED";
+    public const string ConditionExpired = "CONDITION_EXPIRED";
+    public const string ResistanceRolled = "RESISTANCE_ROLLED";
+    public const string ItemConsumed = "ITEM_CONSUMED";
 }
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "kind")]
@@ -207,6 +265,10 @@ public static class GameBattleEventTypes
 [JsonDerivedType(typeof(TurnPassedPayload), GameBattleEventTypes.TurnPassed)]
 [JsonDerivedType(typeof(ActorDefeatedPayload), GameBattleEventTypes.ActorDefeated)]
 [JsonDerivedType(typeof(BattleEndedPayload), GameBattleEventTypes.BattleEnded)]
+[JsonDerivedType(typeof(ConditionAppliedPayload), GameBattleEventTypes.ConditionApplied)]
+[JsonDerivedType(typeof(ConditionExpiredPayload), GameBattleEventTypes.ConditionExpired)]
+[JsonDerivedType(typeof(ResistanceRolledPayload), GameBattleEventTypes.ResistanceRolled)]
+[JsonDerivedType(typeof(ItemConsumedPayload), GameBattleEventTypes.ItemConsumed)]
 public abstract record GameBattleEventPayload;
 
 public sealed record BattleStartedPayload(IReadOnlyList<string> ActorOrder) : GameBattleEventPayload;
@@ -216,6 +278,7 @@ public sealed record ActionSelectedPayload(string ActionId, string ActionName, b
 {
     public bool Reaction { get; init; }
     public int Quantity { get; init; } = 1;
+    public bool DirectUse { get; init; }
 }
 public sealed record ActionUnavailablePayload(string ActionId, string Reason) : GameBattleEventPayload;
 public sealed record ReloadPerformedPayload(string ActionId, int LoadedBefore, int LoadedAfter, int ReserveAfter) : GameBattleEventPayload;
@@ -234,3 +297,12 @@ public sealed record CooldownAdvancedPayload(string ActionId, int RemainingActor
 public sealed record TurnPassedPayload(string Reason) : GameBattleEventPayload;
 public sealed record ActorDefeatedPayload(string ActorId) : GameBattleEventPayload;
 public sealed record BattleEndedPayload(string? WinnerActorId, GameBattleEndReason Reason) : GameBattleEventPayload;
+public sealed record ConditionAppliedPayload(string Code, string Name, int Value, int? RemainingTurns, int? RemainingHours) : GameBattleEventPayload;
+public sealed record ConditionExpiredPayload(string Code, string Name, string Reason) : GameBattleEventPayload;
+public sealed record ResistanceRolledPayload(string Code, IReadOnlyList<int> Dice, string AttributeCode,
+    int Modifier, int Total, int Difficulty, bool Passed) : GameBattleEventPayload
+{
+    public IReadOnlyList<int>? AlternativeDice { get; init; }
+    public GameplayRollMode Mode { get; init; } = GameplayRollMode.Normal;
+}
+public sealed record ItemConsumedPayload(string ActionId, int RemainingQuantity) : GameBattleEventPayload;

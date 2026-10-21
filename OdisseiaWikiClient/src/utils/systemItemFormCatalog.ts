@@ -1,9 +1,11 @@
 import { ItemTipo } from '../models/Itens';
-import { SistemaCondicao, SistemaItemEscopoRuntime, SistemaItemReferenciaRuntime, SistemaResultadoDado } from '../models/SistemaRpg';
+import { SistemaAtributoConfig, SistemaCondicao, SistemaItemEscopoRuntime, SistemaItemReferenciaRuntime, SistemaResultadoDado } from '../models/SistemaRpg';
 
 export interface ItemFormOption {
   value: string;
   label: string;
+  rule?: SistemaCondicao;
+  attributeOptions?: ItemFormOption[];
 }
 
 export interface SistemaItemFormCatalog {
@@ -12,6 +14,10 @@ export interface SistemaItemFormCatalog {
   archetypeOptions: ItemFormOption[];
   testOptions: ItemFormOption[];
   conditionOptions: ItemFormOption[];
+  attributeOptions: ItemFormOption[];
+  conditionRules: SistemaCondicao[];
+  resultOptions: ItemFormOption[];
+  magicRemovalOptions: ItemFormOption[];
   references: SistemaItemReferenciaRuntime[];
   categoryCode?: string;
   archetypeCode?: string;
@@ -89,6 +95,7 @@ export const buildSistemaItemFormCatalog = (
   types: SistemaItemEscopoRuntime[],
   resultRows: SistemaResultadoDado[] = [],
   conditions: SistemaCondicao[] = [],
+  systemAttributes: SistemaAtributoConfig[] = [],
 ): SistemaItemFormCatalog => {
   const { typeScope, categoryCode, archetypeCode } = resolveItemSystemScope(type, attributes, types);
   const categories = (typeScope?.filhos ?? []).filter((item) => item.ativo !== false);
@@ -108,7 +115,11 @@ export const buildSistemaItemFormCatalog = (
     });
   });
 
+  const attributeOptions = systemAttributes.filter((attribute) => attribute.ativo).map((attribute) => ({
+      value: normalizeSystemItemCode(attribute.codigo), label: attribute.nome || attribute.codigo,
+    }));
   return {
+    attributeOptions,
     typeOptions: types
       .filter((item) => item.ativo !== false)
       .flatMap((item) => {
@@ -129,7 +140,21 @@ export const buildSistemaItemFormCatalog = (
     conditionOptions: conditions.map((condition) => ({
       value: normalizeSystemItemCode(condition.codigo),
       label: condition.nome,
+      rule: condition,
+      attributeOptions,
     })),
+    conditionRules: conditions,
+    resultOptions: [...new Map(resultRows.map((row) => [
+      normalizeSystemItemCode(row.codigoResultado),
+      { value: normalizeSystemItemCode(row.codigoResultado), label: row.nomeResultado || row.codigoResultado },
+    ])).values()].filter((option) => option.value),
+    magicRemovalOptions: conditions
+      .filter((condition) => (condition.regraRemocao ?? '').split(';')
+        .some((code) => normalizeSystemItemCode(code) === 'MAGIA'))
+      .map((condition) => ({
+        value: normalizeSystemItemCode(condition.codigo),
+        label: condition.nome,
+      })),
     references: [
       ...(typeScope?.referencias ?? []),
       ...(category?.referencias ?? []),

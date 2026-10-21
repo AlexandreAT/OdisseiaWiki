@@ -19,6 +19,7 @@ import {
 
 interface Props {
   editor: GameModeEditor;
+  mesaId?: number;
   npcs: GameModeNpcOption[];
   editable: boolean;
   theme: 'dark' | 'light';
@@ -36,7 +37,7 @@ const npcLabel = (npc: GameModeNpcOption) =>
 
 const wasConfigured = (encounter: GameModeEncounter) => encounter.configured !== false;
 
-export function ManagementGameEncounterCatalog({ editor, npcs, editable, theme, neon,
+export function ManagementGameEncounterCatalog({ editor, mesaId, npcs, editable, theme, neon,
   addEncounter, updateEncounter, updateEnemy, selectNpc, removeEncounter,
   uploadEnemyImage }: Props) {
   const [query, setQuery] = useState('');
@@ -101,6 +102,7 @@ export function ManagementGameEncounterCatalog({ editor, npcs, editable, theme, 
     {lootCode && editor.encounters[lootCode] && <Modal theme={theme} neon={neon} width="680px"
       title={`Loot · ${editor.encounters[lootCode].enemy.name}`} showFooter={false} onClose={() => setLootCode(null)}>
       <ManagementGameLootEditor encounter={editor.encounters[lootCode]} editable={editable} theme={theme} neon={neon}
+        mesaId={mesaId} systemVersionId={editor.idSistemaVersao}
         onChange={(update) => updateEncounter(lootCode, update)} />
     </Modal>}
     {activeCode && active && <Modal theme={theme} neon={neon} width="760px"

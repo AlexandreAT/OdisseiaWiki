@@ -1,4 +1,5 @@
 import styled, { keyframes } from 'styled-components';
+import { cyberButtonsFillWidth } from '../../../components/Generic/HighlightButton/HighlightButton.styles';
 import { GameFrame } from '../../Game/GameShared.style';
 import { CardContainer, ManagementMetadata } from '../ManagementWiki/WikiForms/FormBuscarConteúdo/ResultCard/ResultCard.style';
 
@@ -36,6 +37,10 @@ export const GameAdminActions = styled.div`
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+  @media (max-width: 600px) {
+    flex-direction: column;
+    ${cyberButtonsFillWidth}
+  }
 `;
 
 export const GameAdminDraftActions = styled(GameAdminActions)<{ $paired: boolean }>`
@@ -114,6 +119,17 @@ export const GameAdminRoute = styled.div`
   @media (max-width: 520px) { grid-template-columns: 1fr; }
 `;
 
+export const GameAdminRouteImageHeader = styled.div<{ $neon: boolean }>`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 38px;
+  gap: 8px;
+  color: ${({ $neon }) => $neon ? 'var(--neonBlue)' : 'var(--lightGrey)'};
+  font-size: .9em;
+  font-weight: 500;
+`;
+
 export const GameAdminWeightRow = styled.div`
   display: flex;
   align-items: center;
@@ -181,6 +197,14 @@ export const GameAdminDelete = styled.button`
 
 export const GameAdminImage = styled.div`
   max-width: 250px;
+  &[data-route-image] label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 `;
 
 export const GameAdminEncounterForm = styled.div`

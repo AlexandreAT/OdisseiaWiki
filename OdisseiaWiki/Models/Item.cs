@@ -45,6 +45,7 @@ public partial class Item
     public bool Destaque { get; set; } = false;
 
     public int IdWikiEscopo { get; set; } = WikiEscopo.IdOficial;
+    [MaxLength(50)] public string? IdOrigemGlobal { get; set; }
 
     public int? IdSistemaRpg { get; set; }
 

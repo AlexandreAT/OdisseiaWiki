@@ -1419,10 +1419,13 @@ public sealed class GameplayEngineService : IGameplayEngineService
                 if (!_rateLimiter.TryAcquire(idMesa, idUsuario, GameplayCommandRateCategory.Roll, out int rollRetryAfter))
                     return RateLimited<GameplayCommandResponseDto>(rollRetryAfter);
 
+                MesaCombate? activeCombat = context.Character is null ? null :
+                    await _repository.GetActiveCombatForUpdateAsync(idMesaSessao, token);
                 GameplayOperationResult<GameplayRollResultDto> evaluation = EvaluateRoll(
                     request,
                     context.Character,
-                    context.Version);
+                    context.Version,
+                    activeCombat);
                 if (!evaluation.Sucesso || evaluation.Dados is null)
                     return ConvertFailure<GameplayRollResultDto, GameplayCommandResponseDto>(evaluation);
                 GameplayRollResultDto roll = evaluation.Dados;
@@ -1432,7 +1435,6 @@ public sealed class GameplayEngineService : IGameplayEngineService
                     ReadSnapshotInt(actionOrigin, "cooldownTurnosProposto") is > 0 &&
                     !string.IsNullOrWhiteSpace(actionOrigin.IdInstancia))
                 {
-                    MesaCombate? activeCombat = await _repository.GetActiveCombatForUpdateAsync(idMesaSessao, token);
                     MesaCombateParticipante? actor = activeCombat?.Participantes.FirstOrDefault(item =>
                         item.IdPersonagemJogador == context.Character?.IdpersonagemJogador &&
                         item.Status != MesaCombateParticipanteStatus.Removido);
@@ -1613,7 +1615,8 @@ public sealed class GameplayEngineService : IGameplayEngineService
     private GameplayOperationResult<GameplayRollResultDto> EvaluateRoll(
         GameplayRollRequestDto request,
         PersonagemJogador? character,
-        SistemaVersao version)
+        SistemaVersao version,
+        MesaCombate? combat = null)
     {
         if (!Enum.IsDefined(request.Modo) || !Enum.IsDefined(request.Visibilidade) || request.Grupos is null)
             return Validation<GameplayRollResultDto>("OPCAO_INVALIDA", "A opção de rolagem é inválida.");
@@ -1624,7 +1627,51 @@ public sealed class GameplayEngineService : IGameplayEngineService
             : _actionResolver.ResolveSystemAction(request, character, version);
         if (!resolvedActionResult.Sucesso || resolvedActionResult.Dados is null)
             return ConvertFailure<GameplayResolvedAction, GameplayRollResultDto>(resolvedActionResult);
-        return EvaluateResolvedAction(resolvedActionResult.Dados);
+        GameplayResolvedAction configuredAction = resolvedActionResult.Dados;
+        if (combat?.Status == MesaCombateStatus.Ativo && character is not null)
+        {
+            MesaCombateParticipante? participant = combat.Participantes.FirstOrDefault(item =>
+                item.IdPersonagemJogador == character.IdpersonagemJogador &&
+                item.Status != MesaCombateParticipanteStatus.Removido);
+            if (participant is not null)
+            {
+                string attributeCode = NormalizeCode(request.CodigoAtributo ??
+                    configuredAction.Snapshot.Valores.GetValueOrDefault("atributo"));
+                var modifiers = new List<GameplayModifierDto>(configuredAction.Modifiers);
+                int adjustment = 0;
+                bool advantage = false, disadvantage = false;
+                foreach (MesaCondicaoAtiva active in combat.Condicoes.Where(item =>
+                             item.IdParticipante == participant.IdMesaCombateParticipante &&
+                             item.Status == MesaCondicaoStatus.Ativa))
+                {
+                    SistemaCondicao? rule = version.Condicoes.FirstOrDefault(item =>
+                        item.IdSistemaCondicao == active.IdSistemaCondicao);
+                    if (rule is null) continue;
+                    foreach (SistemaCondicaoEfeito effect in SistemaCondicaoEfeitos.ReadEffective(rule,
+                                 active.RegraSnapshotJson))
+                    {
+                        if (effect.Operacao == "VANTAGEM") advantage = true;
+                        else if (effect.Operacao == "DESVANTAGEM") disadvantage = true;
+                        else if (effect.Operacao is ("MODIFICAR_ROLAGEM" or "MODIFICAR_ATRIBUTO") &&
+                            (effect.Recurso.Equals("TODOS", StringComparison.OrdinalIgnoreCase) ||
+                             NormalizeCode(effect.Recurso) == attributeCode))
+                        {
+                            int value = rule.OperacaoEfeito == effect.Operacao &&
+                                !SistemaCondicaoEfeitos.HasOverride(active.RegraSnapshotJson, 0) &&
+                                active.Valor.HasValue ? decimal.ToInt32(decimal.Truncate(active.Valor.Value)) : effect.Valor;
+                            adjustment = checked(adjustment + value);
+                            modifiers.Add(new GameplayModifierDto { Codigo = rule.Codigo,
+                                Nome = rule.Nome, Valor = value, Origem = "CONDICAO" });
+                        }
+                    }
+                }
+                GameplayRollMode mode = advantage == disadvantage ? configuredAction.Mode :
+                    advantage ? GameplayRollMode.Vantagem : GameplayRollMode.Desvantagem;
+                configuredAction = configuredAction with { Modifier = checked(configuredAction.Modifier + adjustment),
+                    Modifiers = modifiers, Mode = mode };
+            }
+        }
+        return EvaluateResolvedAction(configuredAction);
 
 #pragma warning disable CS0162 // Mantido temporariamente para compatibilidade de leitura de comandos antigos.
         if (HasActionReference(request.ReferenciaAcao))
@@ -2040,7 +2087,12 @@ public sealed class GameplayEngineService : IGameplayEngineService
         int? duration = proposal.DuracaoCondicao ?? rule.DuracaoPadrao;
         if (duration < 0)
             return Validation<GameplayEffectMutation>("DURACAO_CONDICAO_INVALIDA", "A duração da condição não pode ser negativa.");
-        decimal? value = proposal.Valor > 0 ? proposal.Valor : rule.ValorPadrao ?? rule.ValorEfeito;
+        IReadOnlyList<SistemaCondicaoEfeito> publishedEffects = SistemaCondicaoEfeitos.Read(rule);
+        if (!SistemaCondicaoEfeitos.ValidOverrides(publishedEffects, proposal.ValoresEfeitos))
+            return Validation<GameplayEffectMutation>("EFEITO_CONDICAO_INVALIDO",
+                "Um valor desta origem não respeita a condição publicada.");
+        decimal? value = proposal.Operacao == "APLICAR_VALOR" || proposal.Valor > 0 ? proposal.Valor :
+            rule.ValorPadrao ?? rule.ValorEfeito;
         MesaCondicaoAtiva? current = combat.Condicoes.FirstOrDefault(item =>
             item.IdParticipante == participant.IdMesaCombateParticipante &&
             item.Status == MesaCondicaoStatus.Ativa &&
@@ -2097,6 +2149,7 @@ public sealed class GameplayEngineService : IGameplayEngineService
                     rule.CooldownTurnos,
                     rule.RegraRemocao,
                     rule.ConfiguracaoPadraoJson,
+                    valoresEfeitos = proposal.ValoresEfeitos,
                 }),
                 IdUsuarioAplicacao = idUsuario,
                 AplicadaEmUtc = DateTime.UtcNow,
@@ -2107,28 +2160,35 @@ public sealed class GameplayEngineService : IGameplayEngineService
         }
         combat.Revisao++;
 
-        if (NormalizeCode(rule.MomentoEfeito) == "AO_APLICAR" &&
-            !string.IsNullOrWhiteSpace(rule.CodigoRecurso) &&
-            NormalizeCode(rule.OperacaoEfeito) is "SOMAR" or "SUBTRAIR" or "DEFINIR")
+        if (current is not null &&
+            (previousStacks == 0 || rule.PermiteSobrescrever))
         {
-            decimal configuredValue = proposal.Valor > 0
-                ? proposal.Valor
-                : rule.ValorEfeito ?? rule.ValorPadrao ?? 0;
-            int effectValue = decimal.ToInt32(decimal.Truncate(configuredValue));
+            JsonObject snapshot = JsonNode.Parse(current.RegraSnapshotJson)?.AsObject() ?? new JsonObject();
+            snapshot["valoresEfeitos"] = JsonSerializer.SerializeToNode(proposal.ValoresEfeitos);
+            current.RegraSnapshotJson = snapshot.ToJsonString();
+        }
+        GameplayEffectMutation? lastImmediateEffect = null;
+        foreach (SistemaCondicaoEfeito effect in SistemaCondicaoEfeitos.ReadEffective(rule,
+                     current?.RegraSnapshotJson).Where(effect => effect.Momento == "AO_APLICAR" &&
+                     effect.Operacao is ("SOMAR" or "SUBTRAIR" or "DEFINIR")))
+        {
+            int effectValue = !proposal.ValoresEfeitos.ContainsKey(0) &&
+                rule.OperacaoEfeito?.Equals(effect.Operacao, StringComparison.OrdinalIgnoreCase) == true &&
+                rule.CodigoRecurso?.Equals(effect.Recurso, StringComparison.OrdinalIgnoreCase) == true && value.HasValue
+                ? decimal.ToInt32(decimal.Truncate(value.Value)) : effect.Valor;
             GameplayOperationResult<GameplayEffectMutation> resourceMutation =
                 ApplyConditionResourceEffectToCharacter(
                     character,
-                    rule.CodigoRecurso,
-                    rule.OperacaoEfeito,
+                    effect.Recurso,
+                    effect.Operacao,
                     effectValue,
                     version);
             if (!resourceMutation.Sucesso || resourceMutation.Dados is null)
                 return resourceMutation;
-            return GameplayOperationResult<GameplayEffectMutation>.Ok(resourceMutation.Dados with
-            {
-                Type = "CONDICAO",
-            });
+            lastImmediateEffect = resourceMutation.Dados with { Type = "CONDICAO" };
         }
+        if (lastImmediateEffect is not null)
+            return GameplayOperationResult<GameplayEffectMutation>.Ok(lastImmediateEffect);
 
         return GameplayOperationResult<GameplayEffectMutation>.Ok(new GameplayEffectMutation(
             "CONDICAO",
@@ -2939,8 +2999,8 @@ public sealed class GameplayEngineService : IGameplayEngineService
                         MotivoIndisponivel = validDamage ? null : "O dano calculado excede o limite seguro da ficha.",
                     });
                 }
-                effects.AddRange(ReadSnapshotConditionEffects(origin));
             }
+            effects.AddRange(ReadSnapshotConditionEffects(origin, source, !failed));
         }
 
         effects.AddRange(ReadConfiguredEffects(configuredEffectJson));
@@ -2993,7 +3053,8 @@ public sealed class GameplayEngineService : IGameplayEngineService
             ? value
             : null;
 
-    private static IReadOnlyList<GameplayEffectProposalDto> ReadSnapshotConditionEffects(GameplayActionSnapshotDto source)
+    private static IReadOnlyList<GameplayEffectProposalDto> ReadSnapshotConditionEffects(
+        GameplayActionSnapshotDto source, GameplayRollResultDto roll, bool hit)
     {
         if (!source.Valores.TryGetValue("condicoesPropostasJson", out string? json) || string.IsNullOrWhiteSpace(json))
             return Array.Empty<GameplayEffectProposalDto>();
@@ -3001,29 +3062,53 @@ public sealed class GameplayEngineService : IGameplayEngineService
         {
             JsonArray? entries = JsonNode.Parse(json) as JsonArray;
             if (entries is null) return Array.Empty<GameplayEffectProposalDto>();
-            return entries.OfType<JsonObject>().Select(entry =>
+            return entries.OfType<JsonObject>().Where(entry =>
+            {
+                string trigger = NormalizeCode(entry["trigger"]?.GetValue<string>());
+                if (trigger == "RESULTADO_NATURAL")
+                {
+                    int? natural = roll.ValorNatural;
+                    if (!natural.HasValue) return false;
+                    bool listed = entry["naturalResults"] is JsonArray numbers && numbers.Any(number =>
+                        int.TryParse(number?.ToString(), out int value) && value == natural);
+                    int? minimum = int.TryParse(entry["naturalMinimum"]?.ToString(), out int from) ? from : null;
+                    int? maximum = int.TryParse(entry["naturalMaximum"]?.ToString(), out int to) ? to : null;
+                    return hit && (listed || (minimum.HasValue || maximum.HasValue) &&
+                        natural >= (minimum ?? 1) && natural <= (maximum ?? 20));
+                }
+                if (trigger == "RESULTADO_CLASSIFICADO")
+                    return !string.IsNullOrWhiteSpace(entry["resultCode"]?.ToString()) &&
+                        NormalizeCode(entry["resultCode"]?.ToString()) == NormalizeCode(roll.CodigoResultado);
+                return trigger == "AO_USAR" || hit;
+            }).Select(entry =>
             {
                 string code = NormalizeCode(entry["code"]?.GetValue<string>());
                 string name = entry["name"]?.GetValue<string>() ?? code;
                 int value = entry["value"]?.GetValue<int?>() ?? 0;
                 int? duration = entry["duration"]?.GetValue<int?>();
+                var effectValues = new Dictionary<int, int>();
+                if (entry["effectValues"] is JsonObject configuredValues)
+                    foreach ((string key, JsonNode? configured) in configuredValues)
+                        if (int.TryParse(key, out int index) && int.TryParse(configured?.ToString(), out int amount))
+                            effectValues[index] = amount;
                 string details = string.Join(" · ", new[]
                 {
                     value > 0 ? $"valor {value}" : null,
-                    duration.HasValue ? $"{duration.Value} turno(s)" : null,
+                    duration.HasValue ? $"{duration.Value} {entry["unit"]?.ToString() ?? "turno"}(s)" : null,
                 }.Where(detail => detail is not null));
                 return new GameplayEffectProposalDto
                 {
                     Codigo = $"APLICAR_CONDICAO_{code}",
                     Tipo = "CONDICAO",
                     Nome = details.Length == 0 ? $"Aplicar {name}" : $"Aplicar {name} · {details}",
-                    Alvo = "ALVO",
+                    Alvo = NormalizeCode(entry["target"]?.ToString()) == "USUARIO" ? "AUTOR" : "ALVO",
                     CodigoCondicao = code,
                     DuracaoCondicao = duration,
-                    Operacao = "APLICAR",
+                    Operacao = entry["value"] is null ? "APLICAR" : "APLICAR_VALOR",
                     Valor = value,
+                    ValoresEfeitos = effectValues,
                     ExigeAlvo = true,
-                    PodeAplicar = code.Length > 0 && value >= 0 && duration is null or >= 0,
+                    PodeAplicar = code.Length > 0 && duration is null or >= 0,
                     MotivoIndisponivel = code.Length > 0 ? null : "A condição configurada não possui código válido.",
                 };
             }).ToArray();
@@ -3091,6 +3176,7 @@ public sealed class GameplayEngineService : IGameplayEngineService
         CooldownTurnos = source.CooldownTurnos,
         Operacao = source.Operacao,
         Valor = value,
+        ValoresEfeitos = source.ValoresEfeitos,
         ExigeAlvo = source.ExigeAlvo,
         PodeAplicar = source.PodeAplicar,
         MotivoIndisponivel = source.MotivoIndisponivel,

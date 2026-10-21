@@ -50,11 +50,13 @@ public static class GameplayConditionRuntime
             }
         }
 
+        bool carryLimit = SistemaRpgConfiguration.LerRegras<SistemaRpgConfiguration.RegrasExploracao>(
+            version, SistemaModuloTipo.Exploracao).CargaUsaLimite;
         foreach (SistemaCondicao rule in version.Condicoes
                      .Where(item => !string.IsNullOrWhiteSpace(item.CodigoRecursoGatilho) && item.ValorGatilho.HasValue)
                      .OrderBy(item => item.Ordem))
         {
-            if (!TryReadTriggerValue(character, rule.CodigoRecursoGatilho!, out decimal actual))
+            if (!TryReadTriggerValue(character, rule.CodigoRecursoGatilho!, out decimal actual, carryLimit))
                 continue;
             bool triggered = EvaluateTrigger(actual, rule.OperadorGatilho, rule.ValorGatilho!.Value);
             MesaCondicaoAtiva? active = combat.Condicoes.FirstOrDefault(condition =>
@@ -101,12 +103,12 @@ public static class GameplayConditionRuntime
                 };
                 combat.Condicoes.Add(active);
                 changes.Add(rule.Codigo);
-                if (Normalize(rule.MomentoEfeito) == "AO_APLICAR")
+                if (SistemaCondicaoEfeitos.Read(rule).Any(effect => effect.Momento == "AO_APLICAR"))
                     ApplyImmediateResourceEffect(character, active, rule, version);
             }
             else if (!triggered)
             {
-                if (active is not null && rule.RemocaoAutomatica)
+                if (active is not null && SistemaCondicaoRemocao.AoCessarGatilho(rule))
                 {
                     active.Status = MesaCondicaoStatus.Expirada;
                     active.RemovidaEmUtc = now;
@@ -138,13 +140,19 @@ public static class GameplayConditionRuntime
     {
         string resource = Normalize(resourceCode);
         return ActiveConditionRules(combat, participant, version).Any(entry =>
-            Normalize(entry.Rule.OperacaoEfeito) == "BLOQUEAR_RECUPERACAO" &&
-            Normalize(entry.Rule.CodigoRecurso) == resource);
+            SistemaCondicaoEfeitos.ReadEffective(entry.Rule, entry.Condition.RegraSnapshotJson).Any(effect =>
+                effect.Operacao == "BLOQUEAR_RECUPERACAO" && Normalize(effect.Recurso) == resource));
     }
 
-    public static bool TryReadTriggerValue(PersonagemJogador character, string triggerCode, out decimal value)
+    public static bool TryReadTriggerValue(PersonagemJogador character, string triggerCode, out decimal value,
+        bool carryLimit = true)
     {
         string trigger = Normalize(triggerCode);
+        if (trigger == "EXCESSO_CARGA" && !carryLimit)
+        {
+            value = 0;
+            return false;
+        }
         if (trigger is "CARGA" or "EXCESSO_CARGA")
         {
             decimal total = CalculateInventoryWeight(character.InventarioJson);
@@ -177,13 +185,20 @@ public static class GameplayConditionRuntime
         JsonObject status = GetOrCreate(root, "status");
         JsonObject runtime = GetOrCreate(root, RuntimeProperty);
         JsonObject bases = GetOrCreate(runtime, BaseLimitsProperty);
-        IReadOnlyList<ActiveConditionRule> activeRules = ActiveConditionRules(combat, participant, version)
-            .Where(entry => Normalize(entry.Rule.OperacaoEfeito) == "REDUZIR_LIMITE_PERCENTUAL" &&
-                            !string.IsNullOrWhiteSpace(entry.Rule.CodigoRecurso) &&
-                            (entry.Condition.Valor ?? entry.Rule.ValorEfeito) is >= 0 and <= 100)
+        var activeRules = ActiveConditionRules(combat, participant, version)
             .OrderBy(entry => entry.Rule.Ordem)
+            .SelectMany(entry => SistemaCondicaoEfeitos.ReadEffective(entry.Rule, entry.Condition.RegraSnapshotJson)
+                .Where(effect => effect.Operacao == "REDUZIR_LIMITE_PERCENTUAL" &&
+                    effect.Valor is >= 0 and <= 100 ||
+                    effect.Operacao == "MODIFICAR_LIMITE_PERCENTUAL" && effect.Valor is >= -100 and <= 1000)
+                .Select(effect => (entry.Condition, Effect: effect,
+                    Value: entry.Condition.Valor.HasValue &&
+                        !SistemaCondicaoEfeitos.HasOverride(entry.Condition.RegraSnapshotJson, 0) &&
+                        entry.Rule.OperacaoEfeito?.Equals(effect.Operacao, StringComparison.OrdinalIgnoreCase) == true &&
+                        entry.Rule.CodigoRecurso?.Equals(effect.Recurso, StringComparison.OrdinalIgnoreCase) == true
+                        ? entry.Condition.Valor.Value : effect.Valor)))
             .ToArray();
-        HashSet<string> resources = activeRules.Select(entry => Normalize(entry.Rule.CodigoRecurso))
+        HashSet<string> resources = activeRules.Select(entry => Normalize(entry.Effect.Recurso))
             .Concat(bases.Select(pair => Normalize(pair.Key)))
             .Where(code => code.Length > 0)
             .ToHashSet(StringComparer.Ordinal);
@@ -205,8 +220,8 @@ public static class GameplayConditionRuntime
             if (state is not null && currentMaximum != lastApplied)
                 baseMaximum = currentMaximum;
 
-            ActiveConditionRule[] reductions = activeRules
-                .Where(entry => Normalize(entry.Rule.CodigoRecurso) == resource)
+            var reductions = activeRules
+                .Where(entry => Normalize(entry.Effect.Recurso) == resource)
                 .ToArray();
             if (reductions.Length == 0)
             {
@@ -221,11 +236,12 @@ public static class GameplayConditionRuntime
             }
 
             decimal effective = baseMaximum;
-            foreach (ActiveConditionRule reduction in reductions)
+            foreach (var reduction in reductions)
             {
-                decimal percentage = reduction.Condition.Valor ?? reduction.Rule.ValorEfeito!.Value;
+                decimal percentage = reduction.Effect.Operacao == "REDUZIR_LIMITE_PERCENTUAL"
+                    ? -reduction.Value : reduction.Value;
                 for (int stack = 0; stack < Math.Max(1, reduction.Condition.Acumulos); stack++)
-                    effective *= 1m - percentage / 100m;
+                    effective *= 1m + percentage / 100m;
             }
             int calculated = Math.Max(0, decimal.ToInt32(decimal.Floor(effective)));
             if (currentMaximum != calculated)
@@ -309,14 +325,6 @@ public static class GameplayConditionRuntime
         SistemaCondicao rule,
         SistemaVersao version)
     {
-        if (string.IsNullOrWhiteSpace(rule.CodigoRecurso) ||
-            Normalize(rule.OperacaoEfeito) is not ("SOMAR" or "SUBTRAIR" or "DEFINIR"))
-            return;
-        decimal? configured = condition.Valor ?? rule.ValorEfeito;
-        if (!configured.HasValue) return;
-        int value = decimal.ToInt32(decimal.Truncate(configured.Value));
-        if (value < 0) return;
-
         JsonObject root;
         try
         {
@@ -327,17 +335,27 @@ public static class GameplayConditionRuntime
         {
             return;
         }
-        SistemaRecursoConfig? resource = version.Recursos.FirstOrDefault(item =>
-            item.Ativo && Normalize(item.Codigo) == Normalize(rule.CodigoRecurso));
-        if (resource is null) return;
         JsonObject status = GetOrCreate(root, "status");
-        string preferred = Normalize(rule.CodigoRecurso).ToLowerInvariant();
+        foreach (SistemaCondicaoEfeito effect in SistemaCondicaoEfeitos.ReadEffective(rule,
+                     condition.RegraSnapshotJson).Where(effect =>
+                     effect.Momento == "AO_APLICAR" &&
+                     effect.Operacao is ("SOMAR" or "SUBTRAIR" or "DEFINIR")))
+        {
+        int value = !SistemaCondicaoEfeitos.HasOverride(condition.RegraSnapshotJson, 0) &&
+            rule.OperacaoEfeito?.Equals(effect.Operacao, StringComparison.OrdinalIgnoreCase) == true &&
+            rule.CodigoRecurso?.Equals(effect.Recurso, StringComparison.OrdinalIgnoreCase) == true &&
+            condition.Valor.HasValue ? decimal.ToInt32(decimal.Truncate(condition.Valor.Value)) : effect.Valor;
+        if (value < 0) continue;
+        SistemaRecursoConfig? resource = version.Recursos.FirstOrDefault(item =>
+            item.Ativo && Normalize(item.Codigo) == Normalize(effect.Recurso));
+        if (resource is null) continue;
+        string preferred = Normalize(effect.Recurso).ToLowerInvariant();
         string field = FindResourceKey(status, preferred) ?? preferred;
         int previous = ReadInt(status[field]);
         int current;
         try
         {
-            current = Normalize(rule.OperacaoEfeito) switch
+            current = Normalize(effect.Operacao) switch
             {
                 "SOMAR" => checked(previous + value),
                 "SUBTRAIR" => checked(previous - value),
@@ -346,7 +364,7 @@ public static class GameplayConditionRuntime
         }
         catch (OverflowException)
         {
-            return;
+            continue;
         }
         int minimum = resource.PermiteValorNegativo
             ? decimal.ToInt32(decimal.Max(resource.ValorMinimo, int.MinValue))
@@ -360,6 +378,7 @@ public static class GameplayConditionRuntime
         current = Math.Max(minimum, current);
         if (maximum.HasValue) current = Math.Min(maximum.Value, current);
         status[field] = current;
+        }
         character.StatusJson = root.ToJsonString();
     }
 

@@ -1,6 +1,29 @@
 import styled from 'styled-components';
+import { cyberButtonsFillWidth } from '../../../components/Generic/HighlightButton/HighlightButton.styles';
 import HudCornerThin from '../../../assets/svg/HudCornerThin.svg';
 import { GameNotice } from '../GameShared.style';
+
+export const ConditionOriginCard = styled.div`
+  border: 1px solid rgba(77, 238, 234, .32);
+  border-radius: 5px;
+  background: rgba(8, 28, 43, .56);
+  > button {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    width: 100%; padding: 10px; border: 0; background: transparent;
+    color: #d9f4ff; text-align: left; cursor: pointer;
+    strong { color: var(--clearneonBlue); font-size: .72rem; text-transform: uppercase; }
+    &:hover, &:focus-visible { background: rgba(77, 238, 234, .1); }
+  }
+`;
+
+export const ConditionOriginFields = styled.div<{ $columns?: number }>`
+  display: grid;
+  grid-template-columns: ${({ $columns }) => $columns === 2 ? 'repeat(2, minmax(0, 1fr))' : 'minmax(0, 1fr)'};
+  gap: 10px;
+  min-width: 0;
+  padding: 0 10px 11px;
+  @media (max-width: 390px) { grid-template-columns: minmax(0, 1fr); }
+`;
 
 export const LoadoutBody = styled.div`
   display: grid;
@@ -294,6 +317,11 @@ export const ConsumableRestoration = styled.div`
 export const LoadoutActions = styled.div`
   display: flex; justify-content: flex-end; align-items: center; gap: 10px; flex-wrap: wrap;
   padding-top: 12px; border-top: 1px solid rgba(77, 238, 234, .2);
+  @media (max-width: 600px) {
+    flex-direction: column;
+    align-items: stretch;
+    ${cyberButtonsFillWidth}
+  }
 `;
 
 export const LoadoutLimitNotice = styled(GameNotice)`
@@ -308,6 +336,7 @@ export const LoadoutItemActions = styled.div`
   align-items: center;
   gap: 10px;
   width: 100%;
+  ${cyberButtonsFillWidth}
 
   & > * { min-width: 0; }
   & > :only-child { grid-column: 1 / -1; }

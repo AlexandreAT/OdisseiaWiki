@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { GameModeArea, GameModeEditor, GameModeEncounter, GameModeNpcOption, GameModeRestOption, GameModeSystemVersion } from '../../../models/GameModeManagement';
+import type { GameAdventure, GameModeArea, GameModeEditor, GameModeEncounter, GameModeNpcOption, GameModePowerOption, GameModeRestOption, GameModeSystemVersion } from '../../../models/GameModeManagement';
 import { saveAsset } from '../../../services/assetsService';
 import {
   cloneGameModeDraft, createGameModeDraft, getGameModeEditor, getGameModeNpcs, getGameModeRestOptions, getGameModeSystemVersions,
-  publishGameModeDraft, saveGameModeDraft,
+  listGameAdventures, createGameAdventure, getGameAdventureEditor, createGameAdventureDraft,
+  adaptGameAdventure,
+  saveGameAdventureDraft, publishGameAdventureDraft, getGameAdventureSystemVersions,
 } from '../../../services/gameModeManagementService';
 import { getApiErrorMessage } from '../../../utils/apiError';
 
@@ -25,44 +27,63 @@ const createEncounter = (editor: GameModeEditor, number: number): GameModeEncoun
     [code, editor.encounters[Object.keys(editor.encounters)[0]]?.damageByResult[code] ?? 0])),
 });
 
-export const useManagementGame = () => {
+export const useManagementGame = (mesaId?: number) => {
   const [saved, setSaved] = useState<GameModeEditor | null>(null);
   const [editor, setEditor] = useState<GameModeEditor | null>(null);
   const [npcs, setNpcs] = useState<GameModeNpcOption[]>([]);
   const [restOptions, setRestOptions] = useState<GameModeRestOption[]>([]);
   const [systemVersions, setSystemVersions] = useState<GameModeSystemVersion[]>([]);
   const [selectedSystemVersion, setSelectedSystemVersion] = useState<number | null>(null);
+  const [games, setGames] = useState<GameAdventure[]>([]);
+  const [selectedGameCode, setSelectedGameCode] = useState<string | null>(null);
+  const [newGameName, setNewGameName] = useState('');
+  const [newGameDescription, setNewGameDescription] = useState('');
+  const [newGameBanner, setNewGameBanner] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const changed = !!saved && !!editor && JSON.stringify({ areas: saved.areas, encounters: saved.encounters,
     fallbackAction: saved.fallbackAction, playerDamageByResult: saved.playerDamageByResult,
-    saleDiscountPercent: saved.saleDiscountPercent, repairProtectionAtBase: saved.repairProtectionAtBase }) !==
+    saleDiscountPercent: saved.saleDiscountPercent, repairProtectionAtBase: saved.repairProtectionAtBase,
+    powerCatalog: saved.powerCatalog }) !==
     JSON.stringify({ areas: editor.areas, encounters: editor.encounters,
       fallbackAction: editor.fallbackAction, playerDamageByResult: editor.playerDamageByResult,
-      saleDiscountPercent: editor.saleDiscountPercent, repairProtectionAtBase: editor.repairProtectionAtBase });
+      saleDiscountPercent: editor.saleDiscountPercent, repairProtectionAtBase: editor.repairProtectionAtBase,
+      powerCatalog: editor.powerCatalog });
 
-  const load = useCallback(async (versionId?: number) => {
+  const load = useCallback(async (versionId?: number, gameCode?: string) => {
     setLoading(true); setError(null);
     try {
-      const versions = await getGameModeSystemVersions();
+      const versions = mesaId ? await getGameAdventureSystemVersions(mesaId) : await getGameModeSystemVersions();
       setSystemVersions(versions);
       const selected = versionId ?? versions.find((item) => item.current)?.id ?? versions[0]?.id;
       setSelectedSystemVersion(selected ?? null);
       if (!selected) throw new Error('Nenhuma versão publicada ou arquivada do Sistema foi encontrada.');
-      const [value, candidates, rests] = await Promise.all([
-        getGameModeEditor(selected), getGameModeNpcs(selected).catch(() => []),
-        getGameModeRestOptions(selected).catch(() => []),
+      let catalog = await listGameAdventures(mesaId);
+      if (!mesaId && catalog.length === 0) {
+        await getGameModeEditor(selected);
+        catalog = await listGameAdventures();
+      }
+      setGames(catalog);
+      const currentCode = gameCode && catalog.some((item) => item.codigo === gameCode)
+        ? gameCode : catalog[0]?.codigo ?? null;
+      setSelectedGameCode(currentCode);
+      const value = currentCode ? await getGameAdventureEditor(currentCode, mesaId) : null;
+      const effectiveVersion = value?.idSistemaVersao ?? selected;
+      setSelectedSystemVersion(effectiveVersion);
+      const [candidates, rests] = await Promise.all([
+        getGameModeNpcs(effectiveVersion, mesaId).catch(() => []),
+        getGameModeRestOptions(effectiveVersion, mesaId).catch(() => []),
       ]);
       setNpcs(candidates);
       setRestOptions(rests);
-      setSaved(value); setEditor(copy(value));
+      setSaved(value); setEditor(value ? copy(value) : null);
     } catch (reason) {
       setSaved(null); setEditor(null);
       setError(getApiErrorMessage(reason, 'Não foi possível carregar o jogo.'));
     } finally { setLoading(false); }
-  }, []);
+  }, [mesaId]);
   useEffect(() => { void load(); }, [load]);
 
   const run = async (action: () => Promise<GameModeEditor>, success: string) => {
@@ -70,9 +91,19 @@ export const useManagementGame = () => {
     try {
       const value = await action();
       setSaved(value); setEditor(copy(value)); setSelectedSystemVersion(value.idSistemaVersao);
+      setSelectedGameCode(value.codigoJogo);
+      setGames((current) => current.some((item) => item.codigo === value.codigoJogo) ?
+        current.map((item) => item.codigo === value.codigoJogo ? {
+          ...item, status: value.status, numeroVersao: value.numeroVersao,
+        } : item) : [...current, { codigo: value.codigoJogo, idMesa: value.idMesa,
+          idSistemaVersao: value.idSistemaVersao, nome: value.nomeJogo,
+          descricao: value.descricaoJogo, banner: value.bannerJogo,
+          status: value.status, numeroVersao: value.numeroVersao }]);
       setNotice(success);
+      return true;
     } catch (reason) {
       setError(getApiErrorMessage(reason, 'Não foi possível salvar a configuração.'));
+      return false;
     } finally { setBusy(false); }
   };
 
@@ -147,7 +178,7 @@ export const useManagementGame = () => {
   const uploadEnemyImage = async (code: string, file: File) => {
     setBusy(true); setError(null);
     try {
-      const asset = await saveAsset({ imageFile: file, type: 'jogo', entityName: code });
+      const asset = await saveAsset({ imageFile: file, type: 'jogo', entityName: code, mesaId });
       updateEnemy(code, { image: asset.path });
     } catch (reason) {
       setError(getApiErrorMessage(reason, 'Não foi possível enviar a imagem do personagem.'));
@@ -157,7 +188,7 @@ export const useManagementGame = () => {
     if (!editor) return;
     setBusy(true); setError(null);
     try {
-      const asset = await saveAsset({ imageFile: file, type: 'jogo', entityName: editor.areas[index].code });
+      const asset = await saveAsset({ imageFile: file, type: 'jogo', entityName: editor.areas[index].code, mesaId });
       if (target === 'base') updateArea(index, { baseImage: asset.path });
       else if (target === 'area') updateArea(index, { image: asset.path });
       else {
@@ -167,6 +198,19 @@ export const useManagementGame = () => {
       }
     } catch (reason) {
       setError(getApiErrorMessage(reason, 'Não foi possível enviar a imagem da área.'));
+    } finally { setBusy(false); }
+  };
+  const updatePower = (id: string, update: Partial<GameModePowerOption>) =>
+    setEditor((current) => current && ({ ...current,
+      powerCatalog: current.powerCatalog.map((power) => power.id === id ? { ...power, ...update } : power),
+    }));
+  const uploadPowerImage = async (id: string, file: File) => {
+    setBusy(true); setError(null);
+    try {
+      const asset = await saveAsset({ imageFile: file, type: 'jogo', entityName: id, mesaId });
+      updatePower(id, { image: asset.path });
+    } catch (reason) {
+      setError(getApiErrorMessage(reason, 'Não foi possível enviar a imagem do poder.'));
     } finally { setBusy(false); }
   };
   const removeRoute = (areaIndex: number, optionIndex: number) => {
@@ -193,9 +237,35 @@ export const useManagementGame = () => {
 
   return {
     editor, saved, npcs, restOptions, systemVersions, selectedSystemVersion, loading, busy, changed,
+    games, selectedGameCode, newGameName, newGameDescription, newGameBanner,
+    setNewGameName, setNewGameDescription, setNewGameBanner,
+    selectGame: (code: string) => { if (!changed && !busy) void load(selectedSystemVersion ?? undefined, code); },
+    uploadBanner: async (file: File) => {
+      setBusy(true); setError(null);
+      try {
+        const asset = await saveAsset({ imageFile: file, type: 'jogo', entityName: 'banner', mesaId });
+        setNewGameBanner(asset.path);
+      } catch (reason) {
+        setError(getApiErrorMessage(reason, 'Não foi possível enviar o banner.'));
+      } finally { setBusy(false); }
+    },
+    createGame: () => run(() => createGameAdventure({ idMesa: mesaId,
+      idSistemaVersao: mesaId
+        ? systemVersions.find((version) => version.current)?.id
+        : selectedSystemVersion ?? undefined, nome: newGameName,
+      descricao: newGameDescription, banner: newGameBanner ?? '' }), 'Jogo criado como rascunho.'),
     error, notice, load,
     selectSystemVersion: (id: number) => { if (!changed && !busy) void load(id); },
     updateArea, moveArea, updateEncounter, updateEnemy, selectNpc, uploadAreaImage, uploadEnemyImage,
+    updatePower, uploadPowerImage,
+    addPower: (type: GameModePowerOption['type']) => setEditor((current) => current && current.powerCatalog.length < 40
+      ? { ...current, powerCatalog: [...current.powerCatalog, {
+        id: crypto.randomUUID(), type, name: '', description: null, image: null,
+        minLevel: 1, requirements: null,
+      }] } : current),
+    removePower: (id: string) => setEditor((current) => current && ({ ...current,
+      powerCatalog: current.powerCatalog.filter((power) => power.id !== id),
+    })),
     addEncounter,
     removeRoute, removeEncounter,
     updatePlayerDamage: (code: string, update: Partial<GameModeEditor['playerDamageByResult'][string]>) =>
@@ -254,24 +324,36 @@ export const useManagementGame = () => {
       const areas = current.areas.filter((_, areaIndex) => areaIndex !== index);
       return { ...current, areas };
     }),
-    createDraft: () => run(() => createGameModeDraft(selectedSystemVersion ?? undefined), 'Rascunho criado.'),
+    createDraft: () => run(() => selectedGameCode ? createGameAdventureDraft(selectedGameCode, mesaId)
+      : createGameModeDraft(selectedSystemVersion ?? undefined), 'Rascunho criado.'),
+    adaptGame: () => mesaId && selectedGameCode && run(async () => {
+      const adapted = await adaptGameAdventure(selectedGameCode, mesaId);
+      const [candidates, rests] = await Promise.all([
+        getGameModeNpcs(adapted.idSistemaVersao, mesaId),
+        getGameModeRestOptions(adapted.idSistemaVersao, mesaId),
+      ]);
+      setNpcs(candidates); setRestOptions(rests);
+      return adapted;
+    }, 'Jogo adaptado em um novo rascunho. Revise NPCs, loot e descansos antes de publicar.'),
     cloneDraft: (sourceVersionId: number) => selectedSystemVersion &&
       run(() => cloneGameModeDraft(sourceVersionId, selectedSystemVersion),
         'Jogo copiado para um novo rascunho. Revise os descansos, NPCs e ações antes de publicar.'),
-    save: () => editor && run(() => saveGameModeDraft(editor.idGameModeVersion,
+    save: () => editor && run(() => saveGameAdventureDraft(editor.idGameModeVersion,
       { areas: editor.areas, encounters: editor.encounters,
         fallbackAction: editor.fallbackAction,
         playerDamageByResult: editor.playerDamageByResult,
         saleDiscountPercent: editor.saleDiscountPercent,
-        repairProtectionAtBase: editor.repairProtectionAtBase }), 'Rascunho salvo.'),
+        repairProtectionAtBase: editor.repairProtectionAtBase,
+        powerCatalog: editor.powerCatalog }, mesaId), 'Rascunho salvo.'),
     publish: () => editor && run(async () => {
-      if (changed) await saveGameModeDraft(editor.idGameModeVersion,
+      if (changed) await saveGameAdventureDraft(editor.idGameModeVersion,
         { areas: editor.areas, encounters: editor.encounters,
           fallbackAction: editor.fallbackAction,
           playerDamageByResult: editor.playerDamageByResult,
           saleDiscountPercent: editor.saleDiscountPercent,
-          repairProtectionAtBase: editor.repairProtectionAtBase });
-      return publishGameModeDraft(editor.idGameModeVersion);
+          repairProtectionAtBase: editor.repairProtectionAtBase,
+          powerCatalog: editor.powerCatalog }, mesaId);
+      return publishGameAdventureDraft(editor.idGameModeVersion, mesaId);
     }, 'Nova versão publicada. Runs existentes continuam com sua versão anterior.'),
   };
 };

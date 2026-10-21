@@ -63,7 +63,7 @@ public sealed class MesaWikiController : ControllerBase
         string tipoNormalizado = type?.Trim().ToLowerInvariant() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(entityName) || tipoNormalizado is not (
             "cidade" or "cidades" or "item" or "itens" or "pages" or "pages/gallery" or
-            "pages/images" or "personagem" or "personagens" or "raca" or "racas"))
+            "pages/images" or "personagem" or "personagens" or "raca" or "racas" or "jogo"))
         {
             return BadRequest("Destino do arquivo invÃ¡lido.");
         }

@@ -24,6 +24,14 @@ public sealed class GameRunsController : ControllerBase
         return Ok(await _service.GetCharactersAsync(idUsuario.Value, cancellationToken));
     }
 
+    [HttpGet("characters/{id:int}/games")]
+    public async Task<IActionResult> GetCharacterGames(int id, CancellationToken cancellationToken)
+    {
+        int? idUsuario = User.GetUserId();
+        if (!idUsuario.HasValue) return Unauthorized();
+        return Ok(await _service.GetCharacterGamesAsync(idUsuario.Value, id, cancellationToken));
+    }
+
     [HttpGet("active")]
     public async Task<IActionResult> GetActive(CancellationToken cancellationToken)
     {

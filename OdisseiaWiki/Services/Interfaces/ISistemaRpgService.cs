@@ -33,6 +33,7 @@ public interface ISistemaRpgService
     Task<SistemaOperacaoResultado<SistemaPoderesConfigDto>> ObterPoderesAsync(int idSistemaVersao, bool incluirRascunhos = false);
     Task<SistemaOperacaoResultado<SistemaPoderesConfigDto>> AtualizarPoderesAsync(int idSistemaVersao, SistemaPoderesConfigDto dto);
     Task<SistemaOperacaoResultado<SistemaSobrevivenciaConfigDto>> ObterSobrevivenciaAsync(int idSistemaVersao, bool incluirRascunhos = false);
+    Task<SistemaOperacaoResultado<IReadOnlyList<string>>> ObterReferenciasCondicaoAsync(int idSistemaVersao, string codigo);
     Task<SistemaOperacaoResultado<SistemaSobrevivenciaConfigDto>> AtualizarSobrevivenciaAsync(int idSistemaVersao, SistemaSobrevivenciaConfigDto dto);
 
     Task<SistemaOperacaoResultado<bool>> ValidarVersaoSelecionavelAsync(int idSistemaVersao);

@@ -6,7 +6,7 @@ import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, us
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useEffect, useMemo, useState } from 'react';
-import type { GameRunActionSelection, GameRunConsumeItemResult, GameRunDto } from '../../../models/GameRun';
+import type { GameRunActionSelection, GameRunConsumeItemResult, GameRunDto, GameRunConditionOriginRequest } from '../../../models/GameRun';
 import type { ConfiguracaoCombateSistema } from '../../../models/SistemaRpg';
 import { obterConfiguracaoCombateSistemaRpg } from '../../../services/sistemasRpgService';
 import { CyberButton } from '../../../components/Generic/HighlightButton/HighlightButton';
@@ -16,10 +16,11 @@ import { InventoryClose, InventoryHeader, InventoryToggle } from './RunInventory
 import { BurstShotQuantity, EquippedGear, LoadoutActions, LoadoutAttackPreview, LoadoutBody, LoadoutCarry, LoadoutColumn, LoadoutDefenseNote, LoadoutDefensePanel, LoadoutDefenseStats, LoadoutEmpty, LoadoutGrid, LoadoutLimitNotice, LoadoutModalActions, LoadoutNote, LoadoutSectionTitle, LoadoutSlots, LoadoutTabs } from './RunLoadout.style';
 import { RunInventoryCard } from './RunInventoryCard';
 import { RunInventoryActionDialog } from './RunInventoryActionDialog';
+import { RunConditionOriginEditor } from './RunConditionOriginEditor';
 import { RunResourceBar } from './RunResourceBar/RunResourceBar';
 import { RunConsumableAction } from './RunConsumableAction';
 import { RunInventoryTypeFilter } from './RunInventoryTypeFilter';
-import { describeConsumableResult, isHealingConsumable } from './runConsumableUtils';
+import { describeConsumableResult, isUsableConsumable } from './runConsumableUtils';
 import { maxRunAttackQuantity, parseRunInventoryEntries, runAdditionalAttackStaminaCost, runAttackStaminaCost, runConfiguredAttackLimit, runInventoryKey, runInventoryTabs, runSystemQuantityLimit, stackRunConsumables, type RunInventoryEntry, type RunInventoryKind } from './runInventoryEntries';
 
 type Kind = RunInventoryKind;
@@ -30,6 +31,7 @@ interface Props {
   onUseItem: (itemId: string, quantity?: number) => Promise<GameRunConsumeItemResult | null>;
   onDropItem: (itemId: string) => Promise<boolean>;
   onEquipDefense: (itemId: string, equipped: boolean) => Promise<boolean>;
+  onConfigureCondition: (origin: Omit<GameRunConditionOriginRequest, 'revisaoEsperada' | 'chaveIdempotencia'>) => Promise<boolean>;
   usingItemId: string | null; onClose: () => void;
 }
 const key = runInventoryKey;
@@ -51,7 +53,7 @@ function SortableSlot({ entry, index, disabled, configure, remove }: {
   </li>;
 }
 
-export function RunLoadout({ run, theme, neon, saving, busy, error, onSave, onUseItem, onDropItem, onEquipDefense, usingItemId, onClose }: Props) {
+export function RunLoadout({ run, theme, neon, saving, busy, error, onSave, onUseItem, onDropItem, onEquipDefense, onConfigureCondition, usingItemId, onClose }: Props) {
   const all = useMemo(() => stackRunConsumables([
     ...parseRunInventoryEntries(run.estadoAtual.inventario, 'ITEM'), ...parseRunInventoryEntries(run.estadoAtual.implantes, 'PROTESE'),
     ...parseRunInventoryEntries(run.estadoAtual.magia, 'MAGIA'), ...parseRunInventoryEntries(run.estadoAtual.skills, 'SKILL'),
@@ -84,9 +86,13 @@ export function RunLoadout({ run, theme, neon, saving, busy, error, onSave, onUs
   const items = tabItems.filter((entry) => !typeFilter || entry.subtype === typeFilter);
   const active = selected ? byKey.get(selected) : undefined;
   const powerAction = active?.tipo === 'MAGIA' || active?.tipo === 'SKILL';
+  const utilityConfiguration = Boolean(active && !active.hasDeclaredTest &&
+    (active.tipo !== 'ITEM' || ['consumiveis', 'outro'].includes(active.subtype)) &&
+    (Object.values(active.restore).some((value) => value > 0) || active.useConditions.length > 0));
   const attackConfiguration = powerAction || active?.tipo === 'PROTESE' ||
     (active?.tipo === 'ITEM' && (active.subtype === 'arma' ||
-      (active.subtype === 'outro' && active.damageByRange.base > 0)));
+      (active.subtype === 'outro' && active.damageByRange.base > 0) ||
+      active.hitConditions.length > 0)) || utilityConfiguration;
   const defensiveEquipment = active?.tipo === 'ITEM' && (active.subtype === 'traje' || active.subtype === 'outro') &&
     Object.values(active.defense).some((value) => value > 0);
   const systemQuantityLimit = active ? runSystemQuantityLimit(active, combatRules) : null;
@@ -95,7 +101,7 @@ export function RunLoadout({ run, theme, neon, saving, busy, error, onSave, onUs
   const configuredMax = active ? runConfiguredAttackLimit(active, combatRules) : 0;
   const currentStamina = Math.max(0, Number(run.estadoAtual.status?.status?.estamina) || 0);
   const maximumStamina = run.estadoAtual.status?.status?.estaminaMaxima;
-  const maxAttacks = active ? maxRunAttackQuantity(active, currentStamina,
+  const maxAttacks = utilityConfiguration ? active?.quantity ? 1 : 0 : active ? maxRunAttackQuantity(active, currentStamina,
     combatRules?.estaminaPorAtaqueAdicional ?? 0, systemQuantityLimit?.max) : 0;
   // A mensagem de estamina não pode herdar os limites do item/Sistema.
   const staminaMax = active ? maxRunAttackQuantity({ ...active, maxAttacks: 100 }, currentStamina,
@@ -188,6 +194,17 @@ export function RunLoadout({ run, theme, neon, saving, busy, error, onSave, onUs
             neon={neon === 'on'} onSelect={() => { choose(item); setDropPending(false); }} />)}</LoadoutGrid>
           {items.length === 0 && <GameHint>Nenhuma opção nesta categoria.</GameHint>}
           {active && <RunInventoryActionDialog entry={active} neon={neon === 'on'} onClose={() => setSelected(null)}>
+            {active.conditions.map((condition) => <RunConditionOriginEditor
+              key={`${active.tipo}:${active.idInstancia}:${condition.index}`} entry={active}
+              condition={condition} systemVersionId={run.idSistemaVersao} theme={theme} neon={neon}
+              results={[...new Map((combatRules?.resultadosDado ?? []).map((row) =>
+                [row.codigoResultado, { value: row.codigoResultado, label: row.nomeResultado || row.codigoResultado }])).values()]}
+              disabled={!canEdit || changed} busy={usingItemId === active.idInstancia}
+              onSave={async (origin) => {
+                const ok = await onConfigureCondition(origin);
+                if (ok) setSelected(null);
+                return ok;
+              }} />)}
             {defensiveEquipment && <LoadoutDefensePanel aria-label="Defesas do equipamento">
               <strong>Defesas do equipamento</strong>
               {active.defense.protecao > 0 && <RunResourceBar label="Proteção restante"
@@ -203,8 +220,9 @@ export function RunLoadout({ run, theme, neon, saving, busy, error, onSave, onUs
                   : 'A Base não repara a proteção nesta versão do jogo.'}</LoadoutDefenseNote>}
             </LoadoutDefensePanel>}
             {attackConfiguration && <>
-              {powerAction && <GameHint>Uma execução por ação. O combate exige teste e dano executáveis na versão publicada do Sistema.</GameHint>}
-              {!powerAction && <>
+              {utilityConfiguration && <GameHint>Uma utilização sem teste de acerto quando chegar a vez desta ação. Consumíveis gastam uma unidade da mochila; se estiverem esgotados, o combate tenta a próxima ação.</GameHint>}
+              {powerAction && !utilityConfiguration && <GameHint>Uma execução por ação. O combate exige teste e dano executáveis na versão publicada do Sistema.</GameHint>}
+              {!powerAction && !utilityConfiguration && <>
               <label>Alcance
                 <select value={draftRange ?? ''} disabled={!canEdit} onChange={(event) => {
                   const alcance = event.target.value ? event.target.value as 'CURTA' | 'MEDIA' | 'LONGA' : null;
@@ -229,33 +247,40 @@ export function RunLoadout({ run, theme, neon, saving, busy, error, onSave, onUs
                   onChange={(event) => updateCount(Number(event.target.value))} />}
               </label>
               </>}
-              <LoadoutAttackPreview aria-live="polite">
+              {!utilityConfiguration && <LoadoutAttackPreview aria-live="polite">
                 <span>Uma rolagem</span>
                 <span>Dano base <strong>{baseDamage > 0 ? (baseDamage * effectiveCount).toLocaleString('pt-BR') : '—'}</strong></span>
                 {active.ranged && <span>{active.fireMode === 'RAJADA' ? 'Rajadas' : 'Tiros'} <strong>{effectiveCount}</strong></span>}
                 {active.ranged && active.controlsAmmo && <span>Munição <strong>{active.ammoPerUse * effectiveCount}</strong></span>}
                 {!powerAction && <span>Estamina <strong>{staminaCost === null ? '—' : staminaCost.toLocaleString('pt-BR')}</strong></span>}
-              </LoadoutAttackPreview>
-              {active.ranged && combatRules && <GameHint>
+              </LoadoutAttackPreview>}
+              {utilityConfiguration && active && <LoadoutAttackPreview aria-live="polite">
+                <span>Sem dado de acerto</span>
+                {active.tipo === 'ITEM' && <span>Na mochila <strong>{active.quantity}</strong></span>}
+                {Object.entries(active.restore).filter(([, value]) => value > 0).map(([resource, value]) =>
+                  <span key={resource}>+{resource} <strong>{value.toLocaleString('pt-BR')}</strong></span>)}
+                {active.useConditions.length > 0 && <span>Efeito <strong>{active.useConditions.join(', ')}</strong></span>}
+              </LoadoutAttackPreview>}
+              {!utilityConfiguration && active.ranged && combatRules && <GameHint>
                 {runAdditionalAttackStaminaCost(active, systemAdditionalStamina) === 0
                   ? 'Esta versão do Sistema e este item não cobram estamina por disparo/rajada adicional.'
                   : `Cada ${active.fireMode === 'RAJADA' ? 'rajada' : 'tiro'} adicional custa ${runAdditionalAttackStaminaCost(active, systemAdditionalStamina)} de estamina (Sistema: ${systemAdditionalStamina}${active.staminaPerUse > systemAdditionalStamina ? `; Item: ${active.staminaPerUse}` : ''}).`}
               </GameHint>}
             </>}
-            {attackConfiguration && itemQuantityLimit && <LoadoutLimitNotice $danger={draftCount > itemQuantityLimit.max}
+            {attackConfiguration && !utilityConfiguration && itemQuantityLimit && <LoadoutLimitNotice $danger={draftCount > itemQuantityLimit.max}
               role={draftCount > itemQuantityLimit.max ? 'alert' : 'status'}>
               <strong>Item:</strong> {itemQuantityLimit.reason} permite até {itemQuantityLimit.max} {itemQuantityLimit.max === 1 ? 'uso' : 'usos'} por ação.
             </LoadoutLimitNotice>}
-            {attackConfiguration && systemQuantityLimit && <LoadoutLimitNotice $danger={draftCount > systemQuantityLimit.max}
+            {attackConfiguration && !utilityConfiguration && systemQuantityLimit && <LoadoutLimitNotice $danger={draftCount > systemQuantityLimit.max}
               role={draftCount > systemQuantityLimit.max ? 'alert' : 'status'}>
               <strong>Sistema:</strong> {systemQuantityLimit.reason} permite até {systemQuantityLimit.max} {systemQuantityLimit.max === 1 ? 'uso' : 'usos'} por ação.
             </LoadoutLimitNotice>}
-            {attackConfiguration && active?.availableUses !== null && active?.availableUses !== undefined && active.availableUses < configuredMax &&
+            {attackConfiguration && !utilityConfiguration && active?.availableUses !== null && active?.availableUses !== undefined && active.availableUses < configuredMax &&
               <LoadoutLimitNotice $danger={draftCount > active.availableUses}
                 role={draftCount > active.availableUses ? 'alert' : 'status'}>
                 <strong>Item:</strong> restam {active.availableUses} {active.availableUses === 1 ? 'uso' : 'usos'} até o próximo descanso.
               </LoadoutLimitNotice>}
-            {attackConfiguration && active && staminaMax < configuredMax && <LoadoutLimitNotice $danger={draftCount > staminaMax}
+            {attackConfiguration && !utilityConfiguration && active && staminaMax < configuredMax && <LoadoutLimitNotice $danger={draftCount > staminaMax}
               role={draftCount > staminaMax ? 'alert' : 'status'}>
               <strong>Personagem:</strong> estamina atual {currentStamina}
               {typeof maximumStamina === 'number' && maximumStamina > 0
@@ -263,7 +288,7 @@ export function RunLoadout({ run, theme, neon, saving, busy, error, onSave, onUs
               {runAttackStaminaCost(active, 1, systemAdditionalStamina)}. Isso permite até{' '}
               {staminaMax} {staminaMax === 1 ? 'uso' : 'usos'} nesta ação.
             </LoadoutLimitNotice>}
-            {isHealingConsumable(active) && !dropPending && <RunConsumableAction key={active.idInstancia} entry={active} run={run} theme={theme} neon={neon}
+            {isUsableConsumable(active) && !dropPending && <RunConsumableAction key={active.idInstancia} entry={active} run={run} theme={theme} neon={neon}
               disabled={!canEdit || changed} using={usingItemId === active.idInstancia}
               onUse={(quantity) => void onUseItem(active.idInstancia, quantity).then((result) => {
                 if (result) { setLastUse(describeConsumableResult(result)); setSelected(null); }
@@ -272,7 +297,7 @@ export function RunLoadout({ run, theme, neon, saving, busy, error, onSave, onUs
                 colorType="secondary" width="calc(100% - 15px)" height="40px" text="Deixar item"
                 disabled={!canDrop} onClick={() => setDropPending(true)} /> : undefined} />}
             {!dropPending && (attackConfiguration || defensiveEquipment ||
-              (active.tipo === 'ITEM' && !isHealingConsumable(active))) && <LoadoutModalActions>
+              (active.tipo === 'ITEM' && !isUsableConsumable(active))) && <LoadoutModalActions>
               {attackConfiguration && <CyberButton theme={theme} neon={neon}
                 colorType={equipped ? 'secondary' : 'primary'}
                 width="calc(100% - 15px)" height="40px" text={equipped ? 'Desequipar' : 'Equipar'}
@@ -294,7 +319,7 @@ export function RunLoadout({ run, theme, neon, saving, busy, error, onSave, onUs
                 onClick={() => void onEquipDefense(active.idInstancia, !active.defenseEquipped).then((ok) => {
                   if (ok) setSelected(null);
                 })} />}
-              {active.tipo === 'ITEM' && (!isHealingConsumable(active) || defensiveEquipment || attackConfiguration) &&
+              {active.tipo === 'ITEM' && (!isUsableConsumable(active) || defensiveEquipment || attackConfiguration) &&
                 <CyberButton theme={theme} neon={neon}
                 colorType="secondary" width="calc(100% - 15px)" height="40px" text="Deixar item"
                 disabled={!canDrop} onClick={() => setDropPending(true)} />}
@@ -314,8 +339,8 @@ export function RunLoadout({ run, theme, neon, saving, busy, error, onSave, onUs
           </RunInventoryActionDialog>}
         </LoadoutColumn>
         <LoadoutColumn aria-label="Ordem de ataque">
-          <LoadoutSectionTitle>Ataques equipados <span>{attackCount}/5</span></LoadoutSectionTitle>
-          <LoadoutNote>Arraste para escolher a ordem. O combate usa as ações que já têm teste e dano configurados.</LoadoutNote>
+          <LoadoutSectionTitle>Ações equipadas <span>{attackCount}/5</span></LoadoutSectionTitle>
+          <LoadoutNote>Arraste para escolher a prioridade. Ataques e utilitários seguem esta ordem no combate.</LoadoutNote>
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
             <SortableContext items={actions.map(key)} strategy={verticalListSortingStrategy}>
               <LoadoutSlots>{actions.map((action, index) => {

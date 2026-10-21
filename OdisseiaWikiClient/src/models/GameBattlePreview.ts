@@ -23,6 +23,7 @@ export interface GameBattleEvent {
     actionId?: string;
     actionName?: string;
     quantity?: number;
+    directUse?: boolean;
     mode?: string;
     roll?: {
       total: number;
@@ -45,9 +46,19 @@ export interface GameBattleEvent {
     reason?: string;
     winnerActorId?: string | null;
     dice?: number[];
+    alternativeDice?: number[] | null;
     modifier?: number;
     total?: number;
     formula?: string;
+    code?: string;
+    name?: string;
+    value?: number;
+    remainingTurns?: number | null;
+    remainingHours?: number | null;
+    remainingQuantity?: number;
+    attributeCode?: string;
+    difficulty?: number;
+    passed?: boolean;
   };
 }
 

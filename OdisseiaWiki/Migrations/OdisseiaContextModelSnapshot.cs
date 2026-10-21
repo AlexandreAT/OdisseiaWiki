@@ -64,6 +64,10 @@ namespace OdisseiaWiki.Migrations
                         .HasColumnType("int")
                         .HasColumnName("IDSistemaVersao");
 
+                    b.Property<string>("IdOrigemGlobal")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
                     b.Property<int>("IdWikiEscopo")
                         .HasColumnType("int")
                         .HasColumnName("IDWikiEscopo");
@@ -119,6 +123,10 @@ namespace OdisseiaWiki.Migrations
 
                     b.HasIndex("IdWikiEscopo")
                         .HasDatabaseName("IX_Item_WikiEscopo");
+
+                    b.HasIndex("IdWikiEscopo", "IdOrigemGlobal")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Item_Escopo_OrigemGlobal");
 
                     b.HasIndex("PersonagemIdpersonagem");
 
@@ -208,6 +216,22 @@ namespace OdisseiaWiki.Migrations
                     b.Property<DateTime>("CriadaEmUtc")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<string>("Banner")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("Descricao")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<int?>("IdMesa")
+                        .HasColumnType("int")
+                        .HasColumnName("IDMesa");
+
+                    b.Property<int?>("IdUsuarioCriacao")
+                        .HasColumnType("int")
+                        .HasColumnName("IDUsuarioCriacao");
+
                     b.Property<int>("IdSistemaVersao")
                         .HasColumnType("int")
                         .HasColumnName("IDSistemaVersao");
@@ -216,6 +240,10 @@ namespace OdisseiaWiki.Migrations
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("varchar(20)");
+
+                    b.Property<string>("Nome")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
 
                     b.Property<DateTime?>("PublicadaEmUtc")
                         .HasColumnType("datetime(6)");
@@ -229,6 +257,12 @@ namespace OdisseiaWiki.Migrations
                         .HasColumnType("varchar(20)");
 
                     b.HasKey("IdGameModeVersion");
+
+                    b.HasIndex("IdMesa")
+                        .HasDatabaseName("IX_GameModeVersion_Mesa");
+
+                    b.HasIndex("IdMesa", "IdSistemaVersao", "Status")
+                        .HasDatabaseName("IX_GameModeVersion_Mesa_Sistema_Status");
 
                     b.HasIndex("IdSistemaVersao", "Codigo", "NumeroVersao")
                         .IsUnique()
@@ -1912,6 +1946,9 @@ namespace OdisseiaWiki.Migrations
                         .HasColumnType("int")
                         .HasColumnName("IDWikiEscopo");
 
+                    b.Property<int?>("IdOrigemGlobal")
+                        .HasColumnType("int");
+
                     b.Property<int?>("Idcidade")
                         .HasColumnType("int(11)")
                         .HasColumnName("IDCidade");
@@ -1981,6 +2018,10 @@ namespace OdisseiaWiki.Migrations
 
                     b.HasIndex("IdWikiEscopo")
                         .HasDatabaseName("IX_Personagem_WikiEscopo");
+
+                    b.HasIndex("IdWikiEscopo", "IdOrigemGlobal")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Personagem_Escopo_OrigemGlobal");
 
                     b.HasIndex("PassivaIdpassiva");
 
@@ -3774,12 +3815,20 @@ namespace OdisseiaWiki.Migrations
 
             modelBuilder.Entity("OdisseiaWiki.Models.GameModeVersion", b =>
                 {
+                    b.HasOne("OdisseiaWiki.Models.Mesa", "Mesa")
+                        .WithMany()
+                        .HasForeignKey("IdMesa")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_GameModeVersion_Mesa");
+
                     b.HasOne("OdisseiaWiki.Models.SistemaVersao", "SistemaVersao")
                         .WithMany()
                         .HasForeignKey("IdSistemaVersao")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("FK_GameModeVersion_SistemaVersao");
+
+                    b.Navigation("Mesa");
 
                     b.Navigation("SistemaVersao");
                 });

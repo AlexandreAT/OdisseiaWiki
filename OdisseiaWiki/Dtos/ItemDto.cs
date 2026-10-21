@@ -18,6 +18,7 @@ namespace OdisseiaWiki.Dtos
         public string? Imagem { get; set; }
         public object? AtributosJson { get; set; }
         public string? IditemBase { get; set; }
+        public string? IdOrigemGlobal { get; set; }
         public List<string>? Tags { get; set; }
         public bool Visivel { get; set; } = true;
         public bool Destaque { get; set; } = false;

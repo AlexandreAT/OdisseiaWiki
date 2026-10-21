@@ -161,7 +161,19 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
                 {
                     result = _simulator.Simulate(setup.Input, new SeededGameRunRandomSource(seed));
                     player = result.Actors.Single(actor => actor.Id == "player");
-                    after = GameRunCarry.Reconcile(ApplyResult(before, player), version);
+                    string battleState = ApplyResult(before, player);
+                    foreach (IGrouping<string, GameBattleEvent> consumed in result.Events
+                        .Where(gameEvent => gameEvent.Type == GameBattleEventTypes.ItemConsumed &&
+                            gameEvent.ActorId == "player" && gameEvent.Payload is ItemConsumedPayload)
+                        .GroupBy(gameEvent => ((ItemConsumedPayload)gameEvent.Payload).ActionId,
+                            StringComparer.Ordinal))
+                    {
+                        if (!consumed.Key.StartsWith("item:", StringComparison.Ordinal)) continue;
+                        battleState = GameRunConsumable.SpendInBattle(battleState,
+                            consumed.Key[5..], consumed.Count());
+                    }
+                    after = GameRunCarry.Reconcile(GameRunCarry.PreserveBattleTriggers(
+                        battleState, version, result.Events), version);
                     if (result.WinnerActorId == "player" && node.Payload?.EncounterCode is string encounterCode)
                     {
                         GameBattlePreviewConfig? mode = JsonSerializer.Deserialize<GameBattlePreviewConfig>(
@@ -183,7 +195,7 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
                     }
                 }
                 catch (Exception error) when (error is JsonException or InvalidOperationException or
-                    ArgumentException or OverflowException)
+                    ArgumentException or OverflowException or GameRunConsumableException)
                 {
                     return GameRunOperationResult<GameRunBattleResolutionDto>.Fail(
                         "COMBATE_INDISPONIVEL", error.Message);
@@ -217,6 +229,14 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
                     CriadaEmUtc = now,
                 }, cancellationToken);
                 run.EstadoAtualJson = after;
+                if (GameRunActionLoadout.Read(run.LoadoutJson) is { } equippedActions)
+                {
+                    HashSet<string> exhausted = player.Actions.Where(action => action.RemainingQuantity == 0)
+                        .Select(action => action.ActionId).ToHashSet(StringComparer.Ordinal);
+                    if (exhausted.Count > 0)
+                        run.LoadoutJson = GameRunActionLoadout.Serialize(equippedActions.Where(action =>
+                            !exhausted.Contains($"{action.Tipo.ToLowerInvariant()}:{action.IdInstancia}")).ToArray());
+                }
                 map.OpeningOpportunityPending = false;
                 GameRunMapGenerator.Complete(map, run.NoAtualId,
                     unlockChildren: result.WinnerActorId == "player");
@@ -386,7 +406,7 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
                     "DESCANSO", StringComparison.OrdinalIgnoreCase) == true);
                 if (restCount > 1 || requested.Count - restCount > 5)
                     return GameRunOperationResult<GameRunDto>.Fail("LOADOUT_INVALIDO",
-                        "Equipe até cinco ataques e, opcionalmente, um descanso.");
+                        "Equipe até cinco ações e, opcionalmente, um descanso.");
                 if (requested.Any(action => action is null || string.IsNullOrWhiteSpace(action.Tipo) ||
                     string.IsNullOrWhiteSpace(action.IdInstancia) ||
                     action.IdInstancia.Length > 100 ||
@@ -450,7 +470,7 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
                 {
                     GameBattlePreviewSetup setup = _factory.Build(GameRunService.Map(run), version);
                     if (setup.Input.FirstActor.Actions.Count - 1 != requested.Count - restCount)
-                        throw new InvalidOperationException("Uma das ações não possui ataque D20 e dano executável nesta versão.");
+                        throw new InvalidOperationException("Uma das ações não possui ataque ou utilitário executável nesta versão.");
                 }
                 catch (Exception error) when (error is JsonException or InvalidOperationException or ArgumentException)
                 {
@@ -496,12 +516,18 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
                     return GameRunOperationResult<GameRunConsumeItemResultDto>.Fail(
                         "COMBATE_PENDENTE", "Conclua o combate antes de usar um consumível.");
 
+                SistemaVersao? itemSystem = await _systems.GetVersionAsync(run.IdSistemaVersao, includeConfiguration: true);
+                if (itemSystem is null) return GameRunOperationResult<GameRunConsumeItemResultDto>.Fail(
+                    "SISTEMA_INDISPONIVEL", "A versão do Sistema desta run não está disponível.");
+
                 GameRunConsumableEffect effect;
                 string unequippedSnapshot = run.EstadoAtualJson;
                 try
                 {
                     unequippedSnapshot = GameRunDefensiveEquipment.UnequipIfNeeded(run.EstadoAtualJson, request.IdInstancia);
-                    effect = GameRunConsumable.Use(unequippedSnapshot, request.IdInstancia, request.Quantidade);
+                    unequippedSnapshot = GameRunCarry.RemoveUnequippedItemConditions(
+                        unequippedSnapshot, request.IdInstancia, itemSystem);
+                    effect = GameRunConsumable.Use(unequippedSnapshot, request.IdInstancia, request.Quantidade, itemSystem);
                 }
                 catch (GameRunConsumableException error)
                 {
@@ -513,12 +539,13 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
                         "ITEM_INVALIDO", "O inventário da run está inválido.");
                 }
 
-                SistemaVersao? itemSystem = await _systems.GetVersionAsync(run.IdSistemaVersao, includeConfiguration: true);
-                if (itemSystem is null) return GameRunOperationResult<GameRunConsumeItemResultDto>.Fail(
-                    "SISTEMA_INDISPONIVEL", "A versão do Sistema desta run não está disponível.");
                 string withoutRemovedEquipment = GameRunDefensiveEquipment.RemoveMissingBonuses(
                     unequippedSnapshot, effect.SnapshotJson);
-                run.EstadoAtualJson = GameRunCarry.Reconcile(withoutRemovedEquipment, itemSystem);
+                string healed = effect.LifeRestored > 0 || effect.ClearsConditionsOnCure
+                    ? GameRunCarry.RecoverConditionsAtCure(withoutRemovedEquipment, itemSystem)
+                    : GameRunCarry.Reconcile(withoutRemovedEquipment, itemSystem);
+                run.EstadoAtualJson = GameRunCarry.ApplyConsumedItemConditions(
+                    unequippedSnapshot, healed, request.IdInstancia, itemSystem, request.Quantidade);
                 if (effect.RemainingQuantity == 0 && GameRunActionLoadout.Read(run.LoadoutJson) is { } actions)
                     run.LoadoutJson = GameRunActionLoadout.Serialize(actions.Where(action =>
                         !string.Equals(action.Tipo, "ITEM", StringComparison.OrdinalIgnoreCase) ||
@@ -717,7 +744,12 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
                         return GameRunOperationResult<GameRunBaseResolutionDto>.Fail(
                             "DESCANSO_INDISPONIVEL", "A versão publicada não possui um descanso automático para esta Base.");
                     resultName = rest.Nome;
-                    try { (updated, recovery) = ApplyRest(run.EstadoAtualJson, rest); }
+                    try
+                    {
+                        (updated, recovery) = ApplyRest(
+                            GameRunCarry.RecoverConditionsAtRest(run.EstadoAtualJson, version, rest.Tipo), rest, version);
+                        updated = GameRunCarry.Reconcile(updated, version);
+                    }
                     catch (Exception error) when (error is JsonException or InvalidOperationException or
                         ArgumentException or OverflowException)
                     {
@@ -728,6 +760,24 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
                         ["repairProtectionAtBase"]?.GetValue<bool>() != false)
                     {
                         (updated, repairedProtection) = GameRunDefensiveEquipment.RestoreProtectionAtBase(updated);
+                    }
+                }
+                else if (node.Type == "EVENTO" && node.Payload?.GameMinutes > 0)
+                {
+                    SistemaVersao? version = await _systems.GetVersionAsync(
+                        run.IdSistemaVersao, includeConfiguration: true);
+                    if (version is null)
+                        return GameRunOperationResult<GameRunBaseResolutionDto>.Fail(
+                            "SISTEMA_INDISPONIVEL", "A versão das regras desta run não está disponível.");
+                    try
+                    {
+                        updated = GameRunCarry.AdvanceGameTime(updated, node.Payload.GameMinutes, version);
+                    }
+                    catch (Exception error) when (error is JsonException or InvalidOperationException or
+                        ArgumentException or OverflowException)
+                    {
+                        return GameRunOperationResult<GameRunBaseResolutionDto>.Fail(
+                            "EVENTO_INDISPONIVEL", "Não foi possível avançar o tempo deste evento.");
                     }
                 }
                 string? returnPortalId = null;
@@ -837,8 +887,8 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
                 SistemaDescansoConfig rest = version!.Descansos.First(item =>
                     string.Equals(item.Tipo, "NORMAL", StringComparison.OrdinalIgnoreCase));
                 (string updated, (int vida, int mana, int estamina) recovery) =
-                    ApplyRest(run.EstadoAtualJson, rest);
-                run.EstadoAtualJson = updated;
+                    ApplyRest(GameRunCarry.RecoverConditionsAtRest(run.EstadoAtualJson, version, rest.Tipo), rest, version);
+                run.EstadoAtualJson = GameRunCarry.Reconcile(updated, version);
                 map.MediumRestUsedMapKeys = [.. map.MediumRestUsedMapKeys, MediumRestMapKey(map)];
                 map.OpeningOpportunityPending = true;
                 run.MapaJson = JsonSerializer.Serialize(map, JsonOptions);
@@ -874,7 +924,8 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
             return new(false, name, 0, 0, 0, reason, map.OpeningOpportunityPending);
         try
         {
-            (_, (int vida, int mana, int estamina) recovery) = ApplyRest(run.EstadoAtualJson, rest!);
+            (_, (int vida, int mana, int estamina) recovery) = ApplyRest(
+                GameRunCarry.RecoverConditionsAtRest(run.EstadoAtualJson, version!, rest!.Tipo), rest, version!);
             return new(true, name, recovery.vida, recovery.mana, recovery.estamina,
                 null, map.OpeningOpportunityPending);
         }
@@ -886,7 +937,7 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
     }
 
     private static (string updated, (int vida, int mana, int estamina) recovery) ApplyRest(
-        string snapshotJson, SistemaDescansoConfig rest)
+        string snapshotJson, SistemaDescansoConfig rest, SistemaVersao version)
     {
         JsonNode root = JsonNode.Parse(snapshotJson)
             ?? throw new JsonException("O estado da run está vazio.");
@@ -900,7 +951,11 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
         int stamina = Recover("estamina", "estaminaMaxima", rest.RecuperacaoEstamina);
         ResetUses(Find(root as JsonObject, "inventario"));
         ResetUses(Find(root as JsonObject, "implantes"));
-        return (root.ToJsonString(JsonOptions), (life, mana, stamina));
+        string rested = root.ToJsonString(JsonOptions);
+        if (life > 0) rested = GameRunCarry.RecoverConditionsAtCure(rested, version);
+        rested = GameRunCarry.AdvanceGameTime(rested, rest.DuracaoMinimaMinutos ?? 0, version);
+        return (rested,
+            (life, mana, stamina));
 
         static void ResetUses(JsonNode? collection)
         {
@@ -921,6 +976,7 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
 
         int Recover(string field, string maximumField, decimal configured)
         {
+            if (GameRunCarry.BlocksRecovery((JsonObject)root, version, field.ToUpperInvariant())) return 0;
             JsonNode? currentNode = Find(resources, field);
             JsonNode? maximumNode = Find(resources, maximumField);
             if ((currentNode is not null && !int.TryParse(currentNode.ToString(), out _)) ||
@@ -955,6 +1011,8 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
         Set(resources, "vida", player.HitPoints);
         Set(resources, "mana", player.Mana);
         Set(resources, "estamina", player.Stamina);
+        status!["condicoesJogo"] = JsonSerializer.SerializeToNode(player.ActiveConditions, JsonOptions);
+        status["turnosPerdidos"] = player.TurnsToSkip;
         JsonObject? defenses = Find(status, "defesas") as JsonObject;
         if (defenses is not null)
         {
@@ -1064,10 +1122,21 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
     private static string Hash(string payload) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(payload)));
 
-    private static GameBattlePreviewActorDto MapActor(GameBattleActorSpec actor) => new(
-        actor.Id, actor.Name, actor.HitPoints, actor.MaximumHitPoints,
-        actor.Mana, actor.MaximumMana, actor.Stamina, actor.MaximumStamina, actor.Defenses,
-        actor.Image);
+    private static GameBattlePreviewActorDto MapActor(GameBattleActorSpec actor)
+    {
+        int Maximum(string resource, int original)
+        {
+            int maximum = original;
+            foreach (GameBattleActiveCondition condition in actor.ActiveConditions.Where(item =>
+                         item.Rule.Resource.Equals(resource, StringComparison.OrdinalIgnoreCase) &&
+                         item.Rule.Operation.Equals("REDUZIR_LIMITE_PERCENTUAL", StringComparison.OrdinalIgnoreCase)))
+                maximum = (int)Math.Floor(maximum * (100 - Math.Clamp(condition.Value, 0, 100)) / 100m);
+            return maximum;
+        }
+        return new GameBattlePreviewActorDto(actor.Id, actor.Name, actor.HitPoints,
+            Maximum("VIDA", actor.MaximumHitPoints), actor.Mana, Maximum("MANA", actor.MaximumMana),
+            actor.Stamina, Maximum("ESTAMINA", actor.MaximumStamina), actor.Defenses, actor.Image);
+    }
 
     private static JsonSerializerOptions CreateOptions()
     {

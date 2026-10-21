@@ -188,7 +188,10 @@ public sealed class GameRunMapGenerator
                     Fase = stage + 1, Layer = layer, Position = position,
                     Seed = DeriveSeed(runSeed, id), Type = option.Type, State = state,
                     Connections = connections, Revealed = true,
-                    Payload = nonCombat ? null : new GameRunMapNodePayloadDto { EncounterCode = option.EncounterCode },
+                    Payload = option.Type == "EVENTO" ? new GameRunMapNodePayloadDto
+                    {
+                        GameMinutes = option.GameMinutes,
+                    } : nonCombat ? null : new GameRunMapNodePayloadDto { EncounterCode = option.EncounterCode },
                 };
             }
         }
@@ -385,6 +388,9 @@ public sealed class GameRunMapGenerator
             Payload = option.Type == "AREA_SECRETA" ? new GameRunMapNodePayloadDto
             {
                 SecretAreaCode = option.SecretAreaCode,
+            } : option.Type == "EVENTO" ? new GameRunMapNodePayloadDto
+            {
+                GameMinutes = option.GameMinutes,
             } : nonCombat ? null : new GameRunMapNodePayloadDto
             {
                 EncounterCode = encounterCode,

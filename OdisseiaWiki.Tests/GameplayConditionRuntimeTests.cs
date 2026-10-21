@@ -9,6 +9,31 @@ namespace OdisseiaWiki.Tests;
 public sealed class GameplayConditionRuntimeTests
 {
     [Fact]
+    public void EfeitosMultiplosDaRegraAtivaAfetamDoisRecursosEBloqueiamRecuperacao()
+    {
+        var character = Character("""{"status":{"mana":100,"manaMaxima":100,"estamina":100,"estaminaMaxima":100}}""");
+        var combat = new MesaCombate();
+        var participant = Participant(character, combat);
+        var rule = new SistemaCondicao
+        {
+            IdSistemaCondicao = 8, Codigo = "EXAUSTAO", Nome = "Exaustão", Tipo = "Fisico",
+            ConfiguracaoPadraoJson = """{"efeitos":[{"operacao":"REDUZIR_LIMITE_PERCENTUAL","recurso":"MANA","valor":20,"momento":"ENQUANTO_ATIVA"},{"operacao":"REDUZIR_LIMITE_PERCENTUAL","recurso":"ESTAMINA","valor":30,"momento":"ENQUANTO_ATIVA"},{"operacao":"BLOQUEAR_RECUPERACAO","recurso":"MANA","valor":0,"momento":"ENQUANTO_ATIVA"}]}""",
+        };
+        var version = new SistemaVersao { Condicoes = [rule] };
+        MesaCondicaoAtiva active = ActiveCondition(rule, participant, combat);
+        combat.Condicoes.Add(active);
+
+        Assert.True(GameplayConditionRuntime.ApplyActiveResourceLimits(character, combat, participant, version));
+        Assert.Equal(80, StatusValue(character, "manaMaxima"));
+        Assert.Equal(70, StatusValue(character, "estaminaMaxima"));
+        Assert.True(GameplayConditionRuntime.BlocksRecovery(combat, participant, version, "MANA"));
+        active.Status = MesaCondicaoStatus.Expirada;
+        Assert.True(GameplayConditionRuntime.ApplyActiveResourceLimits(character, combat, participant, version));
+        Assert.Equal(100, StatusValue(character, "manaMaxima"));
+        Assert.Equal(100, StatusValue(character, "estaminaMaxima"));
+    }
+
+    [Fact]
     public void ApplyActiveResourceLimits_AplicaRegrasAtivasNaOrdemERestauraLimiteBase()
     {
         var character = Character("""{"status":{"estamina":100,"estaminaMaxima":100}}""");

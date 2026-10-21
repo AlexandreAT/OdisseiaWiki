@@ -1,4 +1,5 @@
 import styled from "styled-components";
+import { cyberButtonsFillWidth } from '../HighlightButton/HighlightButton.styles';
 
 interface ThemeProps {
   theme: 'dark' | 'light';
@@ -151,6 +152,11 @@ export const ModalFooterContainer = styled.div<ThemeProps>`
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+  @media (max-width: 600px) {
+    flex-direction: column;
+    align-items: stretch;
+    ${cyberButtonsFillWidth}
+  }
   border-top: 1px solid ${({ theme, neon }) =>
     theme === "dark"
       ? neon === "on"

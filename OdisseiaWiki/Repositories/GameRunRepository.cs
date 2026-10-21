@@ -91,7 +91,7 @@ public sealed class GameRunRepository : IGameRunRepository
         IReadOnlyCollection<int> systemVersionIds, CancellationToken cancellationToken) =>
         systemVersionIds.Count == 0 ? [] : await _context.GameModeVersions.AsNoTracking()
             .Where(item => systemVersionIds.Contains(item.IdSistemaVersao) &&
-                item.Codigo == ModeCode && item.Status == GameModeVersionStatus.Publicado)
+                item.Status == GameModeVersionStatus.Publicado)
             .OrderByDescending(item => item.PublicadaEmUtc)
             .ThenByDescending(item => item.IdGameModeVersion)
             .ToListAsync(cancellationToken);
@@ -128,7 +128,7 @@ public sealed class GameRunRepository : IGameRunRepository
     {
         GameModeVersion? latest = await _context.GameModeVersions
             .Where(item => item.IdSistemaVersao == idSistemaVersao &&
-                item.Codigo == ModeCode && item.Status == GameModeVersionStatus.Publicado)
+                item.IdMesa == null && item.Codigo == ModeCode && item.Status == GameModeVersionStatus.Publicado)
             .OrderByDescending(item => item.PublicadaEmUtc)
             .ThenByDescending(item => item.IdGameModeVersion)
             .FirstOrDefaultAsync(cancellationToken);

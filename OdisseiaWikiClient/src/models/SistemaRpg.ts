@@ -444,6 +444,7 @@ export interface SistemaMorteConfig {
 }
 
 export interface ConfiguracaoSobrevivenciaSistema {
+  codigosRemocaoConfirmada?: string[];
   condicoes: SistemaCondicao[];
   descansos: SistemaDescansoConfig[];
   morte?: SistemaMorteConfig | null;

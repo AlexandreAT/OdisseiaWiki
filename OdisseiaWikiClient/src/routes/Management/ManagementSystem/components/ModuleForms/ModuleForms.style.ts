@@ -61,6 +61,7 @@ export const ModuleIntro = styled.div<ThemeProps>`
 `;
 
 export const SectionCard = styled.section<ThemeProps>`
+  scroll-margin-top: 120px;
   min-width: 0;
   padding: 16px;
   border: 1px solid ${({ theme, neon }) => (

@@ -420,6 +420,27 @@ const validateSurvival = (config: ConfiguracaoSobrevivenciaSistema): SistemaVali
     addRequired(errors, `condicoes.${index}.tipo`, row.tipo, 'Tipo');
     addRequired(errors, `condicoes.${index}.unidadeDuracao`, row.unidadeDuracao, 'Unidade');
     addNonNegative(errors, `condicoes.${index}.duracaoPadrao`, row.duracaoPadrao, 'Duração');
+    const hasTriggerPart = Boolean(row.codigoRecursoGatilho || row.operadorGatilho || row.valorGatilho !== null && row.valorGatilho !== undefined);
+    if (hasTriggerPart && (!row.codigoRecursoGatilho || !row.operadorGatilho || row.valorGatilho === null || row.valorGatilho === undefined))
+      errors[`condicoes.${index}.regra`] = 'Para ativar automaticamente, escolha recurso, comparação e valor do gatilho.';
+    if (row.operacaoEfeito && (!row.codigoRecurso || !row.momentoEfeito ||
+        row.operacaoEfeito !== 'BLOQUEAR_RECUPERACAO' && (row.valorEfeito === null || row.valorEfeito === undefined)))
+      errors[`condicoes.${index}.regra`] = 'Para executar o efeito, escolha operação, recurso afetado, momento e valor quando necessário.';
+    const recovery = (row.regraRemocao ?? '').split(';').map((code) => code.trim().toUpperCase());
+    if ((row.regraRemocao ?? '').includes(';') && recovery.some((code) =>
+        !['DURACAO', 'GATILHO_CESSOU', 'DESCANSO_SIMPLES', 'DESCANSO_NORMAL',
+          'DESCANSO_LONGO', 'CURA', 'MAGIA'].includes(code)))
+      errors[`condicoes.${index}.regra`] = 'Escolha apenas as formas de recuperação oferecidas.';
+    if (recovery.includes('DURACAO') && !(Number(row.duracaoPadrao) > 0))
+      errors[`condicoes.${index}.duracaoPadrao`] = 'Defina uma duração maior que zero.';
+    if (recovery.includes('DURACAO') && row.unidadeDuracao !== 'Turno' && row.unidadeDuracao !== 'Hora')
+      errors[`condicoes.${index}.regra`] = 'A expiração automática por duração usa turnos ou horas de jogo.';
+    if (row.operacaoEfeito === 'REDUZIR_LIMITE_PERCENTUAL' &&
+        (row.valorEfeito === null || row.valorEfeito === undefined || row.valorEfeito < 0 || row.valorEfeito > 100))
+      errors[`condicoes.${index}.valorEfeito`] = 'A redução percentual deve estar entre 0 e 100.';
+    if (row.operacaoEfeito === 'REDUZIR_LIMITE_PERCENTUAL' && row.valorPadrao !== null &&
+        row.valorPadrao !== undefined && (row.valorPadrao < 0 || row.valorPadrao > 100))
+      errors[`condicoes.${index}.regra`] = 'A intensidade padrão da redução percentual deve estar entre 0 e 100.';
   });
   addDuplicateErrors(errors, config.condicoes, 'condicoes', 'codigo', 'Código');
 

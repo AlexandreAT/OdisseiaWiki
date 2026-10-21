@@ -524,7 +524,7 @@ public sealed class GameplayActionResolver
             notices.Add(new GameplayExecutionNoticeDto
             {
                 Codigo = "CONDICAO_NAO_PUBLICADA",
-                Mensagem = $"A condição '{invalidCondition}' foi ignorada porque não existe na versão publicada da Mesa.",
+                Mensagem = $"A referência '{invalidCondition}' da condição não é válida na versão publicada da Mesa. Revise a origem.",
                 Fallback = true,
             });
         }
@@ -558,12 +558,14 @@ public sealed class GameplayActionResolver
 
         JsonObject? attributes = GetObject(power, "atributos");
         GameplayStoredTestSpec? test = ReadTestSpec(power, attributes);
+        (IReadOnlyList<ConditionEffectSnapshot> configuredConditions, IReadOnlyList<string> invalidConditions) =
+            ReadConditionEffects(attributes, null, version);
         // Fichas antigas registravam o ataque apenas como acerto D20 + dano.
         // O fallback só usa a tabela publicada do Odisseia, nunca texto livre.
         if (test is null && IsOdisseia(version) &&
             string.Equals(ReadString(power, "tipo"), "ataque", StringComparison.OrdinalIgnoreCase) &&
             IsLegacySingleD20(ReadString(attributes, "acerto") ?? ReadString(power, "acerto")) &&
-            ReadInt(attributes, "dano") is > 0)
+            (ReadInt(attributes, "dano") is > 0 || configuredConditions.Count > 0))
             test = new GameplayStoredTestSpec { CodigoTeste = "ATAQUE_COMUM" };
         if (test is null || string.IsNullOrWhiteSpace(test.CodigoTeste))
         {
@@ -609,10 +611,19 @@ public sealed class GameplayActionResolver
                 values["cooldownTurnosProposto"] = cooldownTurns.Value.ToString(CultureInfo.InvariantCulture);
         }
 
-        (IReadOnlyList<ConditionEffectSnapshot> configuredConditions, _) =
-            ReadConditionEffects(attributes, null, version);
         if (configuredConditions.Count > 0)
             values["condicoesPropostasJson"] = JsonSerializer.Serialize(configuredConditions, JsonOptions);
+        if (type == "MAGIA")
+        {
+            string[] removals = GetArray(attributes, "removeCondicoes")
+                .Select(entry => entry?.ToString()?.Trim())
+                .Where(code => !string.IsNullOrWhiteSpace(code) && version.Condicoes.Any(rule =>
+                    rule.Codigo.Equals(code, StringComparison.OrdinalIgnoreCase) &&
+                    SistemaCondicaoRemocao.AoUsarMagiaDeRemocao(rule)))
+                .Select(code => code!).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+            if (removals.Length > 0)
+                values["condicoesRemovidasPorMagiaJson"] = JsonSerializer.Serialize(removals, JsonOptions);
+        }
 
         return BuildResolved(
             request,
@@ -634,7 +645,12 @@ public sealed class GameplayActionResolver
                     Mensagem = "O teste foi executado; custos e efeitos da skill ou magia ainda dependem da aplicação confirmada pelo mestre.",
                     Fallback = false,
                 },
-            });
+            }.Concat(invalidConditions.Select(code => new GameplayExecutionNoticeDto
+            {
+                Codigo = "CONDICAO_NAO_PUBLICADA",
+                Mensagem = $"A referência '{code}' da condição não é válida na versão publicada da Mesa. Revise a origem antes de usá-la.",
+                Fallback = true,
+            })).ToArray());
     }
 
     private static GameplayOperationResult<GameplayResolvedAction> BuildResolved(
@@ -996,14 +1012,75 @@ public sealed class GameplayActionResolver
             }
             int? value = ReadInt(entry, "valor");
             int? duration = ReadInt(entry, "duracao");
+            if (value is < -1000000 or > 1000000 || duration is <= 0 or > 1000000) continue;
+            if (value < 0 && SistemaCondicaoEfeitos.Read(rule).FirstOrDefault(effect =>
+                effect.Operacao is not ("DESVANTAGEM" or "VANTAGEM" or "BLOQUEAR_RECUPERACAO"))
+                ?.Operacao is not ("MODIFICAR_ROLAGEM" or "MODIFICAR_ATRIBUTO" or
+                    "MODIFICAR_DANO" or "MODIFICAR_DEFESA" or "MODIFICAR_LIMITE_PERCENTUAL")) continue;
+            IReadOnlyList<SistemaCondicaoEfeito> ruleEffects = SistemaCondicaoEfeitos.Read(rule);
+            var effectValues = new Dictionary<int, int>();
+            if (GetObject(entry, "valoresEfeitos") is JsonObject configuredValues)
+            {
+                bool validValues = true;
+                foreach ((string key, JsonNode? configured) in configuredValues)
+                {
+                    if (!int.TryParse(key, out int effectIndex) || effectIndex < 0 || effectIndex >= ruleEffects.Count ||
+                        !int.TryParse(configured?.ToString(), out int effectValue) ||
+                        !SistemaCondicaoEfeitos.Valid(ruleEffects[effectIndex].Operacao,
+                            ruleEffects[effectIndex].Recurso, effectValue, ruleEffects[effectIndex].Momento))
+                    { validValues = false; break; }
+                    effectValues[effectIndex] = effectValue;
+                }
+                if (!validValues) continue;
+            }
+            string trigger = NormalizeCode(ReadString(entry, "gatilho"));
+            if (trigger.Length == 0) trigger = "ACERTO";
+            if (trigger is not ("ACERTO" or "RESULTADO_NATURAL" or "RESULTADO_CLASSIFICADO" or "AO_USAR")) continue;
+            string resultCode = NormalizeCode(ReadString(entry, "codigoResultado"));
+            if (trigger == "RESULTADO_CLASSIFICADO" &&
+                (resultCode.Length == 0 || !version.ResultadosDado.Any(row =>
+                    NormalizeCode(row.CodigoResultado) == resultCode)))
+            {
+                invalid.Add($"{code} / resultado {resultCode}");
+                continue;
+            }
+            string unit = ReadString(entry, "unidadeDuracao") ?? rule.UnidadeDuracao.ToString();
+            string target = NormalizeCode(ReadString(entry, "alvo"));
+            if (target.Length == 0) target = "ALVO";
+            if (target is not ("ALVO" or "USUARIO" or "TODOS_INIMIGOS")) continue;
+            GameplayResistanceTestDto? resistance = null;
+            if (entry.ContainsKey("testeResistencia"))
+            {
+                if (GetObject(entry, "testeResistencia") is not JsonObject resistanceConfig)
+                { invalid.Add($"{code} / teste de resistência"); continue; }
+                try { resistance = resistanceConfig.Deserialize<GameplayResistanceTestDto>(JsonOptions); }
+                catch (JsonException) { invalid.Add($"{code} / teste de resistência"); continue; }
+                if (resistance is null || !GameplayConditionResistance.Valid(resistance, version))
+                { invalid.Add($"{code} / teste de resistência"); continue; }
+            }
+            if (!unit.Equals("Turno", StringComparison.OrdinalIgnoreCase) &&
+                !unit.Equals("Hora", StringComparison.OrdinalIgnoreCase)) continue;
+            int[] naturalResults = GetArray(entry, "resultadosNaturais")
+                .Select(node => int.TryParse(node?.ToString(), out int number) ? number : 0)
+                .Where(number => number is >= 1 and <= 20).Distinct().ToArray();
+            int? naturalMinimum = ReadInt(entry, "resultadoNaturalMinimo");
+            int? naturalMaximum = ReadInt(entry, "resultadoNaturalMaximo");
+            if (naturalMinimum is < 1 or > 20 || naturalMaximum is < 1 or > 20 ||
+                naturalMinimum > naturalMaximum) continue;
+            if (trigger == "RESULTADO_NATURAL" && naturalResults.Length == 0 &&
+                !naturalMinimum.HasValue && !naturalMaximum.HasValue) continue;
             effects.Add(new ConditionEffectSnapshot(
                 code,
                 rule.Nome,
                 value,
-                duration is >= 0 ? duration : null));
+                duration,
+                unit,
+                trigger,
+                naturalResults, naturalMinimum, naturalMaximum, target, resultCode, effectValues,
+                resistance));
         }
         return (
-            effects.GroupBy(effect => effect.Code, StringComparer.Ordinal).Select(group => group.Last()).ToArray(),
+            effects,
             invalid.Distinct(StringComparer.Ordinal).ToArray());
     }
 
@@ -1449,7 +1526,13 @@ public sealed class GameplayActionResolver
         string Code,
         string Name,
         int? Value,
-        int? Duration);
+        int? Duration,
+        string Unit,
+        string Trigger,
+        IReadOnlyList<int> NaturalResults, int? NaturalMinimum, int? NaturalMaximum,
+        string Target = "ALVO", string ResultCode = "",
+        IReadOnlyDictionary<int, int>? EffectValues = null,
+        GameplayResistanceTestDto? ResistanceTest = null);
 
     private sealed record WeaponContext(
         string ActionCode,

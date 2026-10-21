@@ -206,8 +206,22 @@ export interface ModificadoresArma {
 
 export interface GameplayConditionEffectConfig {
   codigo: string;
+  valoresEfeitos?: Record<number, number>;
+  alvo?: 'ALVO' | 'USUARIO' | 'TODOS_INIMIGOS';
+  testeResistencia?: {
+    dados: number;
+    faces: number;
+    atributo: string;
+    dificuldade: number;
+  };
   valor?: number;
   duracao?: number;
+  unidadeDuracao?: 'Turno' | 'Hora';
+  gatilho?: 'ACERTO' | 'RESULTADO_NATURAL' | 'RESULTADO_CLASSIFICADO' | 'AO_USAR' | 'AO_EQUIPAR';
+  resultadosNaturais?: number[];
+  resultadoNaturalMinimo?: number;
+  resultadoNaturalMaximo?: number;
+  codigoResultado?: string;
 }
 
 /** Snapshot da instalação: alterações futuras do catálogo não reescrevem a ficha. */

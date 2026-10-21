@@ -1,5 +1,8 @@
 import type { GameRunActionSelection } from '../../../models/GameRun';
 import type { ConfiguracaoCombateSistema } from '../../../models/SistemaRpg';
+import type { GameplayConditionEffectConfig } from '../../../models/Itens';
+
+export interface RunConditionOrigin extends GameplayConditionEffectConfig { name: string; index: number; }
 
 export type RunInventoryKind = Exclude<GameRunActionSelection['tipo'], 'DESCANSO'>;
 export interface RunActionQuantityLimit {
@@ -28,7 +31,11 @@ export interface RunInventoryEntry extends GameRunActionSelection {
   weaponType: string;
   ranged: boolean;
   fireMode: 'TIRO' | 'RAJADA';
+  hasDeclaredTest: boolean;
   restore: { vida: number; mana: number; estamina: number };
+  useConditions: string[];
+  hitConditions: string[];
+  conditions: RunConditionOrigin[];
   defense: { escudo: number; protecao: number; armadura: number };
   defenseRemaining: { escudo: number; protecao: number };
   defenseEquipped: boolean;
@@ -116,6 +123,44 @@ export const parseRunInventoryEntries = (raw: unknown, tipo: RunInventoryKind): 
     const itemValue = field(item, 'valor');
     const quantity = Number(field(item, 'quantidade') ?? 1);
     const attributes = object(field(item, 'atributos'));
+    const declaredTest = object(field(attributes ?? {}, 'teste') ?? field(attributes ?? {}, 'especificacaoTeste') ??
+      field(item, 'teste') ?? field(item, 'especificacaoTeste'));
+    const hasDeclaredTest = Boolean(String(field(declaredTest ?? {}, 'codigoTeste') ?? '').trim() ||
+      String(field(attributes ?? {}, 'acerto') ?? field(item, 'acerto') ?? '').trim());
+    const configuredConditions = field(attributes ?? {}, 'condicoes');
+    const conditionEffects = Array.isArray(configuredConditions) ? configuredConditions
+      .map(object).filter((condition): condition is Record<string, unknown> => condition !== null) : [];
+    const conditions: RunConditionOrigin[] = conditionEffects.flatMap((condition, index) => {
+      const code = String(field(condition, 'codigo') ?? '').trim();
+      if (!code) return [];
+      const numbers = field(condition, 'resultadosNaturais');
+      const numberOrUndefined = (key: string) => {
+        const value = field(condition, key);
+        return value == null || value === '' || !Number.isFinite(Number(value)) ? undefined : Number(value);
+      };
+      const resistance = object(field(condition, 'testeResistencia'));
+      return [{ index, codigo: code, name: String(field(condition, 'nome') ?? code),
+        gatilho: String(field(condition, 'gatilho') ?? 'ACERTO').toUpperCase() as RunConditionOrigin['gatilho'],
+        alvo: field(condition, 'alvo') as RunConditionOrigin['alvo'],
+        valor: numberOrUndefined('valor'), duracao: numberOrUndefined('duracao'),
+        valoresEfeitos: object(field(condition, 'valoresEfeitos')) as Record<number, number> | undefined,
+        testeResistencia: resistance ? {
+          dados: Number(field(resistance, 'dados') ?? 1),
+          faces: Number(field(resistance, 'faces') ?? 6),
+          atributo: String(field(resistance, 'atributo') ?? ''),
+          dificuldade: Number(field(resistance, 'dificuldade') ?? 0),
+        } : undefined,
+        unidadeDuracao: field(condition, 'unidadeDuracao') as RunConditionOrigin['unidadeDuracao'],
+        resultadoNaturalMinimo: numberOrUndefined('resultadoNaturalMinimo'),
+        resultadoNaturalMaximo: numberOrUndefined('resultadoNaturalMaximo'),
+        resultadosNaturais: Array.isArray(numbers) ? numbers.map(Number).filter((number) => Number.isInteger(number) && number >= 1 && number <= 20) : [],
+        codigoResultado: String(field(condition, 'codigoResultado') ?? '') || undefined,
+      }];
+    });
+    const conditionNames = (trigger: string) => conditionEffects
+      .filter((condition) => String(field(condition, 'gatilho') ?? 'ACERTO').toUpperCase() === trigger)
+      .map((condition) => String(field(condition, 'nome') ?? field(condition, 'codigo') ?? '').trim())
+      .filter(Boolean);
     const baseItemId = field(item, 'idItemBase');
     const subtype = String(field(item, 'tipo') ?? '').toLowerCase();
     const restores = attributes && object(field(attributes, 'restaura'));
@@ -199,15 +244,16 @@ export const parseRunInventoryEntries = (raw: unknown, tipo: RunInventoryKind): 
       damageByRange: { base: damage('base'), curta: damage('curta'), media: damage('media'), longa: damage('longa') },
       weaponType: String(field(attributes ?? {}, 'tipoArma') ?? ''),
       fireMode,
+      hasDeclaredTest,
       ranged,
       restore: {
-        vida: subtype === 'outro' ? numeric(attributes && field(attributes, 'recuperacaoVida'))
-          : numeric(restores && field(restores, 'vida')),
-        mana: subtype === 'outro' ? numeric(attributes && field(attributes, 'recuperacaoMana'))
-          : numeric(restores && field(restores, 'mana')),
-        estamina: subtype === 'outro' ? numeric(attributes && field(attributes, 'recuperacaoEstamina'))
-          : numeric(restores && field(restores, 'estamina')),
+        vida: numeric(attributes && field(attributes, 'recuperacaoVida')) || numeric(restores && field(restores, 'vida')),
+        mana: numeric(attributes && field(attributes, 'recuperacaoMana')) || numeric(restores && field(restores, 'mana')),
+        estamina: numeric(attributes && field(attributes, 'recuperacaoEstamina')) || numeric(restores && field(restores, 'estamina')),
       },
+      useConditions: conditionNames('AO_USAR'),
+      hitConditions: [...conditionNames('ACERTO'), ...conditionNames('RESULTADO_NATURAL')],
+      conditions,
       defense: {
         escudo: numeric(attributes && field(attributes, subtype === 'traje' ? 'escudoBase' : 'escudo')),
         protecao: numeric(attributes && field(attributes, subtype === 'traje' ? 'protecaoBase' : 'protecao')),
@@ -231,7 +277,7 @@ export const stackRunConsumables = (all: RunInventoryEntry[]): RunInventoryEntry
   const result: RunInventoryEntry[] = [];
   for (const entry of all) {
     if (entry.tipo !== 'ITEM' || !['consumiveis', 'outro'].includes(entry.subtype) ||
-        !Object.values(entry.restore).some((value) => value > 0) ||
+        !Object.values(entry.restore).some((value) => value > 0) && entry.useConditions.length === 0 ||
         (entry.subtype === 'outro' && (entry.damageByRange.base > 0 ||
           Object.values(entry.defense).some((value) => value > 0)))) { result.push(entry); continue; }
     const group = JSON.stringify([entry.baseItemId, entry.name, entry.image, entry.value, entry.stackSignature]);

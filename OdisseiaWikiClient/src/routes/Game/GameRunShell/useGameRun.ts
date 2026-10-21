@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import type { GameRunActionSelection, GameRunBaseResolution, GameRunBattleRecord, GameRunConsumeItemResult, GameRunDto, GameRunEncounterSetup, GameRunMediumRestResolution } from '../../../models/GameRun';
+import type { GameRunActionSelection, GameRunBaseResolution, GameRunBattleRecord, GameRunConsumeItemResult, GameRunDto, GameRunEncounterSetup, GameRunMediumRestResolution, GameRunConditionOriginRequest } from '../../../models/GameRun';
 import {
   abandonGameRun, enterGameRunBase, getGameRun, getGameRunBattles,
   consumeGameRunItem,
@@ -10,6 +10,7 @@ import {
   resolveGameRunBattle, resolveGameRunEvent, restartGameRun, selectGameRunNode, upgradeGameRunMap,
   performGameRunMediumRest,
   updateGameRunLoadout, updateGameRunWeaponOrder,
+  updateGameRunConditionOrigin,
 } from '../../../services/gameRunService';
 import { getApiErrorMessage } from '../../../utils/apiError';
 import { shouldAutoCloseCombat, type CombatOrigin } from './battleReplayFlow';
@@ -449,6 +450,24 @@ export const useGameRun = () => {
     } finally { setConsumingItemId(null); }
   };
 
+  const configureCondition = async (
+    origin: Omit<GameRunConditionOriginRequest, 'revisaoEsperada' | 'chaveIdempotencia'>,
+  ): Promise<boolean> => {
+    if (!currentRun || currentRun.status !== 'Ativa' || currentRun.noAtualId || acting ||
+      consumingItemId || savingLoadout || savingWeapons) return false;
+    setConsumingItemId(origin.idInstancia);
+    setActionError(null);
+    try {
+      setRun(await updateGameRunConditionOrigin(currentRun.idGameRun, {
+        ...origin, revisaoEsperada: currentRun.revisao, chaveIdempotencia: crypto.randomUUID(),
+      }));
+      return true;
+    } catch (error: unknown) {
+      await handleActionError(error, 'Não foi possível ajustar a condição desta cópia.');
+      return false;
+    } finally { setConsumingItemId(null); }
+  };
+
   const mediumRest = async (): Promise<boolean> => {
     if (!currentRun || currentRun.status !== 'Ativa' || currentRun.noAtualId ||
       acting || resting || savingWeapons || savingLoadout || consumingItemId) return false;
@@ -630,5 +649,6 @@ export const useGameRun = () => {
     consumeItem,
     dropItem,
     equipDefense,
+    configureCondition,
   };
 };

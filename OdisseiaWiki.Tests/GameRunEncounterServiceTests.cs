@@ -452,6 +452,72 @@ public sealed class GameRunEncounterServiceTests
     }
 
     [Fact]
+    public async Task CombateConsomeUtilitarioEquipadoUmaVezEPersisteInventarioDaRun()
+    {
+        Fixture fixture = new();
+        string original = fixture.Run.SnapshotInicialJson;
+        fixture.Run.EstadoAtualJson = fixture.Run.EstadoAtualJson.Replace("\"inventario\":[]", """
+            "inventario":[{"id":"kit-1","nome":"Kit","tipo":"consumiveis",
+              "quantidade":1,"atributos":{"restaura":{"vida":5}}}]
+            """);
+        fixture.Run.LoadoutJson = GameRunActionLoadout.Serialize(
+            [new GameRunActionSelectionDto { Tipo = "ITEM", IdInstancia = "kit-1" }]);
+        fixture.Run.GameModeVersion.ConfiguracaoJson = Fixture.BranchConfiguration;
+        fixture.Run.MapaJson = JsonSerializer.Serialize(new GameRunMapDto
+        {
+            SchemaVersion = 5,
+            Nodes =
+            [
+                new() { Id = "inicio", Type = "INICIO", State = "CONCLUIDO", Connections = ["cacador"] },
+                new() { Id = "cacador", Type = "COMBATE", State = "DISPONIVEL", Layer = 1,
+                    Payload = new GameRunMapNodePayloadDto { EncounterCode = "CACADOR" } },
+            ],
+        });
+        fixture.Simulator.Setup(item => item.Simulate(
+                It.IsAny<GameBattleInput>(), It.IsAny<IDiceRandomSource>()))
+            .Returns(new GameBattleResult("player", GameBattleEndReason.ActorDefeated, 2,
+            [
+                new GameBattleActorState("player", "Ada", 20, 30, 10, 10, 10, 10,
+                    new GameBattleDefenses(),
+                    [new GameBattleActionState("item:kit-1", null, null, null, 0) { RemainingQuantity = 0 }]),
+                new GameBattleActorState("enemy", "Caçador", 0, 30, 0, 0, 0, 0,
+                    new GameBattleDefenses(), []),
+            ], [new GameBattleEvent(1, 1, 1, GameBattleEventTypes.ItemConsumed,
+                "player", null, new ItemConsumedPayload("item:kit-1", 0))]));
+        Assert.True((await fixture.Service.SelectAsync(10, "cacador", 5, Request(0), CancellationToken.None)).Sucesso);
+
+        var result = await fixture.Service.ResolveAsync(10, 5, Request(1), CancellationToken.None);
+
+        Assert.True(result.Sucesso, result.Mensagem);
+        Assert.Empty(result.Dados!.Run.EstadoAtual.Inventario!.Value.EnumerateArray());
+        Assert.Empty(Assert.IsAssignableFrom<IReadOnlyList<GameRunActionSelectionDto>>(
+            result.Dados.Run.AcoesEquipadas));
+        Assert.Empty(Assert.IsAssignableFrom<IReadOnlyList<GameRunActionSelectionDto>>(
+            GameRunActionLoadout.Read(fixture.Run.LoadoutJson)));
+        Assert.Equal(original, fixture.Run.SnapshotInicialJson);
+    }
+
+    [Fact]
+    public async Task LoadoutAceitaConsumivelSemTesteComoAcaoOrdenada()
+    {
+        Fixture fixture = new();
+        fixture.Run.EstadoAtualJson = fixture.Run.EstadoAtualJson.Replace("\"inventario\":[]", """
+            "inventario":[{"id":"kit-1","nome":"Kit","tipo":"consumiveis",
+              "quantidade":2,"atributos":{"restaura":{"vida":5}}}]
+            """);
+        fixture.Run.LoadoutJson = GameRunActionLoadout.Serialize([]);
+
+        var result = await fixture.Service.UpdateLoadoutAsync(10, 5, new GameRunLoadoutRequestDto
+        {
+            RevisaoEsperada = 0, ChaveIdempotencia = Guid.NewGuid(),
+            Acoes = [new GameRunActionSelectionDto { Tipo = "ITEM", IdInstancia = "kit-1" }],
+        }, CancellationToken.None);
+
+        Assert.True(result.Sucesso, result.Mensagem);
+        Assert.Equal("kit-1", Assert.Single(result.Dados!.AcoesEquipadas).IdInstancia);
+    }
+
+    [Fact]
     public async Task ConsumivelUsaDuasUnidadesEmUmaUnicaRevisaoEDobraOEfeito()
     {
         Fixture fixture = new();

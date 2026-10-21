@@ -133,10 +133,23 @@ const actionPresentation = (preview: GameBattlePreview, event: GameBattleEvent, 
     })
     .filter((effect): effect is string => effect !== null);
   const resourceText = resourceEffects.length > 0 ? ` · ${resourceEffects.join(', ')}` : '';
+  const appliedConditions = following.filter((item) => item.type === 'CONDITION_APPLIED')
+    .map((item) => item.payload.name ?? item.payload.code ?? 'condição');
+  const conditionText = appliedConditions.length ? ` · aplicou ${appliedConditions.join(', ')}` : '';
   if (following.some((item) => item.type === 'REST_PERFORMED'))
     return { text: `${name} — descanso curto${resourceText}.` };
   if (following.some((item) => item.type === 'RELOAD_PERFORMED'))
     return { text: `${name} — ${action}: recarregou${resourceText}.` };
+
+  if (event.payload.directUse) {
+    const lifeRestored = following.filter((item) => item.type === 'RESOURCE_CHANGED' &&
+      item.payload.resource === 'hitPoints' && (item.targetId ?? item.actorId) === event.actorId)
+      .reduce((sum, item) => sum + Math.max(0, (item.payload.after ?? 0) - (item.payload.before ?? 0)), 0);
+    const lifeText = lifeRestored > 0 ? ` · +${lifeRestored} vida` : '';
+    const remaining = following.find((item) => item.type === 'ITEM_CONSUMED')?.payload.remainingQuantity;
+    return { text: `${name} — usou ${action}${lifeText}${resourceText}${conditionText}` +
+      `${remaining === undefined ? '' : ` · restam ${remaining}`}.` };
+  }
 
   const roll = following.find((item) => item.type === 'DICE_ROLLED');
   if (!roll) return { text: `${name} — ${action}${resourceText}.` };
@@ -168,7 +181,7 @@ const actionPresentation = (preview: GameBattlePreview, event: GameBattleEvent, 
     : failure ? 'warning'
       : success ? (playerAttacked ? 'positive' : 'negative') : 'neutral';
   return {
-    text: `${name} — ${action}: ${classification} (D20 ${die})${effect}${resourceText}${ammoRemaining === null ? '' : ` · ${ammoRemaining} munições restantes`}.`,
+    text: `${name} — ${action}: ${classification} (D20 ${die})${effect}${conditionText}${resourceText}${ammoRemaining === null ? '' : ` · ${ammoRemaining} munições restantes`}.`,
     action: {
       actor: name,
       playerActor: playerAttacked,
@@ -213,7 +226,8 @@ export const buildBattleBeats = (preview: GameBattlePreview): BattleBeat[] => {
     }
     if (event.type === 'ACTION_SELECTED') {
       let end = index + 1;
-      while (end < events.length && !['ACTION_SELECTED', 'TURN_STARTED', 'BATTLE_ENDED'].includes(events[end].type)) end++;
+      while (end < events.length && !['ACTION_SELECTED', 'TURN_STARTED', 'BATTLE_ENDED',
+        'RESISTANCE_ROLLED'].includes(events[end].type)) end++;
       const presentation = actionPresentation(preview, event, events.slice(index + 1, end));
       text = presentation.text;
       action = presentation.action;
@@ -221,6 +235,18 @@ export const buildBattleBeats = (preview: GameBattlePreview): BattleBeat[] => {
       index = end - 1;
     }
     if (event.type === 'TURN_PASSED') text = `${actorName(preview, event.actorId)} passou o turno.`;
+    if (event.type === 'RESISTANCE_ROLLED') {
+      const dice = event.payload.dice?.join(' + ') ?? '?';
+      const alternative = event.payload.alternativeDice?.join(' + ');
+      const rolls = alternative ? `${dice} / ${alternative} (${event.payload.mode === 'Vantagem' ? 'vantagem' : 'desvantagem'})` : dice;
+      const modifier = event.payload.modifier ?? 0;
+      text = `${actorName(preview, event.actorId)}: reação de ${event.payload.attributeCode ?? 'atributo'} ` +
+        `${rolls}${modifier ? ` ${modifier > 0 ? '+' : '-'} ${Math.abs(modifier)}` : ''} ` +
+        `= ${event.payload.total ?? '?'} contra ${event.payload.difficulty ?? '?'} — ` +
+        `${event.payload.passed ? 'resistiu' : 'foi afetado'}.`;
+    }
+    if (event.type === 'CONDITION_APPLIED') text = `${actorName(preview, event.targetId)} recebeu ${event.payload.name ?? 'uma condição'}.`;
+    if (event.type === 'CONDITION_EXPIRED') text = `${event.payload.name ?? 'Condição'} terminou em ${actorName(preview, event.actorId)}.`;
     if (event.type === 'BATTLE_ENDED') {
       text = preview.resultado.winnerActorId
         ? `${actorName(preview, preview.resultado.winnerActorId)} venceu o combate.`

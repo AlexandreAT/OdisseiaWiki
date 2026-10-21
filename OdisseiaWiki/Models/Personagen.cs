@@ -18,6 +18,7 @@ public partial class Personagen : PersonagemBase
     public bool Destaque { get; set; } = false;
 
     public int IdWikiEscopo { get; set; } = WikiEscopo.IdOficial;
+    public int? IdOrigemGlobal { get; set; }
 
     public int? IdSistemaRpg { get; set; }
 

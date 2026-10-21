@@ -18,6 +18,11 @@ public partial class OdisseiaContext
             entity.HasKey(item => item.IdGameModeVersion);
             entity.Property(item => item.IdGameModeVersion).HasColumnName("IDGameModeVersion");
             entity.Property(item => item.IdSistemaVersao).HasColumnName("IDSistemaVersao");
+            entity.Property(item => item.IdMesa).HasColumnName("IDMesa");
+            entity.Property(item => item.IdUsuarioCriacao).HasColumnName("IDUsuarioCriacao");
+            entity.Property(item => item.Nome).HasMaxLength(100);
+            entity.Property(item => item.Descricao).HasMaxLength(500);
+            entity.Property(item => item.Banner).HasMaxLength(255);
             entity.Property(item => item.Codigo).HasMaxLength(50);
             entity.Property(item => item.NumeroVersao).HasMaxLength(20);
             entity.Property(item => item.Status).HasConversion<string>().HasMaxLength(20);
@@ -26,9 +31,15 @@ public partial class OdisseiaContext
             entity.Property(item => item.PublicadaEmUtc).HasColumnType("datetime(6)");
             entity.HasIndex(item => new { item.IdSistemaVersao, item.Codigo, item.NumeroVersao })
                 .IsUnique().HasDatabaseName("UX_GameModeVersion_Sistema_Codigo_Versao");
+            entity.HasIndex(item => new { item.IdMesa, item.IdSistemaVersao, item.Status })
+                .HasDatabaseName("IX_GameModeVersion_Mesa_Sistema_Status");
+            entity.HasIndex(item => item.IdMesa).HasDatabaseName("IX_GameModeVersion_Mesa");
             entity.HasOne(item => item.SistemaVersao).WithMany()
                 .HasForeignKey(item => item.IdSistemaVersao).OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("FK_GameModeVersion_SistemaVersao");
+            entity.HasOne(item => item.Mesa).WithMany()
+                .HasForeignKey(item => item.IdMesa).OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_GameModeVersion_Mesa");
         });
 
         modelBuilder.Entity<GameRun>(entity =>

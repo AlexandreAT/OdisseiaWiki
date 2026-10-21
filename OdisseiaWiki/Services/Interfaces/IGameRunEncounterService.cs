@@ -7,6 +7,8 @@ public interface IGameRunEncounterService
     Task<OdisseiaWiki.GameRuns.GameAttributeOptions?> GetAttributesAsync(long runId, int userId, CancellationToken token);
     Task<GameRunOperationResult<GameRunDto>> ClaimLootAsync(long runId, int userId, GameRunMutationRequestDto request, CancellationToken token);
     Task<GameRunOperationResult<GameRunDto>> DropItemAsync(long runId, int userId, string itemId, GameRunMutationRequestDto request, CancellationToken token);
+    Task<GameRunOperationResult<GameRunDto>> UpdateConditionOriginAsync(long runId, int userId,
+        GameRunConditionOriginRequestDto request, CancellationToken token);
     Task<GameRunOperationResult<GameRunDto>> EquipDefenseAsync(long runId, int userId, string itemId,
         GameRunEquipDefenseRequestDto request, CancellationToken token);
     Task<GameRunOperationResult<GameRunDto>> UpgradeAttributeAsync(long runId, int userId, GameRunUpgradeAttributeRequestDto request, CancellationToken token);
