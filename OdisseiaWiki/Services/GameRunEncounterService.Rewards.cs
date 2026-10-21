@@ -31,7 +31,8 @@ public sealed partial class GameRunEncounterService
                 try
                 {
                     string unequipped = GameRunDefensiveEquipment.UnequipIfNeeded(run.EstadoAtualJson, itemId);
-                    run.EstadoAtualJson = GameRunCarry.Reconcile(GameRunCarry.Drop(unequipped, itemId), version);
+                    string cleared = GameRunCarry.RemoveUnequippedItemConditions(unequipped, itemId, version);
+                    run.EstadoAtualJson = GameRunCarry.Reconcile(GameRunCarry.Drop(cleared, itemId), version);
                 }
                 catch (Exception error) when (error is InvalidOperationException or System.Text.Json.JsonException)
                 {

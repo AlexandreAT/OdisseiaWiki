@@ -14,6 +14,7 @@ import { ImageUploader } from '../../../../components/Generic/ImageUploader/Imag
 import { CropPreset } from '../../../../components/Generic/ImageUploader/types';
 import { SistemaRuntimeContexto } from '../../../../models/SistemaRpg';
 import { getRuntimeMagicTypeOptions } from '../../../../utils/systemRuntimeCharacter';
+import { buildSistemaItemFormCatalog, SistemaItemFormCatalog } from '../../../../utils/systemItemFormCatalog';
 
 const characterEntryImageCropPreset: CropPreset = {
   mode: 'single',
@@ -245,7 +246,8 @@ const SkillAtributosEditor = memo(({
   onChange, 
   onRowChange,
   theme, 
-  neon 
+  neon,
+  sistemaItemCatalogo,
 }: { 
   row: Skills; 
   value: any; 
@@ -253,6 +255,7 @@ const SkillAtributosEditor = memo(({
   onRowChange: (row: Skills) => void;
   theme: 'dark' | 'light'; 
   neon: 'on' | 'off';
+  sistemaItemCatalogo?: SistemaItemFormCatalog;
 }) => {
   const [open, setOpen] = React.useState(false);
   const FormComponent = atributosSkillFormMap[row.tipo as SkillTipoString];
@@ -274,7 +277,7 @@ const SkillAtributosEditor = memo(({
           mobileInset
         >
           <CharacterEntryImageUploader row={row} onRowChange={onRowChange} theme={theme} neon={neon} />
-          <FormComponent value={value} onChange={onChange} theme={theme} neon={neon} />
+          <FormComponent value={value} onChange={onChange} theme={theme} neon={neon} sistemaItemCatalogo={sistemaItemCatalogo} />
         </Modal>
       )}
     </>
@@ -284,7 +287,8 @@ const SkillAtributosEditor = memo(({
          prevProps.row.tipo === nextProps.row.tipo &&
          prevProps.row.nome === nextProps.row.nome &&
          prevProps.row.imagem === nextProps.row.imagem &&
-         prevProps.row.imagemArquivo === nextProps.row.imagemArquivo;
+         prevProps.row.imagemArquivo === nextProps.row.imagemArquivo &&
+         prevProps.sistemaItemCatalogo === nextProps.sistemaItemCatalogo;
 });
 
 const MagiaAtributosEditor = memo(({ 
@@ -293,7 +297,8 @@ const MagiaAtributosEditor = memo(({
   onChange, 
   onRowChange,
   theme, 
-  neon 
+  neon,
+  sistemaItemCatalogo,
 }: { 
   row: Magia; 
   value: any; 
@@ -301,6 +306,7 @@ const MagiaAtributosEditor = memo(({
   onRowChange: (row: Magia) => void;
   theme: 'dark' | 'light'; 
   neon: 'on' | 'off';
+  sistemaItemCatalogo?: SistemaItemFormCatalog;
 }) => {
   const [open, setOpen] = React.useState(false);
   const FormComponent = atributosMagiaFormMap[row.tipo as MagiaTipoString];
@@ -322,7 +328,7 @@ const MagiaAtributosEditor = memo(({
           mobileInset
         >
           <CharacterEntryImageUploader row={row} onRowChange={onRowChange} theme={theme} neon={neon} />
-          <FormComponent value={value} onChange={onChange} theme={theme} neon={neon} />
+          <FormComponent value={value} onChange={onChange} theme={theme} neon={neon} sistemaItemCatalogo={sistemaItemCatalogo} />
         </Modal>
       )}
     </>
@@ -332,7 +338,8 @@ const MagiaAtributosEditor = memo(({
          prevProps.row.tipo === nextProps.row.tipo &&
          prevProps.row.nome === nextProps.row.nome &&
          prevProps.row.imagem === nextProps.row.imagem &&
-         prevProps.row.imagemArquivo === nextProps.row.imagemArquivo;
+         prevProps.row.imagemArquivo === nextProps.row.imagemArquivo &&
+         prevProps.sistemaItemCatalogo === nextProps.sistemaItemCatalogo;
 });
 
 const baseItemColumns = [
@@ -461,7 +468,9 @@ export const createSkillsColumns = (
   theme: 'dark' | 'light',
   neon: 'on' | 'off',
   runtimeContext?: SistemaRuntimeContexto | null,
-) => [
+) => {
+  const conditionCatalog = buildSistemaItemFormCatalog('outro', {}, [], [], runtimeContext?.sobrevivencia?.condicoes ?? [], runtimeContext?.criacao?.atributos ?? []);
+  return [
   ...baseSkillsColumns.map((column) => {
     const runtimeColumn = column.key === 'elemento'
       ? { ...column, options: getRuntimeMagicTypeOptions(runtimeContext, true) }
@@ -489,16 +498,19 @@ export const createSkillsColumns = (
     key: "atributos",
     label: "Atributos",
     customRender: (value: any, row: Skills, onChange: (v: any) => void, onRowChange: (row: Skills) => void) => (
-      <SkillAtributosEditor row={row} value={value} onChange={onChange} onRowChange={onRowChange} theme={theme} neon={neon} />
+      <SkillAtributosEditor row={row} value={value} onChange={onChange} onRowChange={onRowChange} theme={theme} neon={neon} sistemaItemCatalogo={conditionCatalog} />
     )
   } as any,
-];
+  ];
+};
 
 export const createMagiasColumns = (
   theme: 'dark' | 'light',
   neon: 'on' | 'off',
   runtimeContext?: SistemaRuntimeContexto | null,
-) => [
+) => {
+  const conditionCatalog = buildSistemaItemFormCatalog('outro', {}, [], [], runtimeContext?.sobrevivencia?.condicoes ?? [], runtimeContext?.criacao?.atributos ?? []);
+  return [
   ...baseMagiasColumns.map((column) => {
     const runtimeColumn = column.key === 'elemento'
       ? { ...column, options: getRuntimeMagicTypeOptions(runtimeContext) }
@@ -526,7 +538,8 @@ export const createMagiasColumns = (
     key: "atributos",
     label: "Atributos",
     customRender: (value: any, row: Magia, onChange: (v: any) => void, onRowChange: (row: Magia) => void) => (
-      <MagiaAtributosEditor row={row} value={value} onChange={onChange} onRowChange={onRowChange} theme={theme} neon={neon} />
+      <MagiaAtributosEditor row={row} value={value} onChange={onChange} onRowChange={onRowChange} theme={theme} neon={neon} sistemaItemCatalogo={conditionCatalog} />
     )
   } as any,
-];
+  ];
+};

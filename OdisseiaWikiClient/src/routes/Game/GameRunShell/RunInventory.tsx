@@ -5,16 +5,18 @@ import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, us
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useEffect, useMemo, useState } from 'react';
-import type { GameRunConsumeItemResult, GameRunDto } from '../../../models/GameRun';
+import type { GameRunConsumeItemResult, GameRunDto, GameRunConditionOriginRequest } from '../../../models/GameRun';
 import { CyberButton } from '../../../components/Generic/HighlightButton/HighlightButton';
+import { obterConfiguracaoCombateSistemaRpg } from '../../../services/sistemasRpgService';
 import { normalizeImagePath } from '../../Wiki/utils/imagePathHelper';
 import { GameEyebrow, GameHint, GameNotice, GameSectionTitle } from '../GameShared.style';
 import { RunFooterActions, RunOverlayDialog, RunPanel } from './GameRunShell.style';
 import { RunInventoryCard } from './RunInventoryCard';
 import { RunInventoryActionDialog } from './RunInventoryActionDialog';
+import { RunConditionOriginEditor } from './RunConditionOriginEditor';
 import { RunConsumableAction } from './RunConsumableAction';
 import { RunInventoryTypeFilter } from './RunInventoryTypeFilter';
-import { describeConsumableResult, isHealingConsumable } from './runConsumableUtils';
+import { describeConsumableResult, isUsableConsumable } from './runConsumableUtils';
 import {
   InventoryContent, InventoryControls, InventoryGroup, InventoryHeader, InventoryImage,
   InventoryItem, InventoryItemInfo, InventoryList, InventorySaveActions, InventoryClose, OtherInventoryList,
@@ -42,6 +44,7 @@ interface Props {
   onUseItem: (itemId: string, quantity?: number) => Promise<GameRunConsumeItemResult | null>;
   onDropItem: (itemId: string) => Promise<boolean>;
   onEquipDefense: (itemId: string, equipped: boolean) => Promise<boolean>;
+  onConfigureCondition: (origin: Omit<GameRunConditionOriginRequest, 'revisaoEsperada' | 'chaveIdempotencia'>) => Promise<boolean>;
   usingItemId: string | null;
   onClose: () => void;
 }
@@ -110,7 +113,16 @@ const SortableWeapon = ({ item, index, disabled }: {
   </InventoryItem>;
 };
 
-export const RunInventory = ({ run, theme, neon, saving, busy, error, onSave, onUseItem, onDropItem, onEquipDefense, usingItemId, onClose }: Props) => {
+export const RunInventory = ({ run, theme, neon, saving, busy, error, onSave, onUseItem, onDropItem, onEquipDefense, onConfigureCondition, usingItemId, onClose }: Props) => {
+  const [conditionResults, setConditionResults] = useState<{ value: string; label: string }[]>([]);
+  useEffect(() => {
+    let active = true;
+    void obterConfiguracaoCombateSistemaRpg(run.idSistemaVersao).then((rules) => {
+      if (active) setConditionResults([...new Map(rules.resultadosDado.map((row) =>
+        [row.codigoResultado, { value: row.codigoResultado, label: row.nomeResultado || row.codigoResultado }])).values()]);
+    }).catch(() => { if (active) setConditionResults([]); });
+    return () => { active = false; };
+  }, [run.idSistemaVersao]);
   const items = useMemo(() => parseItems(run.estadoAtual.inventario), [run.estadoAtual.inventario]);
   const allEntries = useMemo(() => stackRunConsumables([
     ...parseRunInventoryEntries(run.estadoAtual.inventario, 'ITEM'),
@@ -182,6 +194,15 @@ export const RunInventory = ({ run, theme, neon, saving, busy, error, onSave, on
           onSelect={() => { setSelected(runInventoryKey(entry)); setDropPending(false); }} />)}</LoadoutGrid>
         {visibleEntries.length === 0 && <GameHint>Nada nesta categoria.</GameHint>}
         {selectedEntry && <RunInventoryActionDialog entry={selectedEntry} neon={neon === 'on'} onClose={() => setSelected(null)}>
+          {selectedEntry.conditions.map((condition) => <RunConditionOriginEditor
+            key={`${selectedEntry.tipo}:${selectedEntry.idInstancia}:${condition.index}`}
+            entry={selectedEntry} condition={condition} systemVersionId={run.idSistemaVersao} theme={theme} neon={neon} results={conditionResults}
+            disabled={!canEdit || changed} busy={usingItemId === selectedEntry.idInstancia}
+            onSave={async (origin) => {
+              const ok = await onConfigureCondition(origin);
+              if (ok) setSelected(null);
+              return ok;
+            }} />)}
           <RunConsumableAction key={selectedEntry.idInstancia} entry={selectedEntry} run={run} theme={theme} neon={neon} disabled={!canConsume || changed}
             using={usingItemId === selectedEntry.idInstancia}
             onUse={(quantity) => void onUseItem(selectedEntry.idInstancia, quantity).then((result) => {
@@ -210,7 +231,7 @@ export const RunInventory = ({ run, theme, neon, saving, busy, error, onSave, on
               onClick={() => void onDropItem(selectedEntry.idInstancia).then((ok) => {
                 if (ok) { setLastUse(`${selectedEntry.name} deixado para trás.`); setSelected(null); setDropPending(false); }
               })} /></LoadoutItemActions>
-          </> : !isHealingConsumable(selectedEntry) && <CyberButton theme={theme} neon={neon} colorType="secondary" text="Deixar item"
+          </> : !isUsableConsumable(selectedEntry) && <CyberButton theme={theme} neon={neon} colorType="secondary" text="Deixar item"
             disabled={!canDrop} onClick={() => setDropPending(true)} />)}
         </RunInventoryActionDialog>}
       </InventoryGroup>

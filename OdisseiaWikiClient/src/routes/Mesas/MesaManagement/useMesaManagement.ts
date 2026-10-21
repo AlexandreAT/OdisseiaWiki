@@ -21,7 +21,7 @@ import { saveAsset } from '../../../services/assetsService';
 import { listarVersoesSistemaRpg } from '../../../services/sistemasRpgService';
 import { getApiErrorMessage } from '../../../utils/apiError';
 
-export type MesaManagementTab = 'geral' | 'pedidos' | 'jogadores' | 'personagens';
+export type MesaManagementTab = 'geral' | 'pedidos' | 'jogadores' | 'personagens' | 'jogo';
 
 export interface MesaGeneralForm {
   nome: string;

@@ -6,6 +6,8 @@ public interface IGameRunService
 {
     Task<IReadOnlyList<GameRunCharacterOptionDto>> GetCharactersAsync(
         int idUsuario, CancellationToken cancellationToken);
+    Task<IReadOnlyList<GameAdventureDto>> GetCharacterGamesAsync(
+        int idUsuario, int idPersonagemJogador, CancellationToken cancellationToken);
     Task<GameRunDto?> GetActiveAsync(int idUsuario, CancellationToken cancellationToken);
     Task<GameRunDto?> GetByIdAsync(long idGameRun, int idUsuario, CancellationToken cancellationToken);
     Task<GameRunOperationResult<GameRunDto>> CreateAsync(

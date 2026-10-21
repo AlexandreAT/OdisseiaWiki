@@ -1,4 +1,5 @@
 import styled, { css, keyframes } from 'styled-components';
+import { cyberButtonsFillWidth } from '../../../components/Generic/HighlightButton/HighlightButton.styles';
 
 const reveal = keyframes`
   from { opacity: 0; transform: translateY(22px) scale(.98); }
@@ -107,4 +108,9 @@ export const VictoryDetail = styled.div`
 `;
 export const VictoryActions = styled.div`
   position: relative; z-index: 1; display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin-top: 27px;
+  @media (max-width: 600px) {
+    flex-direction: column;
+    align-items: stretch;
+    ${cyberButtonsFillWidth}
+  }
 `;

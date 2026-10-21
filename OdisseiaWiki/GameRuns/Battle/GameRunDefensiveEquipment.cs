@@ -96,6 +96,18 @@ public static class GameRunDefensiveEquipment
         return root.ToJsonString();
     }
 
+    public static bool IsEquipped(string snapshotJson, string itemId)
+    {
+        JsonObject root = JsonNode.Parse(snapshotJson) as JsonObject
+            ?? throw new JsonException("O snapshot da run está inválido.");
+        JsonObject item = Items(root).OfType<JsonObject>().SingleOrDefault(entry =>
+            string.Equals(ReadNode(entry, "id")?.ToString(), itemId, StringComparison.Ordinal))
+            ?? throw new InvalidOperationException("O item não pertence a esta run.");
+        JsonObject? attributes = ReadNode(item, "atributos") as JsonObject;
+        JsonObject? metadata = ReadNode(attributes, "__vistaExplodida") as JsonObject;
+        return !string.IsNullOrWhiteSpace(ReadNode(metadata, "equippedSlot")?.ToString());
+    }
+
     public static (string Snapshot, int Repaired) RestoreProtectionAtBase(string snapshotJson)
     {
         JsonObject root = JsonNode.Parse(snapshotJson) as JsonObject

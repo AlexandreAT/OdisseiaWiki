@@ -3,6 +3,7 @@ using OdisseiaWiki.Enums;
 using OdisseiaWiki.GameRuns.Battle;
 using OdisseiaWiki.Services;
 using OdisseiaWiki.Services.Interfaces;
+using OdisseiaWiki.Services.Helpers;
 using Xunit;
 
 namespace OdisseiaWiki.Tests;
@@ -10,6 +11,437 @@ namespace OdisseiaWiki.Tests;
 public sealed class AutoBattleSimulatorTests
 {
     private readonly AutoBattleSimulator _simulator = new();
+
+    [Fact]
+    public void ConsumivelEquipadoCuraSemDadoGastaUnidadesEAposEsgotarUsaProximaAcao()
+    {
+        GameBattleActorSpec hero = Actor("hero", 50,
+            UtilityAction("item:seringa", new GameBattleUtilitySpec(2, RestoreLife: 30)),
+            Action("espada", 100)) with { MaximumHitPoints = 100 };
+        GameBattleResult result = _simulator.Simulate(
+            Battle(hero, Actor("enemy", 100, Action("idle", 0))),
+            new SequenceRandomSource(11));
+
+        Assert.Equal(2, result.Events.Count(item => item.Type == GameBattleEventTypes.ItemConsumed));
+        Assert.Equal(100, result.Actors[0].HitPoints);
+        Assert.Equal(0, result.Actors[0].Actions[0].RemainingQuantity);
+        Assert.DoesNotContain(result.Events, item => item.Type == GameBattleEventTypes.DiceRolled &&
+            ((DiceRolledPayload)item.Payload).ActionId == "item:seringa");
+        Assert.Contains(result.Events, item => item.Type == GameBattleEventTypes.ActionSelected &&
+            ((ActionSelectedPayload)item.Payload).ActionId == "espada");
+    }
+
+    [Fact]
+    public void ConsumivelNaoEGastoComRecursosCheiosSemOutroEfeito()
+    {
+        GameBattleResult result = _simulator.Simulate(Battle(
+            Actor("hero", 100, UtilityAction("item:seringa",
+                new GameBattleUtilitySpec(1, RestoreLife: 30)), Action("espada", 100)),
+            Actor("enemy", 100, Action("idle", 0))), new SequenceRandomSource(11));
+
+        Assert.DoesNotContain(result.Events, item => item.Type == GameBattleEventTypes.ItemConsumed);
+        Assert.Equal(1, result.Actors[0].Actions[0].RemainingQuantity);
+        Assert.Equal("espada", ((ActionSelectedPayload)result.Events.First(item =>
+            item.Type == GameBattleEventTypes.ActionSelected && item.ActorId == "hero").Payload).ActionId);
+    }
+
+    [Fact]
+    public void GranadaEquipadaAplicaReacoesSemTesteDeAcertoDoUsuario()
+    {
+        var blindness = new GameBattleConditionRule("CEGUEIRA", "Cegueira", "", "", 0,
+            "", false, true, "DURACAO")
+        { Effects = [new SistemaCondicaoEfeito("MODIFICAR_ROLAGEM", "TODOS", -5, "ENQUANTO_ATIVA")] };
+        GameBattleActionSpec grenade = UtilityAction("item:granada", new GameBattleUtilitySpec(1)) with
+        {
+            Conditions = [new GameBattleConditionApplication(blindness, null, 3, "Turno", "AO_USAR", [])
+            { Target = "TODOS_INIMIGOS", ResistanceTest = new GameBattleResistanceTest(1, 6, "AGILIDADE", 5) }],
+        };
+        GameBattleInput input = Battle(Actor("hero", 100, grenade, Action("espada", 10)),
+            Actor("enemy", 100, Action("idle", 0)), maxRounds: 1) with
+        { AdditionalEnemies = [Actor("enemy-2", 100, Action("idle-2", 0))] };
+        GameBattleResult result = _simulator.Simulate(input, new SequenceRandomSource(1, 6, 11));
+
+        Assert.Single(result.Events, item => item.Type == GameBattleEventTypes.ItemConsumed);
+        Assert.Equal(2, result.Events.Count(item => item.Type == GameBattleEventTypes.ResistanceRolled));
+        Assert.DoesNotContain(result.Events, item => item.Type == GameBattleEventTypes.DiceRolled &&
+            item.ActorId == "hero" && ((DiceRolledPayload)item.Payload).ActionId == "item:granada");
+        Assert.Contains(result.Events, item => item.Type == GameBattleEventTypes.ConditionApplied &&
+            item.TargetId == "enemy");
+        Assert.DoesNotContain(result.Events, item => item.Type == GameBattleEventTypes.ConditionApplied &&
+            item.TargetId == "enemy-2");
+    }
+
+    [Fact]
+    public void ReacaoDeAreaTestaCadaInimigoForaDoTurnoEPulaSoQuemFalhou()
+    {
+        var stun = new GameBattleConditionRule("CONCUSSAO", "Concussão", "", "", 0,
+            "", false, true, "DURACAO")
+        { Effects = [new SistemaCondicaoEfeito("PERDER_TURNOS", "TURNO", 1, "AO_APLICAR")] };
+        GameBattleActionSpec grenade = Action("granada", 0) with
+        {
+            Conditions = [new GameBattleConditionApplication(stun, null, 2, "Turno", "AO_USAR", [])
+            {
+                Target = "TODOS_INIMIGOS",
+                ResistanceTest = new GameBattleResistanceTest(1, 6, "AGILIDADE", 5),
+            }],
+        };
+        GameBattleActorSpec firstEnemy = Actor("enemy", 100, Action("ataque", 0)) with
+        { Attributes = new Dictionary<string, int> { ["AGILIDADE"] = 1 } };
+        GameBattleActorSpec secondEnemy = Actor("enemy-2", 100, Action("ataque-2", 0)) with
+        { Attributes = new Dictionary<string, int> { ["AGILIDADE"] = 3 } };
+        GameBattleInput input = Battle(Actor("hero", 100, grenade), firstEnemy, maxRounds: 1)
+            with { AdditionalEnemies = [secondEnemy] };
+
+        GameBattleResult result = _simulator.Simulate(input, new SequenceRandomSource(11, 2, 2, 11));
+
+        ResistanceRolledPayload[] reactions = result.Events.Where(item =>
+            item.Type == GameBattleEventTypes.ResistanceRolled)
+            .Select(item => Assert.IsType<ResistanceRolledPayload>(item.Payload)).ToArray();
+        Assert.Equal([false, true], reactions.Select(item => item.Passed).ToArray());
+        Assert.Single(result.Events.Where(item => item.Type == GameBattleEventTypes.ConditionApplied &&
+            item.TargetId == "enemy"));
+        Assert.DoesNotContain(result.Events, item => item.Type == GameBattleEventTypes.ConditionApplied &&
+            item.TargetId == "enemy-2");
+        Assert.Contains(result.Events, item => item.Type == GameBattleEventTypes.TurnPassed &&
+            item.ActorId == "enemy" && ((TurnPassedPayload)item.Payload).Reason == "CONDITION");
+        Assert.Contains(result.Events, item => item.Type == GameBattleEventTypes.ActionSelected &&
+            item.ActorId == "enemy-2");
+        Assert.DoesNotContain(result.Events, item => item.Type == GameBattleEventTypes.ActionSelected &&
+            item.ActorId == "enemy");
+    }
+
+    [Fact]
+    public void ReacaoDeAreaRespeitaVantagemDaCondicaoDoAfetado()
+    {
+        var advantage = new GameBattleConditionRule("REFLEXO", "Reflexo", "", "", 0,
+            "", false, true, "DURACAO")
+        { Effects = [new SistemaCondicaoEfeito("VANTAGEM", "TODOS", 0, "ENQUANTO_ATIVA")] };
+        var blindness = new GameBattleConditionRule("CEGUEIRA", "Cegueira", "", "", 0,
+            "", false, true, "DURACAO");
+        GameBattleActionSpec grenade = Action("granada", 0) with
+        {
+            Conditions = [new GameBattleConditionApplication(blindness, null, 2, "Turno", "AO_USAR", [])
+            {
+                Target = "TODOS_INIMIGOS",
+                ResistanceTest = new GameBattleResistanceTest(1, 6, "AGILIDADE", 5),
+            }],
+        };
+        GameBattleActorSpec enemy = Actor("enemy", 100, Action("idle", 0)) with
+        { ActiveConditions = [new GameBattleActiveCondition(advantage, 0, 2)] };
+
+        GameBattleResult result = _simulator.Simulate(
+            Battle(Actor("hero", 100, grenade), enemy, maxRounds: 1),
+            new SequenceRandomSource(11, 1, 6, 11));
+
+        ResistanceRolledPayload reaction = Assert.IsType<ResistanceRolledPayload>(result.Events
+            .Single(item => item.Type == GameBattleEventTypes.ResistanceRolled).Payload);
+        Assert.Equal(GameplayRollMode.Vantagem, reaction.Mode);
+        Assert.Equal([1], reaction.Dice);
+        Assert.Equal([6], reaction.AlternativeDice);
+        Assert.Equal(6, reaction.Total);
+        Assert.True(reaction.Passed);
+        Assert.DoesNotContain(result.Events, item => item.Type == GameBattleEventTypes.ConditionApplied &&
+            item.TargetId == "enemy");
+    }
+
+    [Fact]
+    public void EfeitoDeAreaAindaAlcancaOutrosInimigosQuandoAlvoPrimarioMorre()
+    {
+        var condition = new GameBattleConditionRule("MARCA", "Marca", "", "", 0,
+            "", false, true, "DURACAO")
+        { Effects = [new SistemaCondicaoEfeito("MODIFICAR_ROLAGEM", "TODOS", -1, "ENQUANTO_ATIVA")] };
+        GameBattleActionSpec grenade = Action("granada", 100) with
+        {
+            Conditions = [new GameBattleConditionApplication(condition, null, 2, "Turno", "ACERTO", [])
+            { Target = "TODOS_INIMIGOS", ResistanceTest = new GameBattleResistanceTest(1, 6, "AGILIDADE", 5) }],
+        };
+        GameBattleInput input = Battle(Actor("hero", 100, grenade),
+            Actor("enemy", 100, Action("idle", 0)), maxRounds: 1) with
+        { AdditionalEnemies = [Actor("enemy-2", 100, Action("idle-2", 0))] };
+
+        GameBattleResult result = _simulator.Simulate(input, new SequenceRandomSource(11, 1, 11));
+
+        Assert.Contains(result.Events, item => item.Type == GameBattleEventTypes.ActorDefeated &&
+            item.ActorId == "enemy");
+        Assert.Contains(result.Events, item => item.Type == GameBattleEventTypes.ConditionApplied &&
+            item.TargetId == "enemy-2");
+    }
+
+    [Fact]
+    public void CondicoesDinamicasAlteramAtributoDanoEDefesaSemMudarFichaBase()
+    {
+        var offense = new GameBattleConditionRule("FOCO", "Foco", "", "", 0, "", false, true, "DURACAO")
+        {
+            Effects = [new SistemaCondicaoEfeito("MODIFICAR_ATRIBUTO", "PRECISAO", 2, "ENQUANTO_ATIVA"),
+                new SistemaCondicaoEfeito("MODIFICAR_DANO", "TODOS", 5, "ENQUANTO_ATIVA")],
+        };
+        var defense = new GameBattleConditionRule("GUARDA", "Guarda", "", "", 0, "", false, true, "DURACAO")
+        {
+            Effects = [new SistemaCondicaoEfeito("MODIFICAR_DEFESA", "ARMADURA", 4, "ENQUANTO_ATIVA")],
+        };
+        GameBattleActorSpec hero = Actor("hero", 100, Action("golpe", 10) with
+        { AttributeCode = "PRECISAO" }) with
+        { ActiveConditions = [new GameBattleActiveCondition(offense, 0, null)
+            { EffectValues = new Dictionary<int, int> { [0] = 3 } }] };
+        GameBattleActorSpec enemy = Actor("enemy", 100, Action("idle", 0)) with
+        { ActiveConditions = [new GameBattleActiveCondition(defense, 0, null)] };
+
+        GameBattleResult result = _simulator.Simulate(Battle(hero, enemy, maxRounds: 1,
+            defenseOrder: [GameBattleDefenseKind.Armor]), new SequenceRandomSource(15));
+
+        DiceRolledPayload roll = Assert.IsType<DiceRolledPayload>(result.Events.First(item =>
+            item.Type == GameBattleEventTypes.DiceRolled && item.ActorId == "hero").Payload);
+        Assert.Equal(3, roll.Roll.Modificador);
+        Assert.Contains(result.Events, item => item.Type == GameBattleEventTypes.ResourceChanged &&
+            item.TargetId == "enemy" && ((ResourceChangedPayload)item.Payload).After == 89);
+        Assert.Equal(4, result.Actors.Single(item => item.Id == "enemy").Defenses.Armor);
+        Assert.Equal(0, hero.Actions[0].Roll.Modifier);
+    }
+
+    [Fact]
+    public void RegeneracaoEBonusDeLimiteUsamValoresDaCopia()
+    {
+        var rule = new GameBattleConditionRule("REGENERACAO", "Regeneração", "", "", 0,
+            "", false, true, "DURACAO")
+        {
+            Effects = [new SistemaCondicaoEfeito("SOMAR", "VIDA", 10, "FIM_TURNO"),
+                new SistemaCondicaoEfeito("MODIFICAR_LIMITE_PERCENTUAL", "VIDA", 30, "ENQUANTO_ATIVA")],
+        };
+        GameBattleActorSpec hero = Actor("hero", 100, Action("idle", 0)) with
+        { HitPoints = 50, ActiveConditions = [new GameBattleActiveCondition(rule, 0, null)
+            { EffectValues = new Dictionary<int, int> { [0] = 20 } }] };
+
+        GameBattleResult result = _simulator.Simulate(Battle(hero,
+            Actor("enemy", 100, Action("idle", 0)), maxRounds: 1), new SequenceRandomSource(10));
+
+        GameBattleActorState state = result.Actors.Single(item => item.Id == "hero");
+        Assert.Contains(result.Events, item => item.Type == GameBattleEventTypes.ResourceChanged &&
+            item.ActorId == "hero" && ((ResourceChangedPayload)item.Payload).After == 70);
+        Assert.Equal(130, state.MaximumHitPoints);
+        Assert.Equal(50, hero.HitPoints);
+    }
+
+    [Fact]
+    public void GatilhoAutomaticoDeManaZeradaAfetaAPropriaRolagemDoTurno()
+    {
+        var rule = new GameBattleConditionRule("DEPENDENCIA", "Dependência", "", "", 0,
+            "", false, false, "DESCANSO_NORMAL")
+        {
+            Effects = [new SistemaCondicaoEfeito("MODIFICAR_ROLAGEM", "PRECISAO", -5,
+                "ENQUANTO_ATIVA")],
+        };
+        GameBattleActorSpec hero = Actor("hero", 100, Action("magia", 0) with
+        { AttributeCode = "PRECISAO", ManaCost = 5 }) with { Mana = 5, MaximumMana = 10 };
+        GameBattleInput input = Battle(hero, Actor("enemy", 100, Action("idle", 0)),
+            maxRoundsWithoutDamage: 1) with
+        {
+            AutomaticConditions = [new GameBattleAutomaticCondition(rule, "MANA", "<=", 0)],
+        };
+
+        GameBattleResult result = _simulator.Simulate(input, new SequenceRandomSource(16));
+
+        GameBattleEvent applied = Assert.Single(result.Events.Where(item =>
+            item.Type == GameBattleEventTypes.ConditionApplied && item.ActorId == "hero"));
+        GameBattleEvent rollEvent = result.Events.First(item =>
+            item.Type == GameBattleEventTypes.DiceRolled && item.ActorId == "hero");
+        Assert.True(applied.Sequence < rollEvent.Sequence);
+        Assert.Equal(-5, Assert.IsType<DiceRolledPayload>(rollEvent.Payload).Roll.Modificador);
+        Assert.Contains(result.Actors.Single(item => item.Id == "hero").ActiveConditions,
+            item => item.Rule.Code == "DEPENDENCIA");
+    }
+
+    [Fact]
+    public void CondicaoDoSistemaEntraSomenteNoNaturalConfiguradoEAplicaPorTurno()
+    {
+        var rule = new GameBattleConditionRule("SANGRAMENTO", "Sangramento", "SUBTRAIR",
+            "VIDA", 3, "INICIO_TURNO", false, true, "DURACAO");
+        GameBattleActionSpec strike = Action("strike", 1, cooldown: 10) with
+        {
+            Conditions = [new GameBattleConditionApplication(rule, null, 2, "Turno",
+                "RESULTADO_NATURAL", [17])],
+        };
+        GameBattleInput input = Battle(Actor("hero", 100, strike),
+            Actor("enemy", 100, Action("idle", 0)), maxRoundsWithoutDamage: 3);
+
+        GameBattleResult result = _simulator.Simulate(input, new SequenceRandomSource(17, 4));
+
+        Assert.Single(result.Events, item => item.Type == GameBattleEventTypes.ConditionApplied);
+        Assert.Equal(2, result.Events.Count(item => item.Type == GameBattleEventTypes.ResourceChanged &&
+            ((ResourceChangedPayload)item.Payload).ActionId == "condicao:SANGRAMENTO"));
+        Assert.Single(result.Events, item => item.Type == GameBattleEventTypes.ConditionExpired);
+        Assert.Empty(result.Actors.Single(item => item.Id == "enemy").ActiveConditions);
+    }
+
+    [Theory]
+    [InlineData(15, false)]
+    [InlineData(16, true)]
+    [InlineData(20, true)]
+    public void FaixaNaturalDaOrigemControlaAplicacao(int natural, bool applies)
+    {
+        var rule = new GameBattleConditionRule("SANGRAMENTO", "Sangramento", "SUBTRAIR",
+            "VIDA", 50, "INICIO_TURNO", false, true, "DURACAO");
+        GameBattleActionSpec strike = Action("strike", 0) with
+        {
+            Conditions = [new GameBattleConditionApplication(rule, null, 4, "Turno",
+                "RESULTADO_NATURAL", []) { NaturalMinimum = 16 }],
+        };
+        GameBattleResult result = _simulator.Simulate(Battle(
+            Actor("hero", 100, strike), Actor("enemy", 100, Action("idle", 0)),
+            maxRoundsWithoutDamage: 1), new SequenceRandomSource(natural));
+
+        Assert.Equal(applies, result.Events.Any(item => item.Type == GameBattleEventTypes.ConditionApplied));
+    }
+
+    [Theory]
+    [InlineData(19, false)]
+    [InlineData(20, true)]
+    public void CondicaoPodeSeguirCodigoDeCriticoPublicado(int natural, bool applies)
+    {
+        var rule = new GameBattleConditionRule("LESAO", "Lesão", "REDUZIR_LIMITE_PERCENTUAL",
+            "ESTAMINA", 30, "ENQUANTO_ATIVA", false, true, "DESCANSO_NORMAL");
+        GameBattleActionSpec hammer = Action("martelo", 0) with
+        {
+            Conditions = [new GameBattleConditionApplication(rule, null, 2, "Turno",
+                "RESULTADO_CLASSIFICADO", []) { OutcomeCode = "CRITICO" }],
+        };
+        GameBattleResult result = _simulator.Simulate(Battle(
+            Actor("hero", 100, hammer), Actor("enemy", 100, Action("idle", 0)),
+            maxRoundsWithoutDamage: 1), new SequenceRandomSource(natural));
+
+        Assert.Equal(applies, result.Events.Any(item => item.Type == GameBattleEventTypes.ConditionApplied));
+    }
+
+    [Fact]
+    public void CondicaoCombinaPenalidadeDeAtributoEDesvantagemNoMesmoTeste()
+    {
+        var rule = new GameBattleConditionRule("CEGUEIRA", "Cegueira", "", "", 0,
+            "", false, true, "DURACAO")
+        {
+            Effects = [new SistemaCondicaoEfeito("MODIFICAR_ROLAGEM", "PRECISAO", -5, "ENQUANTO_ATIVA"),
+                new SistemaCondicaoEfeito("DESVANTAGEM", "TESTE", 0, "ENQUANTO_ATIVA")],
+        };
+        GameBattleActorSpec hero = Actor("hero", 100, Action("strike", 0) with
+        { AttributeCode = "PRECISAO" }) with
+        { ActiveConditions = [new GameBattleActiveCondition(rule, 0, 3)] };
+
+        GameBattleResult result = _simulator.Simulate(Battle(hero,
+            Actor("enemy", 100, Action("idle", 0)), maxRoundsWithoutDamage: 1),
+            new SequenceRandomSource(17, 4));
+
+        DiceRolledPayload rolled = Assert.IsType<DiceRolledPayload>(result.Events.First(item =>
+            item.Type == GameBattleEventTypes.DiceRolled && item.ActorId == "hero").Payload);
+        Assert.Equal(GameplayRollMode.Desvantagem, rolled.Mode);
+        Assert.Equal(-5, rolled.Roll.Modificador);
+        Assert.Equal(4, rolled.Roll.ValorNatural);
+    }
+
+    [Fact]
+    public void OrigemPodeAplicarCondicaoNoProprioUsuarioSemAfetarOAlvo()
+    {
+        var rule = new GameBattleConditionRule("FOCO", "Foco", "SOMAR", "MANA", 5,
+            "AO_APLICAR", false, true, "DURACAO");
+        GameBattleActionSpec power = Action("foco", 0) with
+        {
+            Conditions = [new GameBattleConditionApplication(rule, null, 2, "Turno", "AO_USAR", [])
+            { Target = "USUARIO" }],
+        };
+        GameBattleActorSpec hero = Actor("hero", 40, power) with
+        { Mana = 0, MaximumMana = 10 };
+        GameBattleResult result = _simulator.Simulate(Battle(hero,
+            Actor("enemy", 40, Action("idle", 0)), maxRoundsWithoutDamage: 1),
+            new SequenceRandomSource(11));
+
+        Assert.Contains(result.Events, item => item.Type == GameBattleEventTypes.ConditionApplied &&
+            item.ActorId == "hero" && item.TargetId == "hero");
+        Assert.True(result.Actors.Single(item => item.Id == "hero").Mana > 0);
+        Assert.Empty(result.Actors.Single(item => item.Id == "enemy").ActiveConditions);
+    }
+
+    [Fact]
+    public void FalhaNaoAplicaCondicaoDeAcerto()
+    {
+        var rule = new GameBattleConditionRule("SANGRAMENTO", "Sangramento", "SUBTRAIR",
+            "VIDA", 3, "INICIO_TURNO", false, true, "DURACAO");
+        GameBattleActionSpec strike = Action("strike", 1) with
+        {
+            Conditions = [new GameBattleConditionApplication(rule, null, 2, "Turno", "ACERTO", [])],
+        };
+        GameBattleResult result = _simulator.Simulate(Battle(
+            Actor("hero", 30, strike), Actor("enemy", 30, Action("idle", 0)),
+            maxRoundsWithoutDamage: 1), new SequenceRandomSource(4));
+        Assert.DoesNotContain(result.Events, item => item.Type == GameBattleEventTypes.ConditionApplied);
+    }
+
+    [Fact]
+    public void MagiaSemDanoAplicaCondicaoQuandoFaixaEAcerto()
+    {
+        var rule = new GameBattleConditionRule("SANGRAMENTO", "Sangramento", "SUBTRAIR",
+            "VIDA", 3, "AO_APLICAR", false, true, "DURACAO");
+        GameBattleActionSpec power = Action("magia", 0) with
+        {
+            Conditions = [new GameBattleConditionApplication(rule, null, 2, "Turno", "ACERTO", [])],
+        };
+        GameBattleResult result = _simulator.Simulate(Battle(
+            Actor("hero", 40, power), Actor("enemy", 40, Action("idle", 0)),
+            maxRoundsWithoutDamage: 2), new SequenceRandomSource(11));
+
+        Assert.Contains(result.Events, item => item.Type == GameBattleEventTypes.ConditionApplied);
+        Assert.Contains(result.Events, item => item.Type == GameBattleEventTypes.ResourceChanged &&
+            ((ResourceChangedPayload)item.Payload).ActionId == "condicao:SANGRAMENTO");
+    }
+
+    [Fact]
+    public void MagiaRemoveSomenteCondicaoMarcadaEPermitidaPeloSistema()
+    {
+        var removable = new GameBattleConditionRule("VENENO", "Veneno", "SUBTRAIR",
+            "VIDA", 1, "INICIO_TURNO", false, true, "CURA;MAGIA");
+        var permanent = new GameBattleConditionRule("MARCA", "Marca", "SUBTRAIR",
+            "VIDA", 1, "INICIO_TURNO", false, true, "MANUAL");
+        GameBattleActorSpec hero = Actor("hero", 40, Action("purificar", 0) with
+        {
+            RemovesConditions = ["VENENO", "MARCA"],
+        }) with
+        {
+            ActiveConditions = [new(removable, 1, null), new(permanent, 1, null)],
+        };
+
+        GameBattleResult result = _simulator.Simulate(Battle(hero,
+            Actor("enemy", 40, Action("idle", 0)), maxRoundsWithoutDamage: 2),
+            new SequenceRandomSource(11));
+
+        Assert.Contains(result.Events, item => item.Type == GameBattleEventTypes.ConditionExpired &&
+            ((ConditionExpiredPayload)item.Payload).Code == "VENENO");
+        Assert.DoesNotContain(result.Events, item => item.Type == GameBattleEventTypes.ConditionExpired &&
+            ((ConditionExpiredPayload)item.Payload).Code == "MARCA");
+    }
+
+    [Fact]
+    public void CodigoPersonalizadoUsaExitoExplicitoDaFaixaPublicada()
+    {
+        var rule = new GameBattleConditionRule("MARCA", "Marca", "SUBTRAIR",
+            "VIDA", 2, "AO_APLICAR", false, true, "DURACAO");
+        GameBattleActionSpec action = Action("poder", 0) with
+        {
+            ResultRanges = Action("poder", 0).ResultRanges.Select(range =>
+                range.Code == "ACERTO" ? range with
+                {
+                    Code = "SUCESSO_PARCIAL",
+                    EffectJson = """{"aplicaCondicoes":true}""",
+                } : range).ToArray(),
+            DamageByResultCode = new Dictionary<string, int>
+            {
+                ["FALHA_CRITICA"] = 0, ["ERRO"] = 0,
+                ["SUCESSO_PARCIAL"] = 0, ["CRITICO"] = 0,
+            },
+            Conditions = [new GameBattleConditionApplication(rule, null, 2, "Turno", "ACERTO", [])],
+        };
+
+        GameBattleResult result = _simulator.Simulate(Battle(
+            Actor("hero", 40, action), Actor("enemy", 40, Action("idle", 0)),
+            maxRoundsWithoutDamage: 1), new SequenceRandomSource(11));
+
+        Assert.Contains(result.Events, item => item.Type == GameBattleEventTypes.ConditionApplied);
+    }
 
     [Fact]
     public void MesmaEntradaESeedProduzemMesmoLogSemModificarSnapshot()
@@ -877,6 +1309,10 @@ public sealed class AutoBattleSimulatorTests
             StaminaCost: staminaCost,
             CooldownTurns: cooldown,
             Magazine: magazine);
+
+    private static GameBattleActionSpec UtilityAction(string id, GameBattleUtilitySpec utility) => new(
+        id, id, new GameplayRollPlan("SEM_TESTE", [], GameplayRollMode.Normal, 0),
+        [], false, new Dictionary<string, int>()) { Utility = utility };
 
     private sealed class SequenceRandomSource(params int[] values) : IDiceRandomSource
     {

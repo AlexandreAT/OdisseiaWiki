@@ -1,4 +1,5 @@
 import styled, { css } from 'styled-components';
+import { cyberButtonsFillWidth } from '../../../components/Generic/HighlightButton/HighlightButton.styles';
 
 export interface SystemThemeProps {
   theme: 'dark' | 'light';
@@ -610,6 +611,11 @@ export const DialogFooter = styled.div`
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
+  @media (max-width: 600px) {
+    flex-direction: column;
+    align-items: stretch;
+    ${cyberButtonsFillWidth}
+  }
 `;
 
 export const ConfirmText = styled.div`

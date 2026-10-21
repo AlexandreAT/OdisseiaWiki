@@ -229,6 +229,7 @@ public sealed class GameplayEffectProposalDto
     public int? CooldownTurnos { get; init; }
     public string Operacao { get; init; } = "SOMAR";
     public int Valor { get; init; }
+    public IReadOnlyDictionary<int, int> ValoresEfeitos { get; init; } = new Dictionary<int, int>();
     public bool ExigeAlvo { get; init; }
     public bool PodeAplicar { get; init; } = true;
     public string? MotivoIndisponivel { get; init; }

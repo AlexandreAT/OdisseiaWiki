@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { Modal } from '../../../components/Generic/Modal/Modal';
 import { ImageUploader } from '../../../components/Generic/ImageUploader/ImageUploader';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { Select } from '../../../components/Generic/Select/Select';
 import { CheckSelect } from '../../../components/Generic/CheckSelect/CheckSelect';
 import { InputText } from '../../../components/Generic/InputText/InputText';
+import { TextArea } from '../../../components/Generic/TextArea/TextArea';
 import { CyberButton } from '../../../components/Generic/HighlightButton/HighlightButton';
 import type { CropPreset } from '../../../components/Generic/ImageUploader/types';
 import { LoadingIndicator } from '../../../components/Generic/LoadingIndicator';
@@ -11,9 +13,10 @@ import type { GameModeAreaOption } from '../../../models/GameModeManagement';
 import { normalizeImagePath } from '../../Wiki/utils/imagePathHelper';
 import { useManagementGame } from './useManagementGame';
 import { ManagementGameEncounterCatalog } from './ManagementGameEncounterCatalog';
+import { ManagementGamePowers } from './ManagementGamePowers';
 import {
   GameAdminActions, GameAdminCard, GameAdminDraftActions, GameAdminFields, GameAdminFrame,
-  GameAdminGrid, GameAdminHeader, GameAdminHint, GameAdminImage, GameAdminRoute, GameAdminSection,
+  GameAdminGrid, GameAdminHeader, GameAdminHint, GameAdminImage, GameAdminRoute, GameAdminRouteImageHeader, GameAdminSection,
   GameAdminWeightRow,
   GameAdminVersion, GameAdminDelete, GameAdminTabs,
 } from './ManagementGame.style';
@@ -26,11 +29,12 @@ const nodeCountOptions = Array.from({ length: 22 }, (_, index) => ({
   value: index + 3, label: `${index + 3} nós`,
 }));
 
-interface Props { theme: 'dark' | 'light'; neon: 'on' | 'off' }
+interface Props { theme: 'dark' | 'light'; neon: 'on' | 'off'; mesaId?: number }
 
-export const ManagementGame = ({ theme, neon }: Props) => {
-  const state = useManagementGame();
-  const [activeTab, setActiveTab] = useState<'geral' | 'ataque' | 'areas' | 'bases' | 'encontros'>('areas');
+export const ManagementGame = ({ theme, neon, mesaId }: Props) => {
+  const state = useManagementGame(mesaId);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'geral' | 'ataque' | 'areas' | 'bases' | 'encontros' | 'poderes'>('areas');
   const [migrationSource, setMigrationSource] = useState<number | null>(null);
   const editor = state.editor;
   const editable = editor?.status === 'Rascunho' && !state.busy;
@@ -40,35 +44,72 @@ export const ManagementGame = ({ theme, neon }: Props) => {
     ? migrationSource : archivedVersions[0]?.id;
   const sourceVersion = archivedVersions.find((version) => version.id === sourceVersionId);
   const targetVersion = state.systemVersions.find((version) => version.id === state.selectedSystemVersion);
-  const canMigrate = editor?.status === 'Publicado' && state.systemVersions.some((version) =>
+  const canMigrate = !mesaId && editor?.codigoJogo === 'ROGUELIKE_MVP' && editor?.status === 'Publicado' && state.systemVersions.some((version) =>
     version.id === state.selectedSystemVersion && version.current) && archivedVersions.length > 0;
+  const canAdapt = Boolean(mesaId && editor && state.systemVersions.some((version) =>
+    version.current && version.id !== editor.idSistemaVersao));
   const versionPicker = <GameAdminVersion><Select theme={theme} neon={neon}
-    label="Versão do Sistema da ficha" value={state.selectedSystemVersion ?? ''}
+    label={mesaId ? 'Versão do Sistema deste jogo' : 'Versão do Sistema da ficha'} value={state.selectedSystemVersion ?? ''}
     options={state.systemVersions.map((version) => ({ value: version.id,
       label: `${version.number} · ${version.status}${version.current ? ' · atual' : ''}` }))}
-    allowEmptyOption={false} disabled={state.busy || state.changed}
+    allowEmptyOption={false} disabled={Boolean(mesaId) || state.busy || state.changed}
     onChange={(event) => state.selectSystemVersion(Number(event.target.value))} />
   </GameAdminVersion>;
 
   if (state.loading) return <LoadingIndicator label="Carregando jogo" />;
-  if (!editor) return <GameAdminFrame neon={neon === 'on'}>
-    {versionPicker}
-    <p role="alert">{state.error ?? 'Não foi possível abrir a configuração do jogo.'}</p>
-    <GameAdminActions><CyberButton theme={theme} neon={neon} colorType="secondary"
-      disabled={state.busy} text="Tentar novamente" width="190px"
-      onClick={() => void state.load(state.selectedSystemVersion ?? undefined)} />
-      <CyberButton theme={theme} neon={neon} disabled={state.busy}
-        text="Criar rascunho" width="190px" onClick={() => void state.createDraft()} />
+  const gameSelector = <GameAdminSection>
+    <h2>Jogos {mesaId ? 'desta mesa' : 'globais'}</h2>
+    <GameAdminActions>
+      <GameAdminVersion><Select theme={theme} neon={neon} label="Jogo" width="100%"
+        value={state.selectedGameCode ?? ''} allowEmptyOption={state.games.length === 0}
+        options={state.games.map((game) => ({ value: game.codigo, label: game.nome }))}
+        disabled={state.busy || state.changed || state.games.length === 0}
+        onChange={(event) => state.selectGame(event.target.value)} /></GameAdminVersion>
+      <CyberButton theme={theme} neon={neon} text="Novo jogo" width="170px"
+        disabled={state.busy} onClick={() => setCreateOpen(true)} />
     </GameAdminActions>
+    {state.changed && <GameAdminHint>Salve as alterações antes de trocar de jogo.</GameAdminHint>}
+  </GameAdminSection>;
+  const createModal = createOpen && <Modal title="Criar jogo" theme={theme} neon={neon}
+    width="660px" showFooter={false} onClose={() => !state.busy && setCreateOpen(false)}>
+    <GameAdminSection>
+      <ImageUploader theme={theme} neon={neon} cropPreset={areaCrop}
+        label="Banner do jogo (16:9)" mobileSize="full"
+        initialImage={state.newGameBanner ? normalizeImagePath(state.newGameBanner) : undefined}
+        onImageCropped={(result) => { void state.uploadBanner(result.file); }}
+        onRemove={() => state.setNewGameBanner(null)} />
+      <InputText theme={theme} neon={neon} label="Nome do jogo" width="100%"
+        value={state.newGameName} onChange={(event) => state.setNewGameName(event.target.value)} />
+      <TextArea theme={theme} neon={neon} label="Descrição" fullWidth rows={3}
+        value={state.newGameDescription}
+        onChange={(event) => state.setNewGameDescription(event.target.value.slice(0, 500))} />
+      <GameAdminActions><CyberButton theme={theme} neon={neon} text="Criar jogo" width="170px"
+        disabled={state.busy || !state.newGameBanner || state.newGameName.trim().length < 2}
+        onClick={() => { void state.createGame().then((ok) => { if (ok) setCreateOpen(false); }); }} /></GameAdminActions>
+      {state.error && <p role="alert">{state.error}</p>}
+    </GameAdminSection>
+  </Modal>;
+  if (!editor) return <GameAdminFrame neon={neon === 'on'}>
+    {versionPicker}{gameSelector}{createModal}
+    {state.error && <p role="alert">{state.error}</p>}
+    {state.games.length === 0 && <GameAdminHint>Crie o primeiro jogo para esta {mesaId ? 'mesa' : 'versão do Sistema'}.</GameAdminHint>}
   </GameAdminFrame>;
 
   return <GameAdminFrame neon={neon === 'on'}>
-    {versionPicker}
+    {versionPicker}{gameSelector}{createModal}
     <GameAdminHeader>
-      <div><h1>Gerenciamento do jogo</h1>
-        <p>Modo {editor.numeroVersao} · {editor.status} · Sistema #{editor.idSistemaVersao}</p></div>
+      <div><h1>{editor.nomeJogo}</h1>
+        <p>Modo {editor.numeroVersao} · {editor.status} · Sistema #{editor.idSistemaVersao}</p>
+        {editor.descricaoJogo && <p>{editor.descricaoJogo}</p>}</div>
       <p>Runs iniciadas preservam a configuração publicada que escolheram.</p>
     </GameAdminHeader>
+    {canAdapt && <GameAdminSection>
+      <h2>Atualizar para o Sistema da Mesa</h2>
+      <GameAdminHint>Esta aventura usa uma versão anterior. A adaptação cria um rascunho na versão atual e preserva as runs e publicações antigas.</GameAdminHint>
+      <GameAdminActions><CyberButton theme={theme} neon={neon}
+        text="Adaptar jogo" width="190px" disabled={state.busy || state.changed}
+        onClick={() => { void state.adaptGame(); }} /></GameAdminActions>
+    </GameAdminSection>}
     {canMigrate &&
       <GameAdminSection>
         <h2>Migrar jogo de outra versão</h2>
@@ -103,7 +144,7 @@ export const ManagementGame = ({ theme, neon }: Props) => {
 
     <GameAdminTabs aria-label="Seções do gerenciamento do jogo">
       {([['geral', 'Geral'], ['ataque', 'Ataque'], ['areas', 'Áreas e rotas'], ['bases', 'Bases'],
-        ['encontros', 'Personagens']] as const).map(([key, label]) =>
+        ['encontros', 'Personagens'], ['poderes', 'Poderes']] as const).map(([key, label]) =>
         <button key={key} type="button" aria-pressed={activeTab === key}
           onClick={() => setActiveTab(key)}>{label}</button>)}
     </GameAdminTabs>
@@ -122,6 +163,11 @@ export const ManagementGame = ({ theme, neon }: Props) => {
         value={editor.saleDiscountPercent ?? 0} disabled={!editable}
         onChange={(event) => state.updateSaleDiscount(Number(event.target.value))} /></GameAdminFields>
     </GameAdminSection>}
+
+    {activeTab === 'poderes' && <ManagementGamePowers theme={theme} neon={neon}
+      editable={!!editable} powers={editor.powerCatalog}
+      onAdd={state.addPower} onUpdate={state.updatePower} onRemove={state.removePower}
+      onUpload={state.uploadPowerImage} />}
 
     {activeTab === 'ataque' && <GameAdminSection>
       <h2>Ataque de reserva</h2>
@@ -244,6 +290,15 @@ export const ManagementGame = ({ theme, neon }: Props) => {
                 options[optionIndex] = { ...option, description: event.target.value };
                 state.updateArea(index, { options });
               }} />}
+            {option.type === 'EVENTO' && <InputText theme={theme} neon={neon}
+              label="Tempo de jogo do evento (minutos)" width="100%" type="number"
+              value={option.gameMinutes ?? 0} disabled={!editable}
+              onChange={(event) => {
+                const options = [...area.options];
+                options[optionIndex] = { ...option,
+                  gameMinutes: Math.min(1_000_000, Math.max(0, Math.trunc(Number(event.target.value) || 0))) };
+                state.updateArea(index, { options });
+              }} />}
             {option.type === 'CACADA' && (editable ? <CheckSelect
               theme={theme} neon={neon} label="Encontros possíveis" width="100%" compactPreview
               value={option.encounterCodes ?? []}
@@ -294,21 +349,30 @@ export const ManagementGame = ({ theme, neon }: Props) => {
               }} />Único</label>
           </GameAdminWeightRow>
           {(['EVENTO', 'DESCANSO', 'ATALHO', 'CACADA', 'AREA_SECRETA'].includes(option.type)) &&
-            <GameAdminImage data-route-image><ImageUploader theme={theme} neon={neon}
+            <GameAdminImage data-route-image>
+              <GameAdminRouteImageHeader $neon={neon === 'on'}>
+                <span>Imagem da opção</span>
+                <GameAdminDelete type="button" disabled={!editable || area.options.length <= 1}
+                  title={area.options.length <= 1 ? 'Cada área precisa de ao menos uma rota' : 'Excluir rota'}
+                  aria-label={`Excluir rota ${optionIndex + 1} de ${area.name}`}
+                  onClick={() => state.removeRoute(index, optionIndex)}><DeleteOutlineIcon /></GameAdminDelete>
+              </GameAdminRouteImageHeader>
+              <ImageUploader theme={theme} neon={neon}
               cropPreset={option.type === 'AREA_SECRETA' ? areaCrop : routeCrop}
               initialImage={normalizeImagePath(option.image ?? undefined)}
-              label="Imagem da opção" onImageCropped={(result) => { if (editable) void state.uploadAreaImage(index, result.file, optionIndex); }}
+              label="Imagem da opção"
+              onImageCropped={(result) => { if (editable) void state.uploadAreaImage(index, result.file, optionIndex); }}
               onRemove={() => { if (editable) {
                 const options = [...area.options];
                 options[optionIndex] = { ...option, image: null };
                 state.updateArea(index, { options });
               } }} /></GameAdminImage>}
-          <GameAdminDelete type="button" disabled={!editable || area.options.length <= 1}
+          {!['EVENTO', 'DESCANSO', 'ATALHO', 'CACADA', 'AREA_SECRETA'].includes(option.type) && <GameAdminDelete type="button" disabled={!editable || area.options.length <= 1}
             title={area.options.length <= 1 ? 'Cada área precisa de ao menos uma rota' : 'Excluir rota'}
             aria-label={`Excluir rota ${optionIndex + 1} de ${area.name}`}
             onClick={() => state.removeRoute(index, optionIndex)}>
             <DeleteOutlineIcon />
-          </GameAdminDelete>
+          </GameAdminDelete>}
         </GameAdminRoute>)}
         <GameAdminActions>
           <CyberButton theme={theme} neon={neon} text="Adicionar rota" width="165px"
@@ -353,7 +417,7 @@ export const ManagementGame = ({ theme, neon }: Props) => {
     {activeTab === 'encontros' && <GameAdminSection>
       <h2>Personagens e encontros</h2>
       <p>Crie os cards aqui e selecione os encontros nas rotas da área. A ficha da Wiki é copiada na publicação; personagens exclusivos vivem somente no jogo.</p>
-      <ManagementGameEncounterCatalog editor={editor} npcs={state.npcs} editable={!!editable}
+      <ManagementGameEncounterCatalog editor={editor} mesaId={mesaId} npcs={state.npcs} editable={!!editable}
         theme={theme} neon={neon} addEncounter={state.addEncounter}
         updateEncounter={state.updateEncounter} updateEnemy={state.updateEnemy}
         selectNpc={state.selectNpc} removeEncounter={state.removeEncounter}

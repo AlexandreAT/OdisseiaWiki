@@ -17,7 +17,15 @@ import {
   SectionCard,
 } from './ModuleForms.style';
 
-const resultColumns: ConfigTableColumn<SistemaResultadoDado>[] = [
+const resultSuccess = (row: SistemaResultadoDado): boolean => {
+  try {
+    const json = JSON.parse(row.efeitoJson ?? '{}') as { aplicaCondicoes?: boolean };
+    if (typeof json.aplicaCondicoes === 'boolean') return json.aplicaCondicoes;
+  } catch { /* Keep legacy result interpretation until the JSON is fixed. */ }
+  return row.codigoResultado === 'CRITICO' || row.codigoResultado.startsWith('ACERTO');
+};
+
+const resultColumns = (neon: 'on' | 'off'): ConfigTableColumn<SistemaResultadoDado>[] => [
   { key: 'codigoTeste', label: 'Código do teste', type: 'text', maxLength: 50 },
   { key: 'nomeTeste', label: 'Nome do teste', type: 'text', maxLength: 120 },
   { key: 'dado', label: 'Dado', type: 'text', maxLength: 12 },
@@ -27,6 +35,14 @@ const resultColumns: ConfigTableColumn<SistemaResultadoDado>[] = [
   { key: 'exigeNatural', label: 'Natural', type: 'checkbox' },
   { key: 'codigoResultado', label: 'Cód. resultado', type: 'text', maxLength: 50 },
   { key: 'nomeResultado', label: 'Resultado', type: 'text', maxLength: 120 },
+  { key: 'efeitoJson', label: 'Aplica condição no êxito', render: (_value, row, update) =>
+    <CheckBox neon={neon} label="Êxito" checked={resultSuccess(row)}
+      onChange={(checked) => {
+        let effects: Record<string, unknown> = {};
+        try { effects = JSON.parse(row.efeitoJson ?? '{}') as Record<string, unknown>; }
+        catch { /* The raw JSON remains editable in the next column. */ }
+        update(JSON.stringify({ ...effects, aplicaCondicoes: checked }));
+      }} /> },
   { key: 'descricao', label: 'Descrição', type: 'textarea', maxLength: 1000 },
   { key: 'efeitoJson', label: 'Efeito JSON', type: 'textarea', maxLength: 1000 },
   { key: 'ordem', label: 'Ordem', type: 'number', min: 0 },
@@ -163,7 +179,7 @@ export const CombatModuleForm = ({
       title="Resultados de dados"
       description={'Agrupe intervalos pelo mesmo código de teste e dado. Para permitir revidar na falha crítica de ATAQUE_COMUM, configure Efeito JSON como {"reacao":"REVIDAR"}.'}
       rows={value.resultadosDado}
-      columns={resultColumns.map((column) => column.key === 'codigoTeste'
+      columns={resultColumns(neon).map((column) => column.key === 'codigoTeste'
         ? { ...column, suggestions: [...new Map(value.resultadosDado
           .filter((entry) => entry.codigoTeste).map((entry) => [entry.codigoTeste,
             { value: entry.codigoTeste, label: entry.nomeTeste || entry.codigoTeste }])).values()] }

@@ -260,18 +260,46 @@ public sealed partial class SistemaRpgService
             erros.Add("Os códigos de condições não podem se repetir.");
         if (dto.Condicoes.Any(c => !JsonValido(c.ConfiguracaoPadraoJson)))
             erros.Add("A configuração complementar de uma condição não contém JSON válido.");
+        if (dto.Condicoes.Any(c => !SistemaCondicaoEfeitos.ValidConfiguration(c.ConfiguracaoPadraoJson)))
+            erros.Add("Os efeitos adicionais da condição devem usar operações executáveis válidas (máximo de oito).");
+        if (dto.Condicoes.Any(c => !string.IsNullOrWhiteSpace(c.OperacaoEfeito) &&
+            !SistemaCondicaoEfeitos.Valid(c.OperacaoEfeito, c.CodigoRecurso ?? "",
+                (int)Math.Clamp(decimal.Truncate(c.ValorPadrao ?? c.ValorEfeito ?? 0), -1000000, 1000000),
+                c.MomentoEfeito ?? "")))
+            erros.Add("O efeito principal da condição não respeita a operação, o recurso ou o intervalo de valor configurado.");
         if (dto.Condicoes.Any(c => c.CooldownTurnos < 0 ||
             (c.ValorEfeito.HasValue && string.IsNullOrWhiteSpace(c.CodigoRecurso)) ||
             (!string.IsNullOrWhiteSpace(c.CodigoRecurso) &&
-             !new[] { "SOMAR", "SUBTRAIR", "DEFINIR", "REDUZIR_LIMITE_PERCENTUAL", "BLOQUEAR_RECUPERACAO" }.Contains((c.OperacaoEfeito ?? string.Empty).Trim().ToUpperInvariant())) ||
+             !new[] { "SOMAR", "SUBTRAIR", "DEFINIR", "REDUZIR_LIMITE_PERCENTUAL", "BLOQUEAR_RECUPERACAO", "MODIFICAR_ROLAGEM", "MODIFICAR_ATRIBUTO", "MODIFICAR_DANO", "MODIFICAR_DEFESA", "MODIFICAR_LIMITE_PERCENTUAL", "DESVANTAGEM", "VANTAGEM", "PERDER_TURNOS" }.Contains((c.OperacaoEfeito ?? string.Empty).Trim().ToUpperInvariant())) ||
             (!string.IsNullOrWhiteSpace(c.MomentoEfeito) &&
              !new[] { "AO_APLICAR", "INICIO_TURNO", "FIM_TURNO", "ENQUANTO_ATIVA" }.Contains(c.MomentoEfeito.Trim().ToUpperInvariant())) ||
             (!string.IsNullOrWhiteSpace(c.OperadorGatilho) &&
              !new[] { "<", "<=", ">", ">=", "==", "!=", "MENOR", "MENOR_OU_IGUAL", "MAIOR", "MAIOR_OU_IGUAL", "IGUAL", "DIFERENTE" }.Contains(c.OperadorGatilho.Trim().ToUpperInvariant())) ||
             (c.ValorGatilho.HasValue && string.IsNullOrWhiteSpace(c.CodigoRecursoGatilho)) ||
             (string.Equals(c.OperacaoEfeito, "REDUZIR_LIMITE_PERCENTUAL", StringComparison.OrdinalIgnoreCase) &&
-             (!c.ValorEfeito.HasValue || c.ValorEfeito is < 0 or > 100))))
+             (!c.ValorEfeito.HasValue || c.ValorEfeito is < 0 or > 100 || c.ValorPadrao is < 0 or > 100))))
             erros.Add("A automação das condições possui recurso, operação ou cooldown inválido.");
+        if (dto.Condicoes.Any(c =>
+            (!string.IsNullOrWhiteSpace(c.CodigoRecursoGatilho) ||
+             !string.IsNullOrWhiteSpace(c.OperadorGatilho) || c.ValorGatilho.HasValue) &&
+            (string.IsNullOrWhiteSpace(c.CodigoRecursoGatilho) ||
+             string.IsNullOrWhiteSpace(c.OperadorGatilho) || !c.ValorGatilho.HasValue)))
+            erros.Add("Um gatilho automático de condição precisa de recurso, comparação e valor.");
+        if (dto.Condicoes.Any(c => !string.IsNullOrWhiteSpace(c.OperacaoEfeito) &&
+            (string.IsNullOrWhiteSpace(c.CodigoRecurso) || string.IsNullOrWhiteSpace(c.MomentoEfeito) ||
+             !string.Equals(c.OperacaoEfeito, "BLOQUEAR_RECUPERACAO", StringComparison.OrdinalIgnoreCase) &&
+             !c.ValorEfeito.HasValue)))
+            erros.Add("Um efeito automático de condição precisa de operação, recurso, momento e valor quando aplicável.");
+        if (dto.Condicoes.Any(c =>
+            (c.RegraRemocao ?? "").Split(';').Any(code => code.Trim().Equals("DURACAO", StringComparison.OrdinalIgnoreCase)) && c.DuracaoPadrao is not > 0 ||
+            (c.RegraRemocao ?? "").Split(';').Any(code => code.Trim().Equals("DURACAO", StringComparison.OrdinalIgnoreCase)) &&
+            c.UnidadeDuracao is not (SistemaUnidadeDuracao.Turno or SistemaUnidadeDuracao.Hora)))
+            erros.Add("A recuperação automática da condição precisa de duração ou gatilho correspondente.");
+        if (dto.Condicoes.Any(c => c.RegraRemocao?.Contains(';') == true &&
+            c.RegraRemocao.Split(';').Any(code => !new[] { "DURACAO", "GATILHO_CESSOU",
+                "DESCANSO_SIMPLES", "DESCANSO_NORMAL", "DESCANSO_LONGO", "CURA", "MAGIA" }
+                .Contains(code.Trim().ToUpperInvariant()))))
+            erros.Add("A condição possui uma forma de recuperação desconhecida.");
         if (dto.Descansos.Any(d => string.IsNullOrWhiteSpace(d.Nome) || string.IsNullOrWhiteSpace(d.Tipo) ||
             d.DuracaoMinimaMinutos < 0 || d.DuracaoMaximaMinutos < 0 ||
             (d.DuracaoMinimaMinutos.HasValue && d.DuracaoMaximaMinutos.HasValue &&
@@ -340,6 +368,14 @@ public sealed partial class SistemaRpgService
         erros.AddRange(ValidarCombate(SistemaRpgMapper.ToCombate(versao)));
         erros.AddRange(ValidarPoderes(SistemaRpgMapper.ToPoderes(versao)));
         erros.AddRange(ValidarSobrevivencia(SistemaRpgMapper.ToSobrevivencia(versao)));
+        foreach (SistemaCondicao condition in versao.Condicoes)
+            foreach (SistemaCondicaoEfeito effect in SistemaCondicaoEfeitos.Read(condition).Where(effect =>
+                         effect.Operacao is ("MODIFICAR_ROLAGEM" or "MODIFICAR_ATRIBUTO") &&
+                         !effect.Recurso.Equals("TODOS", StringComparison.OrdinalIgnoreCase)))
+                if (!versao.Atributos.Any(attribute => attribute.Ativo &&
+                    SistemaRpgConfiguration.NormalizarCodigo(attribute.CodigoAtributo, string.Empty) ==
+                    SistemaRpgConfiguration.NormalizarCodigo(effect.Recurso, string.Empty)))
+                    erros.Add($"A condição {condition.Nome} referencia o atributo {effect.Recurso}, que não existe nesta versão do Sistema.");
         if (versao.ItemEscopos.Count > 0)
             erros.AddRange(SistemaRpgItemCatalogService.Validar(
                 SistemaRpgMapper.ToItens(versao, incluirInativos: true)));

@@ -317,6 +317,7 @@ export const SystemWorkspace = ({
 
             <ModuleEditor
               idSistemaVersao={selectedVersion.idSistemaVersao}
+              lastSavedAt={lastSavedAt}
               moduleKey={activeModule}
               systemCode={system.codigo}
               config={moduleConfig}

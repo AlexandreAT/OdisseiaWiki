@@ -8,6 +8,7 @@ export interface GameModeAreaOption {
   label?: string | null;
   description?: string | null;
   image?: string | null;
+  gameMinutes?: number;
 }
 
 export interface GameModeArea {
@@ -80,6 +81,16 @@ export interface GameModeRestOption {
   executable: boolean;
 }
 
+export interface GameModePowerOption {
+  id: string;
+  type: 'SKILL' | 'ULTIMATE';
+  name: string;
+  description: string | null;
+  image: string | null;
+  minLevel: number;
+  requirements: string | null;
+}
+
 export interface GameModeEncounter {
   lootCount?: number;
   loot?: { itemId: string; weight: number; snapshot?: { nome: string; imagem?: string; tipo: string } | null }[];
@@ -91,6 +102,11 @@ export interface GameModeEncounter {
 }
 
 export interface GameModeEditor {
+  codigoJogo: string;
+  idMesa: number | null;
+  nomeJogo: string;
+  descricaoJogo: string | null;
+  bannerJogo: string | null;
   idSistemaVersao: number;
   idGameModeVersion: number;
   mapSchemaVersion: number;
@@ -103,6 +119,18 @@ export interface GameModeEditor {
   playerDamageByResult: Record<string, { multiplier: number; bonus: number }>;
   saleDiscountPercent: number;
   repairProtectionAtBase: boolean;
+  powerCatalog: GameModePowerOption[];
 }
 
-export type GameModeEditorUpdate = Pick<GameModeEditor, 'areas' | 'encounters' | 'fallbackAction' | 'playerDamageByResult' | 'saleDiscountPercent' | 'repairProtectionAtBase'>;
+export interface GameAdventure {
+  codigo: string;
+  idMesa: number | null;
+  idSistemaVersao: number;
+  nome: string;
+  descricao: string | null;
+  banner: string | null;
+  status: 'Rascunho' | 'Publicado';
+  numeroVersao: string;
+}
+
+export type GameModeEditorUpdate = Pick<GameModeEditor, 'areas' | 'encounters' | 'fallbackAction' | 'playerDamageByResult' | 'saleDiscountPercent' | 'repairProtectionAtBase' | 'powerCatalog'>;

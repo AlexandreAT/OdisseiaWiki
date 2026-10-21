@@ -618,7 +618,9 @@ public class Program
         services.AddScoped<IGameplayEngineService, GameplayEngineService>();
         services.AddScoped<IGameplayCombatService, GameplayCombatService>();
         services.AddScoped<IGameRunService, GameRunService>();
-        services.AddScoped<IGameModeManagementService, GameModeManagementService>();
+        services.AddScoped<GameModeManagementService>();
+        services.AddScoped<IGameModeManagementService>(provider =>
+            provider.GetRequiredService<GameModeManagementService>());
         services.AddScoped<IGameRunSnapshotFactory, GameRunSnapshotFactory>();
         services.AddScoped<IAutoBattleSimulator, AutoBattleSimulator>();
         services.AddScoped<GameBattlePreviewFactory>();

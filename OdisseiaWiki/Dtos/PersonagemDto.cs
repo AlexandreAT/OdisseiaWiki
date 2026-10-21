@@ -22,6 +22,7 @@ namespace OdisseiaWiki.Dtos
         public int? Idpassiva { get; set; }
         public bool Visivel { get; set; } = true;
         public bool Destaque { get; set; } = false;
+        public int? IdOrigemGlobal { get; set; }
         public PersonagemVisibilidadeDto? VisibilidadeInicial { get; set; }
         public int? IdSistemaRpg { get; set; }
         public int? IdSistemaVersao { get; set; }

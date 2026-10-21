@@ -339,6 +339,8 @@ public partial class OdisseiaContext : DbContext
             entity.HasKey(e => e.Idpersonagem).HasName("PRIMARY");
 
             entity.ToTable("personagens");
+            entity.HasIndex(e => new { e.IdWikiEscopo, e.IdOrigemGlobal }).IsUnique()
+                .HasDatabaseName("UX_Personagem_Escopo_OrigemGlobal");
 
             entity.HasIndex(e => e.Idcidade, "ID cidades");
 
@@ -530,6 +532,8 @@ public partial class OdisseiaContext : DbContext
             entity.HasKey(e => e.Iditem).HasName("PRIMARY");
 
             entity.ToTable("itens");
+            entity.HasIndex(e => new { e.IdWikiEscopo, e.IdOrigemGlobal }).IsUnique()
+                .HasDatabaseName("UX_Item_Escopo_OrigemGlobal");
 
             entity.Property(e => e.Iditem)
                 .HasColumnName("IDItem")

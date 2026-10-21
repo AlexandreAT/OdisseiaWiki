@@ -30,6 +30,244 @@ namespace OdisseiaWiki.Tests;
 public sealed class GameplayMariaDbIntegrationTests
 {
     [Fact]
+    public async Task GameAdventure_MigrationScopesGamesAndPrefersMesaItemCopy()
+    {
+        if (!TestDatabase.Enabled) return;
+        await using TestDatabase database = await TestDatabase.CreateAsync();
+        Seed seed = await database.SeedAsync();
+        await using OdisseiaContext context = database.CreateContext();
+        var scope = new WikiEscopo
+        {
+            Tipo = WikiEscopoTipo.Mesa, Chave = $"MESA:{seed.Mesa.Idmesa}",
+            IdMesa = seed.Mesa.Idmesa,
+        };
+        context.WikiEscopos.Add(scope);
+        await context.SaveChangesAsync();
+        context.Itens.AddRange(
+            new Item { Iditem = "loot-global", Nome = "Original", Tipo = ItemTipo.Outro,
+                IdWikiEscopo = WikiEscopo.IdOficial, Visivel = true },
+            new Item { Iditem = "loot-mesa", Nome = "Copia", Tipo = ItemTipo.Outro,
+                IdWikiEscopo = scope.IdWikiEscopo, IdOrigemGlobal = "loot-global", Visivel = true });
+        context.GameModeVersions.AddRange(
+            new GameModeVersion { Codigo = "GAME_GLOBAL", NumeroVersao = "0.4.0",
+                IdSistemaVersao = seed.Mesa.IdSistemaVersao!.Value,
+                Nome = "Global", ConfiguracaoJson = "{}", Status = GameModeVersionStatus.Publicado },
+            new GameModeVersion { Codigo = "GAME_MESA", NumeroVersao = "0.4.0",
+                IdMesa = seed.Mesa.Idmesa, IdUsuarioCriacao = seed.Owner.Idusuario,
+                IdSistemaVersao = seed.Mesa.IdSistemaVersao!.Value,
+                Nome = "Mesa", Banner = "/assets/banner.webp", ConfiguracaoJson = "{}",
+                Status = GameModeVersionStatus.Publicado });
+        await context.SaveChangesAsync();
+
+        var repository = new GameModeManagementRepository(context);
+        var management = new GameModeManagementService(repository, new GameRunRepository(context),
+            Mock.Of<ISistemaRpgRepository>(), new GameplayActionResolver(), context);
+        var loot = await repository.GetLootItemsAsync(seed.Mesa.Idmesa,
+            seed.Mesa.IdSistemaVersao!.Value, CancellationToken.None);
+        var modes = await new GameRunRepository(context).GetPublishedModesAsync(
+            [seed.Mesa.IdSistemaVersao.Value], CancellationToken.None);
+
+        Assert.Single(loot);
+        Assert.Equal("loot-mesa", loot[0].Iditem);
+        Assert.Contains(modes, mode => mode.IdMesa == seed.Mesa.Idmesa && mode.Nome == "Mesa");
+        Assert.Contains(modes, mode => mode.IdMesa is null && mode.Nome == "Global");
+        Assert.True(await management.CanManageAdventureAsync(seed.Mesa.Idmesa,
+            seed.Owner.Idusuario, false, CancellationToken.None));
+        Assert.False(await management.CanManageAdventureAsync(seed.Mesa.Idmesa,
+            seed.Player.Idusuario, false, CancellationToken.None));
+        Assert.Equal("GAME_MESA", Assert.Single(await management.ListAdventuresAsync(
+            seed.Mesa.Idmesa, seed.Owner.Idusuario, false, CancellationToken.None)).Codigo);
+    }
+
+    [Fact]
+    public async Task GameRun_FinalRouteServiceEndsOnceAndCannotBeUsedByAnotherOwner()
+    {
+        if (!TestDatabase.Enabled) return;
+        await using TestDatabase database = await TestDatabase.CreateAsync();
+        Seed seed = await database.SeedAsync(includeCharacter: true);
+        string snapshot = JsonSerializer.Serialize(new
+        {
+            schemaVersion = 1, idSistemaVersao = seed.Mesa.IdSistemaVersao!.Value,
+            nome = "Ada", status = new { status = new { vida = 30, vidaMaxima = 30,
+                mana = 10, manaMaxima = 10, estamina = 10, estaminaMaxima = 10 } },
+            inventario = Array.Empty<object>(), sistema = new { idSistemaVersao = seed.Mesa.IdSistemaVersao.Value },
+        });
+        string mapJson = JsonSerializer.Serialize(new GameRunMapDto
+        {
+            SchemaVersion = 5,
+            Nodes =
+            [
+                new() { Id = "inicio", Type = "INICIO", State = "CONCLUIDO", Connections = ["fim"] },
+                new() { Id = "fim", Type = "EVENTO", Name = "Final", Layer = 1,
+                    State = "DISPONIVEL", Connections = [] },
+            ],
+        }, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        long runId;
+        await using (OdisseiaContext context = database.CreateContext())
+        {
+            var mode = new GameModeVersion
+            {
+                Codigo = "ROGUELIKE_MVP", NumeroVersao = "test-final",
+                IdSistemaVersao = seed.Mesa.IdSistemaVersao.Value,
+                Status = GameModeVersionStatus.Publicado, ConfiguracaoJson = "{\"schemaVersion\":1}",
+            };
+            context.GameModeVersions.Add(mode);
+            await context.SaveChangesAsync();
+            var run = new GameRun
+            {
+                IdUsuario = seed.Player.Idusuario,
+                IdPersonagemJogadorOrigem = seed.Character!.IdpersonagemJogador,
+                IdSistemaVersao = seed.Mesa.IdSistemaVersao.Value,
+                IdGameModeVersion = mode.IdGameModeVersion,
+                Status = GameRunStatus.Ativa, SnapshotInicialJson = snapshot,
+                EstadoAtualJson = snapshot, MapaJson = mapJson,
+            };
+            context.GameRuns.Add(run);
+            await context.SaveChangesAsync();
+            runId = run.IdGameRun;
+        }
+
+        async Task<GameRunOperationResult<GameRunBaseResolutionDto>> Finish(int userId, Guid key)
+        {
+            await using OdisseiaContext context = database.CreateContext();
+            var service = new GameRunEncounterService(new GameRunRepository(context),
+                new Mock<ISistemaRpgRepository>().Object,
+                new GameBattlePreviewFactory(new GameplayActionResolver()),
+                new Mock<IAutoBattleSimulator>().Object);
+            return await service.EnterBaseAsync(runId, "fim", userId, new GameRunMutationRequestDto
+            {
+                RevisaoEsperada = 0, ChaveIdempotencia = key,
+            }, CancellationToken.None);
+        }
+
+        Guid key = Guid.NewGuid();
+        var results = await Task.WhenAll(
+            Finish(seed.Player.Idusuario, key), Finish(seed.Player.Idusuario, key));
+        Assert.Single(results, result => result.Sucesso && !result.Repetido);
+        Assert.Single(results, result => result.Sucesso && result.Repetido);
+        Assert.Equal("RUN_ENCERRADA", (await Finish(seed.Player.Idusuario, Guid.NewGuid())).Codigo);
+        Assert.Equal("RUN_NAO_ENCONTRADA", (await Finish(seed.Owner.Idusuario, Guid.NewGuid())).Codigo);
+
+        await using OdisseiaContext verify = database.CreateContext();
+        GameRun saved = await verify.GameRuns.SingleAsync(item => item.IdGameRun == runId);
+        Assert.Equal(GameRunStatus.Vitoria, saved.Status);
+        Assert.Equal(1, saved.Revisao);
+        Assert.Equal(1, await verify.GameRunCommands.CountAsync(item => item.IdGameRun == runId));
+        using JsonDocument initial = JsonDocument.Parse(saved.SnapshotInicialJson);
+        Assert.Equal(30, initial.RootElement.GetProperty("status")
+            .GetProperty("status").GetProperty("vida").GetInt32());
+        Assert.Empty(initial.RootElement.GetProperty("inventario").EnumerateArray());
+    }
+
+    [Fact]
+    public async Task GameRun_LoadoutServiceIsAtomicIdempotentAndOwnerScoped()
+    {
+        if (!TestDatabase.Enabled) return;
+        await using TestDatabase database = await TestDatabase.CreateAsync();
+        Seed seed = await database.SeedAsync(includeCharacter: true);
+        string snapshot = JsonSerializer.Serialize(new
+        {
+            schemaVersion = 1, idSistemaVersao = seed.Mesa.IdSistemaVersao!.Value,
+            nome = "Ada", status = new { status = new
+            {
+                vida = 30, vidaMaxima = 30, mana = 10, manaMaxima = 10,
+                estamina = 10, estaminaMaxima = 10,
+            } },
+            inventario = Array.Empty<object>(), implantes = Array.Empty<object>(),
+            skills = Array.Empty<object>(), magia = Array.Empty<object>(),
+            sistema = new { idSistemaVersao = seed.Mesa.IdSistemaVersao.Value },
+        });
+        const string modeConfig = """
+            {"schemaVersion":1,"previewUseTotalForRanges":true,
+             "previewEnemy":{"name":"Sentinela","maxVida":30,"defesa":0},
+             "previewFallbackAction":{"name":"Ataque de treino","baseDamage":5},
+             "previewDamageByResult":{"FALHA_CRITICA":0,"ERRO":0,"ACERTO":5,
+                "ACERTO_PRECISO":8,"CRITICO":10},
+             "previewPlayerDamageByResult":{"FALHA_CRITICA":{"multiplier":0,"bonus":0},
+                "ERRO":{"multiplier":0,"bonus":0},"ACERTO":{"multiplier":1,"bonus":0},
+                "ACERTO_PRECISO":{"multiplier":1,"bonus":0},"CRITICO":{"multiplier":2,"bonus":0}}}
+            """;
+        long runId;
+        await using (OdisseiaContext context = database.CreateContext())
+        {
+            var mode = new GameModeVersion
+            {
+                Codigo = "ROGUELIKE_MVP", NumeroVersao = "test-loadout",
+                IdSistemaVersao = seed.Mesa.IdSistemaVersao!.Value,
+                Status = GameModeVersionStatus.Publicado, ConfiguracaoJson = modeConfig,
+            };
+            context.GameModeVersions.Add(mode);
+            await context.SaveChangesAsync();
+            var run = new GameRun
+            {
+                IdUsuario = seed.Player.Idusuario,
+                IdPersonagemJogadorOrigem = seed.Character!.IdpersonagemJogador,
+                IdSistemaVersao = seed.Mesa.IdSistemaVersao.Value,
+                IdGameModeVersion = mode.IdGameModeVersion,
+                Status = GameRunStatus.Ativa,
+                SnapshotInicialJson = snapshot, EstadoAtualJson = snapshot,
+                LoadoutJson = GameRunActionLoadout.Serialize([]),
+            };
+            context.GameRuns.Add(run);
+            await context.SaveChangesAsync();
+            runId = run.IdGameRun;
+        }
+
+        async Task<GameRunOperationResult<GameRunDto>> Save(int userId, Guid key, long revision)
+        {
+            await using OdisseiaContext context = database.CreateContext();
+            var version = new SistemaVersao
+            {
+                IdSistemaVersao = seed.Mesa.IdSistemaVersao!.Value,
+                ResultadosDado =
+                [
+                    Outcome("FALHA_CRITICA", 1, 1), Outcome("ERRO", 2, 10),
+                    Outcome("ACERTO", 11, 17), Outcome("ACERTO_PRECISO", 18, 19),
+                    Outcome("CRITICO", 20, 20),
+                ],
+            };
+            var systems = new Mock<ISistemaRpgRepository>();
+            systems.Setup(item => item.GetVersionAsync(version.IdSistemaVersao, true, false))
+                .ReturnsAsync(version);
+            var service = new GameRunEncounterService(new GameRunRepository(context), systems.Object,
+                new GameBattlePreviewFactory(new GameplayActionResolver()),
+                new Mock<IAutoBattleSimulator>().Object);
+            return await service.UpdateLoadoutAsync(runId, userId, new GameRunLoadoutRequestDto
+            {
+                RevisaoEsperada = revision, ChaveIdempotencia = key, Acoes = [],
+            }, CancellationToken.None);
+        }
+
+        static SistemaResultadoDado Outcome(string code, int min, int max) => new()
+        {
+            CodigoTeste = "ATAQUE_COMUM", NomeTeste = "Ataque comum", Dado = "D20",
+            QuantidadeDados = 1, ResultadoMinimo = min, ResultadoMaximo = max,
+            CodigoResultado = code, NomeResultado = code,
+        };
+
+        Guid replayKey = Guid.NewGuid();
+        var repeated = await Task.WhenAll(
+            Save(seed.Player.Idusuario, replayKey, 0), Save(seed.Player.Idusuario, replayKey, 0));
+        Assert.Single(repeated, result => result.Sucesso && !result.Repetido);
+        Assert.Single(repeated, result => result.Sucesso && result.Repetido);
+
+        var competing = await Task.WhenAll(
+            Save(seed.Player.Idusuario, Guid.NewGuid(), 1),
+            Save(seed.Player.Idusuario, Guid.NewGuid(), 1));
+        Assert.Single(competing, result => result.Sucesso);
+        Assert.Single(competing, result => !result.Sucesso && result.Codigo == "REVISAO_DESATUALIZADA");
+        Assert.Equal("RUN_NAO_ENCONTRADA",
+            (await Save(seed.Owner.Idusuario, Guid.NewGuid(), 2)).Codigo);
+
+        await using OdisseiaContext verify = database.CreateContext();
+        GameRun saved = await verify.GameRuns.SingleAsync(item => item.IdGameRun == runId);
+        Assert.Equal(2, saved.Revisao);
+        Assert.Equal(2, await verify.GameRunCommands.CountAsync(item => item.IdGameRun == runId));
+        using JsonDocument initial = JsonDocument.Parse(saved.SnapshotInicialJson);
+        Assert.Equal(0, initial.RootElement.GetProperty("inventario").GetArrayLength());
+    }
+
+    [Fact]
     public async Task GameRun_MigrationsPreserveExistingCharacterAndMesa()
     {
         if (!TestDatabase.Enabled) return;

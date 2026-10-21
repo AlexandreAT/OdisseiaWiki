@@ -37,6 +37,7 @@ interface ModuleEditorProps {
   systemCode: string;
   raceOptions: RaceOption[];
   idSistemaVersao: number;
+  lastSavedAt: Date | null;
   onChange: (config: AnyModuleConfig) => void;
   onRetry: () => void;
   onCreateEmpty: () => void;
@@ -54,6 +55,7 @@ export const ModuleEditor = ({
   systemCode,
   raceOptions,
   idSistemaVersao,
+  lastSavedAt,
   onChange,
   onRetry,
   onCreateEmpty,
@@ -63,6 +65,7 @@ export const ModuleEditor = ({
   });
   useEffect(() => {
     let active = true;
+    setReferences({ attributes: [], resources: [], conditions: [], testCodes: [], weaponTypes: [] });
     const options = (entries: { codigo: string; nome: string }[]): SystemReferenceOption[] =>
       entries.filter((entry) => entry.codigo).map((entry) => ({ value: entry.codigo, label: entry.nome || entry.codigo }));
     void Promise.allSettled([
@@ -85,7 +88,7 @@ export const ModuleEditor = ({
       });
     });
     return () => { active = false; };
-  }, [idSistemaVersao]);
+  }, [idSistemaVersao, moduleKey, lastSavedAt]);
   if (loading) {
     return (
       <ModuleContent>
@@ -196,6 +199,7 @@ export const ModuleEditor = ({
       )}
       {moduleKey === 'sobrevivencia' && (
         <SurvivalModuleForm
+          idSistemaVersao={idSistemaVersao}
           references={references}
           value={config as SistemaModuloConfigMap['sobrevivencia']}
           onChange={onChange}

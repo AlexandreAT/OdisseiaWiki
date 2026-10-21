@@ -32,6 +32,71 @@ public sealed class GameModeManagementServiceTests
 
         Assert.True(editor.Sucesso, editor.Mensagem);
         Assert.Equal(expected, editor.Dados!.RepairProtectionAtBase);
+        Assert.Empty(editor.Dados.PowerCatalog);
+    }
+
+    [Fact]
+    public async Task CatalogoDePoderesEhVersionadoERejeitaIdentificadoresDuplicados()
+    {
+        var draft = new GameModeVersion { IdGameModeVersion = 81, IdSistemaVersao = 7,
+            NumeroVersao = "0.6.0", Status = GameModeVersionStatus.Rascunho,
+            ConfiguracaoJson = "{}" };
+        Mock<IGameModeManagementRepository> management = new();
+        management.Setup(repo => repo.GetDraftByIdAsync(81, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(draft);
+        management.Setup(repo => repo.GetAttackOutcomeCodesAsync(7, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(["ACERTO"]);
+        Mock<ISistemaRpgRepository> systems = new();
+        systems.Setup(repo => repo.GetVersionAsync(7, true, false))
+            .ReturnsAsync(new SistemaVersao { IdSistemaVersao = 7 });
+        var service = new GameModeManagementService(management.Object,
+            new Mock<IGameRunRepository>().Object, systems.Object, new GameplayActionResolver());
+        string id = Guid.NewGuid().ToString("D");
+        var update = new GameModeEditorUpdateDto
+        {
+            Areas = [new GameModeAreaDto { Code = "FASE_1", Name = "Floresta", BaseName = "Base",
+                Options = [new GameModeAreaOptionDto { Type = "COMBATE", EncounterCode = "A" }] }],
+            Encounters = new Dictionary<string, GameBattleEncounterConfig>
+            {
+                ["A"] = new() { MapName = "Lobo",
+                    Enemy = new GameBattlePreviewEnemy { Name = "Lobo", MaxVida = 10,
+                        Attributes = new Dictionary<string, int>() },
+                    DamageByResult = new Dictionary<string, int> { ["ACERTO"] = 5 } },
+            },
+            FallbackAction = new GameBattleFallbackAction { Name = "Ataque", BaseDamage = 5 },
+            PlayerDamageByResult = new Dictionary<string, GameBattleDamageModifier>
+                { ["ACERTO"] = new() { Multiplier = 1 } },
+            PowerCatalog = [new GameModePowerOptionDto { Id = id, Type = "ULTIMATE",
+                Name = "Chama final", Description = "Descrição editorial", MinLevel = 10,
+                Requirements = "Marco de nível" }],
+        };
+
+        var saved = await service.SaveDraftAsync(81, update, CancellationToken.None);
+        Assert.True(saved.Sucesso, saved.Mensagem);
+        Assert.Equal(id, Assert.Single(saved.Dados!.PowerCatalog).Id);
+        Assert.Equal("Chama final", saved.Dados.PowerCatalog[0].Name);
+        Assert.Contains("powerCatalog", draft.ConfiguracaoJson);
+
+        update.PowerCatalog.Add(new GameModePowerOptionDto { Id = id, Type = "SKILL", Name = "Duplicada" });
+        var invalid = await service.SaveDraftAsync(81, update, CancellationToken.None);
+        Assert.Equal("CONFIGURACAO_INVALIDA", invalid.Codigo);
+        Assert.Single(JsonDocument.Parse(draft.ConfiguracaoJson).RootElement
+            .GetProperty("powerCatalog").EnumerateArray());
+
+        update.PowerCatalog = [new GameModePowerOptionDto
+            { Id = Guid.NewGuid().ToString("D"), Type = "EFEITO", Name = "Não executável" }];
+        Assert.Equal("CONFIGURACAO_INVALIDA",
+            (await service.SaveDraftAsync(81, update, CancellationToken.None)).Codigo);
+
+        update.PowerCatalog = null; // Um cliente anterior não deve apagar o catálogo existente.
+        var legacySave = await service.SaveDraftAsync(81, update, CancellationToken.None);
+        Assert.True(legacySave.Sucesso, legacySave.Mensagem);
+        Assert.Single(legacySave.Dados!.PowerCatalog);
+
+        var published = await service.PublishAsync(81, CancellationToken.None);
+        Assert.True(published.Sucesso, published.Mensagem);
+        Assert.Equal(GameModeVersionStatus.Publicado, draft.Status);
+        Assert.Equal(id, Assert.Single(published.Dados!.PowerCatalog).Id);
     }
 
     [Fact]

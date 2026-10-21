@@ -1,6 +1,7 @@
 import { DadoAcerto } from './Dados';
 import { JSONContent } from './Characters';
 import type { GameplayTestSpec } from './Gameplay';
+import type { GameplayConditionEffectConfig } from './Itens';
 
 export type SkillTipoString = "ataque" | "suporte" | "buff" | "debuff";
 export type SkillElemento = "normal" | "fogo" | "agua" | "ar" | "terra" | "luz" | "escuridao" | "espacial" | "transfiguracao" | "invocacao";
@@ -31,7 +32,7 @@ export interface AtaqueAtributos {
     especial: string;
     cooldown: string;
     cooldownTurnos?: number;
-    condicoes?: Array<{ codigo: string; valor?: number; duracao?: number }>;
+    condicoes?: GameplayConditionEffectConfig[];
     bonus: string;
     acerto?: DadoAcerto;
     teste?: GameplayTestSpec;
@@ -41,7 +42,7 @@ export interface SuporteAtributos {
     especial: string;
     cooldown: string;
     cooldownTurnos?: number;
-    condicoes?: Array<{ codigo: string; valor?: number; duracao?: number }>;
+    condicoes?: GameplayConditionEffectConfig[];
     bonus: string;
     acerto?: DadoAcerto;
     teste?: GameplayTestSpec;
@@ -51,7 +52,7 @@ export interface BuffAtributos {
     especial: string;
     cooldown: string;
     cooldownTurnos?: number;
-    condicoes?: Array<{ codigo: string; valor?: number; duracao?: number }>;
+    condicoes?: GameplayConditionEffectConfig[];
     bonus: string;
     acerto?: DadoAcerto;
     teste?: GameplayTestSpec;
@@ -61,7 +62,7 @@ export interface DebuffAtributos {
     especial: string;
     cooldown: string;
     cooldownTurnos?: number;
-    condicoes?: Array<{ codigo: string; valor?: number; duracao?: number }>;
+    condicoes?: GameplayConditionEffectConfig[];
     bonus: string;
     acerto?: DadoAcerto;
     teste?: GameplayTestSpec;

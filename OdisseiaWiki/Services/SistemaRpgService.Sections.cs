@@ -226,7 +226,15 @@ public sealed partial class SistemaRpgService
         {
             NivelMaximo = dto.NivelMaximo,
             DadoLootFaces = dto.DadoLootFaces,
-            InfluenciasAtributos = dto.InfluenciasAtributos,
+            InfluenciasAtributos = dto.InfluenciasAtributos.Select(rule => new SistemaAtributoRecursoDto
+            {
+                CodigoAtributo = versao.Atributos.FirstOrDefault(attribute =>
+                    SistemaRpgConfiguration.NormalizarCodigo(attribute.CodigoAtributo, string.Empty) ==
+                    SistemaRpgConfiguration.NormalizarCodigo(rule.CodigoAtributo, string.Empty))?.CodigoAtributo
+                    ?? SistemaRpgConfiguration.NormalizarCodigo(rule.CodigoAtributo, string.Empty),
+                Recurso = rule.Recurso,
+                PercentualPorValor = rule.PercentualPorValor,
+            }).ToList(),
             PermiteXpExcedente = dto.PermiteXpExcedente,
         }, 3);
         await SalvarRascunhoAsync(versao);
@@ -436,6 +444,18 @@ public sealed partial class SistemaRpgService
         bool incluirRascunhos = false) =>
         ObterSecaoAsync(idSistemaVersao, incluirRascunhos, SistemaRpgMapper.ToSobrevivencia);
 
+    public async Task<SistemaOperacaoResultado<IReadOnlyList<string>>> ObterReferenciasCondicaoAsync(
+        int idSistemaVersao, string codigo)
+    {
+        SistemaOperacaoResultado<SistemaVersao> lookup = await ObterRascunhoAsync(idSistemaVersao);
+        if (!lookup.Sucesso) return Propagar<IReadOnlyList<string>>(lookup);
+        if (string.IsNullOrWhiteSpace(codigo) || !lookup.Dados!.Condicoes.Any(condition =>
+            condition.Codigo.Equals(codigo, StringComparison.OrdinalIgnoreCase)))
+            return Validacao<IReadOnlyList<string>>("Esta condição não existe no rascunho do Sistema.");
+        return SistemaOperacaoResultado<IReadOnlyList<string>>.Ok(
+            await _repository.GetConditionReferencesAsync(lookup.Dados.IdSistemaRpg, codigo));
+    }
+
     public async Task<SistemaOperacaoResultado<SistemaSobrevivenciaConfigDto>> AtualizarSobrevivenciaAsync(
         int idSistemaVersao,
         SistemaSobrevivenciaConfigDto dto)
@@ -448,6 +468,21 @@ public sealed partial class SistemaRpgService
             return Validacao<SistemaSobrevivenciaConfigDto>(string.Join(" ", erros));
 
         SistemaVersao versao = lookup.Dados!;
+        string[] removedCodes = versao.Condicoes.Select(condition => condition.Codigo)
+            .Except(dto.Condicoes.Select(condition =>
+                SistemaRpgConfiguration.NormalizarCodigo(condition.Codigo, condition.Nome)),
+                StringComparer.OrdinalIgnoreCase).ToArray();
+        foreach (string code in removedCodes)
+        {
+            IReadOnlyList<string> references = await _repository.GetConditionReferencesAsync(
+                versao.IdSistemaRpg, code);
+            if (references.Count > 0 && !(dto.CodigosRemocaoConfirmada ?? []).Contains(code,
+                    StringComparer.OrdinalIgnoreCase))
+                return Validacao<SistemaSobrevivenciaConfigDto>(
+                    $"A condição {code} ainda é usada por: {string.Join(", ", references.Take(8))}" +
+                    (references.Count > 8 ? $" e mais {references.Count - 8} origem(ns)." : ".") +
+                    " Retire ou substitua essas referências antes de salvar sua remoção.");
+        }
         _repository.RemoveRange(versao.Condicoes.Cast<object>()
             .Concat(versao.Descansos.Cast<object>()).ToList());
         if (versao.Morte is not null)

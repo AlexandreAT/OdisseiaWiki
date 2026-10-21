@@ -12,6 +12,65 @@ namespace OdisseiaWiki.Tests;
 public sealed class GameRunServiceTests
 {
     [Fact]
+    public async Task EscolhaDeJogoRespeitaMesaEReinicioMantemJogo()
+    {
+        Fixture fixture = new();
+        fixture.Character.IdSistemaVersao = 42;
+        var mesaGame = new GameModeVersion
+        {
+            IdGameModeVersion = 21, IdSistemaVersao = 42, IdMesa = 5,
+            Codigo = "GAME_MESA", Nome = "Caçada", NumeroVersao = "0.4.0",
+            Status = GameModeVersionStatus.Publicado,
+            ConfiguracaoJson = fixture.Mode.ConfiguracaoJson,
+        };
+        var otherGame = new GameModeVersion
+        {
+            IdGameModeVersion = 22, IdSistemaVersao = 42, IdMesa = 99,
+            Codigo = "GAME_OUTRA_MESA", Nome = "Privado", NumeroVersao = "0.4.0",
+            Status = GameModeVersionStatus.Publicado,
+            ConfiguracaoJson = fixture.Mode.ConfiguracaoJson,
+        };
+        fixture.Repository.Setup(item => item.GetPublishedModesAsync(
+                It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([fixture.Mode, mesaGame, otherGame]);
+
+        var games = await fixture.Service.GetCharacterGamesAsync(
+            fixture.UserId, fixture.Character.IdpersonagemJogador, CancellationToken.None);
+        Assert.Equal(2, games.Count);
+        Assert.DoesNotContain(games, game => game.Codigo == otherGame.Codigo);
+
+        var missingChoice = await fixture.Service.CreateAsync(fixture.UserId, new GameRunCreateRequestDto
+        {
+            IdPersonagemJogador = fixture.Character.IdpersonagemJogador,
+            ChaveIdempotencia = Guid.NewGuid(),
+        }, CancellationToken.None);
+        Assert.Equal("JOGO_OBRIGATORIO", missingChoice.Codigo);
+
+        var forbiddenChoice = await fixture.Service.CreateAsync(fixture.UserId, new GameRunCreateRequestDto
+        {
+            IdPersonagemJogador = fixture.Character.IdpersonagemJogador,
+            CodigoJogo = otherGame.Codigo,
+            ChaveIdempotencia = Guid.NewGuid(),
+        }, CancellationToken.None);
+        Assert.False(forbiddenChoice.Sucesso);
+
+        var created = await fixture.Service.CreateAsync(fixture.UserId, new GameRunCreateRequestDto
+        {
+            IdPersonagemJogador = fixture.Character.IdpersonagemJogador,
+            CodigoJogo = mesaGame.Codigo,
+            ChaveIdempotencia = Guid.NewGuid(),
+        }, CancellationToken.None);
+        Assert.True(created.Sucesso, created.Mensagem);
+        Assert.Equal(mesaGame.IdGameModeVersion, created.Dados!.IdGameModeVersion);
+
+        var restarted = await fixture.Service.RestartAsync(fixture.Run!.IdGameRun, fixture.UserId,
+            new GameRunRestartRequestDto { RevisaoEsperada = 0, ChaveIdempotencia = Guid.NewGuid() },
+            CancellationToken.None);
+        Assert.True(restarted.Sucesso, restarted.Mensagem);
+        Assert.Equal(mesaGame.IdGameModeVersion, restarted.Dados!.IdGameModeVersion);
+    }
+
+    [Fact]
     public async Task ListaPersonagensExplicitaVersaoFixadaELootDisponivelNoModoDaFicha()
     {
         Fixture fixture = new();
@@ -427,6 +486,9 @@ public sealed class GameRunServiceTests
             Repository.Setup(item => item.GetOrCreateModeVersionAsync(
                     It.IsAny<int>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(Mode);
+            Repository.Setup(item => item.GetPublishedModesAsync(
+                    It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(() => new[] { Mode });
             Repository.Setup(item => item.AddRunAsync(
                     It.IsAny<GameRun>(), It.IsAny<CancellationToken>()))
                 .Returns((GameRun run, CancellationToken _) =>

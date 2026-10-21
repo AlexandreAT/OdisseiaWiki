@@ -90,6 +90,7 @@ public sealed class SistemaPoderesConfigDto
 
 public sealed class SistemaSobrevivenciaConfigDto
 {
+    public List<string> CodigosRemocaoConfirmada { get; set; } = new();
     public List<SistemaCondicaoDto> Condicoes { get; set; } = new();
     public List<SistemaDescansoConfigDto> Descansos { get; set; } = new();
     public SistemaMorteConfigDto? Morte { get; set; }

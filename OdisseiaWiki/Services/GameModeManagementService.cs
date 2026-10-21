@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using OdisseiaWiki.Data;
 using OdisseiaWiki.Dtos;
 using OdisseiaWiki.Enums;
 using OdisseiaWiki.GameRuns.Battle;
@@ -11,7 +12,7 @@ using OdisseiaWiki.Services.Interfaces;
 
 namespace OdisseiaWiki.Services;
 
-public sealed class GameModeManagementService : IGameModeManagementService
+public sealed partial class GameModeManagementService : IGameModeManagementService
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
@@ -22,29 +23,38 @@ public sealed class GameModeManagementService : IGameModeManagementService
     private readonly IGameRunRepository _runs;
     private readonly ISistemaRpgRepository _systems;
     private readonly GameplayActionResolver _actionResolver;
+    private readonly OdisseiaContext? _context;
 
     public GameModeManagementService(
         IGameModeManagementRepository management, IGameRunRepository runs,
-        ISistemaRpgRepository systems, GameplayActionResolver actionResolver)
+        ISistemaRpgRepository systems, GameplayActionResolver actionResolver,
+        OdisseiaContext? context = null)
     {
         _management = management;
         _runs = runs;
         _systems = systems;
         _actionResolver = actionResolver;
+        _context = context;
     }
 
     public Task<IReadOnlyList<GameModeSystemVersionDto>> GetSystemVersionsAsync(CancellationToken cancellationToken) =>
         _management.GetSystemVersionsAsync(cancellationToken);
 
-    public async Task<IReadOnlyList<GameModeLootOptionDto>> GetLootOptionsAsync(CancellationToken cancellationToken) =>
-        (await _management.GetLootItemsAsync(cancellationToken)).Where(item => item.Visivel).Select(item =>
+    public async Task<IReadOnlyList<GameModeLootOptionDto>> GetLootOptionsAsync(CancellationToken cancellationToken,
+        int? idMesa = null, int? idSistemaVersao = null) =>
+        (idMesa.HasValue && idSistemaVersao.HasValue
+            ? await _management.GetLootItemsAsync(idMesa, idSistemaVersao.Value, cancellationToken)
+            : await _management.GetLootItemsAsync(cancellationToken)).Where(item => item.Visivel).Select(item =>
             new GameModeLootOptionDto(item.Iditem, item.Nome, item.Tipo.ToString().ToLowerInvariant(), item.Imagem)).ToArray();
 
-    private async Task<string?> FreezeLootAsync(IEnumerable<GameBattleEncounterConfig> encounters, CancellationToken token)
+    private async Task<string?> FreezeLootAsync(IEnumerable<GameBattleEncounterConfig> encounters,
+        CancellationToken token, int? idMesa = null, int? idSistemaVersao = null)
     {
         GameBattleEncounterConfig[] configured = encounters.Where(encounter => encounter.LootCount > 0 || encounter.Loot?.Count > 0).ToArray();
         if (configured.Length == 0) return null;
-        IReadOnlyList<Item> items = (await _management.GetLootItemsAsync(token))
+        IReadOnlyList<Item> items = (idMesa.HasValue && idSistemaVersao.HasValue
+            ? await _management.GetLootItemsAsync(idMesa, idSistemaVersao.Value, token)
+            : await _management.GetLootItemsAsync(token))
             .Where(item => item.Visivel).ToArray();
         foreach (GameBattleEncounterConfig encounter in configured)
         {
@@ -108,14 +118,17 @@ public sealed class GameModeManagementService : IGameModeManagementService
     }
 
     public async Task<IReadOnlyList<GameModeNpcOptionDto>> GetNpcOptionsAsync(
-        int? idSistemaVersao, CancellationToken cancellationToken)
+        int? idSistemaVersao, CancellationToken cancellationToken, int? idMesa = null)
     {
-        int? versionId = await ResolveSystemVersionIdAsync(idSistemaVersao, cancellationToken);
+        int? versionId = idMesa.HasValue ? idSistemaVersao :
+            await ResolveSystemVersionIdAsync(idSistemaVersao, cancellationToken);
         SistemaVersao? version = versionId is int resolvedVersionId
             ? await _systems.GetVersionAsync(resolvedVersionId, includeConfiguration: true) : null;
         IReadOnlyList<string> outcomes = versionId is int selectedVersionId
             ? await _management.GetAttackOutcomeCodesAsync(selectedVersionId, cancellationToken) : [];
-        IReadOnlyList<Personagen> candidates = await _management.GetNpcCandidatesAsync(cancellationToken);
+        IReadOnlyList<Personagen> candidates = idMesa.HasValue && versionId.HasValue
+            ? await _management.GetNpcCandidatesAsync(idMesa, versionId.Value, cancellationToken)
+            : await _management.GetNpcCandidatesAsync(cancellationToken);
         var options = new List<GameModeNpcOptionDto>();
         foreach (Personagen npc in candidates)
         {
@@ -346,24 +359,26 @@ public sealed class GameModeManagementService : IGameModeManagementService
     }
 
     public async Task<GameRunOperationResult<GameModeEditorDto>> SaveDraftAsync(
-        int id, GameModeEditorUpdateDto update, CancellationToken cancellationToken)
+        int id, GameModeEditorUpdateDto update, CancellationToken cancellationToken, int? idMesa = null)
     {
         GameModeVersion? draft = await _management.GetDraftByIdAsync(id, cancellationToken);
-        if (draft is null) return DraftUnavailable();
+        if (draft is null || draft.IdMesa != idMesa) return DraftUnavailable();
         IReadOnlyList<string> outcomes = await _management.GetAttackOutcomeCodesAsync(draft.IdSistemaVersao, cancellationToken);
         string? error = Validate(update, outcomes);
         if (error is not null) return GameRunOperationResult<GameModeEditorDto>.Fail("CONFIGURACAO_INVALIDA", error);
         foreach (int npcId in update.Encounters.Values.Select(encounter => encounter.Enemy?.NpcId)
             .OfType<int>().Distinct())
         {
-            Personagen? npc = await _management.GetNpcAsync(npcId, cancellationToken);
+            Personagen? npc = idMesa.HasValue
+                ? await _management.GetNpcAsync(npcId, idMesa, draft.IdSistemaVersao, cancellationToken)
+                : await _management.GetNpcAsync(npcId, cancellationToken);
             if (npc is null || !npc.Visivel)
                 return GameRunOperationResult<GameModeEditorDto>.Fail("NPC_INVISIVEL",
-                    "Um personagem do jogo está oculto ou não está mais disponível na Wiki oficial.");
+                    "Um personagem do jogo está oculto ou não está mais disponível para esta Mesa.");
         }
         error = await ValidateBaseRestsAsync(draft.IdSistemaVersao, update.Areas);
         if (error is not null) return GameRunOperationResult<GameModeEditorDto>.Fail("DESCANSO_INVALIDO", error);
-        error = await FreezeLootAsync(update.Encounters.Values, cancellationToken);
+        error = await FreezeLootAsync(update.Encounters.Values, cancellationToken, idMesa, draft.IdSistemaVersao);
         if (error is not null) return GameRunOperationResult<GameModeEditorDto>.Fail("LOOT_INVALIDO", error);
 
         JsonObject config = JsonNode.Parse(draft.ConfiguracaoJson)?.AsObject()
@@ -376,16 +391,18 @@ public sealed class GameModeManagementService : IGameModeManagementService
         config["previewPlayerDamageByResult"] = JsonSerializer.SerializeToNode(update.PlayerDamageByResult, JsonOptions);
         config["saleDiscountPercent"] = update.SaleDiscountPercent;
         config["repairProtectionAtBase"] = update.RepairProtectionAtBase;
+        if (update.PowerCatalog is not null)
+            config["powerCatalog"] = JsonSerializer.SerializeToNode(update.PowerCatalog, JsonOptions);
         draft.ConfiguracaoJson = config.ToJsonString(JsonOptions);
         await _management.SaveAsync(cancellationToken);
         return GameRunOperationResult<GameModeEditorDto>.Ok(Map(draft, outcomes));
     }
 
     public async Task<GameRunOperationResult<GameModeEditorDto>> PublishAsync(
-        int id, CancellationToken cancellationToken)
+        int id, CancellationToken cancellationToken, int? idMesa = null)
     {
         GameModeVersion? draft = await _management.GetDraftByIdAsync(id, cancellationToken);
-        if (draft is null) return DraftUnavailable();
+        if (draft is null || draft.IdMesa != idMesa) return DraftUnavailable();
         IReadOnlyList<string> outcomes = await _management.GetAttackOutcomeCodesAsync(draft.IdSistemaVersao, cancellationToken);
         GameModeEditorDto editor = Map(draft, outcomes);
         string? error = Validate(new GameModeEditorUpdateDto
@@ -394,6 +411,7 @@ public sealed class GameModeManagementService : IGameModeManagementService
             FallbackAction = editor.FallbackAction, PlayerDamageByResult = editor.PlayerDamageByResult,
             SaleDiscountPercent = editor.SaleDiscountPercent,
             RepairProtectionAtBase = editor.RepairProtectionAtBase,
+            PowerCatalog = editor.PowerCatalog,
         }, outcomes);
         if (error is not null) return GameRunOperationResult<GameModeEditorDto>.Fail("CONFIGURACAO_INVALIDA", error);
         SistemaVersao? systemVersion = await _systems.GetVersionAsync(
@@ -408,14 +426,16 @@ public sealed class GameModeManagementService : IGameModeManagementService
                 systemVersion, SistemaModuloTipo.Progressao).DadoLootFaces is not (4 or 6 or 8 or 10 or 12 or 20))
             return GameRunOperationResult<GameModeEditorDto>.Fail("DADO_LOOT_NAO_CONFIGURADO",
                 "Configure e publique o dado de loot em Sistema > Progressão antes de publicar encontros com loot.");
-        error = await FreezeLootAsync(editor.Encounters.Values, cancellationToken);
+        error = await FreezeLootAsync(editor.Encounters.Values, cancellationToken, idMesa, draft.IdSistemaVersao);
         if (error is not null) return GameRunOperationResult<GameModeEditorDto>.Fail("LOOT_INVALIDO", error);
         foreach (GameBattleEncounterConfig encounter in editor.Encounters.Values)
         {
             if (encounter.Enemy?.NpcId is not int npcId) continue;
-            Personagen? npc = await _management.GetNpcAsync(npcId, cancellationToken);
+            Personagen? npc = idMesa.HasValue
+                ? await _management.GetNpcAsync(npcId, idMesa, draft.IdSistemaVersao, cancellationToken)
+                : await _management.GetNpcAsync(npcId, cancellationToken);
             if (npc is null || !npc.Visivel)
-                return GameRunOperationResult<GameModeEditorDto>.Fail("NPC_INDISPONIVEL", "Um NPC selecionado não está disponível na Wiki oficial.");
+                return GameRunOperationResult<GameModeEditorDto>.Fail("NPC_INDISPONIVEL", "Um NPC selecionado não está disponível para esta Mesa.");
             try { CopyNpcSnapshot(encounter.Enemy, npc); }
             catch (Exception exception) when (exception is JsonException or InvalidOperationException)
             {
@@ -436,6 +456,7 @@ public sealed class GameModeManagementService : IGameModeManagementService
             FallbackAction = editor.FallbackAction, PlayerDamageByResult = editor.PlayerDamageByResult,
             SaleDiscountPercent = editor.SaleDiscountPercent,
             RepairProtectionAtBase = editor.RepairProtectionAtBase,
+            PowerCatalog = editor.PowerCatalog,
         }, outcomes);
         if (error is not null) return GameRunOperationResult<GameModeEditorDto>.Fail("CONFIGURACAO_INVALIDA", error);
         JsonObject config = JsonNode.Parse(draft.ConfiguracaoJson)?.AsObject()
@@ -609,11 +630,14 @@ public sealed class GameModeManagementService : IGameModeManagementService
             var values = resolved.Snapshot.Valores;
             string damageKey = action.Tipo is "ITEM" or "PROTESE"
                 ? "danoPorAcertoProposto" : "danoProposto";
-            if (!values.TryGetValue(damageKey, out string? damageText) ||
-                !int.TryParse(damageText, NumberStyles.Integer, CultureInfo.InvariantCulture,
-                out int damage) || damage <= 0)
+            int damage = ReadActionValue(values, damageKey);
+            bool hasCondition = values.TryGetValue("condicoesPropostasJson", out string? conditionsJson) &&
+                !string.IsNullOrWhiteSpace(conditionsJson) && conditionsJson != "[]";
+            bool removesCondition = values.TryGetValue("condicoesRemovidasPorMagiaJson", out string? removalsJson) &&
+                !string.IsNullOrWhiteSpace(removalsJson) && removalsJson != "[]";
+            if (damage <= 0 && !hasCondition && !removesCondition)
             {
-                unavailableReason ??= "Esta ação precisa de dano positivo definido na ficha.";
+                unavailableReason ??= "Esta ação precisa de dano ou condição executável na ficha.";
                 continue;
             }
             return action with
@@ -648,6 +672,15 @@ public sealed class GameModeManagementService : IGameModeManagementService
             return "Configure o dano do personagem para cada resultado de ATAQUE_COMUM do Sistema.";
         if (update.SaleDiscountPercent is < 0 or > 100)
             return "O desconto de venda deve ser um percentual inteiro entre 0 e 100.";
+        if (update.PowerCatalog is { } powers &&
+            (powers.Count > 40 || powers.Any(power => power is null ||
+                !Guid.TryParse(power.Id, out _) ||
+                power.Type is not ("SKILL" or "ULTIMATE") ||
+                string.IsNullOrWhiteSpace(power.Name) || power.Name.Length > 100 ||
+                power.Description?.Length > 2000 || power.Image?.Length > 500 ||
+                power.Requirements?.Length > 500 || power.MinLevel is < 1 or > 1000) ||
+             powers.Select(power => power.Id).Distinct(StringComparer.OrdinalIgnoreCase).Count() != powers.Count))
+            return "Cadastre até 40 skills e ultimates com identificadores únicos, nome e nível mínimo válidos.";
         if (update.Areas is null || update.Areas.Count is < 1 or > 9 ||
             update.Encounters is null || update.Encounters.Count is < 1 or > 80)
             return "Configure áreas e ao menos um encontro.";
@@ -702,6 +735,7 @@ public sealed class GameModeManagementService : IGameModeManagementService
                  finalIndex < 0 || finalIndex >= area.Options.Count)))
                 return $"Escolha um fim válido para {area.Name}.";
             if (area.Options.Any(option => option.Weight is < 1 or > 100 ||
+                option.GameMinutes is < 0 or > 1000000 ||
                 option.Image?.Length > 500 ||
                 option.Type is not ("COMBATE" or "ELITE" or "BOSS" or "EVENTO" or "DESCANSO" or "ATALHO" or "CACADA" or "AREA_SECRETA") ||
                 (option.Type is "EVENTO" or "DESCANSO" or "ATALHO"
@@ -769,6 +803,11 @@ public sealed class GameModeManagementService : IGameModeManagementService
             ? encountersJson.Deserialize<Dictionary<string, GameBattleEncounterConfig>>(JsonOptions) ?? [] : [];
         return new GameModeEditorDto
         {
+            CodigoJogo = mode.Codigo,
+            IdMesa = mode.IdMesa,
+            NomeJogo = mode.Nome ?? "Odisseia",
+            DescricaoJogo = mode.Descricao,
+            BannerJogo = mode.Banner,
             IdSistemaVersao = mode.IdSistemaVersao,
             IdGameModeVersion = mode.IdGameModeVersion,
             MapSchemaVersion = mapSchema,
@@ -781,6 +820,9 @@ public sealed class GameModeManagementService : IGameModeManagementService
                 saleDiscount.TryGetInt32(out int discount) ? discount : 0,
             RepairProtectionAtBase = !root.TryGetProperty("repairProtectionAtBase", out JsonElement repairProtection) ||
                 repairProtection.ValueKind != JsonValueKind.False,
+            PowerCatalog = root.TryGetProperty("powerCatalog", out JsonElement catalog) &&
+                catalog.ValueKind == JsonValueKind.Array
+                    ? catalog.Deserialize<List<GameModePowerOptionDto>>(JsonOptions) ?? [] : [],
             PlayerDamageByResult = root.TryGetProperty("previewPlayerDamageByResult", out JsonElement damage)
                 ? damage.Deserialize<Dictionary<string, GameBattleDamageModifier>>(JsonOptions) ?? [] : [],
             FallbackAction = root.TryGetProperty("previewFallbackAction", out JsonElement fallback)

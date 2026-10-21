@@ -146,7 +146,16 @@ internal static class SistemaRpgMapper
         {
             NivelMaximo = regras.NivelMaximo,
             DadoLootFaces = regras.DadoLootFaces,
-            InfluenciasAtributos = regras.InfluenciasAtributos ?? [],
+            InfluenciasAtributos = (regras.InfluenciasAtributos ?? [])
+                .Select(rule => new SistemaAtributoRecursoDto
+                {
+                    CodigoAtributo = entity.Atributos.FirstOrDefault(attribute =>
+                        SistemaRpgConfiguration.NormalizarCodigo(attribute.CodigoAtributo, string.Empty) ==
+                        SistemaRpgConfiguration.NormalizarCodigo(rule.CodigoAtributo, string.Empty))?.CodigoAtributo
+                        ?? rule.CodigoAtributo,
+                    Recurso = rule.Recurso,
+                    PercentualPorValor = rule.PercentualPorValor,
+                }).ToList(),
             PermiteXpExcedente = regras.PermiteXpExcedente,
             Niveis = entity.Niveis.OrderBy(n => n.Ordem).ThenBy(n => n.Nivel).Select(n => new SistemaNivelDto
             {

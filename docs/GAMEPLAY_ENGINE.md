@@ -1545,6 +1545,8 @@ Permanecem configuraveis: avancar fora de combate, saida do originador, inicio/f
 
 O catalogo configuravel informa recurso, operacao, valor, momento, gatilho, duracao, acumulo, remocao e cooldown. Itens, acessorios, proteses, skills e magias podem referenciar uma condicao publicada e substituir valor/duracao. Sem os campos necessarios, a condicao permanece assistida; a engine nunca interpreta texto narrativo.
 
+Na configuração atual, `RegraRemocao` aceita opções estruturadas (`MANUAL`, `GATILHO_CESSOU`, `DURACAO`, `DESCANSO_SIMPLES`, `DESCANSO_NORMAL`, `DESCANSO_LONGO`). A Mesa usa a opção de descanso da versão publicada para expirar a condição, sem presumir pelo código `FADIGA`; versões antigas preservam o comportamento inicial documentado. Texto livre legado permanece assistido e não vira uma regra por interpretação. O minijogo usa, nesta camada, apenas reduções de limite com gatilho numérico; demais efeitos do catálogo exigem integração separada no simulador.
+
 ## 21.3. Politica de acumulo
 
 Cada regra deve declarar uma destas politicas ou equivalente tipado:

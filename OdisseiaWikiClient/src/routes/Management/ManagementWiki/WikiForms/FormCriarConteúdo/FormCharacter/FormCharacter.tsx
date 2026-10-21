@@ -148,8 +148,8 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
   }, [handleNext, setStep, step]);
 
   const itemColumns = React.useMemo(() => createItemColumns(theme, neon), [theme, neon]);
-  const skillsColumns = React.useMemo(() => createSkillsColumns(theme, neon), [theme, neon]);
-  const magiasColumns = React.useMemo(() => createMagiasColumns(theme, neon), [theme, neon]);
+  const skillsColumns = React.useMemo(() => createSkillsColumns(theme, neon, sistema.contexto), [theme, neon, sistema.contexto]);
+  const magiasColumns = React.useMemo(() => createMagiasColumns(theme, neon, sistema.contexto), [theme, neon, sistema.contexto]);
   const inventario = getInventarioItems(itens);
   const updateInventario = (updatedItems: Item[]) => setItens(replaceItemSection(itens, 'inventario', updatedItems));
   const updateProteses = (updatedItems: Item[]) => setItens(

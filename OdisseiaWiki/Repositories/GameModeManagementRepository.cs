@@ -17,6 +17,48 @@ public sealed class GameModeManagementRepository : IGameModeManagementRepository
             .Where(item => item.IdWikiEscopo == WikiEscopo.IdOficial && item.Visivel)
             .OrderBy(item => item.Nome).ToListAsync(cancellationToken);
 
+    private async Task<(int ScopeId, int SystemId)?> GetScopeAsync(
+        int idMesa, int idSistemaVersao, CancellationToken token)
+    {
+        var mesa = await _context.Mesas.AsNoTracking()
+            .Where(entry => entry.Idmesa == idMesa)
+            .Select(entry => new { entry.CodigoSistema, entry.IdSistemaVersao })
+            .SingleOrDefaultAsync(token);
+        var version = await _context.SistemaVersoes.AsNoTracking()
+            .Where(entry => entry.IdSistemaVersao == idSistemaVersao)
+            .Select(entry => new { entry.IdSistemaRpg, entry.SistemaRpg.Codigo }).SingleOrDefaultAsync(token);
+        if (mesa is null || version is null) return null;
+        int? mesaSystemId = mesa.IdSistemaVersao is int mesaVersionId
+            ? await _context.SistemaVersoes.AsNoTracking()
+                .Where(entry => entry.IdSistemaVersao == mesaVersionId)
+                .Select(entry => (int?)entry.IdSistemaRpg).FirstOrDefaultAsync(token)
+            : null;
+        if (mesaSystemId != version.IdSistemaRpg && mesa.CodigoSistema != version.Codigo) return null;
+        int? scope = await _context.WikiEscopos.AsNoTracking()
+            .Where(entry => entry.IdMesa == idMesa).Select(entry => (int?)entry.IdWikiEscopo)
+            .SingleOrDefaultAsync(token);
+        return scope is int id ? (id, version.IdSistemaRpg) : null;
+    }
+
+    public async Task<IReadOnlyList<Item>> GetLootItemsAsync(
+        int? idMesa, int idSistemaVersao, CancellationToken token)
+    {
+        if (idMesa is null) return await GetLootItemsAsync(token);
+        var scope = await GetScopeAsync(idMesa.Value, idSistemaVersao, token);
+        if (scope is null) return [];
+        string[] replaced = await _context.Itens.AsNoTracking()
+            .Where(item => item.IdWikiEscopo == scope.Value.ScopeId && item.IdOrigemGlobal != null)
+            .Select(item => item.IdOrigemGlobal!).ToArrayAsync(token);
+        return await _context.Itens.AsNoTracking()
+            .Where(item => item.Visivel &&
+                (item.IdWikiEscopo == scope.Value.ScopeId || item.IdWikiEscopo == WikiEscopo.IdOficial) &&
+                (item.IdWikiEscopo != WikiEscopo.IdOficial || !replaced.Contains(item.Iditem)) &&
+                (item.IdSistemaRpg == null || item.IdSistemaRpg == scope.Value.SystemId) &&
+                (item.AcompanharPublicacaoAtual || item.IdSistemaVersao == null ||
+                    item.IdSistemaVersao == idSistemaVersao))
+            .OrderBy(item => item.Nome).ToListAsync(token);
+    }
+
     public Task<int?> GetCurrentSystemVersionIdAsync(CancellationToken cancellationToken) =>
         _context.SistemasRpg.AsNoTracking()
             .Where(item => item.Codigo == "ODISSEIA" && item.Ativo)
@@ -38,8 +80,7 @@ public sealed class GameModeManagementRepository : IGameModeManagementRepository
 
     public Task<GameModeVersion?> GetDraftByIdAsync(int id, CancellationToken cancellationToken) =>
         _context.GameModeVersions.FirstOrDefaultAsync(item => item.IdGameModeVersion == id &&
-            item.Codigo == "ROGUELIKE_MVP" && item.Status == GameModeVersionStatus.Rascunho &&
-            item.SistemaVersao.SistemaRpg.Codigo == "ODISSEIA" &&
+            item.Status == GameModeVersionStatus.Rascunho &&
             item.SistemaVersao.SistemaRpg.Ativo, cancellationToken);
 
     public async Task<IReadOnlyList<string>> GetAttackOutcomeCodesAsync(
@@ -78,10 +119,52 @@ public sealed class GameModeManagementRepository : IGameModeManagementRepository
                 Skills = item.Skills, Magia = item.Magia,
             }).ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<Personagen>> GetNpcCandidatesAsync(
+        int? idMesa, int idSistemaVersao, CancellationToken token)
+    {
+        if (idMesa is null) return await GetNpcCandidatesAsync(token);
+        var scope = await GetScopeAsync(idMesa.Value, idSistemaVersao, token);
+        if (scope is null) return [];
+        int[] replaced = await _context.Personagens.AsNoTracking()
+            .Where(item => item.IdWikiEscopo == scope.Value.ScopeId && item.IdOrigemGlobal != null)
+            .Select(item => item.IdOrigemGlobal!.Value).ToArrayAsync(token);
+        return await _context.Personagens.AsNoTracking()
+            .Where(item => item.Visivel &&
+                (item.IdWikiEscopo == scope.Value.ScopeId || item.IdWikiEscopo == WikiEscopo.IdOficial) &&
+                (item.IdWikiEscopo != WikiEscopo.IdOficial || !replaced.Contains(item.Idpersonagem)) &&
+                (item.IdSistemaRpg == null || item.IdSistemaRpg == scope.Value.SystemId) &&
+                (item.AcompanharPublicacaoAtual || item.IdSistemaVersao == null ||
+                    item.IdSistemaVersao == idSistemaVersao))
+            .OrderBy(item => item.Nome).Select(item => new Personagen
+            {
+                Idpersonagem = item.Idpersonagem, Nome = item.Nome, Visivel = item.Visivel,
+                Idraca = item.Idraca, StatusJson = item.StatusJson, Imagem = item.Imagem,
+                InventarioJson = item.InventarioJson, Implantes = item.Implantes,
+                Skills = item.Skills, Magia = item.Magia,
+            }).ToListAsync(token);
+    }
+
     public Task<Personagen?> GetNpcAsync(int id, CancellationToken cancellationToken) =>
         _context.Personagens.AsNoTracking().FirstOrDefaultAsync(item =>
             item.Idpersonagem == id && item.IdWikiEscopo == WikiEscopo.IdOficial && item.Visivel,
             cancellationToken);
+
+    public async Task<Personagen?> GetNpcAsync(int id, int? idMesa, int idSistemaVersao, CancellationToken token)
+    {
+        if (idMesa is null) return await GetNpcAsync(id, token);
+        var scope = await GetScopeAsync(idMesa.Value, idSistemaVersao, token);
+        if (scope is null) return null;
+        int? replacement = await _context.Personagens.AsNoTracking()
+            .Where(item => item.IdWikiEscopo == scope.Value.ScopeId && item.IdOrigemGlobal == id)
+            .Select(item => (int?)item.Idpersonagem).FirstOrDefaultAsync(token);
+        if (replacement is not null) return null;
+        return await _context.Personagens.AsNoTracking().FirstOrDefaultAsync(item =>
+            item.Idpersonagem == id && item.Visivel &&
+            (item.IdWikiEscopo == scope.Value.ScopeId || item.IdWikiEscopo == WikiEscopo.IdOficial) &&
+            (item.IdSistemaRpg == null || item.IdSistemaRpg == scope.Value.SystemId) &&
+            (item.AcompanharPublicacaoAtual || item.IdSistemaVersao == null ||
+                item.IdSistemaVersao == idSistemaVersao), token);
+    }
 
     public Task<GameModeVersion?> GetLatestModeAsync(int idSistemaVersao, CancellationToken cancellationToken) =>
         _context.GameModeVersions.AsNoTracking()

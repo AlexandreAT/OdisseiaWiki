@@ -4,6 +4,17 @@ namespace OdisseiaWiki.Dtos;
 
 public sealed record GameModeLootOptionDto(string Id, string Name, string Type, string? Image);
 
+public sealed class GameModePowerOptionDto
+{
+    public string Id { get; set; } = string.Empty;
+    public string Type { get; set; } = "SKILL";
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public string? Image { get; set; }
+    public int MinLevel { get; set; } = 1;
+    public string? Requirements { get; set; }
+}
+
 public sealed class GameModeAreaDto
 {
     public string Code { get; set; } = string.Empty;
@@ -31,10 +42,16 @@ public sealed class GameModeAreaOptionDto
     public string? Label { get; set; }
     public string? Description { get; set; }
     public string? Image { get; set; }
+    public int GameMinutes { get; set; }
 }
 
 public sealed class GameModeEditorDto
 {
+    public string CodigoJogo { get; init; } = "ROGUELIKE_MVP";
+    public int? IdMesa { get; init; }
+    public string NomeJogo { get; init; } = "Odisseia";
+    public string? DescricaoJogo { get; init; }
+    public string? BannerJogo { get; init; }
     public int IdSistemaVersao { get; init; }
     public int IdGameModeVersion { get; init; }
     public int MapSchemaVersion { get; init; }
@@ -46,7 +63,20 @@ public sealed class GameModeEditorDto
     public Dictionary<string, GameBattleDamageModifier> PlayerDamageByResult { get; init; } = [];
     public int SaleDiscountPercent { get; init; }
     public bool RepairProtectionAtBase { get; init; } = true;
+    public List<GameModePowerOptionDto> PowerCatalog { get; init; } = [];
     public IReadOnlyList<string> AttackOutcomeCodes { get; init; } = [];
+}
+
+public sealed record GameAdventureDto(string Codigo, int? IdMesa, int IdSistemaVersao,
+    string Nome, string? Descricao, string? Banner, string Status, string NumeroVersao);
+
+public sealed class GameAdventureCreateDto
+{
+    public int? IdMesa { get; set; }
+    public int? IdSistemaVersao { get; set; }
+    public string Nome { get; set; } = string.Empty;
+    public string? Descricao { get; set; }
+    public string? Banner { get; set; }
 }
 
 public sealed class GameModeEditorUpdateDto
@@ -57,6 +87,8 @@ public sealed class GameModeEditorUpdateDto
     public Dictionary<string, GameBattleDamageModifier> PlayerDamageByResult { get; set; } = [];
     public int SaleDiscountPercent { get; set; }
     public bool RepairProtectionAtBase { get; set; } = true;
+    // Null preserves a catalog when an older client saves the rest of a draft.
+    public List<GameModePowerOptionDto>? PowerCatalog { get; set; }
 }
 
 public sealed record GameModeNpcOptionDto(int Id, string Name, string? VariantId, string? Image)

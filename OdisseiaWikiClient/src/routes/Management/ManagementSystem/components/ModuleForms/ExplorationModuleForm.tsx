@@ -111,12 +111,13 @@ export const ExplorationModuleForm = ({
 
       <SectionCard theme={theme} neon={neon}>
         <h4>Carga e furtividade</h4>
+        <p>Os textos abaixo orientam a mesa, mas não são executados. Para automatizar a sobrecarga, configure em Sobrevivência uma condição com gatilho EXCESSO_CARGA &gt; 0, recurso afetado, efeito e recuperação. Furtividade contextual permanece decisão do mestre.</p>
         <InlineChecks>
           <CheckBox neon={neon} label="Carga possui limite" checked={value.cargaUsaLimite} onChange={(cargaUsaLimite) => onChange({ ...value, cargaUsaLimite })} disabled={readOnly} />
         </InlineChecks>
         <FieldGrid $columns={2}>
-          <TextArea theme={theme} neon={neon} label="Penalidade por excesso de carga" value={value.penalidadeExcessoCarga ?? ''} onChange={(event) => onChange({ ...value, penalidadeExcessoCarga: event.target.value })} fullWidth />
-          <TextArea theme={theme} neon={neon} label="Regras de furtividade" value={value.furtividadeObservacoes ?? ''} onChange={(event) => onChange({ ...value, furtividadeObservacoes: event.target.value })} fullWidth />
+          <TextArea theme={theme} neon={neon} label="Sobrecarga (explicação, não executa)" value={value.penalidadeExcessoCarga ?? ''} onChange={(event) => onChange({ ...value, penalidadeExcessoCarga: event.target.value })} fullWidth />
+          <TextArea theme={theme} neon={neon} label="Furtividade (explicação, não executa)" value={value.furtividadeObservacoes ?? ''} onChange={(event) => onChange({ ...value, furtividadeObservacoes: event.target.value })} fullWidth />
         </FieldGrid>
       </SectionCard>
 

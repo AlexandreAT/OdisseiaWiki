@@ -13,6 +13,25 @@ namespace OdisseiaWiki.Tests;
 public sealed class SistemaRpgServiceTests
 {
     [Fact]
+    public async Task RemocaoDeCondicaoReferenciadaExigeConfirmacaoAntesDePersistir()
+    {
+        Mock<ISistemaRpgRepository> repository = new();
+        SistemaVersao version = NovaVersao(SistemaVersaoStatus.Rascunho);
+        version.Condicoes.Add(new SistemaCondicao { Codigo = "CEGUEIRA", Nome = "Cegueira", Tipo = "Sensorial" });
+        repository.Setup(row => row.GetVersionAsync(42, true, true)).ReturnsAsync(version);
+        repository.Setup(row => row.GetConditionReferencesAsync(version.IdSistemaRpg, "CEGUEIRA"))
+            .ReturnsAsync(["item Granada de luz"]);
+        SistemaRpgService service = NovoService(repository);
+
+        var result = await service.AtualizarSobrevivenciaAsync(42, new SistemaSobrevivenciaConfigDto());
+
+        Assert.False(result.Sucesso);
+        Assert.Contains("Granada de luz", result.MensagemErro);
+        repository.Verify(row => row.RemoveRange(It.IsAny<IEnumerable<object>>()), Times.Never);
+        repository.Verify(row => row.SaveChangesAsync(), Times.Never);
+    }
+
+    [Fact]
     public async Task ObterCriacaoAsync_SistemaPadraoEspelhaTodasAsRacasDaWiki()
     {
         Mock<ISistemaRpgRepository> repository = new();
@@ -96,6 +115,50 @@ public sealed class SistemaRpgServiceTests
         Assert.Equal(SistemaOperacaoErro.Conflito, resultado.TipoErro);
         Assert.Contains("imut", resultado.MensagemErro, StringComparison.OrdinalIgnoreCase);
         repository.Verify(r => r.SaveChangesAsync(), Times.Never);
+    }
+
+    [Fact]
+    public async Task ObterProgressaoAsync_UsaCodigoAtualDoAtributoEmReferenciaAntiga()
+    {
+        Mock<ISistemaRpgRepository> repository = new();
+        SistemaVersao versao = NovaVersao(SistemaVersaoStatus.Rascunho);
+        versao.Atributos.Add(new SistemaAtributoConfig
+        {
+            CodigoAtributo = "RESISTENCIA", Nome = "Resistência", Grupo = SistemaAtributoGrupo.Principal,
+        });
+        versao.Modulos.Add(new SistemaModulo
+        {
+            TipoModulo = SistemaModuloTipo.Progressao,
+            ConfiguracaoJson = """{"influenciasAtributos":[{"codigoAtributo":"RESISTÊNCIA","recurso":"vida","percentualPorValor":10}]}""",
+        });
+        repository.Setup(r => r.GetVersionAsync(42, true, false)).ReturnsAsync(versao);
+        SistemaRpgService service = NovoService(repository);
+
+        var resultado = await service.ObterProgressaoAsync(42, incluirRascunhos: true);
+
+        Assert.Equal("RESISTENCIA", Assert.Single(resultado.Dados!.InfluenciasAtributos).CodigoAtributo);
+    }
+
+    [Fact]
+    public async Task AtualizarProgressaoAsync_SalvaCodigoCanonicoDoAtributo()
+    {
+        Mock<ISistemaRpgRepository> repository = new();
+        SistemaVersao versao = NovaVersao(SistemaVersaoStatus.Rascunho);
+        versao.Atributos.Add(new SistemaAtributoConfig
+        {
+            CodigoAtributo = "RESISTENCIA", Nome = "Resistência", Grupo = SistemaAtributoGrupo.Principal,
+        });
+        repository.Setup(r => r.GetVersionAsync(42, true, true)).ReturnsAsync(versao);
+        SistemaRpgService service = NovoService(repository);
+
+        var resultado = await service.AtualizarProgressaoAsync(42, new SistemaProgressaoConfigDto
+        {
+            InfluenciasAtributos = [new() { CodigoAtributo = "RESISTÊNCIA", Recurso = "vida", PercentualPorValor = 10 }],
+        });
+
+        Assert.True(resultado.Sucesso, resultado.MensagemErro);
+        Assert.Equal("RESISTENCIA", Assert.Single(resultado.Dados!.InfluenciasAtributos).CodigoAtributo);
+        Assert.Contains("RESISTENCIA", Assert.Single(versao.Modulos).ConfiguracaoJson);
     }
 
     [Fact]

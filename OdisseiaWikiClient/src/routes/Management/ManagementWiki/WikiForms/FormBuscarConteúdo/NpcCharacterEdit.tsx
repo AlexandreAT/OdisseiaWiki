@@ -275,8 +275,9 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
   );
 
   const itemColumns = React.useMemo(() => createItemColumns(theme, neon), [theme, neon]);
-  const skillsColumns = React.useMemo(() => createSkillsColumns(theme, neon), [theme, neon]);
-  const magiasColumns = React.useMemo(() => createMagiasColumns(theme, neon), [theme, neon]);
+  const powerContext = clone && targetMesaId ? targetRuntime.contexto : sistema.contexto;
+  const skillsColumns = React.useMemo(() => createSkillsColumns(theme, neon, powerContext), [theme, neon, powerContext]);
+  const magiasColumns = React.useMemo(() => createMagiasColumns(theme, neon, powerContext), [theme, neon, powerContext]);
 
   React.useEffect(() => {
     return () => {

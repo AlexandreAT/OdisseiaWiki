@@ -15,8 +15,10 @@ import type {
   GameRunMediumRestPreview,
   GameRunMediumRestResolution,
   GameRunBattleRequest,
+  GameRunConditionOriginRequest,
 } from '../models/GameRun';
 import type { GameBattlePreview } from '../models/GameBattlePreview';
+import type { GameAdventure } from '../models/GameModeManagement';
 
 const basePath = '/game-runs';
 
@@ -29,10 +31,16 @@ export const rollGameRunLoot = async (id: number, payload: GameRunMutationReques
 export const dropGameRunItem = async (id: number, itemId: string, payload: GameRunMutationRequest): Promise<GameRunDto> =>
   (await api.post<GameRunDto>(`${basePath}/${id}/inventory/items/${encodeURIComponent(itemId)}/drop`, payload)).data;
 
+export const updateGameRunConditionOrigin = async (id: number, payload: GameRunConditionOriginRequest): Promise<GameRunDto> =>
+  (await api.put<GameRunDto>(`${basePath}/${id}/inventory/condition-origin`, payload)).data;
+
 export const getGameCharacters = async (): Promise<GameCharacterOption[]> => {
   const response = await api.get<GameCharacterOption[]>(`${basePath}/characters`);
   return response.data;
 };
+
+export const getCharacterGames = async (id: number): Promise<GameAdventure[]> =>
+  (await api.get<GameAdventure[]>(`${basePath}/characters/${id}/games`)).data;
 
 export const getActiveGameRun = async (): Promise<GameRunDto | null> => {
   const response = await api.get<GameRunDto>(`${basePath}/active`);

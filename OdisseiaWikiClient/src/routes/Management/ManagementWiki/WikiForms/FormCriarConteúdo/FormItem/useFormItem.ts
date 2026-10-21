@@ -175,8 +175,9 @@ export const useFormItem = (initialItem?: ItemPayload, contentType?: string) => 
       sistema.catalogTypes,
       sistema.contexto?.combate?.resultadosDado ?? [],
       sistema.contexto?.sobrevivencia?.condicoes ?? [],
+      sistema.contexto?.criacao?.atributos ?? [],
     ),
-    [atributos, sistema.catalogTypes, sistema.contexto?.combate?.resultadosDado, sistema.contexto?.sobrevivencia?.condicoes, tipo],
+    [atributos, sistema.catalogTypes, sistema.contexto?.combate?.resultadosDado, sistema.contexto?.sobrevivencia?.condicoes, sistema.contexto?.criacao?.atributos, tipo],
   );
 
   const handleAtributosChange = useCallback((nextAttributes: Record<string, unknown>) => {

@@ -16,19 +16,20 @@ const Rows = styled.div`
   @media (max-width: 480px) { article { grid-template-columns: minmax(0, 1fr) 95px 28px; gap: 10px; } }
 `;
 
-export function ManagementGameLootEditor({ encounter, onChange, theme, neon, editable }: {
+export function ManagementGameLootEditor({ encounter, onChange, theme, neon, editable, mesaId, systemVersionId }: {
   encounter: GameModeEncounter; onChange: (update: Partial<GameModeEncounter>) => void;
   theme: 'light' | 'dark'; neon: 'on' | 'off'; editable: boolean;
+  mesaId?: number; systemVersionId: number;
 }) {
   const [items, setItems] = useState<GameLootOption[]>([]);
   const [query, setQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     let active = true;
-    void getGameLootOptions().then((value) => { if (active) setItems(value); })
+    void getGameLootOptions(mesaId, systemVersionId).then((value) => { if (active) setItems(value); })
       .catch((reason: unknown) => { if (active) setError(getApiErrorMessage(reason, 'Não foi possível carregar o catálogo de loot.')); });
     return () => { active = false; };
-  }, []);
+  }, [mesaId, systemVersionId]);
   const loot = encounter.loot ?? [];
   const available = items.filter((item) => !loot.some((entry) => entry.itemId === item.id));
   const label = (item: GameLootOption) => `${item.name} · ${item.type} · #${item.id}`;

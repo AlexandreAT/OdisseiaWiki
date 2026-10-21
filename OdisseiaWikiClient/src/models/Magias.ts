@@ -1,6 +1,7 @@
 import { DadoAcerto } from './Dados';
 import { JSONContent } from './Characters';
 import type { GameplayTestSpec } from './Gameplay';
+import type { GameplayConditionEffectConfig } from './Itens';
 
 export type MagiaTipoString = "ataque" | "suporte" | "buff" | "debuff";
 export type MagiaElemento = "fogo" | "agua" | "ar" | "terra" | "luz" | "escuridao" | "espacial" | "transfiguracao" | "invocacao";
@@ -31,6 +32,8 @@ export interface AtaqueAtributos {
     bonus: string;
     acerto?: DadoAcerto;
     teste?: GameplayTestSpec;
+    condicoes?: GameplayConditionEffectConfig[];
+    removeCondicoes?: string[];
 }
 
 export interface SuporteAtributos {
@@ -38,6 +41,8 @@ export interface SuporteAtributos {
     bonus: string;
     acerto?: DadoAcerto;
     teste?: GameplayTestSpec;
+    condicoes?: GameplayConditionEffectConfig[];
+    removeCondicoes?: string[];
 }
 
 export interface BuffAtributos {
@@ -45,6 +50,8 @@ export interface BuffAtributos {
     bonus: string;
     acerto?: DadoAcerto;
     teste?: GameplayTestSpec;
+    condicoes?: GameplayConditionEffectConfig[];
+    removeCondicoes?: string[];
 }
 
 export interface DebuffAtributos {
@@ -52,4 +59,6 @@ export interface DebuffAtributos {
     bonus: string;
     acerto?: DadoAcerto;
     teste?: GameplayTestSpec;
+    condicoes?: GameplayConditionEffectConfig[];
+    removeCondicoes?: string[];
 }

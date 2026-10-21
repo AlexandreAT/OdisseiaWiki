@@ -11,6 +11,7 @@ export interface GameCharacterOption {
   nome: string;
   imagem: string | null;
   idRaca: number;
+  idMesa: number;
   idSistemaVersao: number | null;
   idSistemaVersaoAtual?: number | null;
   numeroVersaoSistema?: string | null;
@@ -70,6 +71,7 @@ export interface GameRunDto {
   idGameRun: number;
   idPersonagemJogadorOrigem: number;
   idGameModeVersion: number;
+  nomeJogo: string;
   numeroVersaoModo: string;
   idSistemaVersao: number;
   revisao: number;
@@ -170,6 +172,24 @@ export interface GameRunMutationRequest {
   chaveIdempotencia: string;
 }
 
+export interface GameRunConditionOriginRequest extends GameRunMutationRequest {
+  tipo: 'ITEM' | 'PROTESE' | 'MAGIA' | 'SKILL';
+  idInstancia: string;
+  indice: number;
+  codigo: string;
+  gatilho: 'ACERTO' | 'RESULTADO_NATURAL' | 'RESULTADO_CLASSIFICADO' | 'AO_USAR' | 'AO_EQUIPAR';
+  codigoResultado?: string | null;
+  alvo: 'ALVO' | 'USUARIO' | 'TODOS_INIMIGOS';
+  testeResistencia?: { dados: number; faces: number; atributo: string; dificuldade: number } | null;
+  valor?: number | null;
+  valoresEfeitos?: Record<number, number>;
+  duracao?: number | null;
+  unidadeDuracao?: 'Turno' | 'Hora' | null;
+  resultadoNaturalMinimo?: number | null;
+  resultadoNaturalMaximo?: number | null;
+  resultadosNaturais: number[];
+}
+
 export interface GameRunEncounterSetup {
   equipe: import('./GameBattlePreview').GameBattlePreviewActor[];
   oponentes: import('./GameBattlePreview').GameBattlePreviewActor[];
@@ -212,6 +232,7 @@ export interface GameRunConsumeItemResult {
 
 export interface CreateGameRunRequest {
   idPersonagemJogador: number;
+  codigoJogo?: string;
   chaveIdempotencia: string;
 }
 

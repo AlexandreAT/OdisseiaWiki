@@ -4,6 +4,7 @@ using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using OdisseiaWiki.Dtos;
 using OdisseiaWiki.Enums;
+using OdisseiaWiki.GameRuns.Inventory;
 using OdisseiaWiki.Models;
 using OdisseiaWiki.Services;
 using OdisseiaWiki.Services.Helpers;
@@ -70,15 +71,19 @@ public sealed class GameBattlePreviewFactory
             row.EfeitoJson)).ToArray();
 
         JsonElement? status = Property(run.EstadoAtual.Status, "status");
+        IReadOnlyList<GameBattleActiveCondition> playerConditions = ReadActiveConditions(run.EstadoAtual, version);
         int hitPoints = ReadInt(status, "vida") ?? 0;
-        int maximumHitPoints = Math.Max(hitPoints, ReadInt(status, "vidaMaxima") ?? hitPoints);
+        int maximumHitPoints = ReadInt(Property(run.EstadoAtual.LimitesCondicoes, "vida"), "base") ??
+            Math.Max(hitPoints, ReadInt(status, "vidaMaxima") ?? hitPoints);
         if (hitPoints <= 0 || maximumHitPoints <= 0)
             throw new InvalidOperationException("A ficha desta run precisa ter vida acima de zero para a prévia.");
 
         int mana = Math.Max(0, ReadInt(status, "mana") ?? 0);
         int stamina = Math.Max(0, ReadInt(status, "estamina") ?? 0);
-        int maximumMana = Math.Max(mana, ReadInt(status, "manaMaxima") ?? mana);
-        int maximumStamina = Math.Max(stamina, ReadInt(status, "estaminaMaxima") ?? stamina);
+        int maximumMana = ReadInt(Property(run.EstadoAtual.LimitesCondicoes, "mana"), "base") ??
+            Math.Max(mana, ReadInt(status, "manaMaxima") ?? mana);
+        int maximumStamina = ReadInt(Property(run.EstadoAtual.LimitesCondicoes, "estamina"), "base") ??
+            Math.Max(stamina, ReadInt(status, "estaminaMaxima") ?? stamina);
         JsonElement? defenses = Property(run.EstadoAtual.Status, "defesas");
         var playerDefenses = new GameBattleDefenses(
             Math.Max(0, ReadInt(defenses, "escudo") ?? 0),
@@ -179,7 +184,8 @@ public sealed class GameBattlePreviewFactory
                     enemyModifier),
                 ranges, config.PreviewUseTotalForRanges, enemyDamage,
                 ManaCost: enemyConfig.CustoManaAtaque,
-                StaminaCost: enemyConfig.CustoEstaminaAtaque));
+                StaminaCost: enemyConfig.CustoEstaminaAtaque)
+            { AttributeCode = enemyConfig.AttackAttributeCode });
         }
 
         var player = new GameBattleActorSpec(
@@ -193,7 +199,12 @@ public sealed class GameBattlePreviewFactory
             maximumStamina,
             playerDefenses,
             playerActions,
-            run.EstadoAtual.Imagem) { Rest = playerRest };
+            run.EstadoAtual.Imagem) { Rest = playerRest,
+                Attributes = ReadAttributes(run.EstadoAtual.Status),
+                TurnsToSkip = Math.Clamp(ReadInt(run.EstadoAtual.Status, "turnosPerdidos") ?? 0, 0, 100),
+                ActiveConditions = playerConditions };
+        JsonElement enemyStatus = string.IsNullOrWhiteSpace(enemyConfig.StatusJson)
+            ? default : ParseSnapshot(enemyConfig.StatusJson);
         var enemy = new GameBattleActorSpec(
             "enemy",
             enemyConfig.Name,
@@ -205,7 +216,7 @@ public sealed class GameBattlePreviewFactory
             enemyConfig.MaxEstamina,
             enemyDefenses,
             enemyActions,
-            enemyConfig.Image);
+            enemyConfig.Image) { Attributes = ReadAttributes(enemyStatus, enemyConfig.Attributes) };
 
         int enemyCount = Math.Clamp(enemyConfig.Quantity, 1, 4);
         if (enemyCount > 1) enemy = enemy with { Name = $"{enemyConfig.Name} 1" };
@@ -219,8 +230,6 @@ public sealed class GameBattlePreviewFactory
         if (useInitiative)
         {
             string formula = combatRules.FormulaIniciativa!;
-            JsonElement enemyStatus = string.IsNullOrWhiteSpace(enemyConfig.StatusJson)
-                ? default : ParseSnapshot(enemyConfig.StatusJson);
             player = player with { Initiative = Initiative(formula, run.EstadoAtual.Status) };
             enemy = enemy with { Initiative = Initiative(formula, enemyStatus, enemyConfig.Attributes) };
             additionalEnemies = additionalEnemies.Select(actor => actor with
@@ -228,7 +237,21 @@ public sealed class GameBattlePreviewFactory
         }
         return new GameBattlePreviewSetup(
             new GameBattleInput(player, enemy, defenseOrder)
-            { AdditionalEnemies = additionalEnemies, UseInitiative = useInitiative },
+            { AdditionalEnemies = additionalEnemies, UseInitiative = useInitiative,
+              AutomaticConditions = version.Condicoes.Where(rule =>
+                  rule.ValorGatilho.HasValue &&
+                  rule.CodigoRecursoGatilho is "VIDA" or "MANA" or "ESTAMINA" &&
+                  SistemaCondicaoEfeitos.Read(rule).Count > 0)
+                .Select(rule => new GameBattleAutomaticCondition(
+                    new GameBattleConditionRule(rule.Codigo, rule.Nome,
+                        rule.OperacaoEfeito ?? "", rule.CodigoRecurso ?? "",
+                        (int)(rule.ValorPadrao ?? rule.ValorEfeito ?? 0),
+                        rule.MomentoEfeito ?? "", rule.Empilhavel,
+                        rule.PermiteSobrescrever, rule.RegraRemocao ?? "MANUAL")
+                    { Effects = SistemaCondicaoEfeitos.Read(rule) },
+                    rule.CodigoRecursoGatilho!, rule.OperadorGatilho ?? "==",
+                    rule.ValorGatilho!.Value, rule.DuracaoPadrao,
+                    rule.UnidadeDuracao.ToString())).ToArray() },
             playerActions.Take(playerActions.Count - 1).Select(action => action.Name).ToArray(),
             config.PreviewFallbackAction.Name);
     }
@@ -403,6 +426,9 @@ public sealed class GameBattlePreviewFactory
             {
                 UsesUntilRest = Math.Clamp(ReadInt(Property(item, "atributos"), "capacidadeUso") ?? 0, 0, 100000),
                 InitialUsesRemaining = ReadInt(Property(item, "atributos"), "capacidadeUsoRestante"),
+                Conditions = ResolveConditions(resolved, version),
+                AttributeCode = resolved.Snapshot.Valores.TryGetValue("atributo", out string? itemAttribute)
+                    ? itemAttribute : null,
             });
         }
         return actions;
@@ -431,15 +457,24 @@ public sealed class GameBattlePreviewFactory
         {
             string type = selection.Tipo.ToUpperInvariant();
             if (type is not ("ITEM" or "PROTESE" or "MAGIA" or "SKILL")) continue;
-            JsonElement? item = type is "ITEM" or "PROTESE" ?
-                GameRunWeaponOrder.InventoryEntries(type == "ITEM"
-                    ? snapshot.Inventario : snapshot.Implantes)
-                    .FirstOrDefault(entry => string.Equals(ReadString(entry, "id"),
-                        selection.IdInstancia, StringComparison.Ordinal)) : null;
+            JsonElement? snapshotSource = type switch
+            {
+                "ITEM" => snapshot.Inventario, "PROTESE" => snapshot.Implantes,
+                "MAGIA" => snapshot.Magia, _ => snapshot.Skills,
+            };
+            JsonElement? item = SnapshotEntries(snapshotSource).FirstOrDefault(entry =>
+                string.Equals(ReadString(entry, "id"), selection.IdInstancia, StringComparison.Ordinal));
+            if (item is not { ValueKind: JsonValueKind.Object }) continue;
+            GameBattleActionSpec? utility = BuildUtilityAction(snapshot, selection, item.Value, version);
+            if (utility is not null)
+            {
+                actions.Add(utility);
+                continue;
+            }
             int count = selection.QuantidadeAtaques;
             if (count is < 1 or > 100)
                 throw new InvalidOperationException("A quantidade de ataques da ação está fora do limite.");
-            JsonElement? attributes = item is { ValueKind: JsonValueKind.Object } ? Property(item, "atributos") : null;
+            JsonElement? attributes = Property(item, "atributos");
             string fireMode = FixedFireMode(attributes);
             string? weaponMode = attributes is { } weaponAttributes ? ReadString(weaponAttributes, "modoModificadores") : null;
             string? weaponType = attributes is { } typedAttributes ? ReadString(typedAttributes, "tipoArma") : null;
@@ -507,12 +542,15 @@ public sealed class GameBattlePreviewFactory
                 };
                 GameplayOperationResult<GameplayResolvedAction> result = _actionResolver.Resolve(
                     request, character, version);
+                string damageKey = type is "ITEM" or "PROTESE"
+                    ? "danoPorAcertoProposto" : "danoProposto";
                 if (result.Sucesso && result.Dados is { } candidate &&
                     candidate.Groups.Count == 1 && candidate.Groups[0] == new GameplayDiceGroupSpec(1, 20) &&
-                    candidate.Snapshot.Valores.TryGetValue(type is "ITEM" or "PROTESE"
-                        ? "danoPorAcertoProposto" : "danoProposto", out string? damageText) &&
-                    int.TryParse(damageText, NumberStyles.Integer, CultureInfo.InvariantCulture,
-                        out int damage) && damage > 0 &&
+                    ((candidate.Snapshot.Valores.TryGetValue(damageKey, out string? damageText) &&
+                      int.TryParse(damageText, NumberStyles.Integer, CultureInfo.InvariantCulture,
+                          out int damage) && damage > 0) ||
+                     ResolveConditions(candidate, version).Count > 0 ||
+                     type == "MAGIA" && ResolveConditionRemovals(candidate, version).Count > 0) &&
                     candidate.Ranges.Count > 0 &&
                     candidate.Ranges.All(resultRange =>
                         config.PreviewPlayerDamageByResult!.ContainsKey(resultRange.Code)))
@@ -522,8 +560,8 @@ public sealed class GameBattlePreviewFactory
                 }
             }
             if (resolved is null) continue;
-            int baseDamage = int.Parse(resolved.Snapshot.Valores[type is "ITEM" or "PROTESE"
-                ? "danoPorAcertoProposto" : "danoProposto"], CultureInfo.InvariantCulture);
+            int baseDamage = ReadInt(resolved.Snapshot.Valores,
+                type is "ITEM" or "PROTESE" ? "danoPorAcertoProposto" : "danoProposto") ?? 0;
             GameBattleMagazineSpec? magazine = item is { ValueKind: JsonValueKind.Object }
                 ? ResolveMagazine(item.Value, resolved) : null;
             if (ReadInt(resolved.Snapshot.Valores, "consumoMunicaoProposto") is > 0 && magazine is null)
@@ -535,8 +573,11 @@ public sealed class GameBattlePreviewFactory
                 new GameplayRollPlan("1D20", resolved.Groups, resolved.Mode, resolved.Modifier,
                     ModifierDetails: resolved.Modifiers),
                 resolved.Ranges, resolved.UseTotalForRanges,
-                ResolvePlayerDamage(resolved.Ranges, baseDamage,
-                    config.PreviewPlayerDamageByResult!),
+                baseDamage > 0
+                    ? ResolvePlayerDamage(resolved.Ranges, baseDamage,
+                        config.PreviewPlayerDamageByResult!)
+                    : resolved.Ranges.ToDictionary(range => range.Code, _ => 0,
+                        StringComparer.OrdinalIgnoreCase),
                 ManaCost: Math.Max(0, ReadInt(resolved.Snapshot.Valores, "custoManaProposto") ?? 0),
                 StaminaCost: ranged && IsFirearmType(weaponType) ? 0 : Math.Max(0,
                     ReadInt(resolved.Snapshot.Valores,
@@ -544,6 +585,10 @@ public sealed class GameBattlePreviewFactory
                 CooldownTurns: Math.Max(0, ReadInt(resolved.Snapshot.Valores, "cooldownTurnosProposto") ?? 0),
                 Magazine: magazine)
             {
+                Conditions = ResolveConditions(resolved, version),
+                RemovesConditions = ResolveConditionRemovals(resolved, version),
+                AttributeCode = resolved.Snapshot.Valores.TryGetValue("atributo", out string? selectedAttribute)
+                    ? selectedAttribute : null,
                 AttacksPerTurn = count,
                 UsesUntilRest = Math.Clamp(usesUntilRest ?? 0, 0, 100000),
                 InitialUsesRemaining = ReadInt(attributes, "capacidadeUsoRestante"),
@@ -556,6 +601,212 @@ public sealed class GameBattlePreviewFactory
             });
         }
         return actions;
+    }
+
+    private static IReadOnlyList<GameBattleConditionApplication> ResolveConditions(
+        GameplayResolvedAction action, SistemaVersao version)
+    {
+        if (!action.Snapshot.Valores.TryGetValue("condicoesPropostasJson", out string? json) ||
+            string.IsNullOrWhiteSpace(json)) return [];
+        return ResolveConditions(json, version);
+    }
+
+    private static IReadOnlyList<GameBattleConditionApplication> ResolveConditions(
+        string json, SistemaVersao version)
+    {
+        ConditionOriginSnapshot[] origins = JsonSerializer.Deserialize<ConditionOriginSnapshot[]>(json, JsonOptions) ?? [];
+        return ResolveConditions(origins, version);
+    }
+
+    private static IReadOnlyList<GameBattleConditionApplication> ResolveConfiguredConditions(
+        JsonElement? attributes, SistemaVersao version, string defaultTarget = "ALVO")
+    {
+        if (Property(attributes, "condicoes") is not { ValueKind: JsonValueKind.Array } configured) return [];
+        var origins = new List<ConditionOriginSnapshot>();
+        foreach (JsonElement origin in configured.EnumerateArray())
+        {
+            if (origin.ValueKind != JsonValueKind.Object) continue;
+            var values = new Dictionary<int, int>();
+            if (Property(origin, "valoresEfeitos") is { ValueKind: JsonValueKind.Object } effectValues)
+                foreach (JsonProperty value in effectValues.EnumerateObject())
+                    if (int.TryParse(value.Name, out int index) && ReadInt(effectValues, value.Name) is int number)
+                        values[index] = number;
+            JsonElement? natural = Property(origin, "resultadosNaturais");
+            JsonElement? resistance = Property(origin, "testeResistencia");
+            origins.Add(new ConditionOriginSnapshot(
+                ReadString(origin, "codigo") ?? "", ReadString(origin, "nome") ?? "",
+                ReadInt(origin, "valor"), ReadInt(origin, "duracao"),
+                ReadString(origin, "unidadeDuracao") ?? "", ReadString(origin, "gatilho") ?? "ACERTO",
+                natural is { ValueKind: JsonValueKind.Array } array
+                    ? array.EnumerateArray().Where(value => value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out _))
+                        .Select(value => value.GetInt32()).ToArray() : [],
+                ReadInt(origin, "resultadoNaturalMinimo"), ReadInt(origin, "resultadoNaturalMaximo"),
+                ReadString(origin, "alvo") ?? defaultTarget, ReadString(origin, "codigoResultado"), values,
+                resistance is { ValueKind: JsonValueKind.Object } test
+                    ? test.Deserialize<GameplayResistanceTestDto>(JsonOptions) : null));
+        }
+        return ResolveConditions(origins, version);
+    }
+
+    private static IReadOnlyList<GameBattleConditionApplication> ResolveConditions(
+        IReadOnlyList<ConditionOriginSnapshot> origins, SistemaVersao version)
+    {
+        var published = version.Condicoes.ToDictionary(rule => rule.Codigo, StringComparer.OrdinalIgnoreCase);
+        var result = new List<GameBattleConditionApplication>();
+        foreach (ConditionOriginSnapshot origin in origins)
+        {
+            if (string.IsNullOrWhiteSpace(origin.Code) || !published.TryGetValue(origin.Code, out SistemaCondicao? rule)) continue;
+            IReadOnlyList<SistemaCondicaoEfeito> effects = SistemaCondicaoEfeitos.Read(rule);
+            if (effects.Count == 0 || effects.Any(effect => !SistemaCondicaoEfeitos.Valid(
+                    effect.Operacao, effect.Recurso, effect.Valor, effect.Momento))) continue;
+            if (origin.Value is < -1000000 or > 1000000 || origin.Duration is <= 0 or > 1000000 ||
+                !GameplayConditionResistance.Valid(origin.ResistanceTest, version) ||
+                origin.EffectValues?.Any(pair => pair.Key < 0 || pair.Key >= effects.Count ||
+                    !SistemaCondicaoEfeitos.Valid(effects[pair.Key].Operacao, effects[pair.Key].Recurso,
+                        pair.Value, effects[pair.Key].Momento)) == true ||
+                origin.NaturalResults?.Any(number => number is < 1 or > 20) == true ||
+                origin.NaturalMinimum is < 1 or > 20 || origin.NaturalMaximum is < 1 or > 20 ||
+                origin.NaturalMinimum > origin.NaturalMaximum) continue;
+            string unit = string.IsNullOrWhiteSpace(origin.Unit) ? rule.UnidadeDuracao.ToString() : origin.Unit;
+            if (!unit.Equals("Turno", StringComparison.OrdinalIgnoreCase) &&
+                !unit.Equals("Hora", StringComparison.OrdinalIgnoreCase)) continue;
+            if ((origin.Trigger ?? "ACERTO").Equals("RESULTADO_NATURAL", StringComparison.OrdinalIgnoreCase) &&
+                origin.NaturalResults is not { Count: > 0 } &&
+                !origin.NaturalMinimum.HasValue && !origin.NaturalMaximum.HasValue) continue;
+            if ((origin.Trigger ?? "ACERTO").Equals("RESULTADO_CLASSIFICADO", StringComparison.OrdinalIgnoreCase) &&
+                (string.IsNullOrWhiteSpace(origin.ResultCode) || !version.ResultadosDado.Any(row =>
+                    row.CodigoResultado.Equals(origin.ResultCode, StringComparison.OrdinalIgnoreCase)))) continue;
+            int configuredValue = (int)Math.Clamp(decimal.Truncate(rule.ValorEfeito ?? rule.ValorPadrao ?? 0), 0, 1000000);
+            if ((origin.Duration ?? rule.DuracaoPadrao) is <= 0 or > 1000000) continue;
+            result.Add(new GameBattleConditionApplication(
+                new GameBattleConditionRule(rule.Codigo, rule.Nome, rule.OperacaoEfeito ?? "",
+                    rule.CodigoRecurso ?? "", configuredValue, rule.MomentoEfeito ?? "", rule.Empilhavel,
+                    rule.PermiteSobrescrever, rule.RegraRemocao ?? "MANUAL") { Effects = effects },
+                origin.Value, origin.Duration ?? rule.DuracaoPadrao, unit,
+                string.IsNullOrWhiteSpace(origin.Trigger) ? "ACERTO" : origin.Trigger,
+                origin.NaturalResults ?? [])
+            { NaturalMinimum = origin.NaturalMinimum, NaturalMaximum = origin.NaturalMaximum,
+              Target = origin.Target ?? "ALVO", OutcomeCode = origin.ResultCode,
+              EffectValues = origin.EffectValues ?? new Dictionary<int, int>(),
+              ResistanceTest = origin.ResistanceTest is null ? null : new GameBattleResistanceTest(
+                  origin.ResistanceTest.Dados, origin.ResistanceTest.Faces,
+                  SistemaRpgConfiguration.NormalizarCodigo(origin.ResistanceTest.Atributo, string.Empty),
+                  origin.ResistanceTest.Dificuldade) });
+        }
+        return result;
+    }
+
+    private static IReadOnlyList<JsonElement> SnapshotEntries(JsonElement? source)
+    {
+        if (source is null) return [];
+        JsonElement value = source.Value;
+        if (value.ValueKind == JsonValueKind.String && value.GetString() is string serialized)
+        {
+            using JsonDocument document = JsonDocument.Parse(serialized);
+            return SnapshotEntries(document.RootElement.Clone());
+        }
+        if (value.ValueKind == JsonValueKind.Array) return value.EnumerateArray().ToArray();
+        foreach (string key in new[] { "itens", "inventario", "items", "implantes", "proteses", "magias", "skills" })
+            if (Property(value, key) is { ValueKind: JsonValueKind.Array } entries)
+                return entries.EnumerateArray().ToArray();
+        return [];
+    }
+
+    private static GameBattleActionSpec? BuildUtilityAction(GameRunCharacterSnapshotDto snapshot,
+        GameRunActionSelectionDto selection, JsonElement item, SistemaVersao version)
+    {
+        JsonElement? attributes = Property(item, "atributos");
+        string type = selection.Tipo.ToUpperInvariant();
+        string subtype = ReadString(item, "tipo")?.ToLowerInvariant() ?? "";
+        bool itemUtility = type == "ITEM" && subtype is "consumiveis" or "outro";
+        JsonElement? test = Property(attributes, "teste") ?? Property(item, "teste") ??
+            Property(attributes, "especificacaoTeste") ?? Property(item, "especificacaoTeste");
+        bool declaredTest = !string.IsNullOrWhiteSpace(ReadString(test ?? item, "codigoTeste")) ||
+            !string.IsNullOrWhiteSpace(ReadString(attributes ?? item, "acerto"));
+        if (declaredTest) return null;
+        JsonElement? restore = Property(attributes, "restaura");
+        int life = Math.Max(0, ReadInt(attributes, "recuperacaoVida") ?? ReadInt(restore, "vida") ?? 0);
+        int mana = Math.Max(0, ReadInt(attributes, "recuperacaoMana") ?? ReadInt(restore, "mana") ?? 0);
+        int stamina = Math.Max(0, ReadInt(attributes, "recuperacaoEstamina") ?? ReadInt(restore, "estamina") ?? 0);
+        IReadOnlyList<GameBattleConditionApplication> conditions = ResolveConfiguredConditions(attributes, version,
+                itemUtility ? "USUARIO" : "ALVO")
+            .Where(origin => origin.Trigger.Equals("AO_USAR", StringComparison.OrdinalIgnoreCase)).ToArray();
+        if (life + (long)mana + stamina == 0 && conditions.Count == 0) return null;
+        if (type == "ITEM" && !itemUtility) return null;
+        if (selection.QuantidadeAtaques != 1 || selection.Alcance is not null || selection.ModoDisparo is not null)
+            throw new InvalidOperationException("Utilitários usam uma unidade por ação, sem alcance ou modo de disparo.");
+        int? quantity = type == "ITEM"
+            ? GameRunConsumable.AvailableQuantity(snapshot.Inventario, selection.IdInstancia) : null;
+        if (quantity is <= 0)
+            throw new InvalidOperationException("Este utilitário não possui unidades no inventário da run.");
+        int manaCost = Math.Max(0, ReadInt(attributes, "custoMana") ?? ReadInt(attributes, "gastoMana") ??
+            ReadInt(item, "custoMana") ?? ReadInt(item, "gastoMana") ?? 0);
+        int staminaCost = Math.Max(0, ReadInt(attributes, "custoEstamina") ?? ReadInt(attributes, "gastoEstamina") ??
+            ReadInt(item, "custoEstamina") ?? ReadInt(item, "gastoEstamina") ?? 0);
+        int cooldown = type is "MAGIA" or "SKILL" && version.SkillConfig?.UsaCooldown != true ? 0 :
+            Math.Clamp(ReadInt(attributes, "cooldownTurnos") ?? ReadInt(item, "cooldownTurnos") ?? 0, 0, 100);
+        return new GameBattleActionSpec($"{type.ToLowerInvariant()}:{selection.IdInstancia}",
+            ReadString(item, "nome") ?? "Utilitário",
+            new GameplayRollPlan("SEM_TESTE", [], GameplayRollMode.Normal, 0), [], false,
+            new Dictionary<string, int>(), ManaCost: manaCost, StaminaCost: staminaCost,
+            CooldownTurns: cooldown)
+        {
+            Utility = new GameBattleUtilitySpec(quantity, life, mana, stamina),
+            Conditions = conditions,
+            UsesUntilRest = Math.Clamp(ReadInt(attributes, "capacidadeUso") ?? 0, 0, 100000),
+            InitialUsesRemaining = ReadInt(attributes, "capacidadeUsoRestante"),
+        };
+    }
+
+    private static IReadOnlyList<string> ResolveConditionRemovals(
+        GameplayResolvedAction action, SistemaVersao version)
+    {
+        if (!action.Snapshot.Valores.TryGetValue("condicoesRemovidasPorMagiaJson", out string? json) ||
+            string.IsNullOrWhiteSpace(json)) return [];
+        string[] codes = JsonSerializer.Deserialize<string[]>(json, JsonOptions) ?? [];
+        return codes.Where(code => version.Condicoes.Any(rule =>
+            rule.Codigo.Equals(code, StringComparison.OrdinalIgnoreCase) &&
+            SistemaCondicaoRemocao.AoUsarMagiaDeRemocao(rule)))
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+    }
+
+    private sealed record ConditionOriginSnapshot(
+        string Code, string Name, int? Value, int? Duration,
+        string Unit, string Trigger, IReadOnlyList<int>? NaturalResults,
+        int? NaturalMinimum = null, int? NaturalMaximum = null, string? Target = null,
+        string? ResultCode = null, IReadOnlyDictionary<int, int>? EffectValues = null,
+        GameplayResistanceTestDto? ResistanceTest = null);
+
+    private static IReadOnlyList<GameBattleActiveCondition> ReadActiveConditions(
+        GameRunCharacterSnapshotDto snapshot, SistemaVersao version)
+    {
+        JsonElement? source = Property(snapshot.Status, "condicoesJogo");
+        GameBattleActiveCondition[] saved = source is { ValueKind: JsonValueKind.Array }
+            ? JsonSerializer.Deserialize<GameBattleActiveCondition[]>(source.Value.GetRawText(), JsonOptions) ?? []
+            : [];
+        var published = version.Condicoes.ToDictionary(rule => rule.Codigo, StringComparer.OrdinalIgnoreCase);
+        var result = saved.Where(item => item?.Rule is not null && published.ContainsKey(item.Rule.Code))
+            .Select(item =>
+            {
+                SistemaCondicao rule = published[item.Rule.Code];
+                return item with { Rule = new GameBattleConditionRule(rule.Codigo, rule.Nome,
+                    rule.OperacaoEfeito ?? "", rule.CodigoRecurso ?? "", item.Rule.Value,
+                    rule.MomentoEfeito ?? "", rule.Empilhavel, rule.PermiteSobrescrever,
+                    rule.RegraRemocao ?? "MANUAL") { Effects = SistemaCondicaoEfeitos.Read(rule) } };
+            }).ToList();
+        if (snapshot.CondicoesAtivas is { ValueKind: JsonValueKind.Object } flags)
+            foreach (JsonProperty flag in flags.EnumerateObject())
+            {
+                if (flag.Value.ValueKind != JsonValueKind.True || !published.TryGetValue(flag.Name, out SistemaCondicao? rule) ||
+                    result.Any(item => item.Rule.Code.Equals(rule.Codigo, StringComparison.OrdinalIgnoreCase)) ||
+                    SistemaCondicaoEfeitos.Read(rule).Count == 0) continue;
+                int value = (int)Math.Clamp(decimal.Truncate(rule.ValorPadrao ?? rule.ValorEfeito ?? 0), 0, 1000000);
+                result.Add(new GameBattleActiveCondition(new GameBattleConditionRule(rule.Codigo, rule.Nome,
+                    rule.OperacaoEfeito ?? "", rule.CodigoRecurso ?? "", value, rule.MomentoEfeito ?? "ENQUANTO_ATIVA",
+                    rule.Empilhavel, rule.PermiteSobrescrever, rule.RegraRemocao ?? "MANUAL")
+                    { Effects = SistemaCondicaoEfeitos.Read(rule) }, value, null));
+            }
+        return result;
     }
 
     private static GameBattleMagazineSpec? ResolveMagazine(JsonElement item, GameplayResolvedAction action)
@@ -695,6 +946,25 @@ public sealed class GameBattlePreviewFactory
             return null;
         }
         return NormalizedValue(primary, code) ?? NormalizedValue(secondary, code) ?? 0;
+    }
+
+    private static IReadOnlyDictionary<string, int> ReadAttributes(JsonElement status,
+        IReadOnlyDictionary<string, int>? fallback = null)
+    {
+        var values = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        JsonElement? attributes = Property(status, "atributos");
+        foreach (string groupName in new[] { "principais", "secundarios" })
+        {
+            JsonElement? group = Property(attributes, groupName);
+            if (group is not { ValueKind: JsonValueKind.Object } entries) continue;
+            foreach (JsonProperty entry in entries.EnumerateObject())
+                if (entry.Value.ValueKind == JsonValueKind.Number && entry.Value.TryGetInt32(out int value))
+                    values[SistemaRpgConfiguration.NormalizarCodigo(entry.Name, string.Empty)] = value;
+        }
+        if (fallback is not null)
+            foreach ((string code, int value) in fallback)
+                values.TryAdd(SistemaRpgConfiguration.NormalizarCodigo(code, string.Empty), value);
+        return values;
     }
 
     private static string? ReadString(JsonElement source, string name)

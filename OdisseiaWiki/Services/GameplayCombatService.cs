@@ -415,9 +415,8 @@ public sealed partial class GameplayCombatService : IGameplayCombatService
                     };
                     scope.Combat.Condicoes.Add(current);
                 }
-                GameplayEffectApplicationDto? application = Normalize(rule.MomentoEfeito) == "AO_APLICAR"
-                    ? ApplyConditionResourceEffect(scope, participant, current, rule, false)
-                    : null;
+                IReadOnlyList<GameplayEffectApplicationDto> applications =
+                    ApplyConditionResourceEffects(scope, participant, current, rule, "AO_APLICAR", false);
                 ApplyResourceLimitEffects(scope, participant);
                 return Task.FromResult(Mutation(
                     "CONDICAO_APLICADA",
@@ -425,7 +424,7 @@ public sealed partial class GameplayCombatService : IGameplayCombatService
                     $"Condição aplicada em {participant.NomeSnapshot}.",
                     participant,
                     characterId: participant.IdPersonagemJogador,
-                    application: application));
+                    application: applications.FirstOrDefault(), applications: applications));
             }, cancellationToken);
 
     public Task<GameplayOperationResult<GameplayCombatCommandResponseDto>> RemoveConditionAsync(
@@ -478,13 +477,12 @@ public sealed partial class GameplayCombatService : IGameplayCombatService
                         item.IdPersonagemJogador == character.IdpersonagemJogador);
                     if (participant is not null)
                     {
-                        bool normalOrLong = Normalize(rest.Tipo) is "NORMAL" or "LONGO";
                         foreach (MesaCondicaoAtiva condition in scope.Combat.Condicoes.Where(item =>
                                      item.IdParticipante == participant.IdMesaCombateParticipante &&
                                      item.Status == MesaCondicaoStatus.Ativa &&
-                                     ((item.UnidadeDuracao == SistemaUnidadeDuracao.Descanso &&
-                                       Normalize(item.CodigoSnapshot) != "FADIGA") ||
-                                      (normalOrLong && Normalize(item.CodigoSnapshot) == "FADIGA"))).ToList())
+                                     scope.Version.Condicoes.Any(rule =>
+                                         rule.IdSistemaCondicao == item.IdSistemaCondicao &&
+                                         SistemaCondicaoRemocao.AoDescansar(rule, rest.Tipo))).ToList())
                         {
                             condition.Status = MesaCondicaoStatus.Expirada;
                             condition.RemovidaEmUtc = scope.Now;
@@ -962,12 +960,13 @@ public sealed partial class GameplayCombatService : IGameplayCombatService
                      item.IdParticipante == participant.IdMesaCombateParticipante && item.Status == MesaCondicaoStatus.Ativa).ToList())
         {
             SistemaCondicao? rule = scope.Version.Condicoes.FirstOrDefault(item => item.IdSistemaCondicao == condition.IdSistemaCondicao);
-            if (rule is not null && Normalize(rule.MomentoEfeito) == moment)
+            if (rule is not null)
             {
-                GameplayEffectApplicationDto? application = ApplyConditionResourceEffect(scope, participant, condition, rule);
-                if (application is not null) applications.Add(application);
+                applications.AddRange(ApplyConditionResourceEffects(scope, participant, condition, rule, moment));
             }
-            if (moment == "FIM_TURNO" && condition.UnidadeDuracao == SistemaUnidadeDuracao.Turno && condition.TurnosRestantes.HasValue)
+            if (moment == "FIM_TURNO" && rule is not null &&
+                SistemaCondicaoRemocao.AoTerminarDuracao(rule) &&
+                condition.UnidadeDuracao == SistemaUnidadeDuracao.Turno && condition.TurnosRestantes.HasValue)
             {
                 condition.TurnosRestantes--;
                 if (condition.TurnosRestantes <= 0)
@@ -996,34 +995,47 @@ public sealed partial class GameplayCombatService : IGameplayCombatService
         return applications;
     }
 
-    private static GameplayEffectApplicationDto? ApplyConditionResourceEffect(
+    private static IReadOnlyList<GameplayEffectApplicationDto> ApplyConditionResourceEffects(
         CommandScope scope,
         MesaCombateParticipante participant,
         MesaCondicaoAtiva condition,
         SistemaCondicao rule,
+        string moment,
         bool multiplyStacks = true)
     {
+        var applications = new List<GameplayEffectApplicationDto>();
         PersonagemJogador? character = participant.PersonagemJogador;
-        decimal? configuredValue = condition.Valor ?? rule.ValorEfeito;
-        if (character is null || string.IsNullOrWhiteSpace(rule.CodigoRecurso) || !configuredValue.HasValue) return null;
+        if (character is null) return applications;
         int multiplier = multiplyStacks ? Math.Max(1, condition.Acumulos) : 1;
-        int value = decimal.ToInt32(decimal.Truncate(configuredValue.Value * multiplier));
-        if (value == 0 || !TryReadResource(character, rule.CodigoRecurso, out int previous)) return null;
-        MutateResource(character, rule.CodigoRecurso, rule.OperacaoEfeito, value, scope.Version);
-        if (!TryReadResource(character, rule.CodigoRecurso, out int current)) return null;
-        character.RevisaoRuntime++;
-        scope.ChangedCharacterIds.Add(character.IdpersonagemJogador);
-        return new GameplayEffectApplicationDto
+        foreach (SistemaCondicaoEfeito effect in SistemaCondicaoEfeitos.ReadEffective(rule,
+                     condition.RegraSnapshotJson).Where(effect =>
+                     effect.Momento.Equals(moment, StringComparison.OrdinalIgnoreCase) &&
+                     effect.Operacao is ("SOMAR" or "SUBTRAIR" or "DEFINIR")))
         {
-            CodigoEfeito = $"CONDICAO_{Normalize(condition.CodigoSnapshot)}",
-            IdPersonagemAlvo = character.IdpersonagemJogador,
-            RevisaoPersonagem = character.RevisaoRuntime,
-            Campo = Normalize(rule.CodigoRecurso).ToLowerInvariant(),
-            Tipo = "CONDICAO",
-            ValorAnterior = previous,
-            ValorAplicado = current - previous,
-            ValorAtual = current,
-        };
+            decimal valueBase = condition.Valor.HasValue &&
+                !SistemaCondicaoEfeitos.HasOverride(condition.RegraSnapshotJson, 0) &&
+                rule.OperacaoEfeito?.Equals(effect.Operacao, StringComparison.OrdinalIgnoreCase) == true &&
+                rule.CodigoRecurso?.Equals(effect.Recurso, StringComparison.OrdinalIgnoreCase) == true
+                ? condition.Valor.Value : effect.Valor;
+            int value = decimal.ToInt32(decimal.Truncate(valueBase * multiplier));
+            if (value == 0 || !TryReadResource(character, effect.Recurso, out int previous)) continue;
+            MutateResource(character, effect.Recurso, effect.Operacao, value, scope.Version);
+            if (!TryReadResource(character, effect.Recurso, out int current)) continue;
+            character.RevisaoRuntime++;
+            scope.ChangedCharacterIds.Add(character.IdpersonagemJogador);
+            applications.Add(new GameplayEffectApplicationDto
+            {
+                CodigoEfeito = $"CONDICAO_{Normalize(condition.CodigoSnapshot)}",
+                IdPersonagemAlvo = character.IdpersonagemJogador,
+                RevisaoPersonagem = character.RevisaoRuntime,
+                Campo = Normalize(effect.Recurso).ToLowerInvariant(),
+                Tipo = "CONDICAO",
+                ValorAnterior = previous,
+                ValorAplicado = current - previous,
+                ValorAtual = current,
+            });
+        }
+        return applications;
     }
 
     private static void ApplyResourceLimitEffects(CommandScope scope, MesaCombateParticipante participant)

@@ -6,6 +6,7 @@ import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import CloseIcon from '@mui/icons-material/Close';
+import SportsEsportsOutlinedIcon from '@mui/icons-material/SportsEsportsOutlined';
 import { useState } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -43,12 +44,14 @@ import {
 } from '../Mesas.style';
 import { MesaManagementTab, useMesaManagement } from './useMesaManagement';
 import type { MesaThemeState } from '../MesaThemeState';
+import { ManagementGame } from '../../Management/ManagementGame/ManagementGame';
 
 const tabs: Array<{ key: MesaManagementTab | 'wiki' | 'configuracoes'; label: string; icon: typeof HomeOutlinedIcon; disabled?: boolean }> = [
   { key: 'geral', label: 'Geral', icon: HomeOutlinedIcon },
   { key: 'pedidos', label: 'Pedidos', icon: PersonOutlineIcon },
   { key: 'jogadores', label: 'Jogadores', icon: GroupsOutlinedIcon },
   { key: 'personagens', label: 'Personagens', icon: PersonOutlineIcon },
+  { key: 'jogo', label: 'Jogos', icon: SportsEsportsOutlinedIcon },
   { key: 'wiki', label: 'Wiki da Mesa', icon: MenuBookOutlinedIcon },
   { key: 'configuracoes', label: 'Configurações', icon: SettingsOutlinedIcon, disabled: true },
 ];
@@ -68,7 +71,7 @@ const MesaManagement = () => {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const rawTab = params.get('aba');
-  const tab: MesaManagementTab = ['pedidos', 'jogadores', 'personagens'].includes(rawTab || '') ? rawTab as MesaManagementTab : 'geral';
+  const tab: MesaManagementTab = ['pedidos', 'jogadores', 'personagens', 'jogo'].includes(rawTab || '') ? rawTab as MesaManagementTab : 'geral';
   const { theme, neon } = useSelector((state: MesaThemeState) => state.themesReducer);
   const isNeonActive = neon === 'on';
   const currentUserId = Number(getStoredAuthUser()?.id);
@@ -114,6 +117,7 @@ const MesaManagement = () => {
           </ManagementSidebar>
           <ManagementContent $neon={isNeonActive}>
             <MesaHudDecor neon={isNeonActive} />
+            {tab === 'jogo' && <ManagementGame theme={theme} neon={neon} mesaId={idMesa} />}
             {tab === 'geral' && (
               <FormGrid onSubmit={(event) => { event.preventDefault(); void state.save(); }}>
                 <FormColumn>

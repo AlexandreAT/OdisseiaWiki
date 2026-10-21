@@ -28,4 +28,5 @@ export interface ModuleFormProps<K extends SistemaModuloKey> {
   raceOptions?: RaceOption[];
   systemCode?: string;
   references?: SystemReferenceCatalog;
+  idSistemaVersao?: number;
 }

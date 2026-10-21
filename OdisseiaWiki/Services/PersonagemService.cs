@@ -82,6 +82,7 @@ namespace OdisseiaWiki.Services
                 Visivel = dto.Visivel,
                 Destaque = dto.Destaque,
                 IdWikiEscopo = idWikiEscopo ?? WikiEscopo.IdOficial,
+                IdOrigemGlobal = idWikiEscopo is > WikiEscopo.IdOficial ? dto.IdOrigemGlobal : null,
                 IdSistemaRpg = vinculo.IdSistemaRpg,
                 IdSistemaVersao = vinculo.IdSistemaVersao,
                 AcompanharPublicacaoAtual = vinculo.AcompanharPublicacaoAtual,

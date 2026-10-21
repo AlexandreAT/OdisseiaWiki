@@ -52,6 +52,16 @@ public sealed class GameRunEncountersController : ControllerBase
         return result.Sucesso ? Ok(result.Dados) : Failure(result.Codigo, result.Mensagem);
     }
 
+    [HttpPut("inventory/condition-origin")]
+    public async Task<IActionResult> UpdateConditionOrigin(long idGameRun,
+        GameRunConditionOriginRequestDto request, CancellationToken token)
+    {
+        int? userId = User.GetUserId();
+        if (userId is null) return Unauthorized();
+        var result = await _service.UpdateConditionOriginAsync(idGameRun, userId.Value, request, token);
+        return result.Sucesso ? Ok(result.Dados) : Failure(result.Codigo, result.Mensagem);
+    }
+
     [HttpPut("inventory/items/{itemId}/defense")]
     public async Task<IActionResult> EquipDefense(long idGameRun, string itemId,
         GameRunEquipDefenseRequestDto request, CancellationToken token)

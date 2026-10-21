@@ -17,6 +17,95 @@ public sealed class GameBattlePreviewFactoryTests
     private readonly GameBattlePreviewFactory _factory = new(new GameplayActionResolver());
 
     [Fact]
+    public void Build_LeGatilhoAutomaticoDaVersaoFixadaDoSistema()
+    {
+        SistemaVersao version = Version();
+        version.Condicoes.Add(new SistemaCondicao
+        {
+            Codigo = "DEPENDENCIA", Nome = "Dependência", Tipo = "Magico",
+            CodigoRecursoGatilho = "MANA", OperadorGatilho = "<=", ValorGatilho = 0,
+            OperacaoEfeito = "REDUZIR_LIMITE_PERCENTUAL", CodigoRecurso = "MANA",
+            ValorEfeito = 30, MomentoEfeito = "ENQUANTO_ATIVA",
+            RegraRemocao = "DESCANSO_NORMAL",
+        });
+
+        GameBattleAutomaticCondition automatic = Assert.Single(
+            _factory.Build(Run("[]"), version).Input.AutomaticConditions);
+
+        Assert.Equal("DEPENDENCIA", automatic.Rule.Code);
+        Assert.Equal("MANA", automatic.Resource);
+        Assert.Equal("<=", automatic.Comparison);
+        Assert.Equal(0, automatic.Threshold);
+        Assert.Equal(30, Assert.Single(automatic.Rule.Effects).Valor);
+    }
+
+    [Fact]
+    public void Build_NaoAplicaDuasVezesLimiteQueJaVeioAjustadoDaRun()
+    {
+        GameRunDto original = Run("[]");
+        GameRunDto run = new()
+        {
+            IdSistemaVersao = original.IdSistemaVersao,
+            ConfiguracaoModo = original.ConfiguracaoModo,
+            EstadoAtual = new GameRunCharacterSnapshotDto
+            {
+                IdSistemaVersao = original.IdSistemaVersao,
+                Nome = "Herói",
+                Status = Json("""{"status":{"vida":70,"vidaMaxima":70,"mana":0,"manaMaxima":10,"estamina":10}}"""),
+                LimitesCondicoes = Json("""{"vida":{"base":100,"aplicado":70}}"""),
+                Inventario = Json("[]"),
+            },
+        };
+        SistemaVersao version = Version();
+        version.Condicoes.Add(new SistemaCondicao
+        {
+            Codigo = "DEPENDENCIA", Nome = "Dependência", Tipo = "Magico",
+            CodigoRecursoGatilho = "MANA", OperadorGatilho = "<=", ValorGatilho = 0,
+            OperacaoEfeito = "REDUZIR_LIMITE_PERCENTUAL", CodigoRecurso = "VIDA",
+            ValorEfeito = 30, MomentoEfeito = "ENQUANTO_ATIVA",
+        });
+
+        GameBattleInput input = _factory.Build(run, version).Input;
+        GameBattleResult battle = new AutoBattleSimulator().Simulate(input, new SeededGameRunRandomSource(123));
+
+        Assert.Equal(100, input.FirstActor.MaximumHitPoints);
+        Assert.Equal(70, battle.Actors.Single(actor => actor.Id == input.FirstActor.Id).MaximumHitPoints);
+    }
+
+    [Fact]
+    public void Build_PreservaVidaAcimaDaBaseQuandoBonusDeLimiteEstaAtivo()
+    {
+        GameRunDto original = Run("[]");
+        GameRunDto run = new()
+        {
+            IdSistemaVersao = original.IdSistemaVersao,
+            ConfiguracaoModo = original.ConfiguracaoModo,
+            EstadoAtual = new GameRunCharacterSnapshotDto
+            {
+                IdSistemaVersao = original.IdSistemaVersao,
+                Nome = "Herói",
+                Status = Json("""{"status":{"vida":120,"vidaMaxima":130,"mana":10,"manaMaxima":10,"estamina":10}}"""),
+                LimitesCondicoes = Json("""{"vida":{"base":100,"aplicado":130}}"""),
+                CondicoesAtivas = Json("""{"REGENERACAO":true}"""),
+                Inventario = Json("[]"),
+            },
+        };
+        SistemaVersao version = Version();
+        version.Condicoes.Add(new SistemaCondicao
+        {
+            Codigo = "REGENERACAO", Nome = "Regeneração", Tipo = "Fisico",
+            OperacaoEfeito = "MODIFICAR_LIMITE_PERCENTUAL", CodigoRecurso = "VIDA",
+            ValorEfeito = 30, MomentoEfeito = "ENQUANTO_ATIVA",
+        });
+
+        GameBattleInput input = _factory.Build(run, version).Input;
+        GameBattleResult battle = new AutoBattleSimulator().Simulate(input, new SeededGameRunRandomSource(123));
+
+        Assert.Equal(100, input.FirstActor.MaximumHitPoints);
+        Assert.Equal(130, battle.Actors.Single(actor => actor.Id == input.FirstActor.Id).MaximumHitPoints);
+    }
+
+    [Fact]
     public void Build_UsaInventarioLegadoERegraNaturalDoAtaquePreciso()
     {
         GameRunDto run = Run("""
@@ -37,6 +126,107 @@ public sealed class GameBattlePreviewFactoryTests
         Assert.Equal(0, result.Input.SecondActor.Mana);
         Assert.Equal(0, result.Input.SecondActor.Stamina);
         Assert.Equal("/uploads/heroi.png", result.Input.FirstActor.Image);
+    }
+
+    [Fact]
+    public void Build_UsaCondicaoDoItemERegraDaVersaoPublicada()
+    {
+        GameRunDto run = Run("""
+            [{"id":"espada-1","nome":"Lâmina","tipo":"arma",
+              "atributos":{"tipoArma":"espada","danoBase":18,
+                "condicoes":[{"codigo":"SANGRAMENTO","gatilho":"RESULTADO_NATURAL",
+                  "resultadosNaturais":[18,20],"valor":4,"duracao":2,
+                  "unidadeDuracao":"Turno"}]}}]
+            """);
+        SistemaVersao version = Version();
+        version.Condicoes.Add(new SistemaCondicao
+        {
+            Codigo = "SANGRAMENTO", Nome = "Sangramento", Tipo = "Fisico",
+            OperacaoEfeito = "SUBTRAIR", CodigoRecurso = "VIDA", ValorEfeito = 3,
+            MomentoEfeito = "INICIO_TURNO", RegraRemocao = "DURACAO;CURA",
+        });
+
+        GameBattleConditionApplication condition = Assert.Single(
+            _factory.Build(run, version).Input.FirstActor.Actions[0].Conditions);
+        Assert.Equal("SANGRAMENTO", condition.Rule.Code);
+        Assert.Equal("RESULTADO_NATURAL", condition.Trigger);
+        Assert.Equal([18, 20], condition.NaturalResults);
+        Assert.Equal(4, condition.Value);
+        Assert.Equal(2, condition.Duration);
+        Assert.Equal("INICIO_TURNO", condition.Rule.Moment);
+    }
+
+    [Fact]
+    public void Build_PreservaValoresIndividuaisDaOrigemParaTodosOsEfeitos()
+    {
+        GameRunDto run = Run("""
+            [{"id":"item-1","nome":"Granada","tipo":"arma",
+              "atributos":{"tipoArma":"espada","danoBase":1,
+                "condicoes":[{"codigo":"CEGUEIRA","gatilho":"ACERTO","duracao":3,
+                  "valoresEfeitos":{"0":-8,"1":15}}]}}]
+            """);
+        SistemaVersao version = Version();
+        version.Condicoes.Add(new SistemaCondicao
+        {
+            Codigo = "CEGUEIRA", Nome = "Cegueira", Tipo = "Sensorial",
+            ConfiguracaoPadraoJson = """{"efeitos":[{"operacao":"MODIFICAR_ATRIBUTO","recurso":"PRECISAO","valor":-5,"momento":"ENQUANTO_ATIVA"},{"operacao":"SOMAR","recurso":"VIDA","valor":5,"momento":"FIM_TURNO"}]}""",
+            RegraRemocao = "DURACAO",
+        });
+
+        GameBattleConditionApplication condition = Assert.Single(
+            _factory.Build(run, version).Input.FirstActor.Actions[0].Conditions);
+
+        Assert.Equal(-8, condition.EffectValues[0]);
+        Assert.Equal(15, condition.EffectValues[1]);
+        Assert.Equal(3, condition.Duration);
+    }
+
+    [Fact]
+    public void Build_UsaFaixaNaturalConfiguradaNaCopiaDoItem()
+    {
+        GameRunDto run = Run("""
+            [{"id":"espada-1","nome":"Lâmina","tipo":"arma",
+              "atributos":{"tipoArma":"espada","danoBase":18,
+                "condicoes":[{"codigo":"SANGRAMENTO","gatilho":"RESULTADO_NATURAL",
+                  "resultadoNaturalMinimo":16,"valor":80,"duracao":4,
+                  "unidadeDuracao":"Turno"}]}}]
+            """);
+        SistemaVersao version = Version();
+        version.Condicoes.Add(new SistemaCondicao
+        {
+            Codigo = "SANGRAMENTO", Nome = "Sangramento", Tipo = "Fisico",
+            OperacaoEfeito = "SUBTRAIR", CodigoRecurso = "VIDA", ValorEfeito = 50,
+            MomentoEfeito = "INICIO_TURNO", RegraRemocao = "DURACAO;CURA",
+        });
+
+        GameBattleConditionApplication condition = Assert.Single(
+            _factory.Build(run, version).Input.FirstActor.Actions[0].Conditions);
+        Assert.Equal(16, condition.NaturalMinimum);
+        Assert.Null(condition.NaturalMaximum);
+        Assert.Equal(80, condition.Value);
+        Assert.Equal(4, condition.Duration);
+    }
+
+    [Fact]
+    public void Build_ResolveEfeitosCompostosDaVersaoPublicada()
+    {
+        GameRunDto run = Run("""
+            [{"id":"espada-1","nome":"Lâmina","tipo":"arma",
+              "atributos":{"tipoArma":"espada","danoBase":18,
+                "condicoes":[{"codigo":"CEGUEIRA","gatilho":"ACERTO","duracao":3}]}}]
+            """);
+        SistemaVersao version = Version();
+        version.Condicoes.Add(new SistemaCondicao
+        {
+            Codigo = "CEGUEIRA", Nome = "Cegueira", Tipo = "Sensorial",
+            ConfiguracaoPadraoJson = """{"efeitos":[{"operacao":"MODIFICAR_ROLAGEM","recurso":"PRECISAO","valor":-5,"momento":"ENQUANTO_ATIVA"},{"operacao":"DESVANTAGEM","recurso":"TESTE","valor":0,"momento":"ENQUANTO_ATIVA"}]}""",
+            RegraRemocao = "DURACAO",
+        });
+        GameBattleConditionApplication condition = Assert.Single(
+            _factory.Build(run, version).Input.FirstActor.Actions[0].Conditions);
+        Assert.Equal(2, condition.Rule.Effects.Count);
+        Assert.Equal(-5, condition.Rule.Effects[0].Valor);
+        Assert.Equal("DESVANTAGEM", condition.Rule.Effects[1].Operacao);
     }
 
     [Fact]
@@ -226,6 +416,182 @@ public sealed class GameBattlePreviewFactoryTests
         Assert.Equal("magia:fogo-1", actor.Actions[0].Id);
         Assert.Equal(15, actor.Actions[0].DamageByResultCode["ACERTO"]);
         Assert.False(actor.Actions[0].IsFallback);
+    }
+
+    [Fact]
+    public void Build_ConsumivelDeCuraEquipadoUsaQuantidadeDaCopiaESemDado()
+    {
+        GameRunDto original = Run("""
+            [{"id":"seringa","idItemBase":19,"nome":"Seringa","tipo":"consumiveis",
+              "quantidade":2,"atributos":{"restaura":{"vida":25}}}]
+            """);
+        GameRunDto run = new()
+        {
+            IdSistemaVersao = original.IdSistemaVersao,
+            ConfiguracaoModo = original.ConfiguracaoModo,
+            EstadoAtual = original.EstadoAtual,
+            AcoesEquipadas = [new() { Tipo = "ITEM", IdInstancia = "seringa" }],
+        };
+
+        GameBattleActionSpec action = _factory.Build(run, Version()).Input.FirstActor.Actions[0];
+
+        Assert.Equal("item:seringa", action.Id);
+        Assert.Empty(action.Roll.Groups);
+        Assert.Equal(2, action.Utility?.InitialQuantity);
+        Assert.Equal(25, action.Utility?.RestoreLife);
+    }
+
+    [Fact]
+    public void Build_GranadaEquipadaUsaCondicaoDaVersaoFixadaEReacaoDeArea()
+    {
+        GameRunDto original = Run("""
+            [{"id":"granada","nome":"Granada de luz","tipo":"consumiveis",
+              "atributos":{"condicoes":[{"codigo":"CEGUEIRA","gatilho":"AO_USAR",
+                "alvo":"TODOS_INIMIGOS","duracao":3,"testeResistencia":{
+                  "dados":1,"faces":6,"atributo":"AGILIDADE","dificuldade":5}}]}}]
+            """);
+        GameRunDto run = new()
+        {
+            IdSistemaVersao = original.IdSistemaVersao,
+            ConfiguracaoModo = original.ConfiguracaoModo,
+            EstadoAtual = original.EstadoAtual,
+            AcoesEquipadas = [new() { Tipo = "ITEM", IdInstancia = "granada" }],
+        };
+        SistemaVersao version = Version();
+        version.Atributos.Add(new SistemaAtributoConfig
+        {
+            CodigoAtributo = "AGILIDADE", Nome = "Agilidade", Ativo = true,
+        });
+        version.Condicoes.Add(new SistemaCondicao
+        {
+            Codigo = "CEGUEIRA", Nome = "Cegueira", Tipo = "Sensorial",
+            OperacaoEfeito = "MODIFICAR_ROLAGEM", CodigoRecurso = "TODOS", ValorEfeito = -5,
+            MomentoEfeito = "ENQUANTO_ATIVA", DuracaoPadrao = 2,
+        });
+
+        GameBattleActionSpec action = _factory.Build(run, version).Input.FirstActor.Actions[0];
+        GameBattleConditionApplication condition = Assert.Single(action.Conditions);
+
+        Assert.NotNull(action.Utility);
+        Assert.Empty(action.Roll.Groups);
+        Assert.Equal("CEGUEIRA", condition.Rule.Code);
+        Assert.Equal("TODOS_INIMIGOS", condition.Target);
+        Assert.Equal(3, condition.Duration);
+        Assert.Equal(6, condition.ResistanceTest?.Faces);
+        Assert.Equal(5, condition.ResistanceTest?.Difficulty);
+    }
+
+    [Fact]
+    public void Build_MagiaComTesteECondicaoSemDanoEntraNoLoadout()
+    {
+        GameRunDto original = Run("[]");
+        GameRunDto run = new()
+        {
+            IdSistemaVersao = original.IdSistemaVersao,
+            ConfiguracaoModo = original.ConfiguracaoModo,
+            EstadoAtual = new GameRunCharacterSnapshotDto
+            {
+                IdSistemaVersao = original.EstadoAtual.IdSistemaVersao,
+                IdPersonagemJogadorOrigem = original.EstadoAtual.IdPersonagemJogadorOrigem,
+                Nome = original.EstadoAtual.Nome,
+                Status = original.EstadoAtual.Status,
+                Inventario = Json("[]"),
+                Magia = Json("""
+                    [{"id":"sangrar","nome":"Marca sangrenta","tipo":"ataque",
+                      "atributos":{"acerto":"1D20","condicoes":[{"codigo":"SANGRAMENTO",
+                        "gatilho":"ACERTO","duracao":2,"unidadeDuracao":"Turno"}]}}]
+                    """),
+            },
+            AcoesEquipadas = [new() { Tipo = "MAGIA", IdInstancia = "sangrar" }],
+        };
+        SistemaVersao version = Version();
+        version.Condicoes.Add(new SistemaCondicao
+        {
+            Codigo = "SANGRAMENTO", Nome = "Sangramento", Tipo = "Fisico",
+            OperacaoEfeito = "SUBTRAIR", CodigoRecurso = "VIDA", ValorEfeito = 3,
+            MomentoEfeito = "INICIO_TURNO", RegraRemocao = "DURACAO",
+        });
+
+        GameBattleActionSpec action = _factory.Build(run, version).Input.FirstActor.Actions[0];
+
+        Assert.Equal("magia:sangrar", action.Id);
+        Assert.Equal(0, action.DamageByResultCode["ACERTO"]);
+        Assert.Equal("SANGRAMENTO", Assert.Single(action.Conditions).Rule.Code);
+    }
+
+    [Fact]
+    public void Build_MagiaDeRemocaoSemDanoUsaSomenteRegraPublicada()
+    {
+        GameRunDto original = Run("[]");
+        GameRunDto run = new()
+        {
+            IdSistemaVersao = original.IdSistemaVersao,
+            ConfiguracaoModo = original.ConfiguracaoModo,
+            EstadoAtual = new GameRunCharacterSnapshotDto
+            {
+                IdSistemaVersao = original.EstadoAtual.IdSistemaVersao,
+                IdPersonagemJogadorOrigem = original.EstadoAtual.IdPersonagemJogadorOrigem,
+                Nome = original.EstadoAtual.Nome,
+                Status = original.EstadoAtual.Status,
+                Inventario = Json("[]"),
+                Magia = Json("""
+                    [{"id":"purificar","nome":"Purificar","tipo":"suporte",
+                      "atributos":{"teste":{"codigoTeste":"ATAQUE_COMUM"},
+                        "removeCondicoes":["VENENO","MARCA"]}}]
+                    """),
+            },
+            AcoesEquipadas = [new() { Tipo = "MAGIA", IdInstancia = "purificar" }],
+        };
+        SistemaVersao version = Version();
+        version.Condicoes.Add(new SistemaCondicao
+        {
+            Codigo = "VENENO", Nome = "Veneno", Tipo = "Fisico",
+            OperacaoEfeito = "SUBTRAIR", CodigoRecurso = "VIDA",
+            MomentoEfeito = "INICIO_TURNO", RegraRemocao = "MAGIA",
+        });
+        version.Condicoes.Add(new SistemaCondicao
+        {
+            Codigo = "MARCA", Nome = "Marca", Tipo = "Fisico",
+            OperacaoEfeito = "SUBTRAIR", CodigoRecurso = "VIDA",
+            MomentoEfeito = "INICIO_TURNO", RegraRemocao = "MANUAL",
+        });
+
+        GameBattleActionSpec action = _factory.Build(run, version).Input.FirstActor.Actions[0];
+
+        Assert.Equal("magia:purificar", action.Id);
+        Assert.Equal(["VENENO"], action.RemovesConditions);
+        Assert.Equal(0, action.DamageByResultCode["ACERTO"]);
+    }
+
+    [Fact]
+    public void Build_ItemOutroComTesteECondicaoDispensaDano()
+    {
+        GameRunDto original = Run("""
+            [{"id":"artefato","nome":"Artefato","tipo":"outro",
+              "atributos":{"teste":{"codigoTeste":"ATAQUE_COMUM"},
+                "condicoes":[{"codigo":"MARCA","gatilho":"ACERTO","duracao":2,
+                  "unidadeDuracao":"Turno"}]}}]
+            """);
+        GameRunDto run = new()
+        {
+            IdSistemaVersao = original.IdSistemaVersao,
+            ConfiguracaoModo = original.ConfiguracaoModo,
+            EstadoAtual = original.EstadoAtual,
+            AcoesEquipadas = [new() { Tipo = "ITEM", IdInstancia = "artefato" }],
+        };
+        SistemaVersao version = Version();
+        version.Condicoes.Add(new SistemaCondicao
+        {
+            Codigo = "MARCA", Nome = "Marca", Tipo = "Fisico",
+            OperacaoEfeito = "SUBTRAIR", CodigoRecurso = "VIDA",
+            MomentoEfeito = "AO_APLICAR", RegraRemocao = "DURACAO",
+        });
+
+        GameBattleActionSpec action = _factory.Build(run, version).Input.FirstActor.Actions[0];
+
+        Assert.Equal("item:artefato", action.Id);
+        Assert.Equal(0, action.DamageByResultCode["ACERTO"]);
+        Assert.Equal("MARCA", Assert.Single(action.Conditions).Rule.Code);
     }
 
     [Fact]

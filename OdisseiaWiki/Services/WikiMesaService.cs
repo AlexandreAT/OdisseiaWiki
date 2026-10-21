@@ -482,6 +482,8 @@ public sealed class WikiMesaService : IWikiMesaService
             return Validacao<ResultPersonagem>(erro);
 
         AplicarVinculoDaMesa(dto, contexto.Dados!);
+        // A origem global sÃ³ Ã© atribuÃ­da pelo fluxo interno de cÃ³pia ao editar o original.
+        dto.IdOrigemGlobal = null;
         ResultPersonagem resultado = await _personagemService.CreateAsync(dto, contexto.Dados!.IdWikiEscopo);
         return resultado.Sucesso
             ? WikiMesaOperacaoResultado<ResultPersonagem>.Ok(resultado)
@@ -497,7 +499,25 @@ public sealed class WikiMesaService : IWikiMesaService
 
         Personagen? existente = await _personagemService.GetByIdAsync(idPersonagem, contexto.Dados!.IdWikiEscopo);
         if (existente is null)
-            return NaoEncontrado<ResultPersonagem>();
+        {
+            Personagen? original = await _personagemService.GetByIdAsync(idPersonagem, WikiEscopo.IdOficial);
+            if (original is null || !original.Visivel || !Compativel(original.IdSistemaRpg,
+                    original.IdSistemaVersao, original.AcompanharPublicacaoAtual, contexto.Dados))
+                return NaoEncontrado<ResultPersonagem>();
+            existente = (await _personagemService.GetAllAsync(null, contexto.Dados.IdWikiEscopo) ?? [])
+                .FirstOrDefault(item => item.IdOrigemGlobal == idPersonagem);
+            if (existente is null)
+            {
+                string? copyError = await ValidarReferenciasPersonagemAsync(contexto.Dados, dto);
+                if (copyError is not null) return Validacao<ResultPersonagem>(copyError);
+                AplicarVinculoDaMesa(dto, contexto.Dados);
+                dto.IdOrigemGlobal = idPersonagem;
+                ResultPersonagem copy = await _personagemService.CreateAsync(dto, contexto.Dados.IdWikiEscopo);
+                return copy.Sucesso ? WikiMesaOperacaoResultado<ResultPersonagem>.Ok(copy)
+                    : Validacao<ResultPersonagem>(copy.MensagemErro ?? "Não foi possível criar a cópia do NPC.");
+            }
+            idPersonagem = existente.Idpersonagem;
+        }
 
         string? erro = await ValidarReferenciasPersonagemAsync(contexto.Dados, dto, existente);
         if (erro is not null)
@@ -568,6 +588,7 @@ public sealed class WikiMesaService : IWikiMesaService
             return Validacao<ItemSaveResultDto>(erro);
 
         AplicarVinculoDaMesa(dto, contexto.Dados!);
+        dto.IdOrigemGlobal = null;
         try
         {
             return WikiMesaOperacaoResultado<ItemSaveResultDto>.Ok(
@@ -587,7 +608,40 @@ public sealed class WikiMesaService : IWikiMesaService
             return Falha<ItemSaveResultDto>(contexto);
 
         if (await _itemService.GetByIdAsync(idItem, contexto.Dados!.IdWikiEscopo) is null)
-            return NaoEncontrado<ItemSaveResultDto>();
+        {
+            ItemDto? original = await _itemService.GetByIdAsync(idItem, WikiEscopo.IdOficial);
+            if (original is null || !original.Visivel || !Compativel(original.IdSistemaRpg,
+                    original.IdSistemaVersao, original.AcompanharPublicacaoAtual, contexto.Dados))
+                return NaoEncontrado<ItemSaveResultDto>();
+            ItemDto? copy = (await _itemService.GetAllAsync(null, contexto.Dados.IdWikiEscopo) ?? [])
+                .FirstOrDefault(item => item.IdOrigemGlobal == idItem);
+            if (copy is null)
+            {
+                string? copyError = await ValidarReferenciasItemAsync(contexto.Dados,
+                    dto.Idpersonagem, dto.IditemBase);
+                if (copyError is not null) return Validacao<ItemSaveResultDto>(copyError);
+                var create = new ItemCreateDto
+                {
+                    Nome = dto.Nome, Tipo = dto.Tipo, Descricao = dto.Descricao,
+                    Peso = dto.Peso, Valor = dto.Valor, Discricao = dto.Discricao,
+                    Quantidade = dto.Quantidade, Efeito = dto.Efeito, Imagem = dto.Imagem,
+                    AtributosJson = dto.AtributosJson, IditemBase = dto.IditemBase,
+                    Tags = dto.Tags, Visivel = dto.Visivel, Destaque = dto.Destaque,
+                    Idpersonagem = dto.Idpersonagem, IdOrigemGlobal = idItem,
+                };
+                AplicarVinculoDaMesa(create, contexto.Dados);
+                try
+                {
+                    return WikiMesaOperacaoResultado<ItemSaveResultDto>.Ok(
+                        await _itemService.CreateWithRuntimeAsync(create, contexto.Dados.IdWikiEscopo));
+                }
+                catch (InvalidOperationException exception)
+                {
+                    return Validacao<ItemSaveResultDto>(exception.Message);
+                }
+            }
+            idItem = copy.Iditem;
+        }
 
         string? erro = await ValidarReferenciasItemAsync(contexto.Dados, dto.Idpersonagem, dto.IditemBase);
         if (erro is not null)
@@ -695,7 +749,9 @@ public sealed class WikiMesaService : IWikiMesaService
         List<Personagen> oficiais = (await _personagemService.GetAllAsync(VisibilidadeOficial(contexto, visivel), WikiEscopo.IdOficial))
             .Where(personagem => Compativel(personagem.IdSistemaRpg, personagem.IdSistemaVersao, personagem.AcompanharPublicacaoAtual, contexto))
             .ToList();
-        return UnirPorId(oficiais, proprios, personagem => personagem.Idpersonagem);
+        HashSet<int> substituidos = proprios.Select(item => item.IdOrigemGlobal).OfType<int>().ToHashSet();
+        return UnirPorId(oficiais.Where(item => !substituidos.Contains(item.Idpersonagem)),
+            proprios, personagem => personagem.Idpersonagem);
     }
 
     private async Task<List<ItemDto>> ObterItensEfetivosAsync(Contexto contexto, bool somenteProprios, bool? visivel)
@@ -707,7 +763,10 @@ public sealed class WikiMesaService : IWikiMesaService
         List<ItemDto> oficiais = (await _itemService.GetAllAsync(VisibilidadeOficial(contexto, visivel), WikiEscopo.IdOficial))
             .Where(item => Compativel(item.IdSistemaRpg, item.IdSistemaVersao, item.AcompanharPublicacaoAtual, contexto))
             .ToList();
-        return UnirPorId(oficiais, proprios, item => item.Iditem);
+        HashSet<string> substituidos = proprios.Select(item => item.IdOrigemGlobal)
+            .OfType<string>().ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return UnirPorId(oficiais.Where(item => !substituidos.Contains(item.Iditem)),
+            proprios, item => item.Iditem);
     }
 
     private async Task<CidadeDto?> EncontrarCidadeEfetivaAsync(Contexto contexto, int idCidade)
@@ -748,6 +807,10 @@ public sealed class WikiMesaService : IWikiMesaService
             return proprio;
         }
 
+        Personagen? copia = (await _personagemService.GetAllAsync(null, contexto.IdWikiEscopo) ?? [])
+            .FirstOrDefault(item => item.IdOrigemGlobal == idPersonagem);
+        if (copia is not null) return contexto.Admin || contexto.PodeGerenciar || copia.Visivel ? copia : null;
+
         Personagen? oficial = await _personagemService.GetByIdAsync(idPersonagem, WikiEscopo.IdOficial);
         if (oficial is null || (!contexto.Admin && !oficial.Visivel) ||
             !Compativel(oficial.IdSistemaRpg, oficial.IdSistemaVersao, oficial.AcompanharPublicacaoAtual, contexto))
@@ -782,6 +845,10 @@ public sealed class WikiMesaService : IWikiMesaService
         ItemDto? proprio = await _itemService.GetByIdAsync(idItem, contexto.IdWikiEscopo);
         if (proprio is not null)
             return contexto.Admin || contexto.PodeGerenciar || proprio.Visivel ? proprio : null;
+
+        ItemDto? copia = (await _itemService.GetAllAsync(null, contexto.IdWikiEscopo) ?? [])
+            .FirstOrDefault(item => string.Equals(item.IdOrigemGlobal, idItem, StringComparison.OrdinalIgnoreCase));
+        if (copia is not null) return contexto.Admin || contexto.PodeGerenciar || copia.Visivel ? copia : null;
 
         ItemDto? oficial = await _itemService.GetByIdAsync(idItem, WikiEscopo.IdOficial);
         return oficial is not null

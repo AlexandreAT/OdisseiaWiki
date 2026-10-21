@@ -2,10 +2,10 @@ import { CheckBox } from '../../../../../components/Generic/CheckBox/CheckBox';
 import { InputText } from '../../../../../components/Generic/InputText/InputText';
 import { TextArea } from '../../../../../components/Generic/TextArea/TextArea';
 import {
-  SistemaCondicao,
   SistemaDescansoConfig,
 } from '../../../../../models/SistemaRpg';
 import { ConfigTable, ConfigTableColumn } from '../ConfigTable/ConfigTable';
+import { ConditionRulesEditor } from './ConditionRulesEditor';
 import { ModuleFormProps } from './ModuleForm.types';
 import {
   FieldGrid,
@@ -15,67 +15,6 @@ import {
   ModuleWarning,
   SectionCard,
 } from './ModuleForms.style';
-
-const conditionColumns: ConfigTableColumn<SistemaCondicao>[] = [
-  { key: 'codigo', label: 'Código', type: 'text', maxLength: 50 },
-  { key: 'nome', label: 'Nome', type: 'text', maxLength: 120 },
-  { key: 'tipo', label: 'Tipo', type: 'text', maxLength: 80 },
-  { key: 'duracaoPadrao', label: 'Duração', type: 'number', min: 0, nullable: true },
-  {
-    key: 'unidadeDuracao',
-    label: 'Unidade',
-    type: 'select',
-    options: [
-      { value: 'Turno', label: 'Turno' },
-      { value: 'Minuto', label: 'Minuto' },
-      { value: 'Hora', label: 'Hora' },
-      { value: 'Descanso', label: 'Descanso' },
-      { value: 'Sessao', label: 'Sessão' },
-      { value: 'Permanente', label: 'Permanente' },
-    ],
-  },
-  { key: 'empilhavel', label: 'Empilhável', type: 'checkbox' },
-  { key: 'remocaoAutomatica', label: 'Remoção automática', type: 'checkbox' },
-  { key: 'permiteSobrescrever', label: 'Sobrescrever ao aplicar', type: 'checkbox' },
-  { key: 'valorPadrao', label: 'Valor padrão', type: 'number', nullable: true },
-  { key: 'codigoRecurso', label: 'Recurso afetado', type: 'text', maxLength: 50 },
-  {
-    key: 'operacaoEfeito', label: 'Operação do efeito', type: 'select', options: [
-      { value: '', label: 'Sem alteração automática' },
-      { value: 'SUBTRAIR', label: 'Diminuir recurso' },
-      { value: 'SOMAR', label: 'Recuperar recurso' },
-      { value: 'DEFINIR', label: 'Definir valor' },
-      { value: 'REDUZIR_LIMITE_PERCENTUAL', label: 'Reduzir limite enquanto ativa (%)' },
-      { value: 'BLOQUEAR_RECUPERACAO', label: 'Bloquear recuperação enquanto ativa' },
-    ],
-  },
-  { key: 'valorEfeito', label: 'Valor do efeito', type: 'number', nullable: true },
-  {
-    key: 'momentoEfeito', label: 'Quando aplicar', type: 'select', options: [
-      { value: '', label: 'Somente manual' },
-      { value: 'AO_APLICAR', label: 'Ao aplicar' },
-      { value: 'INICIO_TURNO', label: 'Início do turno' },
-      { value: 'FIM_TURNO', label: 'Fim do turno' },
-      { value: 'ENQUANTO_ATIVA', label: 'Enquanto a condição estiver ativa' },
-    ],
-  },
-  { key: 'codigoRecursoGatilho', label: 'Recurso gatilho', type: 'text', maxLength: 50 },
-  {
-    key: 'operadorGatilho', label: 'Comparação do gatilho', type: 'select', options: [
-      { value: '', label: 'Ativação manual' },
-      { value: '<=', label: 'Menor ou igual' },
-      { value: '>=', label: 'Maior ou igual' },
-      { value: '==', label: 'Igual' },
-      { value: '<', label: 'Menor' },
-      { value: '>', label: 'Maior' },
-    ],
-  },
-  { key: 'valorGatilho', label: 'Valor do gatilho', type: 'number', nullable: true },
-  { key: 'cooldownTurnos', label: 'Cooldown (turnos)', type: 'number', min: 0, nullable: true },
-  { key: 'regraRemocao', label: 'Como remover', type: 'textarea', maxLength: 500 },
-  { key: 'descricao', label: 'Descrição / efeito', type: 'textarea', maxLength: 1400 },
-  { key: 'ordem', label: 'Ordem', type: 'number', min: 0 },
-];
 
 const restColumns: ConfigTableColumn<SistemaDescansoConfig>[] = [
   { key: 'tipo', label: 'Tipo', type: 'text', maxLength: 50 },
@@ -101,29 +40,6 @@ const restColumns: ConfigTableColumn<SistemaDescansoConfig>[] = [
   { key: 'ordem', label: 'Ordem', type: 'number', min: 0 },
 ];
 
-const createCondition = (): SistemaCondicao => ({
-  codigo: '',
-  nome: '',
-  descricao: '',
-  tipo: '',
-  duracaoPadrao: 0,
-  unidadeDuracao: 'Turno',
-  empilhavel: false,
-  remocaoAutomatica: false,
-  permiteSobrescrever: true,
-  valorPadrao: null,
-  codigoRecurso: '',
-  operacaoEfeito: '',
-  valorEfeito: null,
-  momentoEfeito: '',
-  codigoRecursoGatilho: '',
-  operadorGatilho: '',
-  valorGatilho: null,
-  cooldownTurnos: null,
-  regraRemocao: '',
-  ordem: 1,
-});
-
 const createRest = (): SistemaDescansoConfig => ({
   tipo: '',
   nome: '',
@@ -147,6 +63,7 @@ export const SurvivalModuleForm = ({
   theme,
   neon,
   references,
+  idSistemaVersao,
 }: ModuleFormProps<'sobrevivencia'>) => {
   const morte = value.morte ?? {
     limiteBeiraDaMorte: 0,
@@ -169,26 +86,21 @@ export const SurvivalModuleForm = ({
         <div>
           <h3>Sobrevivência</h3>
           <p>
-            Condições, descanso, refeições, loot e estados de morte. Duração e intensidade podem
-            continuar sendo sobrescritas pelo mestre em cada aplicação.
+            Condições, descanso, refeições, loot e estados de morte. Só gatilho, efeito,
+            destino e recuperação configurados em campos próprios podem virar regra automática;
+            a descrição é apenas para leitura. Valores negativos reduzem atributos, dano ou defesa;
+            valores positivos concedem bônus. Recursos podem ser recuperados em cada turno.
           </p>
         </div>
       </ModuleIntro>
 
-      <ConfigTable
-        title="Condições"
-        description="Definições globais. A condição aplicada ao personagem manterá duração, origem e valor próprios."
+      <ConditionRulesEditor
+        idSistemaVersao={idSistemaVersao}
         rows={value.condicoes}
-        columns={conditionColumns.map((column) =>
-          column.key === 'codigoRecurso' || column.key === 'codigoRecursoGatilho'
-            ? { ...column, suggestions: references?.resources } : column)}
-        createRow={createCondition}
         onChange={(condicoes) => onChange({ ...value, condicoes })}
-        theme={theme}
-        neon={neon}
-        readOnly={readOnly}
-        errors={errors}
-        errorPath="condicoes"
+        onConfirmedRemoval={(condicoes, codigo) => onChange({ ...value, condicoes,
+          codigosRemocaoConfirmada: [...new Set([...(value.codigosRemocaoConfirmada ?? []), codigo])] })}
+        theme={theme} neon={neon} readOnly={readOnly} errors={errors} references={references}
       />
 
       <ConfigTable

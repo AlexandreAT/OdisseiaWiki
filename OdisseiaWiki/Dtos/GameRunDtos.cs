@@ -9,6 +9,7 @@ public sealed class GameRunCharacterOptionDto
     public string Nome { get; init; } = string.Empty;
     public string? Imagem { get; init; }
     public int IdRaca { get; init; }
+    public int IdMesa { get; init; }
     public int? IdSistemaVersao { get; init; }
     public int? IdSistemaVersaoAtual { get; init; }
     public string? NumeroVersaoSistema { get; init; }
@@ -25,6 +26,7 @@ public sealed class GameRunCreateRequestDto
 {
     [Range(1, int.MaxValue)]
     public int IdPersonagemJogador { get; set; }
+    public string? CodigoJogo { get; set; }
 
     [Required]
     public Guid ChaveIdempotencia { get; set; }
@@ -96,6 +98,33 @@ public sealed class GameRunEquipDefenseRequestDto : GameRunMutationRequestDto
     public bool Equipado { get; set; }
 }
 
+public sealed class GameRunConditionOriginRequestDto : GameRunMutationRequestDto
+{
+    [Required, MaxLength(12)] public string Tipo { get; set; } = string.Empty;
+    [Required, MaxLength(100)] public string IdInstancia { get; set; } = string.Empty;
+    [Range(0, 100)] public int Indice { get; set; }
+    [Required, MaxLength(80)] public string Codigo { get; set; } = string.Empty;
+    [Required, MaxLength(30)] public string Gatilho { get; set; } = string.Empty;
+    [MaxLength(80)] public string? CodigoResultado { get; set; }
+    [MaxLength(12)] public string Alvo { get; set; } = "ALVO";
+    [Range(-1000000, 1000000)] public int? Valor { get; set; }
+    public Dictionary<int, int> ValoresEfeitos { get; set; } = [];
+    [Range(1, 1000000)] public int? Duracao { get; set; }
+    [MaxLength(10)] public string? UnidadeDuracao { get; set; }
+    [Range(1, 20)] public int? ResultadoNaturalMinimo { get; set; }
+    [Range(1, 20)] public int? ResultadoNaturalMaximo { get; set; }
+    public IReadOnlyList<int> ResultadosNaturais { get; set; } = [];
+    public GameplayResistanceTestDto? TesteResistencia { get; set; }
+}
+
+public sealed class GameplayResistanceTestDto
+{
+    [Range(1, 10)] public int Dados { get; set; }
+    [Range(2, 1000)] public int Faces { get; set; }
+    [Required, MaxLength(50)] public string Atributo { get; set; } = string.Empty;
+    [Range(-1000000, 1000000)] public int Dificuldade { get; set; }
+}
+
 public sealed record GameRunConsumeItemResultDto(
     GameRunDto Run, string NomeItem, int QuantidadeRestante,
     int VidaRecuperada, int ManaRecuperada, int EstaminaRecuperada);
@@ -145,6 +174,7 @@ public sealed class GameRunMapNodePayloadDto
 {
     public string? EncounterCode { get; init; }
     public string? SecretAreaCode { get; init; }
+    public int GameMinutes { get; init; }
 }
 
 public sealed class GameRunSystemSnapshotDto
@@ -165,6 +195,8 @@ public sealed class GameRunSystemSnapshotDto
 public sealed class GameRunCharacterSnapshotDto
 {
     public System.Text.Json.JsonElement? Carga { get; init; }
+    public System.Text.Json.JsonElement? LimitesCondicoes { get; init; }
+    public System.Text.Json.JsonElement? CondicoesAtivas { get; init; }
     public OdisseiaWiki.GameRuns.GameRunLootState? Loot { get; init; }
     public int SchemaVersion { get; init; } = 1;
     public int IdPersonagemJogadorOrigem { get; init; }
@@ -188,6 +220,7 @@ public sealed class GameRunDto
     public long IdGameRun { get; init; }
     public int IdPersonagemJogadorOrigem { get; init; }
     public int IdGameModeVersion { get; init; }
+    public string NomeJogo { get; init; } = "Odisseia";
     public string NumeroVersaoModo { get; init; } = string.Empty;
     public int IdSistemaVersao { get; init; }
     public string Status { get; init; } = string.Empty;

@@ -175,6 +175,11 @@ public sealed class SistemasRpgController : ControllerBase
         => Responder(await _service.ObterSobrevivenciaAsync(idSistemaVersao, User.IsAdmin()));
 
     [Authorize(Policy = AuthorizationPolicies.Admin)]
+    [HttpGet("versoes/{idSistemaVersao:int}/condicoes/{codigo}/referencias")]
+    public async Task<IActionResult> ObterReferenciasCondicao(int idSistemaVersao, string codigo)
+        => Responder(await _service.ObterReferenciasCondicaoAsync(idSistemaVersao, codigo));
+
+    [Authorize(Policy = AuthorizationPolicies.Admin)]
     [HttpPut("versoes/{idSistemaVersao:int}/sobrevivencia")]
     public async Task<IActionResult> AtualizarSobrevivencia(
         int idSistemaVersao,

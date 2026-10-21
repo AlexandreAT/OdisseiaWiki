@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { ConfirmDialog } from '../../../components/Generic/ConfirmDialog/ConfirmDialog';
+import { Modal } from '../../../components/Generic/Modal/Modal';
 import { CyberButton } from '../../../components/Generic/HighlightButton/HighlightButton';
 import { LoadingIndicator } from '../../../components/Generic/LoadingIndicator';
 import { OdisseiaAnimatedTitle } from '../../../components/Generic/OdisseiaAnimatedTitle';
@@ -33,6 +34,8 @@ import {
   CharacterChoice,
   CharacterCard,
   CharacterGrid,
+  GameChoiceGrid,
+  GameChoiceCard,
   CharacterInfo,
   CharacterPortrait,
   CharacterSearch,
@@ -98,7 +101,9 @@ export default function GameLanding() {
       }
     };
     const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') closeWarning(); };
-    const onScroll = () => positionWarning();
+    const onScroll = (event: Event) => {
+      if (event.target !== warningPopup.current) positionWarning();
+    };
     document.addEventListener('pointerdown', onPointerDown);
     document.addEventListener('keydown', onKeyDown);
     window.addEventListener('scroll', onScroll, true);
@@ -151,7 +156,7 @@ export default function GameLanding() {
               <ActiveRunName><OdisseiaAnimatedTitle theme={theme} neon={neon}
                 text={current?.nome ?? ''} compact /></ActiveRunName>
               <span>Nível {current?.status?.nivel ?? 1} · {current?.status?.xp ?? 0} XP · Fase {activeRun.fase}</span>
-              <span>Sistema #{activeRun.idSistemaVersao} · Modo {activeRun.numeroVersaoModo}</span>
+              <span>{activeRun.nomeJogo} · Modo {activeRun.numeroVersaoModo}</span>
             </ActiveRunSummary>
           </ActiveRunIdentity>
           <ActiveRunResources><ResourceList>
@@ -231,7 +236,7 @@ export default function GameLanding() {
                     onPointerEnter={(event) => { if (event.pointerType !== 'touch') showWarning(character.idPersonagemJogador, event.currentTarget); }}
                     onPointerLeave={(event) => { if (event.pointerType !== 'touch') scheduleWarningClose(); }}
                     onFocus={(event) => { if (event.currentTarget.matches(':focus-visible')) showWarning(character.idPersonagemJogador, event.currentTarget); }}
-                    onBlur={scheduleWarningClose}
+                    onBlur={() => { if (window.matchMedia('(hover: hover)').matches) scheduleWarningClose(); }}
                     onClick={(event) => {
                       if (window.matchMedia('(hover: hover)').matches) return;
                       if (warningTooltip?.characterId === character.idPersonagemJogador && !warningTooltip.closing) closeWarning();
@@ -253,7 +258,9 @@ export default function GameLanding() {
         if (!character) return null;
         return createPortal(<CharacterWarningTooltip ref={warningPopup} id="game-character-warning-tooltip"
           data-game-warning-tooltip role="tooltip"
-          onPointerEnter={cancelWarningClose} onPointerLeave={scheduleWarningClose}
+          onPointerDown={cancelWarningClose}
+          onPointerEnter={cancelWarningClose}
+          onPointerLeave={(event) => { if (event.pointerType !== 'touch') scheduleWarningClose(); }}
           $top={warningTooltip.top} $left={warningTooltip.left} $closing={warningTooltip.closing}>
           <strong>Atenção · {character.nome}</strong>
           {getGameCharacterWarnings(character).map((warning) => <p key={warning}>{warning}</p>)}
@@ -269,6 +276,19 @@ export default function GameLanding() {
         isLoading={state.abandoning}
         error={state.abandonError}
       />
+      {state.gameChoices && <Modal title="Escolha o jogo" theme={theme} neon={neon}
+        width="1040px" showFooter={false} onClose={state.closeGameChoices}>
+        <GameChoiceGrid>
+          {state.gameChoices.games.map((game) => <GameChoiceCard key={game.codigo}
+            type="button" disabled={state.creating}
+            onClick={() => state.chooseGame(game.codigo)}>
+            {game.banner && <img src={normalizeImagePath(game.banner)} alt="" />}
+            <strong>{game.nome}</strong>
+            {game.descricao && <small>{game.descricao}</small>}
+            <small>{game.idMesa ? 'Jogo da mesa' : 'Jogo global'} · Modo {game.numeroVersao}</small>
+          </GameChoiceCard>)}
+        </GameChoiceGrid>
+      </Modal>}
     </GamePage>
   );
 }

@@ -480,12 +480,14 @@ export default function GameRunShell() {
           saving={state.savingLoadout || Boolean(state.consumingItemId)}
           error={state.actionError} busy={state.acting || Boolean(state.consumingItemId)}
           onSave={state.saveLoadout} onUseItem={state.consumeItem} onDropItem={state.dropItem} onEquipDefense={state.equipDefense}
+          onConfigureCondition={state.configureCondition}
           usingItemId={state.consumingItemId}
           onClose={() => setInventoryOpen(false)} />
       : <RunInventory run={run} theme={theme} neon={neon}
           saving={state.savingWeapons || Boolean(state.consumingItemId)}
           error={state.actionError} busy={state.acting || Boolean(state.consumingItemId)}
           onSave={state.saveWeaponOrder} onUseItem={state.consumeItem} onDropItem={state.dropItem} onEquipDefense={state.equipDefense}
+          onConfigureCondition={state.configureCondition}
           usingItemId={state.consumingItemId}
           onClose={() => setInventoryOpen(false)} />)}
     <RunTrainingDialog open={trainingOpen} onClose={() => setTrainingOpen(false)}

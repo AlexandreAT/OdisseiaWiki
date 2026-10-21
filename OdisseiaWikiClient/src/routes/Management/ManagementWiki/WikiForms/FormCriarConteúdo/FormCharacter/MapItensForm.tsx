@@ -2,6 +2,7 @@ import React from 'react';
 import { InputText } from '../../../../../../components/Generic/InputText/InputText';
 import { Select } from '../../../../../../components/Generic/Select/Select';
 import { CheckBox } from '../../../../../../components/Generic/CheckBox/CheckBox';
+import { CheckSelect } from '../../../../../../components/Generic/CheckSelect/CheckSelect';
 import { CyberButton } from '../../../../../../components/Generic/HighlightButton/HighlightButton';
 import { AttributeRow, AttributeSubsection, AttributeSubsectionTitle, FormItemAtributos, ProsthesisActions } from './FormCharacter.style';
 import { ArmaAtributos, ArmaTipo, ArmaTipoDano, ImplanteAtributos, TrajeAtributos } from '../../../../../../models/Itens';
@@ -13,6 +14,7 @@ import { WeaponAccessories } from '../../../../../../components/WeaponAccessorie
 import { getWeaponModifierMode } from '../../../../../../utils/weaponModifiers';
 import type { AcessorioAtributos, GameplayConditionEffectConfig } from '../../../../../../models/Itens';
 import type { GameplayTestSpec } from '../../../../../../models/Gameplay';
+import { editableConditionEffects } from '../../../../../../utils/conditionEffectOverrides';
 
 interface BaseProps {
   theme: 'dark' | 'light';
@@ -199,37 +201,160 @@ const ConditionEffectFields = ({
   theme,
   neon,
   options = [],
+  resultOptions = [],
+  allowEquipTrigger = false,
+  useOnly = false,
 }: {
   value?: GameplayConditionEffectConfig[];
   onChange: (value: GameplayConditionEffectConfig[]) => void;
   theme: 'dark' | 'light';
   neon: 'on' | 'off';
   options?: ItemFormOption[];
+  resultOptions?: ItemFormOption[];
+  allowEquipTrigger?: boolean;
+  useOnly?: boolean;
 }) => {
-  if (options.length === 0) return null;
+  const [expanded, setExpanded] = React.useState(value.length > 0);
+  const [naturalInputs, setNaturalInputs] = React.useState<Record<number, string>>({});
   const update = (index: number, changes: Partial<GameplayConditionEffectConfig>) => onChange(
     value.map((condition, currentIndex) => currentIndex === index ? { ...condition, ...changes } : condition),
   );
   const available = options.filter((option) => !value.some((condition) => condition.codigo === option.value));
   return (
     <AttributeSubsection theme={theme} neon={neon}>
-      <AttributeSubsectionTitle theme={theme} neon={neon}>Condições propostas</AttributeSubsectionTitle>
-      <p>A condição será apenas proposta após a rolagem. O mestre confirma o alvo e pode alterar os valores no combate.</p>
+      <CyberButton theme={theme} neon={neon} colorType="secondary" width="fit-content"
+        text={expanded ? 'Ocultar condições' : `Adicionar condição${value.length ? ` · ${value.length}` : ''}`}
+        onClick={() => setExpanded(!expanded)} />
+      {expanded && <>
+      <AttributeSubsectionTitle theme={theme} neon={neon}>Condições aplicadas</AttributeSubsectionTitle>
+      <p>Escolha uma condição do Sistema. Aqui você pode ajustar o gatilho, a duração e cada efeito desta origem. Valores vazios usam o padrão publicado.</p>
+      {options.length === 0 && <p>Escolha um Sistema publicado com condições para configurar este efeito.</p>}
       {value.map((condition, index) => (
-        <AttributeRow $columns={4} key={`${condition.codigo}-${index}`}>
+        <React.Fragment key={`${condition.codigo}-${index}`}>
+        <AttributeRow $columns={4}>
           <Select
             label="Condição"
             theme={theme}
             neon={neon}
             value={condition.codigo}
-            options={options}
-            onChange={(event) => update(index, { codigo: event.target.value })}
+            options={condition.codigo && !options.some((option) => option.value === condition.codigo)
+              ? [{ value: condition.codigo, label: `${condition.codigo} (não existe nesta versão)` }, ...options]
+              : options}
+            onChange={(event) => update(index, { codigo: event.target.value,
+              valor: undefined, valoresEfeitos: {}, testeResistencia: undefined })}
             width="100%"
           />
-          <InputText label="Valor (opcional)" type="number" theme={theme} neon={neon} value={condition.valor ?? ''} onChange={(event) => update(index, { valor: event.target.value === '' ? undefined : Number(event.target.value) })} />
+          {(condition.valor !== undefined ||
+            editableConditionEffects(options.find((option) => option.value === condition.codigo)?.rule).length === 0) &&
+            <InputText label="Valor do primeiro efeito (opcional)" type="number" theme={theme} neon={neon}
+              value={condition.valor ?? ''} onChange={(event) => update(index, {
+                valor: event.target.value === '' ? undefined : Number(event.target.value),
+              })} />}
           <InputText label="Duração (opcional)" type="number" theme={theme} neon={neon} value={condition.duracao ?? ''} onChange={(event) => update(index, { duracao: event.target.value === '' ? undefined : Number(event.target.value) })} />
           <CyberButton theme={theme} neon={neon} colorType="secondary" width="100%" text="Remover" onClick={() => onChange(value.filter((_, currentIndex) => currentIndex !== index))} />
         </AttributeRow>
+        {condition.codigo && !options.some((option) => option.value === condition.codigo) &&
+          <p role="alert">Esta condição não existe no Sistema atual. Escolha outra antes de usar este conteúdo.</p>}
+        {editableConditionEffects(options.find((option) => option.value === condition.codigo)?.rule)
+          .map((effect) => <InputText key={effect.index} type="number" theme={theme} neon={neon}
+            label={`${effect.label} (padrão ${effect.value}${effect.percentage ? '%' : ''})`}
+            min={effect.minimum ?? (effect.signed ? effect.percentage ? -100 : -1000000 : 0)}
+            max={effect.maximum ?? (effect.percentage ? effect.signed ? 1000 : 100 : 1000000)}
+            value={condition.valoresEfeitos?.[effect.index] ?? ''}
+            onChange={(event) => {
+              const next = { ...condition.valoresEfeitos };
+              if (event.target.value === '') delete next[effect.index];
+              else next[effect.index] = Number(event.target.value);
+              update(index, { valoresEfeitos: next });
+            }} />)}
+        <AttributeRow $columns={3}>
+          <Select label="Quando aplicar" theme={theme} neon={neon}
+            value={condition.gatilho ?? 'ACERTO'}
+            options={[
+              ...(!useOnly ? [{ value: 'ACERTO', label: 'Em qualquer acerto' },
+                { value: 'RESULTADO_NATURAL', label: 'Ao tirar números no dado' },
+                { value: 'RESULTADO_CLASSIFICADO', label: 'Resultado classificado pelo Sistema' }] : []),
+              { value: 'AO_USAR', label: useOnly ? 'Ao consumir' : 'Ao usar a ação' },
+              ...(allowEquipTrigger ? [{ value: 'AO_EQUIPAR', label: 'Ao equipar traje ou item defensivo' }] : []),
+              ...(useOnly && condition.gatilho !== 'AO_USAR'
+                ? [{ value: condition.gatilho ?? 'ACERTO',
+                  label: `${condition.gatilho ?? 'ACERTO'} (não executa ao consumir)` }] : []),
+            ]}
+            onChange={(event) => update(index, { gatilho: event.target.value as GameplayConditionEffectConfig['gatilho'] })} />
+          {condition.gatilho === 'RESULTADO_NATURAL' &&
+            <InputText label="Números naturais (ex.: 18, 19, 20)" theme={theme} neon={neon}
+              value={naturalInputs[index] ?? (condition.resultadosNaturais ?? []).join(', ')}
+              onChange={(event) => {
+                const raw = event.target.value;
+                setNaturalInputs((current) => ({ ...current, [index]: raw }));
+                update(index, { resultadosNaturais: raw.split(',')
+                  .map((part) => Number(part.trim())).filter((number) => Number.isInteger(number) && number > 0 && number <= 20) });
+              }} />}
+          <Select label="Duração em" theme={theme} neon={neon}
+            value={condition.unidadeDuracao ?? 'Turno'}
+            options={[{ value: 'Turno', label: 'Turnos' }, { value: 'Hora', label: 'Horas de jogo (eventos/descansos)' }]}
+            onChange={(event) => update(index, { unidadeDuracao: event.target.value as GameplayConditionEffectConfig['unidadeDuracao'] })} />
+        </AttributeRow>
+        <AttributeRow $columns={2}>
+          <Select label="Quem recebe a condição" theme={theme} neon={neon}
+            value={condition.alvo ?? (useOnly ? 'USUARIO' : 'ALVO')}
+            options={[{ value: 'ALVO', label: 'Alvo da ação' },
+              { value: 'USUARIO', label: 'Quem usa o item ou poder' },
+              { value: 'TODOS_INIMIGOS', label: 'Todos os inimigos' }]}
+            onChange={(event) => update(index, { alvo: event.target.value as GameplayConditionEffectConfig['alvo'] })} />
+        </AttributeRow>
+        <CyberButton theme={theme} neon={neon} colorType="secondary" width="fit-content"
+          text={condition.testeResistencia ? 'Remover teste de reação' : 'Exigir teste de reação'}
+          onClick={() => update(index, { testeResistencia: condition.testeResistencia ? undefined : {
+            dados: 1, faces: 6,
+            atributo: options.find((option) => option.value === condition.codigo)?.attributeOptions?.[0]?.value ?? '',
+            dificuldade: 4,
+          } })} />
+        {condition.testeResistencia && <>
+          <p>Cada afetado testa fora do turno. Se alcançar a dificuldade, evita esta condição; a ordem normal continua depois.</p>
+          <AttributeRow $columns={4}>
+            <InputText label="Quantidade de dados" type="number" min={1} max={10} theme={theme} neon={neon}
+              value={condition.testeResistencia.dados} onChange={(event) => update(index, {
+                testeResistencia: { ...condition.testeResistencia!, dados: Number(event.target.value) },
+              })} />
+            <InputText label="Faces do dado" type="number" min={2} max={1000} theme={theme} neon={neon}
+              value={condition.testeResistencia.faces} onChange={(event) => update(index, {
+                testeResistencia: { ...condition.testeResistencia!, faces: Number(event.target.value) },
+              })} />
+            <Select label="Atributo do afetado" theme={theme} neon={neon}
+              value={condition.testeResistencia.atributo}
+              options={options.find((option) => option.value === condition.codigo)?.attributeOptions ?? []}
+              onChange={(event) => update(index, {
+                testeResistencia: { ...condition.testeResistencia!, atributo: event.target.value },
+              })} />
+            <InputText label="Passa com total ≥" type="number" theme={theme} neon={neon}
+              value={condition.testeResistencia.dificuldade} onChange={(event) => update(index, {
+                testeResistencia: { ...condition.testeResistencia!, dificuldade: Number(event.target.value) },
+              })} />
+          </AttributeRow>
+        </>}
+        {condition.gatilho === 'RESULTADO_NATURAL' && <AttributeRow $columns={2}>
+          <InputText label="Do resultado natural (inclusive)" type="number" theme={theme} neon={neon}
+            value={condition.resultadoNaturalMinimo ?? ''}
+            onChange={(event) => update(index, { resultadoNaturalMinimo: event.target.value === ''
+              ? undefined : Number(event.target.value) })} />
+          <InputText label="Até o resultado natural (inclusive)" type="number" theme={theme} neon={neon}
+            value={condition.resultadoNaturalMaximo ?? ''}
+            onChange={(event) => update(index, { resultadoNaturalMaximo: event.target.value === ''
+              ? undefined : Number(event.target.value) })} />
+        </AttributeRow>}
+        {condition.gatilho === 'RESULTADO_CLASSIFICADO' && <Select
+          label="Qual resultado do Sistema?" theme={theme} neon={neon}
+          value={condition.codigoResultado ?? ''}
+          options={[{ value: '', label: 'Selecione um resultado' },
+            ...(condition.codigoResultado && !resultOptions.some((option) => option.value === condition.codigoResultado)
+              ? [{ value: condition.codigoResultado, label: `${condition.codigoResultado} (não existe nesta versão)` }]
+              : []), ...resultOptions]}
+          onChange={(event) => update(index, { codigoResultado: event.target.value })} />}
+        {condition.gatilho === 'RESULTADO_CLASSIFICADO' && condition.codigoResultado &&
+          !resultOptions.some((option) => option.value === condition.codigoResultado) &&
+          <p role="alert">Este resultado não existe no Sistema atual. Escolha outro antes de usar a condição.</p>}
+        </React.Fragment>
       ))}
       {available.length > 0 && (
         <CyberButton
@@ -238,9 +363,12 @@ const ConditionEffectFields = ({
           colorType="primary"
           width="fit-content"
           text="Adicionar condição"
-          onClick={() => onChange([...value, { codigo: available[0].value }])}
+          onClick={() => onChange([...value, { codigo: available[0].value,
+            gatilho: useOnly ? 'AO_USAR' : allowEquipTrigger ? 'AO_EQUIPAR' : 'ACERTO',
+            unidadeDuracao: 'Turno' }])}
         />
       )}
+      </>}
     </AttributeSubsection>
   );
 };
@@ -367,7 +495,7 @@ export const ArmaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme,
         onChange={(condicoes) => handleChange('condicoes', condicoes)}
         theme={theme}
         neon={neon}
-        options={sistemaItemCatalogo?.conditionOptions}
+        options={sistemaItemCatalogo?.conditionOptions} resultOptions={sistemaItemCatalogo?.resultOptions}
       />
 
       <ManagementAttributeGroup enabled={managementLayout} title="Efeitos e propriedades" theme={theme} neon={neon}>
@@ -432,7 +560,8 @@ export const TrajeAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme
         onChange={(condicoes) => handleChange('condicoes', condicoes)}
         theme={theme}
         neon={neon}
-        options={sistemaItemCatalogo?.conditionOptions}
+        options={sistemaItemCatalogo?.conditionOptions} resultOptions={sistemaItemCatalogo?.resultOptions}
+        allowEquipTrigger
       />
     </FormItemAtributos>
   );
@@ -554,7 +683,7 @@ export const ImplanteAtributosForm: React.FC<BaseProps> = ({ value, onChange, th
       onChange={(condicoes) => update({ condicoes })}
       theme={theme}
       neon={neon}
-      options={sistemaItemCatalogo?.conditionOptions}
+      options={sistemaItemCatalogo?.conditionOptions} resultOptions={sistemaItemCatalogo?.resultOptions}
     />
   </FormItemAtributos>;
 };
@@ -576,7 +705,7 @@ export const ConsumiveisAtributosForm: React.FC<BaseProps> = ({ value, onChange,
       <InputText label="Efeito" theme={theme} neon={neon} value={value?.efeito || ""} onChange={e => onChange({ ...value, efeito: e.target.value })} />
     </AttributeRow>
     <TestSpecificationFields value={value?.teste} onChange={(teste) => onChange({ ...value, teste, aplicaTeste: Boolean(teste) })} theme={theme} neon={neon} testOptions={sistemaItemCatalogo?.testOptions} />
-    <ConditionEffectFields value={value?.condicoes} onChange={(condicoes) => onChange({ ...value, condicoes })} theme={theme} neon={neon} options={sistemaItemCatalogo?.conditionOptions} />
+    <ConditionEffectFields value={value?.condicoes} onChange={(condicoes) => onChange({ ...value, condicoes })} theme={theme} neon={neon} options={sistemaItemCatalogo?.conditionOptions} resultOptions={sistemaItemCatalogo?.resultOptions} useOnly />
   </FormItemAtributos>
 );
 
@@ -596,7 +725,7 @@ export const AcessorioAtributosForm: React.FC<BaseProps> = ({ value, onChange, t
       <InputText label="Efeito" theme={theme} neon={neon} value={value?.efeito || ""} onChange={e => onChange({ ...value, efeito: e.target.value })} />
     </AttributeRow>
     <TestSpecificationFields value={value?.teste} onChange={(teste) => onChange({ ...value, teste, aplicaTeste: Boolean(teste) })} theme={theme} neon={neon} testOptions={sistemaItemCatalogo?.testOptions} />
-    <ConditionEffectFields value={value?.condicoes} onChange={(condicoes) => onChange({ ...value, condicoes })} theme={theme} neon={neon} options={sistemaItemCatalogo?.conditionOptions} />
+    <ConditionEffectFields value={value?.condicoes} onChange={(condicoes) => onChange({ ...value, condicoes })} theme={theme} neon={neon} options={sistemaItemCatalogo?.conditionOptions} resultOptions={sistemaItemCatalogo?.resultOptions} />
   </FormItemAtributos>
 );
 
@@ -622,7 +751,7 @@ export const OutrosAtributosForm: React.FC<BaseProps> = ({ value, onChange, them
       <InputText label="Efeito" theme={theme} neon={neon} value={value?.efeito || ""} onChange={e => onChange({ ...value, efeito: e.target.value })} />
     </AttributeRow>
     <TestSpecificationFields value={value?.teste} onChange={(teste) => onChange({ ...value, teste, aplicaTeste: Boolean(teste) })} theme={theme} neon={neon} testOptions={sistemaItemCatalogo?.testOptions} />
-    <ConditionEffectFields value={value?.condicoes} onChange={(condicoes) => onChange({ ...value, condicoes })} theme={theme} neon={neon} options={sistemaItemCatalogo?.conditionOptions} />
+    <ConditionEffectFields value={value?.condicoes} onChange={(condicoes) => onChange({ ...value, condicoes })} theme={theme} neon={neon} options={sistemaItemCatalogo?.conditionOptions} resultOptions={sistemaItemCatalogo?.resultOptions} allowEquipTrigger />
   </FormItemAtributos>
 );
 
@@ -689,7 +818,7 @@ export const AtaqueAtributosForm: React.FC<BaseProps> = ({ value, onChange, them
       />
       <AcertoDadoSelect value={local.acerto} onChange={(acerto) => handleChange('acerto', acerto)} theme={theme} neon={neon} />
       <TestSpecificationFields value={local.teste} onChange={(teste) => handleChange('teste', teste)} theme={theme} neon={neon} />
-      <ConditionEffectFields value={local.condicoes} onChange={(condicoes) => handleChange('condicoes', condicoes)} theme={theme} neon={neon} options={sistemaItemCatalogo?.conditionOptions} />
+      <ConditionEffectFields value={local.condicoes} onChange={(condicoes) => handleChange('condicoes', condicoes)} theme={theme} neon={neon} options={sistemaItemCatalogo?.conditionOptions} resultOptions={sistemaItemCatalogo?.resultOptions} />
     </FormItemAtributos>
   );
 };
@@ -731,7 +860,7 @@ export const SuporteAtributosForm: React.FC<BaseProps> = ({ value, onChange, the
       />
       <AcertoDadoSelect value={local.acerto} onChange={(acerto) => handleChange('acerto', acerto)} theme={theme} neon={neon} />
       <TestSpecificationFields value={local.teste} onChange={(teste) => handleChange('teste', teste)} theme={theme} neon={neon} />
-      <ConditionEffectFields value={local.condicoes} onChange={(condicoes) => handleChange('condicoes', condicoes)} theme={theme} neon={neon} options={sistemaItemCatalogo?.conditionOptions} />
+      <ConditionEffectFields value={local.condicoes} onChange={(condicoes) => handleChange('condicoes', condicoes)} theme={theme} neon={neon} options={sistemaItemCatalogo?.conditionOptions} resultOptions={sistemaItemCatalogo?.resultOptions} />
     </FormItemAtributos>
   );
 };
@@ -773,7 +902,7 @@ export const BuffAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme,
       />
       <AcertoDadoSelect value={local.acerto} onChange={(acerto) => handleChange('acerto', acerto)} theme={theme} neon={neon} />
       <TestSpecificationFields value={local.teste} onChange={(teste) => handleChange('teste', teste)} theme={theme} neon={neon} />
-      <ConditionEffectFields value={local.condicoes} onChange={(condicoes) => handleChange('condicoes', condicoes)} theme={theme} neon={neon} options={sistemaItemCatalogo?.conditionOptions} />
+      <ConditionEffectFields value={local.condicoes} onChange={(condicoes) => handleChange('condicoes', condicoes)} theme={theme} neon={neon} options={sistemaItemCatalogo?.conditionOptions} resultOptions={sistemaItemCatalogo?.resultOptions} />
     </FormItemAtributos>
   );
 };
@@ -815,7 +944,7 @@ export const DebuffAtributosForm: React.FC<BaseProps> = ({ value, onChange, them
       />
       <AcertoDadoSelect value={local.acerto} onChange={(acerto) => handleChange('acerto', acerto)} theme={theme} neon={neon} />
       <TestSpecificationFields value={local.teste} onChange={(teste) => handleChange('teste', teste)} theme={theme} neon={neon} />
-      <ConditionEffectFields value={local.condicoes} onChange={(condicoes) => handleChange('condicoes', condicoes)} theme={theme} neon={neon} options={sistemaItemCatalogo?.conditionOptions} />
+      <ConditionEffectFields value={local.condicoes} onChange={(condicoes) => handleChange('condicoes', condicoes)} theme={theme} neon={neon} options={sistemaItemCatalogo?.conditionOptions} resultOptions={sistemaItemCatalogo?.resultOptions} />
     </FormItemAtributos>
   );
 };
@@ -828,7 +957,7 @@ export const atributosSkillFormMap: Record<string, React.FC<BaseProps>> = {
 };
 
 
-export const AtaqueMagiaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon }) => {
+export const AtaqueMagiaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon, sistemaItemCatalogo }) => {
   const [local, setLocal] = React.useState(
     withNormalizedAcerto(value, { dano: null, especial: "", bonus: "" })
   );
@@ -865,11 +994,15 @@ export const AtaqueMagiaAtributosForm: React.FC<BaseProps> = ({ value, onChange,
       />
       <AcertoDadoSelect value={local.acerto} onChange={(acerto) => handleChange('acerto', acerto)} theme={theme} neon={neon} />
       <TestSpecificationFields value={local.teste} onChange={(teste) => handleChange('teste', teste)} theme={theme} neon={neon} />
+      <ConditionEffectFields value={local.condicoes} onChange={(condicoes) => handleChange('condicoes', condicoes)} theme={theme} neon={neon} options={sistemaItemCatalogo?.conditionOptions} resultOptions={sistemaItemCatalogo?.resultOptions} />
+      <CheckSelect theme={theme} neon={neon} label="Remover condições ao acertar (magia)"
+        value={local.removeCondicoes ?? []} options={sistemaItemCatalogo?.magicRemovalOptions ?? []}
+        onChange={(removeCondicoes) => handleChange('removeCondicoes', removeCondicoes)} />
     </FormItemAtributos>
   );
 };
 
-export const SuporteMagiaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon }) => {
+export const SuporteMagiaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon, sistemaItemCatalogo }) => {
   const [local, setLocal] = React.useState(
     withNormalizedAcerto(value, { especial: "", bonus: "" })
   );
@@ -898,11 +1031,15 @@ export const SuporteMagiaAtributosForm: React.FC<BaseProps> = ({ value, onChange
       />
       <AcertoDadoSelect value={local.acerto} onChange={(acerto) => handleChange('acerto', acerto)} theme={theme} neon={neon} />
       <TestSpecificationFields value={local.teste} onChange={(teste) => handleChange('teste', teste)} theme={theme} neon={neon} />
+      <ConditionEffectFields value={local.condicoes} onChange={(condicoes) => handleChange('condicoes', condicoes)} theme={theme} neon={neon} options={sistemaItemCatalogo?.conditionOptions} resultOptions={sistemaItemCatalogo?.resultOptions} />
+      <CheckSelect theme={theme} neon={neon} label="Remover condições ao acertar (magia)"
+        value={local.removeCondicoes ?? []} options={sistemaItemCatalogo?.magicRemovalOptions ?? []}
+        onChange={(removeCondicoes) => handleChange('removeCondicoes', removeCondicoes)} />
     </FormItemAtributos>
   );
 };
 
-export const BuffMagiaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon }) => {
+export const BuffMagiaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon, sistemaItemCatalogo }) => {
   const [local, setLocal] = React.useState(
     withNormalizedAcerto(value, { especial: "", bonus: "" })
   );
@@ -931,11 +1068,15 @@ export const BuffMagiaAtributosForm: React.FC<BaseProps> = ({ value, onChange, t
       />
       <AcertoDadoSelect value={local.acerto} onChange={(acerto) => handleChange('acerto', acerto)} theme={theme} neon={neon} />
       <TestSpecificationFields value={local.teste} onChange={(teste) => handleChange('teste', teste)} theme={theme} neon={neon} />
+      <ConditionEffectFields value={local.condicoes} onChange={(condicoes) => handleChange('condicoes', condicoes)} theme={theme} neon={neon} options={sistemaItemCatalogo?.conditionOptions} resultOptions={sistemaItemCatalogo?.resultOptions} />
+      <CheckSelect theme={theme} neon={neon} label="Remover condições ao acertar (magia)"
+        value={local.removeCondicoes ?? []} options={sistemaItemCatalogo?.magicRemovalOptions ?? []}
+        onChange={(removeCondicoes) => handleChange('removeCondicoes', removeCondicoes)} />
     </FormItemAtributos>
   );
 };
 
-export const DebuffMagiaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon }) => {
+export const DebuffMagiaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon, sistemaItemCatalogo }) => {
   const [local, setLocal] = React.useState(
     withNormalizedAcerto(value, { especial: "", bonus: "" })
   );
@@ -964,6 +1105,10 @@ export const DebuffMagiaAtributosForm: React.FC<BaseProps> = ({ value, onChange,
       />
       <AcertoDadoSelect value={local.acerto} onChange={(acerto) => handleChange('acerto', acerto)} theme={theme} neon={neon} />
       <TestSpecificationFields value={local.teste} onChange={(teste) => handleChange('teste', teste)} theme={theme} neon={neon} />
+      <ConditionEffectFields value={local.condicoes} onChange={(condicoes) => handleChange('condicoes', condicoes)} theme={theme} neon={neon} options={sistemaItemCatalogo?.conditionOptions} resultOptions={sistemaItemCatalogo?.resultOptions} />
+      <CheckSelect theme={theme} neon={neon} label="Remover condições ao acertar (magia)"
+        value={local.removeCondicoes ?? []} options={sistemaItemCatalogo?.magicRemovalOptions ?? []}
+        onChange={(removeCondicoes) => handleChange('removeCondicoes', removeCondicoes)} />
     </FormItemAtributos>
   );
 };

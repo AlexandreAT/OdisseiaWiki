@@ -1,11 +1,75 @@
 using System.Text.Json;
 using OdisseiaWiki.GameRuns.Inventory;
+using OdisseiaWiki.Models;
 using Xunit;
 
 namespace OdisseiaWiki.Tests;
 
 public sealed class GameRunConsumableTests
 {
+    [Fact]
+    public void ConsumoDoCombateRemoveUnidadesDaPilhaSemAplicarCuraNovamente()
+    {
+        const string snapshot = """
+            {"status":{"status":{"vida":10,"vidaMaxima":30}},"inventario":[
+              {"id":"g1","idItemBase":"base","nome":"Granada","tipo":"consumiveis","quantidade":1,
+               "atributos":{"condicoes":[{"codigo":"CEGUEIRA","gatilho":"AO_USAR","alvo":"TODOS_INIMIGOS"}]}},
+              {"id":"g2","idItemBase":"base","nome":"Granada","tipo":"consumiveis","quantidade":2,
+               "atributos":{"condicoes":[{"codigo":"CEGUEIRA","gatilho":"AO_USAR","alvo":"TODOS_INIMIGOS"}]}}]}
+            """;
+        using JsonDocument inventory = JsonDocument.Parse(snapshot);
+        Assert.Equal(3, GameRunConsumable.AvailableQuantity(
+            inventory.RootElement.GetProperty("inventario"), "g1"));
+
+        string after = GameRunConsumable.SpendInBattle(snapshot, "g1", 2);
+        using JsonDocument state = JsonDocument.Parse(after);
+        Assert.Equal(10, state.RootElement.GetProperty("status").GetProperty("status")
+            .GetProperty("vida").GetInt32());
+        Assert.Equal(1, state.RootElement.GetProperty("inventario")[0]
+            .GetProperty("quantidade").GetInt32());
+        Assert.Single(state.RootElement.GetProperty("inventario").EnumerateArray());
+    }
+
+    [Fact]
+    public void GranadaDeAreaNaoPodeSerGastaForaDoCombateComoAutobuff()
+    {
+        const string snapshot = """
+            {"status":{"status":{"vida":10,"vidaMaxima":20}},
+             "inventario":[{"id":"granada","nome":"Granada","tipo":"consumiveis","quantidade":1,
+               "atributos":{"condicoes":[{"codigo":"CEGUEIRA","gatilho":"AO_USAR",
+                 "alvo":"TODOS_INIMIGOS"}]}}]}
+            """;
+
+        Assert.Equal("ITEM_INVALIDO", Assert.Throws<GameRunConsumableException>(() =>
+            GameRunConsumable.Use(snapshot, "granada")).Code);
+    }
+
+    [Fact]
+    public void ConsumivelSemCuraAplicaCondicaoEstruturadaDaVersaoFixada()
+    {
+        const string snapshot = """
+            {"status":{"status":{"vida":10,"vidaMaxima":20,"mana":0,"manaMaxima":0,
+              "estamina":0,"estaminaMaxima":0}},
+             "inventario":[{"id":"frasco","nome":"Frasco","tipo":"consumiveis","quantidade":1,
+               "atributos":{"condicoes":[{"codigo":"VENENO","gatilho":"AO_USAR",
+                 "valor":3,"duracao":2,"unidadeDuracao":"Turno"}]}}]}
+            """;
+        var version = new SistemaVersao { Condicoes = [new SistemaCondicao
+        {
+            Codigo = "VENENO", Nome = "Veneno", Tipo = "Fisico", CodigoRecurso = "VIDA",
+            OperacaoEfeito = "SUBTRAIR", ValorEfeito = 2, MomentoEfeito = "AO_APLICAR",
+            RegraRemocao = "DURACAO",
+        }] };
+
+        GameRunConsumableEffect consumed = GameRunConsumable.Use(snapshot, "frasco", 1, version);
+        string after = GameRunCarry.ApplyConsumedItemConditions(snapshot, consumed.SnapshotJson, "frasco", version);
+        using JsonDocument document = JsonDocument.Parse(after);
+        Assert.Equal(7, document.RootElement.GetProperty("status").GetProperty("status")
+            .GetProperty("vida").GetInt32());
+        Assert.Equal("VENENO", document.RootElement.GetProperty("status")
+            .GetProperty("condicoesJogo")[0].GetProperty("rule").GetProperty("code").GetString());
+        Assert.Empty(document.RootElement.GetProperty("inventario").EnumerateArray());
+    }
     [Fact]
     public void Outro_ComRecuperacao_ConsomeUnidadesEAplicaEfeitos()
     {
@@ -48,6 +112,31 @@ public sealed class GameRunConsumableTests
         Assert.Equal(10, resources.GetProperty("estamina").GetInt32());
         Assert.Equal(1, item.GetProperty("quantidade").GetInt32());
         Assert.Contains("\"vida\":10", Snapshot);
+    }
+
+    [Fact]
+    public void CuraConfiguradaRemoveCondicaoMesmoComVidaCheia()
+    {
+        const string snapshot = """
+            {"status":{"status":{"vida":30,"vidaMaxima":30,"mana":0,"manaMaxima":0,
+              "estamina":0,"estaminaMaxima":0},"condicoesJogo":[{"rule":{"code":"SANGRAMENTO",
+              "recovery":"CURA"},"value":50,"remainingTurns":3}]},
+             "inventario":[{"id":"kit","nome":"Kit","tipo":"consumiveis","quantidade":1,
+               "atributos":{"restaura":{"vida":25}}}]}
+            """;
+        var version = new SistemaVersao { Condicoes = [new SistemaCondicao
+        {
+            Codigo = "SANGRAMENTO", Nome = "Sangramento", Tipo = "Fisico",
+            OperacaoEfeito = "SUBTRAIR", CodigoRecurso = "VIDA", ValorEfeito = 50,
+            MomentoEfeito = "INICIO_TURNO", RegraRemocao = "CURA",
+        }] };
+
+        GameRunConsumableEffect effect = GameRunConsumable.Use(snapshot, "kit", 1, version);
+        Assert.Equal(0, effect.LifeRestored);
+        Assert.True(effect.ClearsConditionsOnCure);
+        string recovered = GameRunCarry.RecoverConditionsAtCure(effect.SnapshotJson, version);
+        using JsonDocument state = JsonDocument.Parse(recovered);
+        Assert.Empty(state.RootElement.GetProperty("status").GetProperty("condicoesJogo").EnumerateArray());
     }
 
     [Fact]

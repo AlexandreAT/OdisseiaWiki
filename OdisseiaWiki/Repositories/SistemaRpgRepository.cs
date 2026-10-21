@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 using OdisseiaWiki.Data;
 using OdisseiaWiki.Enums;
 using OdisseiaWiki.Models;
@@ -12,6 +13,90 @@ public sealed class SistemaRpgRepository : ISistemaRpgRepository
     private readonly OdisseiaContext _context;
 
     public SistemaRpgRepository(OdisseiaContext context) => _context = context;
+
+    public async Task<IReadOnlyList<string>> GetConditionReferencesAsync(int idSistemaRpg, string codigo)
+    {
+        int[] versions = await _context.SistemaVersoes.AsNoTracking()
+            .Where(version => version.IdSistemaRpg == idSistemaRpg)
+            .Select(version => version.IdSistemaVersao).ToArrayAsync();
+        int[] tables = await _context.Mesas.AsNoTracking()
+            .Where(table => table.IdSistemaVersao.HasValue && versions.Contains(table.IdSistemaVersao.Value))
+            .Select(table => table.Idmesa).ToArrayAsync();
+        var found = new List<string>();
+        var items = await _context.Itens.AsNoTracking()
+            .Where(item => item.IdSistemaRpg == idSistemaRpg ||
+                item.IdSistemaVersao.HasValue && versions.Contains(item.IdSistemaVersao.Value) ||
+                item.IdSistemaRpg == null && item.IdSistemaVersao == null && item.IdWikiEscopo == WikiEscopo.IdOficial)
+            .Select(item => new { item.Nome, item.AtributosJson }).ToListAsync();
+        foreach (var item in items)
+            if (ReferencesCondition(item.AtributosJson, codigo)) found.Add($"item {item.Nome}");
+        var npcs = await _context.Personagens.AsNoTracking()
+            .Where(npc => npc.IdSistemaRpg == idSistemaRpg ||
+                npc.IdSistemaVersao.HasValue && versions.Contains(npc.IdSistemaVersao.Value) ||
+                npc.IdSistemaRpg == null && npc.IdSistemaVersao == null && npc.IdWikiEscopo == WikiEscopo.IdOficial)
+            .Select(npc => new { npc.Nome, npc.InventarioJson, npc.Implantes, npc.Skills, npc.Magia, npc.Ultimate })
+            .ToListAsync();
+        foreach (var npc in npcs)
+            if (ReferencesCondition(npc.InventarioJson, codigo) || ReferencesCondition(npc.Implantes, codigo) ||
+                ReferencesCondition(npc.Skills, codigo) || ReferencesCondition(npc.Magia, codigo) ||
+                ReferencesCondition(npc.Ultimate, codigo)) found.Add($"NPC {npc.Nome}");
+        var characters = await _context.PersonagemJogadores.AsNoTracking()
+            .Where(character => character.IdSistemaVersao.HasValue && versions.Contains(character.IdSistemaVersao.Value) ||
+                tables.Contains(character.Idmesa))
+            .Select(character => new { character.Nome, character.InventarioJson, character.Implantes,
+                character.Skills, character.Magia, character.Ultimate }).ToListAsync();
+        foreach (var character in characters)
+            if (ReferencesCondition(character.InventarioJson, codigo) || ReferencesCondition(character.Implantes, codigo) ||
+                ReferencesCondition(character.Skills, codigo) || ReferencesCondition(character.Magia, codigo) ||
+                ReferencesCondition(character.Ultimate, codigo)) found.Add($"ficha {character.Nome}");
+        var gameModes = await _context.GameModeVersions.AsNoTracking()
+            .Where(mode => versions.Contains(mode.IdSistemaVersao))
+            .Select(mode => new { mode.Nome, mode.Codigo, mode.NumeroVersao, mode.ConfiguracaoJson })
+            .ToListAsync();
+        foreach (var mode in gameModes)
+            if (ReferencesCondition(mode.ConfiguracaoJson, codigo))
+                found.Add($"jogo {mode.Nome ?? mode.Codigo} ({mode.NumeroVersao})");
+        return found;
+    }
+
+    private static bool ReferencesCondition(string? json, string code)
+    {
+        if (string.IsNullOrWhiteSpace(json) || !json.Contains(code, StringComparison.OrdinalIgnoreCase)) return false;
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(json);
+            return Visit(document.RootElement, false, 0);
+        }
+        catch (JsonException) { return false; }
+
+        bool Visit(JsonElement node, bool inConditions, int depth)
+        {
+            if (depth > 32) return false;
+            if (node.ValueKind == JsonValueKind.Array)
+                return node.EnumerateArray().Any(entry => Visit(entry, inConditions, depth + 1));
+            if (node.ValueKind == JsonValueKind.String && depth < 32)
+            {
+                string? nested = node.GetString();
+                if (string.IsNullOrWhiteSpace(nested) || !nested.Contains(code, StringComparison.OrdinalIgnoreCase))
+                    return false;
+                try
+                {
+                    using JsonDocument parsed = JsonDocument.Parse(nested);
+                    return Visit(parsed.RootElement, inConditions, depth + 1);
+                }
+                catch (JsonException) { return false; }
+            }
+            if (node.ValueKind != JsonValueKind.Object) return false;
+            if (inConditions && node.EnumerateObject().Any(property =>
+                (property.Name.Equals("codigo", StringComparison.OrdinalIgnoreCase) ||
+                 property.Name.Equals("code", StringComparison.OrdinalIgnoreCase)) &&
+                property.Value.ValueKind == JsonValueKind.String &&
+                property.Value.GetString()?.Equals(code, StringComparison.OrdinalIgnoreCase) == true)) return true;
+            return node.EnumerateObject().Any(property => Visit(property.Value,
+                property.Name.Equals("condicoes", StringComparison.OrdinalIgnoreCase) ||
+                property.Name.Equals("conditions", StringComparison.OrdinalIgnoreCase), depth + 1));
+        }
+    }
 
     public Task<List<SistemaRpg>> GetAllAsync(bool includeInactive = false)
     {

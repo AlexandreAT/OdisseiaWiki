@@ -15,6 +15,11 @@ public sealed class GameModeVersion
     public string NumeroVersao { get; set; } = null!;
 
     public int IdSistemaVersao { get; set; }
+    public int? IdMesa { get; set; }
+    public int? IdUsuarioCriacao { get; set; }
+    [MaxLength(100)] public string? Nome { get; set; }
+    [MaxLength(500)] public string? Descricao { get; set; }
+    [MaxLength(255)] public string? Banner { get; set; }
     public GameModeVersionStatus Status { get; set; } = GameModeVersionStatus.Rascunho;
     public int SchemaVersion { get; set; } = 1;
 
@@ -25,5 +30,6 @@ public sealed class GameModeVersion
     public DateTime? PublicadaEmUtc { get; set; }
 
     public SistemaVersao SistemaVersao { get; set; } = null!;
+    public Mesa? Mesa { get; set; }
     public ICollection<GameRun> Runs { get; set; } = new List<GameRun>();
 }

@@ -47,9 +47,8 @@ public sealed class GameRunService : IGameRunService
             idUsuario, cancellationToken);
         int[] versionIds = characters.Where(item => item.IdSistemaVersao.HasValue)
             .Select(item => item.IdSistemaVersao!.Value).Distinct().ToArray();
-        var modes = (await _repository.GetPublishedModesAsync(versionIds, cancellationToken))
-            .GroupBy(item => item.IdSistemaVersao)
-            .ToDictionary(group => group.Key, group => group.First());
+        IReadOnlyList<GameModeVersion> modes = await _repository.GetPublishedModesAsync(
+            versionIds, cancellationToken);
         var versions = new Dictionary<int, SistemaVersao>();
         if (_systemRepository is not null)
             foreach (int versionId in versionIds)
@@ -72,6 +71,7 @@ public sealed class GameRunService : IGameRunService
             Nome = item.Nome,
             Imagem = item.Imagem,
             IdRaca = item.Idraca,
+            IdMesa = item.Idmesa,
             IdSistemaVersao = item.IdSistemaVersao,
             IdSistemaVersaoAtual = contexts[item.IdpersonagemJogador].IdVersaoDisponivel ??
                 contexts[item.IdpersonagemJogador].IdSistemaVersao,
@@ -82,10 +82,10 @@ public sealed class GameRunService : IGameRunService
                 versions.TryGetValue(versionId, out SistemaVersao? version) ? version.NumeroVersao : null,
             NumeroVersaoSistemaAtual = contexts[item.IdpersonagemJogador].NumeroVersaoDisponivel ??
                 contexts[item.IdpersonagemJogador].NumeroVersao,
-            NumeroVersaoModo = item.IdSistemaVersao is int modeVersionId &&
-                modes.TryGetValue(modeVersionId, out GameModeVersion? mode) ? mode.NumeroVersao : null,
-            LootConfigurado = item.IdSistemaVersao is int lootVersionId &&
-                modes.TryGetValue(lootVersionId, out GameModeVersion? lootMode) ? HasLoot(lootMode.ConfiguracaoJson) : null,
+            NumeroVersaoModo = modes.FirstOrDefault(mode => mode.IdSistemaVersao == item.IdSistemaVersao &&
+                (mode.IdMesa == item.Idmesa || mode.IdMesa == null))?.NumeroVersao,
+            LootConfigurado = modes.Where(mode => mode.IdSistemaVersao == item.IdSistemaVersao &&
+                (mode.IdMesa == item.Idmesa || mode.IdMesa == null)).Any(mode => HasLoot(mode.ConfiguracaoJson)),
             InfluenciasAtributosConfiguradas = item.IdSistemaVersao is int progressVersionId &&
                 versions.TryGetValue(progressVersionId, out SistemaVersao? progressVersion) ?
                 SistemaRpgConfiguration.LerRegras<SistemaRpgConfiguration.RegrasProgressao>(
@@ -108,6 +108,22 @@ public sealed class GameRunService : IGameRunService
         catch (JsonException) { return false; }
     }
 
+    public async Task<IReadOnlyList<GameAdventureDto>> GetCharacterGamesAsync(
+        int idUsuario, int idPersonagemJogador, CancellationToken cancellationToken)
+    {
+        PersonagemJogador? character = await _repository.GetOwnedCharacterAsync(
+            idUsuario, idPersonagemJogador, cancellationToken);
+        if (character?.IdSistemaVersao is not int versionId) return [];
+        IReadOnlyList<GameModeVersion> versions = await _repository.GetPublishedModesAsync(
+            [versionId], cancellationToken);
+        return versions.Where(mode => mode.IdMesa == null || mode.IdMesa == character.Idmesa)
+            .GroupBy(mode => mode.Codigo).Select(group => group.First())
+            .Select(mode => new GameAdventureDto(mode.Codigo, mode.IdMesa, mode.IdSistemaVersao,
+                mode.Nome ?? "Odisseia", mode.Descricao, mode.Banner,
+                mode.Status.ToString(), mode.NumeroVersao))
+            .OrderBy(mode => mode.Nome).ToArray();
+    }
+
     public async Task<GameRunDto?> GetActiveAsync(int idUsuario, CancellationToken cancellationToken)
     {
         GameRun? run = await _repository.GetActiveAsync(idUsuario, cancellationToken);
@@ -128,7 +144,7 @@ public sealed class GameRunService : IGameRunService
             return GameRunOperationResult<GameRunDto>.Fail(
                 "REQUISICAO_INVALIDA", "Informe um personagem e uma chave de idempotência válidos.");
 
-        string hash = HashPayload($"CRIAR|{request.IdPersonagemJogador}");
+        string hash = HashPayload($"CRIAR|{request.IdPersonagemJogador}|{request.CodigoJogo}");
         try
         {
             return await _repository.ExecuteWithUserLockAsync(idUsuario, async () =>
@@ -143,7 +159,7 @@ public sealed class GameRunService : IGameRunService
                         "RUN_ATIVA_EXISTENTE", "Abandone ou conclua sua run ativa antes de iniciar outra.");
 
                 var prepared = await PrepareNewRunAsync(
-                    idUsuario, request.IdPersonagemJogador, null, cancellationToken);
+                    idUsuario, request.IdPersonagemJogador, null, cancellationToken, request.CodigoJogo);
                 if (prepared.Error is not null) return prepared.Error;
                 return await PersistNewRunAsync(prepared.Run!, null, idUsuario,
                     request.ChaveIdempotencia, "CRIAR", hash, null, cancellationToken);
@@ -256,7 +272,8 @@ public sealed class GameRunService : IGameRunService
                         "RUN_ATIVA_EXISTENTE", "Outra run está ativa. Abra essa jornada para reiniciá-la.");
 
                 var prepared = await PrepareNewRunAsync(
-                    idUsuario, current.IdPersonagemJogadorOrigem, current.Seed, cancellationToken);
+                    idUsuario, current.IdPersonagemJogadorOrigem, current.Seed,
+                    cancellationToken, current.GameModeVersion.Codigo);
                 if (prepared.Error is not null) return prepared.Error;
                 return await PersistNewRunAsync(prepared.Run!,
                     current.Status == GameRunStatus.Ativa ? current : null, idUsuario,
@@ -277,8 +294,10 @@ public sealed class GameRunService : IGameRunService
     }
 
     private async Task<(GameRun? Run, GameRunOperationResult<GameRunDto>? Error)> PrepareNewRunAsync(
-        int idUsuario, int idPersonagemJogador, long? previousSeed, CancellationToken cancellationToken)
+        int idUsuario, int idPersonagemJogador, long? previousSeed, CancellationToken cancellationToken,
+        string? gameCode = null)
     {
+        if (string.IsNullOrWhiteSpace(gameCode)) gameCode = null;
         PersonagemJogador? character = await _repository.GetOwnedCharacterAsync(
             idUsuario, idPersonagemJogador, cancellationToken);
         if (character is null)
@@ -316,8 +335,22 @@ public sealed class GameRunService : IGameRunService
                 "A ficha possui dados inválidos de status, inventário, skills ou magia."));
         }
 
-        GameModeVersion? mode = await _repository.GetOrCreateModeVersionAsync(
-            idSistemaVersao, cancellationToken);
+        IReadOnlyList<GameModeVersion> published = await _repository.GetPublishedModesAsync(
+            [idSistemaVersao], cancellationToken) ?? [];
+        GameModeVersion[] available = published
+            .Where(candidate => candidate.IdMesa == null || candidate.IdMesa == character.Idmesa)
+            .GroupBy(candidate => candidate.Codigo).Select(group => group.First()).ToArray();
+        if (available.Length == 0 && gameCode is null)
+        {
+            GameModeVersion? fallback = await _repository.GetOrCreateModeVersionAsync(
+                idSistemaVersao, cancellationToken);
+            if (fallback is not null) available = [fallback];
+        }
+        if (gameCode is null && available.Length > 1)
+            return (null, GameRunOperationResult<GameRunDto>.Fail("JOGO_OBRIGATORIO",
+                "Escolha qual jogo desta mesa deseja iniciar."));
+        GameModeVersion? mode = gameCode is null ? available.FirstOrDefault() :
+            available.FirstOrDefault(candidate => candidate.Codigo == gameCode);
         if (mode is null)
             return (null, GameRunOperationResult<GameRunDto>.Fail(
                 "MODO_INDISPONIVEL",
@@ -443,6 +476,7 @@ public sealed class GameRunService : IGameRunService
             IdGameRun = run.IdGameRun,
             IdPersonagemJogadorOrigem = run.IdPersonagemJogadorOrigem,
             IdGameModeVersion = run.IdGameModeVersion,
+            NomeJogo = run.GameModeVersion.Nome ?? "Odisseia",
             NumeroVersaoModo = run.GameModeVersion.NumeroVersao,
             IdSistemaVersao = run.IdSistemaVersao,
             Status = run.Status.ToString(),

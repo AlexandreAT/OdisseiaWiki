@@ -1,4 +1,5 @@
 import styled, { keyframes } from 'styled-components';
+import { cyberButtonsFillWidth } from '../../../components/Generic/HighlightButton/HighlightButton.styles';
 import { GameFrame } from '../GameShared.style';
 
 export const LandingSection = styled(GameFrame)`
@@ -39,6 +40,7 @@ export const ActiveRunActions = styled.div`
   grid-template-columns: repeat(2, minmax(0, 1fr));
   width: min(100%, 350px);
   gap: 10px;
+  ${cyberButtonsFillWidth}
 
   @media (max-width: 600px) {
     width: 100%;
@@ -92,6 +94,42 @@ export const CharacterGrid = styled.div`
   gap: 14px;
 `;
 
+export const GameChoiceGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  max-height: min(65vh, 680px);
+  overflow-y: auto;
+  padding: 8px 4px 12px;
+  @media (max-width: 740px) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  @media (max-width: 490px) { grid-template-columns: 1fr; }
+`;
+
+export const GameChoiceCard = styled.button`
+  display: grid;
+  align-content: start;
+  gap: 9px;
+  min-width: 0;
+  padding: 0 0 14px;
+  text-align: left;
+  color: var(--whitesmoke);
+  background: rgba(1, 14, 25, .78);
+  border: 1px solid var(--neonBlue);
+  border-radius: 8px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color .2s, box-shadow .2s, transform .2s;
+  &:hover, &:focus-visible {
+    border-color: var(--clearneonBlue);
+    box-shadow: 0 0 15px rgba(0, 187, 255, .28);
+    transform: translateY(-2px);
+  }
+  &:disabled { opacity: .55; cursor: wait; transform: none; }
+  img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+  strong { padding: 0 12px; font-family: 'DO Futuristic', sans-serif; color: var(--clearneonBlue); }
+  small { padding: 0 12px; color: #b8c8d7; line-height: 1.35; }
+`;
+
 export const CharacterCard = styled.div`
   position: relative;
   min-width: 0;
@@ -140,6 +178,9 @@ export const CharacterWarningTooltip = styled.div<{ $top: number; $left: number;
   width: min(340px, calc(100vw - 24px));
   max-height: min(300px, calc(100vh - 24px));
   overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
   padding: 12px 14px;
   border: 1px solid var(--clearneonYellow);
   border-radius: 9px;
