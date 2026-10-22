@@ -8,6 +8,7 @@ import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import CloseIcon from '@mui/icons-material/Close';
 import SportsEsportsOutlinedIcon from '@mui/icons-material/SportsEsportsOutlined';
 import { useState } from 'react';
+import { useUnsavedChangesGuard } from '../../../hooks/useUnsavedChangesGuard';
 import { useSelector } from 'react-redux';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import BannerMesa from '../../../assets/Banner Mesa.jpeg';
@@ -78,6 +79,10 @@ const MesaManagement = () => {
   const state = useMesaManagement(idMesa, tab);
   const [expelUser, setExpelUser] = useState<{ id: number; name: string } | null>(null);
   const [expelReason, setExpelReason] = useState('');
+  const [gameDirty, setGameDirty] = useState(false);
+  const { guardDialog } = useUnsavedChangesGuard(
+    (tab === 'geral' && state.dirty) || (tab === 'jogo' && gameDirty),
+  );
 
   if (state.loading) {
     return (
@@ -93,6 +98,7 @@ const MesaManagement = () => {
 
   return (
     <>
+      {guardDialog}
       <AnimatedBackground type="management" skipIntro />
       <MesaPage $neon={isNeonActive}>
         <PageHeader $neon={isNeonActive}>
@@ -117,7 +123,7 @@ const MesaManagement = () => {
           </ManagementSidebar>
           <ManagementContent $neon={isNeonActive}>
             <MesaHudDecor neon={isNeonActive} />
-            {tab === 'jogo' && <ManagementGame theme={theme} neon={neon} mesaId={idMesa} />}
+            {tab === 'jogo' && <ManagementGame theme={theme} neon={neon} mesaId={idMesa} onDirtyChange={setGameDirty} />}
             {tab === 'geral' && (
               <FormGrid onSubmit={(event) => { event.preventDefault(); void state.save(); }}>
                 <FormColumn>

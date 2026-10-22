@@ -13,6 +13,8 @@ import { HorizontalList } from '../../../../../../components/Generic/HorizontalL
 import { DataTable } from '../../../../../../components/Generic/DataTable/DataTable';
 import { PontoDeInteresse } from '../../../../../../models/Cities';
 import { useEntityEditSync } from '../../../../../../hooks/useEntityEditSync';
+import { UnsavedChangesGuard } from '../../../../../../components/Generic/UnsavedChangesGuard';
+import { flushSync } from 'react-dom';
 import { normalizeImagePath } from '../../../../../Wiki/utils/imagePathHelper';
 import { EntityEditFloatingActions } from '../../FormBuscarConteúdo/EntityEditFloatingActions';
 import {
@@ -180,7 +182,7 @@ export const FormCity = ({ theme, neon, initialCity, onSaveSuccess, contentType 
       if (result?.success) {
         pointImageFilesRef.current.clear();
         toast.success(result.message);
-        markSaved();
+        flushSync(markSaved);
         if (onSaveSuccess) {
           await onSaveSuccess({ stayOnPage });
         }
@@ -201,6 +203,7 @@ export const FormCity = ({ theme, neon, initialCity, onSaveSuccess, contentType 
 
   return (
     <FormController onSubmit={onSubmit}>
+      {initialCity && <UnsavedChangesGuard dirty={!isSynced} />}
       <FormHeader>
         <HeaderInfo>
           <InputText

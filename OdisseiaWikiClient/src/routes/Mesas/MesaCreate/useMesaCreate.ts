@@ -21,7 +21,7 @@ const initialForm: MesaCreateFormState = {
   nome: '', descricao: '', limiteJogadores: 4, tags: '', acompanharVersaoAtual: true,
 };
 
-export const useMesaCreate = () => {
+export const useMesaCreate = (onCreated?: () => void) => {
   const navigate = useNavigate();
   const [form, setForm] = useState(initialForm);
   const [systems, setSystems] = useState<SistemaRpgResumo[]>([]);
@@ -78,6 +78,7 @@ export const useMesaCreate = () => {
         acompanharVersaoAtual: form.acompanharVersaoAtual,
       });
       toast.success('Mesa criada com sucesso.');
+      onCreated?.();
       navigate(`/mesa/${mesa.idMesa}/gerenciar`);
     } catch (error) {
       toast.error(getApiErrorMessage(error, 'Não foi possível criar a Mesa.'));

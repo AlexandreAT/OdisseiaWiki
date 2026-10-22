@@ -15,6 +15,8 @@ import { useFormItem } from '../FormCriarConteúdo/FormItem/useFormItem';
 import { ItemPayload } from '../../../../../services/itensService';
 import { ItemTipo } from '../../../../../models/Itens';
 import { useEntityEditSync } from '../../../../../hooks/useEntityEditSync';
+import { UnsavedChangesGuard } from '../../../../../components/Generic/UnsavedChangesGuard';
+import { flushSync } from 'react-dom';
 import { atributosFormMap } from '../FormCriarConteúdo/FormCharacter/MapItensForm';
 import {
   FormController,
@@ -243,7 +245,7 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
 
       if (result?.success) {
         toast.success(result.message);
-        markSaved();
+        flushSync(markSaved);
         await onSave?.();
         if (!stayOnPage) onBack();
       } else {
@@ -289,6 +291,7 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
 
   return (
     <FormController theme={theme} neon={neon} onSubmit={onSubmit}>
+      <UnsavedChangesGuard dirty={!isSynced} />
       <FormHeader theme={theme} neon={neon}>
         <SectionTitle theme={theme} neon={neon}>Dados Básicos</SectionTitle>
 

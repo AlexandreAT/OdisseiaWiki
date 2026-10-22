@@ -19,7 +19,7 @@ export const createGameAdventureDraft = async (code: string, mesaId?: number): P
   (await api.post<GameModeEditor>(`${adventurePath}/${encodeURIComponent(code)}/draft`, null,
     { params: { idMesa: mesaId } })).data;
 
-export const adaptGameAdventure = async (code: string, mesaId: number): Promise<GameModeEditor> =>
+export const adaptGameAdventure = async (code: string, mesaId?: number): Promise<GameModeEditor> =>
   (await api.post<GameModeEditor>(`${adventurePath}/${encodeURIComponent(code)}/adapt`, null,
     { params: { idMesa: mesaId } })).data;
 

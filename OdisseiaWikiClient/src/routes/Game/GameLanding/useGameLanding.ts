@@ -105,7 +105,7 @@ export const useGameLanding = () => {
     try {
       const games = await getCharacterGames(characterId);
       if (games.length === 0) {
-        setActionError('Ainda não há jogo publicado para o Sistema desta ficha.');
+        setActionError('Ainda não há jogo publicado para a versão do Sistema desta ficha. O responsável precisa adaptar e publicar o jogo nessa versão.');
       } else if (games.length > 1) setGameChoices({ characterId, games });
       else {
         creatingRef.current = false;

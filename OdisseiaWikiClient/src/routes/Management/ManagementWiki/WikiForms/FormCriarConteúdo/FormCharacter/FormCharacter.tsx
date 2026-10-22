@@ -49,9 +49,10 @@ interface FormProps {
   theme: 'dark' | 'light';
   neon: 'on' | 'off';
   contentType?: string;
+  onSaveSuccess?: () => void;
 }
 
-export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
+export const FormCharacter = ({ theme, neon, contentType, onSaveSuccess }: FormProps) => {
   const [comparisonItem, setComparisonItem] = React.useState<Item | null>(null);
   const [characterComparisonOpen, setCharacterComparisonOpen] = React.useState(false);
   const [explodedTab, setExplodedTab] = React.useState<ExplodedViewTab | null>(null);
@@ -101,7 +102,7 @@ export const FormCharacter = ({ theme, neon, contentType }: FormProps) => {
     listItens, handleSelectItem,
     sistema,
     variants,
-  } = useFormCharacter({ contentType, idMesa: getMesaWikiIdFromPath() });
+  } = useFormCharacter({ contentType, idMesa: getMesaWikiIdFromPath(), onSaveSuccess });
   
   const tagInputRef = useRef<HTMLInputElement>(null);
 

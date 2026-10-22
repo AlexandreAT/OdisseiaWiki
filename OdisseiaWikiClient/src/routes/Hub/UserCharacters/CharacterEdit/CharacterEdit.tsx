@@ -38,6 +38,7 @@ import {
 } from '../../../../components/Gameplay';
 import { useGameplayEngine } from '../../../../hooks/useGameplayEngine';
 import { useGameplayFavorites } from '../../../../hooks/useGameplayFavorites';
+import { useUnsavedChangesGuard } from '../../../../hooks/useUnsavedChangesGuard';
 
 interface UserCharactersProps {
   theme: 'dark' | 'light';
@@ -255,6 +256,9 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, initialStep = 1
     }, [snapshot, userName, race]);
 
     const isSynced = lastSavedSnapshot !== '' && snapshot === lastSavedSnapshot;
+    const { guardDialog, allowNextNavigation } = useUnsavedChangesGuard(
+      lastSavedSnapshot !== '' && !isSynced,
+    );
 
     const isFirstStep = editStep === 1;
     const isLastStep = editStep === 2;
@@ -284,13 +288,16 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, initialStep = 1
         const success = await handleUpdate();
         if (success) {
           setLastSavedSnapshot(snapshot);
-          if (goBackAfterSave) onBack();
+          if (goBackAfterSave) {
+            allowNextNavigation();
+            onBack();
+          }
         }
         return success;
       } finally {
         saveInFlightRef.current = false;
       }
-    }, [handleUpdate, onBack, snapshot, validateEdit]);
+    }, [allowNextNavigation, handleUpdate, onBack, snapshot, validateEdit]);
 
     const persistedSourceIds = React.useMemo(() => {
       const inventoryIds = persistedGameplayIds(personagem.inventarioJson);
@@ -378,6 +385,7 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, initialStep = 1
 
     return (
         <FormController marginTop="0px" onSubmit={(e) => e.preventDefault()}>
+            {guardDialog}
             <CharacterEditActions aria-label="Opções do personagem">
               <CharacterOptionButton
                 type="button"

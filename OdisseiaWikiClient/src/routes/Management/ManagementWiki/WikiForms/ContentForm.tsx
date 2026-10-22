@@ -6,13 +6,14 @@ interface ContentFormProps {
   mode: 'create' | 'search' | null;
   theme: 'dark' | 'light';
   neon: 'on' | 'off';
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
-export const ContentForm = ({ mode, theme, neon }: ContentFormProps) => {
+export const ContentForm = ({ mode, theme, neon, onDirtyChange }: ContentFormProps) => {
     const renderForm = () => {
         switch (mode) {
             case 'create':
-                return <FormCriarConteúdo theme={theme} neon={neon} />;
+                return <FormCriarConteúdo theme={theme} neon={neon} onDirtyChange={onDirtyChange} />;
             case 'search':
                 return <FormBuscarConteúdo theme={theme} neon={neon} />;
             default:

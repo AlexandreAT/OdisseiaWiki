@@ -1,4 +1,6 @@
 import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
+import { useState } from 'react';
+import { useUnsavedChangesGuard } from '../../../hooks/useUnsavedChangesGuard';
 import { useSelector } from 'react-redux';
 import { AnimatedBackground } from '../../../components/Generic/AnimatedBackground/AnimatedBackground';
 import { CyberButton } from '../../../components/Generic/HighlightButton/HighlightButton';
@@ -12,11 +14,17 @@ import type { MesaThemeState } from '../MesaThemeState';
 
 const MesaCreate = () => {
   const { theme, neon } = useSelector((state: MesaThemeState) => state.themesReducer);
-  const state = useMesaCreate();
+  const [dirty, setDirty] = useState(false);
+  const { guardDialog, allowNextNavigation } = useUnsavedChangesGuard(dirty);
+  const state = useMesaCreate(() => {
+    allowNextNavigation();
+    setDirty(false);
+  });
   const isNeonActive = neon === 'on';
 
   return (
     <>
+      {guardDialog}
       <AnimatedBackground type="distant" skipIntro />
       <MesaPage $neon={isNeonActive}>
         <PageHeader $neon={isNeonActive}>
@@ -25,7 +33,8 @@ const MesaCreate = () => {
         </PageHeader>
         <FormFrame $neon={isNeonActive}>
           <MesaHudDecor neon={isNeonActive} />
-          <FormGrid onSubmit={(event) => { event.preventDefault(); void state.submit(); }}>
+          <FormGrid onInputCapture={() => setDirty(true)} onChangeCapture={() => setDirty(true)}
+            onSubmit={(event) => { event.preventDefault(); void state.submit(); }}>
             <FormColumn>
               <ImageUploader
                 theme={theme}

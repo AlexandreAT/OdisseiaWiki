@@ -38,9 +38,10 @@ interface FormItemProps {
   theme: 'dark' | 'light';
   neon: 'on' | 'off';
   contentType?: string;
+  onSaveSuccess?: () => void;
 }
 
-export const FormItem = ({ theme, neon, contentType }: FormItemProps) => {
+export const FormItem = ({ theme, neon, contentType, onSaveSuccess }: FormItemProps) => {
   const {
     itemId,
     nome,
@@ -99,6 +100,7 @@ export const FormItem = ({ theme, neon, contentType }: FormItemProps) => {
 
     if (result?.success) {
       toast.success(result.message);
+      onSaveSuccess?.();
     } else {
       toast.error(result?.message || "Erro ao criar item");
     }

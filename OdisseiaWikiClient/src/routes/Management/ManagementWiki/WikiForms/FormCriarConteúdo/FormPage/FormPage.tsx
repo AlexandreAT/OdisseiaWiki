@@ -47,6 +47,8 @@ import { BiTrash, BiPlus, BiMoveVertical, BiInfoCircle } from 'react-icons/bi';
 import { EntityEditFloatingActions } from '../../FormBuscarConteúdo/EntityEditFloatingActions';
 import { revealFirstValidationError } from '../../../../../../utils/formValidationFeedback';
 import { useEntityEditSync } from '../../../../../../hooks/useEntityEditSync';
+import { UnsavedChangesGuard } from '../../../../../../components/Generic/UnsavedChangesGuard';
+import { flushSync } from 'react-dom';
 import { getMesaWikiIdFromPath } from '../../../../../../services/wikiContext';
 
 const BLOCK_TYPES: PageBlockType[] = [
@@ -165,7 +167,7 @@ export const FormPage: React.FC<FormPageProps> = ({
       const result = await handleSubmit();
       if (!result?.success) return;
 
-      markSaved();
+      flushSync(markSaved);
       await onSaveSuccess?.({ stayOnPage });
     } finally {
       persistInFlightRef.current = false;
@@ -283,6 +285,7 @@ export const FormPage: React.FC<FormPageProps> = ({
 
   return (
     <FormPageContainer onSubmit={(e) => void persist(false, e)}>
+      {pageId && <UnsavedChangesGuard dirty={!isSynced} />}
       <div>
         <SectionHeader $isDark={theme === 'dark'}>
           <SectionTitle>Informações da Página</SectionTitle>

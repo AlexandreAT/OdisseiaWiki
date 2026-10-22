@@ -223,7 +223,7 @@ public sealed partial class GameModeManagementService
     }
 
     public async Task<GameRunOperationResult<GameModeEditorDto>> AdaptAdventureAsync(
-        string code, int idMesa, int userId, bool admin, CancellationToken token)
+        string code, int? idMesa, int userId, bool admin, CancellationToken token)
     {
         var scope = await ResolveAdventureScopeAsync(idMesa, null, userId, admin, token);
         if (_context is null || scope.SystemVersion is not int targetId)

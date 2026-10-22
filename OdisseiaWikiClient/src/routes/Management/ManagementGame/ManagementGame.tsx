@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Modal } from '../../../components/Generic/Modal/Modal';
 import { ImageUploader } from '../../../components/Generic/ImageUploader/ImageUploader';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
@@ -29,14 +29,21 @@ const nodeCountOptions = Array.from({ length: 22 }, (_, index) => ({
   value: index + 3, label: `${index + 3} nós`,
 }));
 
-interface Props { theme: 'dark' | 'light'; neon: 'on' | 'off'; mesaId?: number }
+interface Props { theme: 'dark' | 'light'; neon: 'on' | 'off'; mesaId?: number;
+  onDirtyChange?: (dirty: boolean) => void }
 
-export const ManagementGame = ({ theme, neon, mesaId }: Props) => {
+export const ManagementGame = ({ theme, neon, mesaId, onDirtyChange }: Props) => {
   const state = useManagementGame(mesaId);
   const [createOpen, setCreateOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'geral' | 'ataque' | 'areas' | 'bases' | 'encontros' | 'poderes'>('areas');
   const [migrationSource, setMigrationSource] = useState<number | null>(null);
   const editor = state.editor;
+  const formDirty = state.changed || Boolean(
+    state.newGameName.trim() || state.newGameDescription.trim() || state.newGameBanner);
+  useEffect(() => {
+    onDirtyChange?.(formDirty);
+    return () => onDirtyChange?.(false);
+  }, [formDirty, onDirtyChange]);
   const editable = editor?.status === 'Rascunho' && !state.busy;
   const archivedVersions = state.systemVersions.filter((version) =>
     version.id !== state.selectedSystemVersion && !version.current);
@@ -48,6 +55,10 @@ export const ManagementGame = ({ theme, neon, mesaId }: Props) => {
     version.id === state.selectedSystemVersion && version.current) && archivedVersions.length > 0;
   const canAdapt = Boolean(mesaId && editor && state.systemVersions.some((version) =>
     version.current && version.id !== editor.idSistemaVersao));
+  const canAdaptGlobal = Boolean(!mesaId && !editor && state.selectedGameCode &&
+    state.systemVersions.some((version) => version.current && version.id === state.selectedSystemVersion) &&
+    state.games.some((game) => game.codigo === state.selectedGameCode &&
+      game.idSistemaVersao !== state.selectedSystemVersion));
   const versionPicker = <GameAdminVersion><Select theme={theme} neon={neon}
     label={mesaId ? 'Versão do Sistema deste jogo' : 'Versão do Sistema da ficha'} value={state.selectedSystemVersion ?? ''}
     options={state.systemVersions.map((version) => ({ value: version.id,
@@ -85,12 +96,24 @@ export const ManagementGame = ({ theme, neon, mesaId }: Props) => {
         onChange={(event) => state.setNewGameDescription(event.target.value.slice(0, 500))} />
       <GameAdminActions><CyberButton theme={theme} neon={neon} text="Criar jogo" width="170px"
         disabled={state.busy || !state.newGameBanner || state.newGameName.trim().length < 2}
-        onClick={() => { void state.createGame().then((ok) => { if (ok) setCreateOpen(false); }); }} /></GameAdminActions>
+        onClick={() => { void state.createGame().then((ok) => {
+          if (!ok) return;
+          state.setNewGameName('');
+          state.setNewGameDescription('');
+          state.setNewGameBanner(null);
+          setCreateOpen(false);
+        }); }} /></GameAdminActions>
       {state.error && <p role="alert">{state.error}</p>}
     </GameAdminSection>
   </Modal>;
   if (!editor) return <GameAdminFrame neon={neon === 'on'}>
     {versionPicker}{gameSelector}{createModal}
+    {canAdaptGlobal && <GameAdminSection>
+      <h2>Atualizar jogo para o Sistema atual</h2>
+      <GameAdminHint>Este jogo ainda não tem versão nesta publicação do Sistema. A adaptação cria um rascunho; revise e publique para liberar o jogo às fichas atualizadas.</GameAdminHint>
+      <GameAdminActions><CyberButton theme={theme} neon={neon} text="Adaptar jogo"
+        width="190px" disabled={state.busy} onClick={() => { void state.adaptGame(); }} /></GameAdminActions>
+    </GameAdminSection>}
     {state.error && <p role="alert">{state.error}</p>}
     {state.games.length === 0 && <GameAdminHint>Crie o primeiro jogo para esta {mesaId ? 'mesa' : 'versão do Sistema'}.</GameAdminHint>}
   </GameAdminFrame>;

@@ -56,7 +56,7 @@ public sealed class GameAdventuresController : ControllerBase
     }
 
     [HttpPost("{code}/adapt")]
-    public async Task<IActionResult> Adapt(string code, [FromQuery] int idMesa, CancellationToken token)
+    public async Task<IActionResult> Adapt(string code, [FromQuery] int? idMesa, CancellationToken token)
     {
         int? userId = User.GetUserId();
         if (userId is null) return Unauthorized();

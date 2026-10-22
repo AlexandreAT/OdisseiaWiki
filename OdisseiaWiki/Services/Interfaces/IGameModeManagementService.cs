@@ -36,5 +36,5 @@ public interface IGameModeManagementService
     Task<GameRunOperationResult<GameModeEditorDto>> CreateAdventureDraftAsync(
         string code, int? idMesa, int userId, bool admin, CancellationToken token);
     Task<GameRunOperationResult<GameModeEditorDto>> AdaptAdventureAsync(
-        string code, int idMesa, int userId, bool admin, CancellationToken token);
+        string code, int? idMesa, int userId, bool admin, CancellationToken token);
 }

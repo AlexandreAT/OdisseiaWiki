@@ -36,7 +36,7 @@ const serializeRichText = (value: any): string => {
   }
 };
 
-export const useFormCharacter = ({ applyRaceDefaults = true, contentType, idEntidade, idMesa }: { applyRaceDefaults?: boolean; contentType?: string; idEntidade?: string; idMesa?: number | null } = {}) => {
+export const useFormCharacter = ({ applyRaceDefaults = true, contentType, idEntidade, idMesa, onSaveSuccess }: { applyRaceDefaults?: boolean; contentType?: string; idEntidade?: string; idMesa?: number | null; onSaveSuccess?: () => void } = {}) => {
   // --- step ---
   const [step, setStep] = useState(1);
   // --- dados do formulário ---
@@ -640,13 +640,14 @@ export const useFormCharacter = ({ applyRaceDefaults = true, contentType, idEnti
       }
 
       toast.success("Personagem salvo com sucesso!");
+      onSaveSuccess?.();
       if (!variants.generico) variants.hydrate(null);
     } catch (err: any) {
       toast.error(getApiErrorMessage(err, 'Erro ao salvar personagem'));
     } finally {
       setIsSubmitting(false);
     }
-  }, [avatarUrl, avatarFile, galeriaFiles, galeriaCaptions, userName, statusBasico, itens, magias, skills, race, city, history, costumes, nanites, alignment, traits, idpassiva, ultimate, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, statusExtras, defesas, tags, contentType, visivel, destaque, validateStepOne, sistema, variants]);
+  }, [avatarUrl, avatarFile, galeriaFiles, galeriaCaptions, userName, statusBasico, itens, magias, skills, race, city, history, costumes, nanites, alignment, traits, idpassiva, ultimate, listPersonagemRelacionado, atributosPrincipais, atributosSecundarios, level, xp, statusExtras, defesas, tags, contentType, visivel, destaque, validateStepOne, sistema, variants, onSaveSuccess]);
 
   return {
     variants,

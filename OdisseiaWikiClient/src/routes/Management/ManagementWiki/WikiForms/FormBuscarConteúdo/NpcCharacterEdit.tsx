@@ -5,6 +5,7 @@ import { getMesas } from '../../../../../services/mesaService';
 import { getAuthSession } from '../../../../../services/authSession';
 import { getMesaWikiIdFromPath } from '../../../../../services/wikiContext';
 import { useSistemaRuntimeContexto } from '../../../../../hooks/useSistemaRuntimeContexto';
+import { useUnsavedChangesGuard } from '../../../../../hooks/useUnsavedChangesGuard';
 import type { Mesa } from '../../../../../models/Mesa';
 import { CharacterVariantName, CharacterVariantPager, CharacterVariantType } from '../../../../../components/CharacterVariants/CharacterVariants';
 import { findInvalidVariant } from '../../../../../utils/characterVariants';
@@ -558,6 +559,9 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
   }, [snapshot, userName, race, isLoadingCharacter]);
 
   const isSynced = lastSavedSnapshot !== '' && snapshot === lastSavedSnapshot;
+  const { guardDialog, allowNextNavigation } = useUnsavedChangesGuard(
+    lastSavedSnapshot !== '' && !isSynced,
+  );
   const isFirstStep = editStep === 1;
   const isLastStep = editStep === 2;
 
@@ -848,9 +852,11 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
       setLastSavedSnapshot(snapshot);
       if (!variants.generico) variants.hydrate(null);
       toast.success(clone ? 'NPC clonado com sucesso!' : 'NPC atualizado com sucesso!');
+      if (clone) allowNextNavigation();
       await onSave?.();
 
       if (options?.goBackAfterSave) {
+        allowNextNavigation();
         onBack();
       }
     } catch (error: unknown) {
@@ -906,6 +912,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
     onBack,
     sistema,
     targetRuntime,
+    allowNextNavigation,
   ]);
 
   const handleSaveAndBack = React.useCallback(async () => {
@@ -934,6 +941,7 @@ export const NpcCharacterEdit: React.FC<NpcCharacterEditProps> = ({
 
   return (
     <FormController onSubmit={(event) => event.preventDefault()}>
+      {guardDialog}
       <CharacterStepDots
         theme={theme}
         neon={neon}

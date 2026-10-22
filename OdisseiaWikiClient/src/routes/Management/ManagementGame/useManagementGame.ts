@@ -69,9 +69,17 @@ export const useManagementGame = (mesaId?: number) => {
       const currentCode = gameCode && catalog.some((item) => item.codigo === gameCode)
         ? gameCode : catalog[0]?.codigo ?? null;
       setSelectedGameCode(currentCode);
-      const value = currentCode ? await getGameAdventureEditor(currentCode, mesaId) : null;
-      const effectiveVersion = value?.idSistemaVersao ?? selected;
-      setSelectedSystemVersion(effectiveVersion);
+      let value: GameModeEditor | null = null;
+      if (currentCode) {
+        try {
+          value = await getGameAdventureEditor(currentCode, mesaId, mesaId ? versionId : selected);
+        } catch (reason) {
+          const code = (reason as { response?: { data?: { codigo?: string } } })?.response?.data?.codigo;
+          if (code !== 'MODO_INDISPONIVEL') throw reason;
+        }
+      }
+      const effectiveVersion = mesaId ? value?.idSistemaVersao ?? selected : selected;
+      setSelectedSystemVersion(effectiveVersion ?? null);
       const [candidates, rests] = await Promise.all([
         getGameModeNpcs(effectiveVersion, mesaId).catch(() => []),
         getGameModeRestOptions(effectiveVersion, mesaId).catch(() => []),
@@ -94,7 +102,8 @@ export const useManagementGame = (mesaId?: number) => {
       setSelectedGameCode(value.codigoJogo);
       setGames((current) => current.some((item) => item.codigo === value.codigoJogo) ?
         current.map((item) => item.codigo === value.codigoJogo ? {
-          ...item, status: value.status, numeroVersao: value.numeroVersao,
+          ...item, idSistemaVersao: value.idSistemaVersao,
+          status: value.status, numeroVersao: value.numeroVersao,
         } : item) : [...current, { codigo: value.codigoJogo, idMesa: value.idMesa,
           idSistemaVersao: value.idSistemaVersao, nome: value.nomeJogo,
           descricao: value.descricaoJogo, banner: value.bannerJogo,
@@ -239,7 +248,8 @@ export const useManagementGame = (mesaId?: number) => {
     editor, saved, npcs, restOptions, systemVersions, selectedSystemVersion, loading, busy, changed,
     games, selectedGameCode, newGameName, newGameDescription, newGameBanner,
     setNewGameName, setNewGameDescription, setNewGameBanner,
-    selectGame: (code: string) => { if (!changed && !busy) void load(selectedSystemVersion ?? undefined, code); },
+    selectGame: (code: string) => { if (!changed && !busy)
+      void load(mesaId ? undefined : selectedSystemVersion ?? undefined, code); },
     uploadBanner: async (file: File) => {
       setBusy(true); setError(null);
       try {
@@ -255,7 +265,8 @@ export const useManagementGame = (mesaId?: number) => {
         : selectedSystemVersion ?? undefined, nome: newGameName,
       descricao: newGameDescription, banner: newGameBanner ?? '' }), 'Jogo criado como rascunho.'),
     error, notice, load,
-    selectSystemVersion: (id: number) => { if (!changed && !busy) void load(id); },
+    selectSystemVersion: (id: number) => { if (!changed && !busy)
+      void load(id, selectedGameCode ?? undefined); },
     updateArea, moveArea, updateEncounter, updateEnemy, selectNpc, uploadAreaImage, uploadEnemyImage,
     updatePower, uploadPowerImage,
     addPower: (type: GameModePowerOption['type']) => setEditor((current) => current && current.powerCatalog.length < 40
@@ -326,7 +337,7 @@ export const useManagementGame = (mesaId?: number) => {
     }),
     createDraft: () => run(() => selectedGameCode ? createGameAdventureDraft(selectedGameCode, mesaId)
       : createGameModeDraft(selectedSystemVersion ?? undefined), 'Rascunho criado.'),
-    adaptGame: () => mesaId && selectedGameCode && run(async () => {
+    adaptGame: () => selectedGameCode && run(async () => {
       const adapted = await adaptGameAdventure(selectedGameCode, mesaId);
       const [candidates, rests] = await Promise.all([
         getGameModeNpcs(adapted.idSistemaVersao, mesaId),

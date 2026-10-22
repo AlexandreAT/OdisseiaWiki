@@ -36,6 +36,7 @@ export interface MesaGeneralForm {
 export const useMesaManagement = (idMesa?: number, tab: MesaManagementTab = 'geral') => {
   const [mesa, setMesa] = useState<MesaPublica | null>(null);
   const [form, setForm] = useState<MesaGeneralForm | null>(null);
+  const [savedForm, setSavedForm] = useState('');
   const [versions, setVersions] = useState<SistemaVersaoResumo[]>([]);
   const [requests, setRequests] = useState<MesaSolicitacaoEntrada[]>([]);
   const [players, setPlayers] = useState<MesaJogador[]>([]);
@@ -49,7 +50,7 @@ export const useMesaManagement = (idMesa?: number, tab: MesaManagementTab = 'ger
     if (!idMesa) return;
     const data = await obterMesaPublica(idMesa);
     setMesa(data);
-    setForm({
+    const nextForm: MesaGeneralForm = {
       nome: data.nome,
       descricao: data.descricao || '',
       imagem: data.imagem || undefined,
@@ -57,7 +58,9 @@ export const useMesaManagement = (idMesa?: number, tab: MesaManagementTab = 'ger
       limiteJogadores: data.limiteJogadores,
       idSistemaVersao: data.idSistemaVersao || undefined,
       acompanharVersaoAtual: false,
-    });
+    };
+    setForm(nextForm);
+    setSavedForm(JSON.stringify(nextForm));
     if (data.idSistemaRpg) {
       const items = await listarVersoesSistemaRpg(data.idSistemaRpg);
       setVersions(items.filter((version) => ['Publicado', 'Published'].includes(version.status)));
@@ -147,7 +150,8 @@ export const useMesaManagement = (idMesa?: number, tab: MesaManagementTab = 'ger
   };
 
   return {
-    mesa, form, versions, requests, players, characters, loading, tabLoading, saving,
+    mesa, form, dirty: Boolean(form && savedForm && JSON.stringify(form) !== savedForm),
+    versions, requests, players, characters, loading, tabLoading, saving,
     updateForm,
     setBanner: (file: File, preview: string) => { setBannerFile(file); updateForm('imagem', preview); },
     removeBanner: () => { setBannerFile(null); updateForm('imagem', undefined); },

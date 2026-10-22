@@ -1,17 +1,24 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ManagementContainer, ButtonDiv, ButtonForm } from './ManagementWiki.style';
 import { ContentForm } from './WikiForms/ContentForm';
 import { isNullOrEmpty } from '../../../utils/isNullOrEmpty';
 import { useSearchParams } from 'react-router-dom';
 import { NpcCharacterEdit } from './WikiForms/FormBuscarConteúdo/NpcCharacterEdit';
+import { hasUnsavedForms } from '../../../utils/unsavedChangesRegistry';
 
 interface ManagementWikiProps {
   theme: 'dark' | 'light';
   neon: 'on' | 'off';
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
-export const ManagementWiki = ({ theme, neon }: ManagementWikiProps) => {
+export const ManagementWiki = ({ theme, neon, onDirtyChange }: ManagementWikiProps) => {
   const [mode, setMode] = useState<'create' | 'search' | null>('create');
+  const [createDirty, setCreateDirty] = useState(false);
+  useEffect(() => {
+    onDirtyChange?.(createDirty);
+    return () => onDirtyChange?.(false);
+  }, [createDirty, onDirtyChange]);
   const [searchParams, setSearchParams] = useSearchParams();
   const cloneNpcId = searchParams.get('cloneNpc');
   const sourceMesaId = Number(searchParams.get('sourceMesaId')) || undefined;
@@ -43,7 +50,11 @@ export const ManagementWiki = ({ theme, neon }: ManagementWikiProps) => {
     <ManagementContainer>
         <ButtonDiv>
             <ButtonForm
-                onClick={() => setMode('search')}
+                onClick={() => {
+                  if (mode !== 'search' && (createDirty || hasUnsavedForms()) &&
+                    !window.confirm('Existem alterações não salvas. Deseja descartá-las?')) return;
+                  setMode('search');
+                }}
                 theme={theme} 
                 neon={neon}
                 buttonClicked={mode === 'search'}>
@@ -51,7 +62,11 @@ export const ManagementWiki = ({ theme, neon }: ManagementWikiProps) => {
             </ButtonForm>
 
             <ButtonForm 
-                onClick={() => setMode('create')}
+                onClick={() => {
+                  if (mode !== 'create' && hasUnsavedForms() &&
+                    !window.confirm('Existem alterações não salvas. Deseja descartá-las?')) return;
+                  setMode('create');
+                }}
                 theme={theme}
                 neon={neon}
                 buttonClicked={mode === 'create'}>
@@ -59,7 +74,7 @@ export const ManagementWiki = ({ theme, neon }: ManagementWikiProps) => {
             </ButtonForm>
         </ButtonDiv>
         {!isNullOrEmpty(mode) && 
-            <ContentForm mode={mode} theme={theme} neon={neon} />
+            <ContentForm mode={mode} theme={theme} neon={neon} onDirtyChange={setCreateDirty} />
         }
     </ManagementContainer>
   );

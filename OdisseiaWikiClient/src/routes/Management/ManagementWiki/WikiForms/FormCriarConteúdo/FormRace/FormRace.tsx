@@ -16,6 +16,8 @@ import { SystemEntityBinding } from '../../../../../../components/Generic/System
 import { normalizeImagePath } from '../../../../../Wiki/utils/imagePathHelper';
 import { RacaPassiva, RacaVariacao } from '../../../../../../services/racasService';
 import { useEntityEditSync } from '../../../../../../hooks/useEntityEditSync';
+import { UnsavedChangesGuard } from '../../../../../../components/Generic/UnsavedChangesGuard';
+import { flushSync } from 'react-dom';
 import { useFormRace } from './useFormRace';
 import {
   FormController,
@@ -205,7 +207,7 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
       const result = await handleSubmit(event, variationImageFilesRef.current);
       if (result?.success) {
         toast.success(result.message);
-        markSaved();
+        flushSync(markSaved);
         await onSaveSuccess?.({ stayOnPage });
       } else {
         toast.error(result?.message || 'Erro ao salvar raça');
@@ -222,6 +224,7 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
 
   return (
     <FormController onSubmit={(event) => void persist(false, event)}>
+      {initialRaca && <UnsavedChangesGuard dirty={!isSynced} />}
       <FormHeader>
         <HeaderInfo>
           <InputText

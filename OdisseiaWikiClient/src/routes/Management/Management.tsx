@@ -1,4 +1,5 @@
 import { useSelector } from 'react-redux';
+import { useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -7,6 +8,8 @@ import { ManagementWiki } from './ManagementWiki/ManagementWiki';
 import { AnimatedBackground } from '../../components/Generic/AnimatedBackground/AnimatedBackground';
 import { ManagementSystem } from './ManagementSystem/ManagementSystem';
 import { ManagementGame } from './ManagementGame/ManagementGame';
+import { UnsavedChangesGuard } from '../../components/Generic/UnsavedChangesGuard';
+import { hasUnsavedForms } from '../../utils/unsavedChangesRegistry';
 
 const OPTIONS = [
     { key: 'wiki', label: 'Wiki' },
@@ -33,10 +36,13 @@ const getInitialArea = (): ManagementArea => {
 };
 
 export const Management = () => {
+    const location = useLocation();
     const { theme, neon } = useSelector((state: ManagementThemeState) => state.themesReducer);
     const [selected, setSelected] = useState<ManagementArea>(getInitialArea);
     const [sidebarExpanded, setSidebarExpanded] = useState(false);
     const [systemDirty, setSystemDirty] = useState(false);
+    const [gameDirty, setGameDirty] = useState(false);
+    const [wikiDirty, setWikiDirty] = useState(false);
 
     useEffect(() => {
         const collapseMobileSidebar = () => {
@@ -48,33 +54,16 @@ export const Management = () => {
     }, []);
 
     useEffect(() => {
-        const syncAreaFromHistory = () => {
-            const nextArea = getInitialArea();
-            if (
-                selected === 'sistema'
-                && nextArea !== 'sistema'
-                && systemDirty
-                && !window.confirm('Existem alterações não salvas no módulo atual. Deseja descartá-las e sair?')
-            ) {
-                const params = new URLSearchParams(window.location.search);
-                params.set('area', selected);
-                window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}${window.location.hash}`);
-                return;
-            }
-            setSelected(nextArea);
-        };
-
-        window.addEventListener('popstate', syncAreaFromHistory);
-        return () => window.removeEventListener('popstate', syncAreaFromHistory);
-    }, [selected, systemDirty]);
+        setSelected(getInitialArea());
+    }, [location.search]);
     const renderContent = () => {
         switch (selected) {
             case 'wiki':
-                return <ManagementWiki theme={theme} neon={neon} />;
+                return <ManagementWiki theme={theme} neon={neon} onDirtyChange={setWikiDirty} />;
             case 'sistema':
                 return <ManagementSystem theme={theme} neon={neon} onDirtyChange={setSystemDirty} />;
             case 'jogo':
-                return <ManagementGame theme={theme} neon={neon} />;
+                return <ManagementGame theme={theme} neon={neon} onDirtyChange={setGameDirty} />;
             case 'mesas':
                 return <p>Conteúdo das Mesas</p>;
             case 'jogadores':
@@ -86,6 +75,8 @@ export const Management = () => {
 
     return (
         <MainContainer>
+            {(selected === 'sistema' || selected === 'jogo') &&
+                <UnsavedChangesGuard dirty={selected === 'sistema' ? systemDirty : gameDirty} />}
             <AnimatedBackground 
                 type='management' 
                 skipIntro={true}
@@ -112,9 +103,11 @@ export const Management = () => {
                                 onClick={() => {
                                     const nextArea = option.key as ManagementArea;
                                     if (
-                                        selected === 'sistema'
-                                        && nextArea !== 'sistema'
-                                        && systemDirty
+                                        (hasUnsavedForms() ||
+                                            (selected === 'sistema' && systemDirty) ||
+                                            (selected === 'jogo' && gameDirty) ||
+                                            (selected === 'wiki' && wikiDirty))
+                                        && nextArea !== selected
                                         && !window.confirm('Existem alterações não salvas no módulo atual. Deseja descartá-las e sair?')
                                     ) return;
 
