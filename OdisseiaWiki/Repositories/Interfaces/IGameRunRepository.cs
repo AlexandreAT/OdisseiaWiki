@@ -4,6 +4,9 @@ namespace OdisseiaWiki.Repositories.Interfaces;
 
 public interface IGameRunRepository
 {
+    Task<GameCharacterMemory?> GetCharacterMemoryAsync(int userId, int characterId, CancellationToken token);
+    Task AddCharacterMemoryAsync(GameCharacterMemory memory, CancellationToken token);
+    Task<IReadOnlyList<GameRunBattle>> GetCharacterVictoriesAsync(int userId, int characterId, int systemId, CancellationToken token);
     Task<IReadOnlyList<PersonagemJogador>> GetCharactersAsync(int idUsuario, CancellationToken cancellationToken);
     Task<IReadOnlyList<GameModeVersion>> GetPublishedModesAsync(
         IReadOnlyCollection<int> systemVersionIds, CancellationToken cancellationToken);

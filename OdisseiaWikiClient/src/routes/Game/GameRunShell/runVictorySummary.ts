@@ -1,5 +1,5 @@
 import type { GameRunBattleRecord, GameRunDto, GameRunMap } from '../../../models/GameRun';
-import { parseRunInventoryEntries } from './runInventoryEntries.ts';
+import { parseRunInventoryEntries, parseRunStoredItems } from './runInventoryEntries.ts';
 
 function completedAreas(map: GameRunMap): number {
   const names = new Set<string>();
@@ -23,6 +23,7 @@ export function summarizeRunVictory(run: GameRunDto, battles: GameRunBattleRecor
     for (const entry of [
       ...parseRunInventoryEntries(snapshot.inventario, 'ITEM'),
       ...parseRunInventoryEntries(snapshot.implantes, 'PROTESE'),
+      ...parseRunStoredItems(snapshot.economy?.stash),
     ]) {
       const key = `${entry.tipo}:${entry.idInstancia}`;
       quantities.set(key, (quantities.get(key) ?? 0) + entry.quantity);

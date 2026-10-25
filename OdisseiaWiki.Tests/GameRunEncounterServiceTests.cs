@@ -17,6 +17,273 @@ namespace OdisseiaWiki.Tests;
 public sealed class GameRunEncounterServiceTests
 {
     [Fact]
+    public async Task LootDePublicacaoSemPrecoHerdaValorDoItemEVendeComDescontoSemMudarSnapshotInicial()
+    {
+        var catalogue = new Mock<IGameModeManagementRepository>();
+        catalogue.Setup(repo => repo.GetLootItemsAsync(It.IsAny<int?>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new Item { Iditem = "seringa", Valor = 200 }]);
+        Fixture fixture = new(new GameRunItemValueResolver(catalogue.Object));
+        UseVendorMap(fixture);
+        var configuration = JsonNode.Parse(fixture.Run.GameModeVersion.ConfiguracaoJson)!;
+        configuration["saleDiscountPercent"] = 75;
+        fixture.Run.GameModeVersion.ConfiguracaoJson = configuration.ToJsonString();
+        fixture.Run.EstadoAtualJson = GameRunLoot.Prepare(fixture.Run.EstadoAtualJson, "combate",
+            new GameBattleEncounterConfig { LootCount = 1, Loot = [new GameLootEntry { ItemId = "seringa",
+                Snapshot = new JsonObject { ["nome"] = "Seringa", ["tipo"] = "consumiveis", ["valor"] = null } }] }, 4);
+        string initial = fixture.Run.SnapshotInicialJson;
+        var claimed = await fixture.Service.ClaimLootAsync(10, 5, Request(0), default);
+        Assert.True(claimed.Sucesso, claimed.Mensagem);
+        JsonNode reward = Assert.Single(claimed.Dados!.EstadoAtual.Loot!.Rewards)!;
+        string id = reward["id"]!.ToString();
+        Assert.Equal(200, reward["valor"]!.GetValue<decimal>());
+        Assert.Equal(200, JsonNode.Parse(fixture.Run.EstadoAtualJson)!["inventario"]![0]!["valor"]!.GetValue<decimal>());
+        await fixture.Service.EnterVendorAsync(10, "vendedor", 5, Request(1), default);
+        var request = new GameRunVendorSaleRequestDto { Items = [new() { ItemId = id }],
+            RevisaoEsperada = 2, ChaveIdempotencia = Guid.NewGuid() };
+        var sold = await fixture.Service.SellVendorItemsAsync(10, 5, request, default);
+        Assert.True(sold.Sucesso, sold.Mensagem);
+        Assert.Equal(150, sold.Dados!.EstadoAtual.Economy!.Balance);
+        Assert.True((await fixture.Service.SellVendorItemsAsync(10, 5, request, default)).Repetido);
+        Assert.Equal(initial, fixture.Run.SnapshotInicialJson);
+    }
+
+    [Fact]
+    public async Task VendaUsaDescontoPublicadoQuantidadeEIdempotenciaSemAlterarFicha()
+    {
+        Fixture fixture = new();
+        UseVendorMap(fixture);
+        await fixture.Service.EnterVendorAsync(10, "vendedor", 5, Request(0), default);
+        fixture.Run.GameModeVersion.ConfiguracaoJson = Fixture.BranchConfiguration.Replace(
+            "\"schemaVersion\":1", "\"saleDiscountPercent\":50,\"schemaVersion\":1", StringComparison.Ordinal);
+        JsonObject snapshot = JsonNode.Parse(fixture.Run.EstadoAtualJson)!.AsObject();
+        snapshot["inventario"] = JsonNode.Parse("""[{"id":"a","tipo":"consumiveis","valor":90,"quantidade":4,"peso":1,"atributos":{"restaura":{"vida":10}}}]""");
+        fixture.Run.EstadoAtualJson = snapshot.ToJsonString();
+        fixture.Run.LoadoutJson = GameRunActionLoadout.Serialize([new() { Tipo = "ITEM", IdInstancia = "a" }, new() { Tipo = "DESCANSO", IdInstancia = "descanso" }]);
+        var request = new GameRunVendorSaleRequestDto { Items = [new() { ItemId = "a", Quantity = 2 }],
+            RevisaoEsperada = 1, ChaveIdempotencia = Guid.NewGuid() };
+        var result = await fixture.Service.SellVendorItemsAsync(10, 5, request, default);
+        Assert.True(result.Sucesso, result.Mensagem);
+        Assert.Equal(190, result.Dados!.EstadoAtual.Economy!.Balance);
+        Assert.Equal(2, JsonNode.Parse(fixture.Run.EstadoAtualJson)!["inventario"]![0]!["quantidade"]!.GetValue<int>());
+        Assert.Equal(2, GameRunActionLoadout.Read(fixture.Run.LoadoutJson)!.Count);
+        Assert.True((await fixture.Service.SellVendorItemsAsync(10, 5, request, default)).Repetido);
+        Assert.Equal(2, fixture.Run.Revisao);
+        request.Items[0].Quantity = 1;
+        Assert.Equal("CHAVE_IDEMPOTENCIA_REUTILIZADA", (await fixture.Service.SellVendorItemsAsync(10, 5, request, default)).Codigo);
+        var remaining = await fixture.Service.SellVendorItemsAsync(10, 5, new GameRunVendorSaleRequestDto {
+            Items = [new() { ItemId = "a", Quantity = 2 }], RevisaoEsperada = 2, ChaveIdempotencia = Guid.NewGuid() }, default);
+        Assert.True(remaining.Sucesso, remaining.Mensagem);
+        Assert.Equal(280, remaining.Dados!.EstadoAtual.Economy!.Balance);
+        Assert.Empty(JsonNode.Parse(fixture.Run.EstadoAtualJson)!["inventario"]!.AsArray());
+        Assert.Equal("DESCANSO", Assert.Single(GameRunActionLoadout.Read(fixture.Run.LoadoutJson)!).Tipo);
+        Assert.Empty(JsonNode.Parse(fixture.Run.SnapshotInicialJson)!["inventario"]!.AsArray());
+        Assert.Equal(2, GameRunFirstMap.Read(fixture.Run.MapaJson, new(JsonSerializerDefaults.Web))
+            .Nodes.Single(node => node.Id == "vendedor").Payload!.Offers![0].Stock);
+    }
+
+    [Fact]
+    public async Task VendaDeDefesaEquipadaRemoveBonusERecalculaCarga()
+    {
+        Fixture fixture = new();
+        UseVendorMap(fixture);
+        await fixture.Service.EnterVendorAsync(10, "vendedor", 5, Request(0), default);
+        JsonObject root = JsonNode.Parse(fixture.Run.EstadoAtualJson)!.AsObject();
+        root["inventario"] = JsonNode.Parse("""[{"id":"colete","tipo":"traje","peso":70,"valor":100,"atributos":{"protecaoBase":300,"armaduraBase":20}}]""");
+        fixture.Run.EstadoAtualJson = GameRunDefensiveEquipment.SetEquipped(root.ToJsonString(), "colete", true);
+        var result = await fixture.Service.SellVendorItemsAsync(10, 5, new GameRunVendorSaleRequestDto {
+            Items = [new() { ItemId = "colete" }], RevisaoEsperada = 1, ChaveIdempotencia = Guid.NewGuid() }, default);
+        Assert.True(result.Sucesso, result.Mensagem);
+        root = JsonNode.Parse(fixture.Run.EstadoAtualJson)!.AsObject();
+        Assert.Equal(0, root["status"]!["defesas"]!["protecao"]!.GetValue<int>());
+        Assert.Equal(0, root["status"]!["defesas"]!["armadura"]!.GetValue<int>());
+        Assert.Empty(root["inventario"]!.AsArray());
+        Assert.Equal(0, result.Dados!.EstadoAtual.Carga!.Value.GetProperty("pesoAtual").GetDouble());
+    }
+
+    [Fact]
+    public async Task VendaExigeDonoRevisaoRunAtivaEVendedorAtual()
+    {
+        Fixture fixture = new();
+        UseVendorMap(fixture);
+        var request = new GameRunVendorSaleRequestDto { Items = [new() { ItemId = "a" }],
+            RevisaoEsperada = 0, ChaveIdempotencia = Guid.NewGuid() };
+        Assert.Equal("RUN_NAO_ENCONTRADA", (await fixture.Service.SellVendorItemsAsync(10, 99, request, default)).Codigo);
+        Assert.Equal("VENDEDOR_INDISPONIVEL", (await fixture.Service.SellVendorItemsAsync(10, 5, request, default)).Codigo);
+        await fixture.Service.EnterVendorAsync(10, "vendedor", 5, Request(0), default);
+        Assert.Equal("REVISAO_DESATUALIZADA", (await fixture.Service.SellVendorItemsAsync(10, 5, request, default)).Codigo);
+        request.RevisaoEsperada = 1;
+        string snapshot = fixture.Run.EstadoAtualJson;
+        Assert.Equal("VENDA_INVALIDA", (await fixture.Service.SellVendorItemsAsync(10, 5, request, default)).Codigo);
+        Assert.Equal(snapshot, fixture.Run.EstadoAtualJson);
+        Assert.Equal(1, fixture.Run.Revisao);
+        fixture.Run.Status = GameRunStatus.Vitoria;
+        Assert.Equal("RUN_ENCERRADA", (await fixture.Service.SellVendorItemsAsync(10, 5, request, default)).Codigo);
+    }
+
+    [Fact]
+    public async Task CompraUsaOfertaPublicadaDebitaUmaVezEPreservaEstoqueAoRetomar()
+    {
+        Fixture fixture = new();
+        UseVendorMap(fixture);
+        Assert.True((await fixture.Service.EnterVendorAsync(10, "vendedor", 5, Request(0), default)).Sucesso);
+        var request = new GameRunVendorPurchaseRequestDto
+            { ItemId = "pocao", RevisaoEsperada = 1, ChaveIdempotencia = Guid.NewGuid() };
+
+        var bought = await fixture.Service.BuyVendorItemAsync(10, 5, request, default);
+        var repeated = await fixture.Service.BuyVendorItemAsync(10, 5, request, default);
+
+        Assert.True(bought.Sucesso, bought.Mensagem);
+        Assert.True(repeated.Repetido);
+        Assert.Equal(60, bought.Dados!.EstadoAtual.Economy!.Balance);
+        JsonNode snapshot = JsonNode.Parse(fixture.Run.EstadoAtualJson)!;
+        JsonNode item = Assert.Single(snapshot["inventario"]!.AsArray())!;
+        Assert.Equal("Poção publicada", item["nome"]!.ToString());
+        Assert.True(Guid.TryParse(item["id"]!.ToString(), out _));
+        Assert.Equal("pocao", item["idItemBase"]!.ToString());
+        Assert.Equal(1, GameRunFirstMap.Read(fixture.Run.MapaJson, new(JsonSerializerDefaults.Web))
+            .Nodes.Single(node => node.Id == "vendedor").Payload!.Offers![0].Stock);
+        Assert.Empty(JsonNode.Parse(fixture.Run.SnapshotInicialJson)!["inventario"]!.AsArray());
+        Assert.Equal(2, fixture.Run.Revisao);
+
+        var stale = await fixture.Service.BuyVendorItemAsync(10, 5, new GameRunVendorPurchaseRequestDto
+            { ItemId = "pocao", RevisaoEsperada = 1, ChaveIdempotencia = Guid.NewGuid() }, default);
+        Assert.Equal("REVISAO_DESATUALIZADA", stale.Codigo);
+        request.ToStash = true;
+        Assert.Equal("CHAVE_IDEMPOTENCIA_REUTILIZADA",
+            (await fixture.Service.BuyVendorItemAsync(10, 5, request, default)).Codigo);
+    }
+
+    [Fact]
+    public async Task CompraSemSaldoOuEstoqueNaoConsomeMoedaNemEntregaItem()
+    {
+        Fixture fixture = new();
+        UseVendorMap(fixture, price: 101);
+        await fixture.Service.EnterVendorAsync(10, "vendedor", 5, Request(0), default);
+        string before = fixture.Run.EstadoAtualJson;
+        var failed = await fixture.Service.BuyVendorItemAsync(10, 5, new GameRunVendorPurchaseRequestDto
+            { ItemId = "pocao", RevisaoEsperada = 1, ChaveIdempotencia = Guid.NewGuid() }, default);
+        Assert.Equal("COMPRA_INVALIDA", failed.Codigo);
+        Assert.Equal(before, fixture.Run.EstadoAtualJson);
+        Assert.Equal(1, fixture.Run.Revisao);
+
+        UseVendorMap(fixture, stock: 0, state: "SELECIONADO");
+        fixture.Run.NoAtualId = "vendedor";
+        failed = await fixture.Service.BuyVendorItemAsync(10, 5, new GameRunVendorPurchaseRequestDto
+            { ItemId = "pocao", RevisaoEsperada = 1, ChaveIdempotencia = Guid.NewGuid() }, default);
+        Assert.Equal("ESTOQUE_ESGOTADO", failed.Codigo);
+        Assert.Empty(JsonNode.Parse(fixture.Run.EstadoAtualJson)!["inventario"]!.AsArray());
+    }
+
+    [Fact]
+    public async Task DepositoTransfereNoMercadorSemDuplicarERecusaAcessoDepoisDeAvancar()
+    {
+        Fixture fixture = new();
+        UseVendorMap(fixture);
+        await fixture.Service.EnterVendorAsync(10, "vendedor", 5, Request(0), default);
+        string initialBefore = fixture.Run.SnapshotInicialJson;
+        var bought = await fixture.Service.BuyVendorItemAsync(10, 5, new GameRunVendorPurchaseRequestDto
+            { ItemId = "pocao", ToStash = true, RevisaoEsperada = 1, ChaveIdempotencia = Guid.NewGuid() }, default);
+        Assert.True(bought.Sucesso, bought.Mensagem);
+        string itemId = Assert.Single(bought.Dados!.EstadoAtual.Economy!.Stash)["id"]!.ToString();
+        Assert.Empty(JsonNode.Parse(fixture.Run.EstadoAtualJson)!["inventario"]!.AsArray());
+        var transfer = new GameRunStashTransferRequestDto
+            { ItemId = itemId, RevisaoEsperada = 2, ChaveIdempotencia = Guid.NewGuid() };
+        var taken = await fixture.Service.TransferStashItemAsync(10, 5, transfer, default);
+        Assert.True(taken.Sucesso, taken.Mensagem);
+        Assert.Empty(taken.Dados!.EstadoAtual.Economy!.Stash);
+        Assert.True((await fixture.Service.TransferStashItemAsync(10, 5, transfer, default)).Repetido);
+        Assert.Single(JsonNode.Parse(fixture.Run.EstadoAtualJson)!["inventario"]!.AsArray());
+        fixture.Run.LoadoutJson = GameRunActionLoadout.Serialize([new() { Tipo = "ITEM", IdInstancia = itemId }]);
+        var stored = await fixture.Service.TransferStashItemAsync(10, 5, new GameRunStashTransferRequestDto
+            { ItemId = itemId, ToStash = true, RevisaoEsperada = 3, ChaveIdempotencia = Guid.NewGuid() }, default);
+        Assert.True(stored.Sucesso, stored.Mensagem);
+        Assert.Empty(GameRunActionLoadout.Read(fixture.Run.LoadoutJson)!);
+        Assert.Equal(itemId, Assert.Single(stored.Dados!.EstadoAtual.Economy!.Stash)["id"]!.ToString());
+        Assert.Empty(JsonNode.Parse(fixture.Run.EstadoAtualJson)!["inventario"]!.AsArray());
+        await fixture.Service.LeaveVendorAsync(10, 5, Request(4), default);
+        Assert.True((await fixture.Service.SelectAsync(10, "lobo", 5, Request(5), default)).Sucesso);
+        string before = fixture.Run.EstadoAtualJson;
+        var denied = await fixture.Service.TransferStashItemAsync(10, 5, new GameRunStashTransferRequestDto
+            { ItemId = itemId, RevisaoEsperada = 6, ChaveIdempotencia = Guid.NewGuid() }, default);
+        Assert.Equal("STASH_INDISPONIVEL", denied.Codigo);
+        Assert.Equal(before, fixture.Run.EstadoAtualJson);
+        Assert.Equal(initialBefore, fixture.Run.SnapshotInicialJson);
+        Assert.Equal(6, fixture.Run.Revisao);
+    }
+
+    [Theory]
+    [InlineData(GameRunStatus.Ativa)]
+    [InlineData(GameRunStatus.Vitoria)]
+    public async Task BaseFinalPermiteGuardarERetirarMesmoAposVitoriaSemReabrirARun(GameRunStatus status)
+    {
+        Fixture fixture = new();
+        fixture.Run.Status = status;
+        fixture.Run.EstadoAtualJson = fixture.Run.EstadoAtualJson.Replace("\"inventario\":[]",
+            "\"inventario\":[{\"id\":\"colete\",\"nome\":\"Colete\",\"tipo\":\"outro\",\"quantidade\":1}]");
+        fixture.Run.MapaJson = """{"schemaVersion":5,"nodes":[{"id":"base-final","type":"BASE","state":"CONCLUIDO","layer":2},{"id":"inicio-2","type":"INICIO","state":"CONCLUIDO","layer":3}]}""";
+        string initial = fixture.Run.SnapshotInicialJson;
+        var request = new GameRunStashTransferRequestDto { ItemId = "colete", ToStash = true,
+            RevisaoEsperada = 0, ChaveIdempotencia = Guid.NewGuid() };
+        var stored = await fixture.Service.TransferStashItemAsync(10, 5, request, default);
+        Assert.True(stored.Sucesso, stored.Mensagem);
+        Assert.Single(stored.Dados!.EstadoAtual.Economy!.Stash);
+        Assert.Empty(stored.Dados.EstadoAtual.Inventario!.Value.EnumerateArray());
+        Assert.True((await fixture.Service.TransferStashItemAsync(10, 5, request, default)).Repetido);
+        var taken = await fixture.Service.TransferStashItemAsync(10, 5, new() { ItemId = "colete", ToStash = false,
+            RevisaoEsperada = 1, ChaveIdempotencia = Guid.NewGuid() }, default);
+        Assert.True(taken.Sucesso, taken.Mensagem);
+        Assert.Empty(taken.Dados!.EstadoAtual.Economy!.Stash);
+        Assert.Single(taken.Dados.EstadoAtual.Inventario!.Value.EnumerateArray());
+        Assert.Equal(status, fixture.Run.Status);
+        Assert.Equal(initial, fixture.Run.SnapshotInicialJson);
+        fixture.Run.Status = GameRunStatus.Derrota;
+        Assert.Equal("RUN_ENCERRADA", (await fixture.Service.TransferStashItemAsync(10, 5, new()
+            { ItemId = "colete", ToStash = true, RevisaoEsperada = 2, ChaveIdempotencia = Guid.NewGuid() }, default)).Codigo);
+    }
+
+    [Fact]
+    public async Task VendedorNoFimDeSecretasEncadeadasRetornaAteOMapaNormalEEncerra()
+    {
+        Fixture fixture = new();
+        GameRunMapDto parent = new() { SchemaVersion = 5, Nodes = [
+            new() { Id = "inicio", Type = "INICIO", State = "CONCLUIDO", Connections = ["portal1"] },
+            new() { Id = "portal1", Type = "AREA_SECRETA", State = "SELECIONADO", Fase = 2, Layer = 1 }] };
+        GameRunMapDto first = new() { SchemaVersion = 5, Nodes = [
+            new() { Id = "inicio-secreto1", Type = "INICIO", State = "CONCLUIDO", Connections = ["portal2"] },
+            new() { Id = "portal2", Type = "AREA_SECRETA", State = "SELECIONADO", Layer = 1 }] };
+        GameRunMapDto second = new() { SchemaVersion = 5, Nodes = [
+            new() { Id = "inicio-secreto2", Type = "INICIO", State = "CONCLUIDO", Connections = ["vendedor"] },
+            new() { Id = "vendedor", Type = "VENDEDOR", State = "SELECIONADO", Layer = 1 }] };
+        var nested = GameRunMapGenerator.EnterSecret(GameRunMapGenerator.EnterSecret(parent, first, "portal1"), second, "portal2");
+        fixture.Run.MapaJson = JsonSerializer.Serialize(nested, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        fixture.Run.NoAtualId = "vendedor";
+        var result = await fixture.Service.LeaveVendorAsync(10, 5, Request(0), default);
+        Assert.True(result.Sucesso, result.Mensagem);
+        Assert.Equal("Vitoria", result.Dados!.Status);
+        Assert.Equal(2, result.Dados.Fase);
+        Assert.Null(result.Dados.NoAtualId);
+        Assert.Null(result.Dados.Mapa.ParentNodes);
+        Assert.Equal("CONCLUIDO", result.Dados.Mapa.Nodes.Single(node => node.Id == "portal1").State);
+    }
+
+    private static void UseVendorMap(Fixture fixture, int stock = 2, int price = 40, string state = "DISPONIVEL")
+    {
+        fixture.Run.EstadoAtualJson = GameRunEconomy.Credit(fixture.Run.SnapshotInicialJson, 100);
+        fixture.Run.MapaJson = JsonSerializer.Serialize(new GameRunMapDto
+        {
+            SchemaVersion = 5,
+            Nodes = [
+                new() { Id = "inicio", Type = "INICIO", State = "CONCLUIDO", Connections = ["vendedor"] },
+                new() { Id = "vendedor", Type = "VENDEDOR", State = state, Layer = 1, Fase = 1,
+                    Connections = ["lobo"], Payload = new() { Offers = [new() { ItemId = "pocao", Price = price, Stock = stock,
+                        Snapshot = JsonNode.Parse("""{"nome":"Poção publicada","tipo":"consumiveis","peso":1,"valor":90,"atributos":{"recuperacaoVida":10}}""")!.AsObject() }] } },
+                new() { Id = "lobo", Type = "COMBATE", State = "BLOQUEADO", Layer = 2, Fase = 1,
+                    Payload = new() { EncounterCode = "CACADOR" } },
+            ],
+        }, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+    }
+
+    [Fact]
     public async Task VitoriaComLootPublicadoDeixaRecompensaPendenteNaRun()
     {
         Fixture fixture = new();
@@ -54,7 +321,7 @@ public sealed class GameRunEncounterServiceTests
     {
         Fixture fixture = new();
         fixture.Run.GameModeVersion.ConfiguracaoJson = Fixture.BranchConfiguration.Replace(
-            "\"CACADOR\":{\"mapName\"", "\"CACADOR\":{\"xpReward\":7,\"mapName\"",
+            "\"CACADOR\":{\"mapName\"", "\"CACADOR\":{\"currencyReward\":35,\"xpReward\":7,\"mapName\"",
             StringComparison.Ordinal);
         fixture.Run.MapaJson = JsonSerializer.Serialize(new GameRunMapDto
         {
@@ -74,9 +341,36 @@ public sealed class GameRunEncounterServiceTests
         Assert.True(result.Sucesso, result.Mensagem);
         Assert.True(repeated.Repetido);
         Assert.Equal(7, result.Dados!.Battle.XpConcedido);
+        Assert.Equal(35, result.Dados.Battle.MoedaConcedida);
+        Assert.Equal(35, result.Dados.Run.EstadoAtual.Economy!.Balance);
         Assert.Equal(7, result.Dados.Run.EstadoAtual.Status.GetProperty("xp").GetInt32());
         Assert.False(result.Dados.Run.SnapshotInicial.Status.TryGetProperty("xp", out _));
         Assert.Equal(7, repeated.Dados!.Run.EstadoAtual.Status.GetProperty("xp").GetInt32());
+        Assert.Equal(35, repeated.Dados.Run.EstadoAtual.Economy!.Balance);
+    }
+
+    [Fact]
+    public async Task VitoriaGravaMarcoUmaVezNaTransacaoSemMudarFichaOriginal()
+    {
+        Fixture fixture = new();
+        fixture.Run.GameModeVersion.Codigo = "JOGO";
+        fixture.Run.GameModeVersion.ConfiguracaoJson = Fixture.BranchConfiguration;
+        fixture.Repository.Setup(item => item.GetOwnedCharacterAsync(5, 0, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PersonagemJogador());
+        GameCharacterMemory? memory = null;
+        fixture.Repository.Setup(item => item.AddCharacterMemoryAsync(It.IsAny<GameCharacterMemory>(), It.IsAny<CancellationToken>()))
+            .Callback((GameCharacterMemory item, CancellationToken _) => memory = item).Returns(Task.CompletedTask);
+        fixture.Run.MapaJson = """{"schemaVersion":5,"nodes":[{"id":"inicio","type":"INICIO","state":"CONCLUIDO","connections":["cacador"]},{"id":"cacador","type":"COMBATE","state":"DISPONIVEL","layer":1,"payload":{"encounterCode":"CACADOR"}}]}""";
+        string original = fixture.Run.SnapshotInicialJson;
+        await fixture.Service.SelectAsync(10, "cacador", 5, Request(0), default);
+        var command = Request(1);
+        var result = await fixture.Service.ResolveAsync(10, 5, command, default);
+        Assert.True(result.Sucesso, result.Mensagem);
+        Assert.NotNull(memory);
+        Assert.Equal("Caçador", Assert.Single(GameCharacterMilestones.Read(memory.EstadoJson).DefeatedEnemies).Encounter.Enemy!.Name);
+        Assert.True((await fixture.Service.ResolveAsync(10, 5, command, default)).Repetido);
+        fixture.Repository.Verify(item => item.AddCharacterMemoryAsync(It.IsAny<GameCharacterMemory>(), It.IsAny<CancellationToken>()), Times.Once);
+        Assert.Equal(original, fixture.Run.SnapshotInicialJson);
     }
 
     [Fact]
@@ -449,6 +743,46 @@ public sealed class GameRunEncounterServiceTests
         {
             RevisaoEsperada = 1, ChaveIdempotencia = Guid.NewGuid(), IdInstancia = "kit-1",
         }, CancellationToken.None)).Codigo);
+    }
+
+    [Theory]
+    [InlineData(GameRunStatus.Ativa)]
+    [InlineData(GameRunStatus.Vitoria)]
+    public async Task LootRecebidoPermiteUsarEEquiparSemDuplicarInclusiveNaVitoria(GameRunStatus status)
+    {
+        Fixture fixture = new();
+        fixture.Run.Status = status;
+        var root = JsonNode.Parse(fixture.Run.EstadoAtualJson)!;
+        root["status"]!["status"]!["vida"] = 10;
+        root["inventario"] = JsonNode.Parse("""[{"id":"cura","nome":"Seringa","tipo":"consumiveis","quantidade":1,"atributos":{"restaura":{"vida":5}}},{"id":"colete","nome":"Colete","tipo":"traje","atributos":{"protecaoBase":50}},{"id":"antigo","tipo":"consumiveis","quantidade":1,"atributos":{"restaura":{"vida":5}}},{"id":"outro-traje","tipo":"traje","atributos":{"protecaoBase":10}}]""");
+        root["loot"] = JsonNode.Parse("""{"faces":4,"roll":2,"rewards":[{"id":"cura"},{"id":"colete"}]}""");
+        fixture.Run.EstadoAtualJson = root.ToJsonString();
+        string original = fixture.Run.SnapshotInicialJson;
+        var consume = new GameRunConsumeItemRequestDto { IdInstancia = "cura", Quantidade = 1,
+            RevisaoEsperada = 0, ChaveIdempotencia = Guid.NewGuid() };
+        var used = await fixture.Service.ConsumeItemAsync(10, 5, consume, default);
+        Assert.True(used.Sucesso, used.Mensagem);
+        Assert.Equal(5, used.Dados!.VidaRecuperada);
+        Assert.Equal(0, used.Dados.QuantidadeRestante);
+        Assert.DoesNotContain(used.Dados.Run.EstadoAtual.Inventario!.Value.EnumerateArray(), item => item.GetProperty("id").GetString() == "cura");
+        Assert.True((await fixture.Service.ConsumeItemAsync(10, 5, consume, default)).Repetido);
+        var equip = new GameRunEquipDefenseRequestDto { Equipado = true, RevisaoEsperada = 1, ChaveIdempotencia = Guid.NewGuid() };
+        var equipped = await fixture.Service.EquipDefenseAsync(10, 5, "colete", equip, default);
+        Assert.True(equipped.Sucesso, equipped.Mensagem);
+        Assert.Equal(50, equipped.Dados!.EstadoAtual.Status.GetProperty("defesas").GetProperty("protecao").GetInt32());
+        Assert.True((await fixture.Service.EquipDefenseAsync(10, 5, "colete", equip, default)).Repetido);
+        Assert.Equal(status, fixture.Run.Status);
+        Assert.Equal(2, fixture.Run.Revisao);
+        Assert.Equal(original, fixture.Run.SnapshotInicialJson);
+        if (status == GameRunStatus.Vitoria)
+        {
+            string before = fixture.Run.EstadoAtualJson;
+            Assert.Equal("RUN_ENCERRADA", (await fixture.Service.ConsumeItemAsync(10, 5, new()
+                { IdInstancia = "antigo", RevisaoEsperada = 2, ChaveIdempotencia = Guid.NewGuid() }, default)).Codigo);
+            Assert.Equal("RUN_INDISPONIVEL", (await fixture.Service.EquipDefenseAsync(10, 5, "outro-traje", new()
+                { Equipado = true, RevisaoEsperada = 2, ChaveIdempotencia = Guid.NewGuid() }, default)).Codigo);
+            Assert.Equal(before, fixture.Run.EstadoAtualJson);
+        }
     }
 
     [Fact]
@@ -1029,7 +1363,7 @@ public sealed class GameRunEncounterServiceTests
         public SistemaVersao Version { get; private set; } = null!;
         public GameRunEncounterService Service { get; }
 
-        public Fixture()
+        public Fixture(GameRunItemValueResolver? itemValues = null)
         {
             var commands = new Dictionary<Guid, GameRunCommand>();
             Dictionary<string, GameRunBattle> battles = new();
@@ -1110,7 +1444,7 @@ public sealed class GameRunEncounterServiceTests
                 ], [new GameBattleEvent(1, 1, 1, GameBattleEventTypes.BattleStarted,
                     null, null, new BattleStartedPayload(["player", "enemy"]))]));
             Service = new GameRunEncounterService(Repository.Object, systems.Object,
-                new GameBattlePreviewFactory(new GameplayActionResolver()), Simulator.Object);
+                new GameBattlePreviewFactory(new GameplayActionResolver()), Simulator.Object, itemValues);
         }
 
         private static SistemaResultadoDado Row(string code, int min, int max, int order) => new()

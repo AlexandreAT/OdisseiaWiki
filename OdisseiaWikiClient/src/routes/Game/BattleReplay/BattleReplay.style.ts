@@ -8,14 +8,6 @@ const outcomeColor = (tone: BattleTone) => ({
   neutral: '#d9e8f0',
 })[tone];
 
-const borderTravel = keyframes`
-  0% { top: -5px; left: -5px; }
-  25% { top: -5px; left: calc(100% - 5px); }
-  50% { top: calc(100% - 5px); left: calc(100% - 5px); }
-  75% { top: calc(100% - 5px); left: -5px; }
-  100% { top: -5px; left: -5px; }
-`;
-
 export const ActorName = styled.span<{ $enemy: boolean }>`
   color: ${({ $enemy }) => $enemy ? 'var(--clearneonRed)' : 'var(--clearneonBlue)'};
   font-family: 'DO Futuristic', sans-serif;
@@ -132,19 +124,6 @@ export const CombatantCard = styled.div<{ $enemy?: boolean; $result?: 'win' | 'l
   ${({ $result, $neon }) => $result && $neon && css`
     box-shadow: 0 0 14px ${$result === 'win' ? '#55eabc66' : '#ff788666'},
       inset 0 0 18px ${$result === 'win' ? '#55eabc33' : '#ff788633'};
-    &::after {
-      content: '';
-      position: absolute;
-      z-index: 2;
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      pointer-events: none;
-      background: ${$result === 'win' ? '#55eabc' : '#ff7886'};
-      box-shadow: 0 0 12px 4px ${$result === 'win' ? '#55eabc88' : '#ff788688'};
-      animation: ${borderTravel} 3.2s linear infinite;
-    }
-    @media (prefers-reduced-motion: reduce) { &::after { animation: none; } }
   `}
 
   header {

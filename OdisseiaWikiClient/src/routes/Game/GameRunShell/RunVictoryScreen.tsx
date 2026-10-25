@@ -50,6 +50,11 @@ export function RunVictoryScreen({ run, battles, theme, neon, onClose, onHistory
         </VictoryStat>)}</VictoryStats>
       {enemyNames.length > 0 && <VictoryDetail><strong>Inimigos superados</strong>
         <p>{enemyNames.join(' · ')}</p></VictoryDetail>}
+      {run.estadoAtual.economy && <VictoryDetail><strong>Economia da jornada</strong>
+        <p>{battles.reduce((total, { battle }) => total + Math.max(0, battle.moedaConcedida ?? 0), 0).toLocaleString('pt-BR')} moedas em combates
+          {' · '}saldo final {run.estadoAtual.economy.balance.toLocaleString('pt-BR')}
+          {run.estadoAtual.economy.stash.length > 0 && <>{' · '}{run.estadoAtual.economy.stash.length} itens no depósito</>}</p>
+      </VictoryDetail>}
       <VictoryActions>
         <CyberButton theme={theme} neon={neon} text="Ver combates" colorType="secondary"
           width="180px" onClick={onHistory} />

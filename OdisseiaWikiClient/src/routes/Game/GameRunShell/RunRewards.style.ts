@@ -60,6 +60,16 @@ export const AttributePopover = styled.div<{ $top: number; $left: number }>`
 `;
 export const LootGrid = styled.div`
   display: grid; grid-template-columns: repeat(auto-fill, minmax(125px, 1fr)); gap: 14px;
-  > article { animation: ${reveal} .5s ease-out both; }
+  align-items: start;
+  min-width: 0;
+  > article {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-content: start;
+    min-width: 0;
+    animation: ${reveal} .5s ease-out both;
+    /* A button's intrinsic width must not depend on its image or item name. */
+    > button { width: 100%; min-width: 0; box-sizing: border-box; }
+  }
   @media (prefers-reduced-motion: reduce) { > article { animation: none; } }
 `;

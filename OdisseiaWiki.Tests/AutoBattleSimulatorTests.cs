@@ -10,10 +10,53 @@ namespace OdisseiaWiki.Tests;
 
 public sealed class AutoBattleSimulatorTests
 {
+    [Theory]
+    [InlineData("INICIO_TURNO")]
+    [InlineData("FIM_TURNO")]
+    public void CondicoesPeriodicasEmitemEfeitoComValorRealParaAmbosOsCombatentes(string moment)
+    {
+        var rule = new GameBattleConditionRule("REGEN", "Regeneração", "SOMAR", "VIDA", 100,
+            moment, false, true, "DURACAO");
+        var hero = Actor("hero", 1000, Action("idle", 0)) with { HitPoints = 200,
+            ActiveConditions = [new(rule, 100, 4)] };
+        var enemy = Actor("enemy", 1000, Action("idle", 0)) with { HitPoints = 200,
+            ActiveConditions = [new(rule, 100, 4)] };
+        var result = _simulator.Simulate(Battle(hero, enemy, maxRounds: 3), new SequenceRandomSource(10));
+        foreach (string id in new[] { "hero", "enemy" })
+        {
+            var effects = result.Events.Where(item => item.Type == GameBattleEventTypes.ConditionEffect && item.TargetId == id)
+                .Select(item => Assert.IsType<ConditionEffectPayload>(item.Payload)).ToArray();
+            Assert.Equal(4, effects.Length);
+            Assert.All(effects, effect => { Assert.Equal(moment, effect.Moment);
+                Assert.Equal(100, effect.After - effect.Before); Assert.Equal("Regeneração", effect.Name); });
+        }
+    }
+
+    [Fact]
+    public void AplicacaoIncluiImagemDuracaoEBonusOuPenalidadesSemAlterarRegras()
+    {
+        var rule = new GameBattleConditionRule("CEGUEIRA", "Cegueira", "", "", 0, "", false, true, "DURACAO")
+        { Image = "/assets/cegueira.png", Effects = [new("MODIFICAR_ATRIBUTO", "PRECISAO", -5, "ENQUANTO_ATIVA"),
+            new("DESVANTAGEM", "TODOS", 0, "ENQUANTO_ATIVA")] };
+        var utility = UtilityAction("granada", new(1)) with { Conditions =
+            [new(rule, null, 3, "Turno", "AO_USAR", []) { Target = "ALVO" }] };
+        var result = _simulator.Simulate(Battle(Actor("hero", 100, utility), Actor("enemy", 100, Action("idle", 0)), maxRounds: 1), new SequenceRandomSource(10));
+        var applied = Assert.IsType<ConditionAppliedPayload>(Assert.Single(result.Events, item => item.Type == GameBattleEventTypes.ConditionApplied).Payload);
+        Assert.Equal(3, applied.RemainingTurns);
+        Assert.Equal("/assets/cegueira.png", applied.Image);
+        var effects = result.Events.Where(item => item.Type == GameBattleEventTypes.ConditionEffect && item.TargetId == "enemy")
+            .Select(item => Assert.IsType<ConditionEffectPayload>(item.Payload)).ToArray();
+        Assert.Contains(effects, effect => effect.Operation == "MODIFICAR_ATRIBUTO" && effect.Value == -5);
+        Assert.Contains(effects, effect => effect.Operation == "DESVANTAGEM");
+        string json = JsonSerializer.Serialize(result);
+        var restored = JsonSerializer.Deserialize<GameBattleResult>(json)!;
+        Assert.Equal(effects.Length, restored.Events.Count(item => item.Type == GameBattleEventTypes.ConditionEffect));
+    }
+
     private readonly AutoBattleSimulator _simulator = new();
 
     [Fact]
-    public void ConsumivelEquipadoCuraSemDadoGastaUnidadesEAposEsgotarUsaProximaAcao()
+    public void ConsumivelEquipadoUsaUmaUnidadeSemDadoESegueParaProximaAcao()
     {
         GameBattleActorSpec hero = Actor("hero", 50,
             UtilityAction("item:seringa", new GameBattleUtilitySpec(2, RestoreLife: 30)),
@@ -22,9 +65,9 @@ public sealed class AutoBattleSimulatorTests
             Battle(hero, Actor("enemy", 100, Action("idle", 0))),
             new SequenceRandomSource(11));
 
-        Assert.Equal(2, result.Events.Count(item => item.Type == GameBattleEventTypes.ItemConsumed));
-        Assert.Equal(100, result.Actors[0].HitPoints);
-        Assert.Equal(0, result.Actors[0].Actions[0].RemainingQuantity);
+        Assert.Single(result.Events, item => item.Type == GameBattleEventTypes.ItemConsumed);
+        Assert.Equal(80, result.Actors[0].HitPoints);
+        Assert.Equal(1, result.Actors[0].Actions[0].RemainingQuantity);
         Assert.DoesNotContain(result.Events, item => item.Type == GameBattleEventTypes.DiceRolled &&
             ((DiceRolledPayload)item.Payload).ActionId == "item:seringa");
         Assert.Contains(result.Events, item => item.Type == GameBattleEventTypes.ActionSelected &&
@@ -46,12 +89,136 @@ public sealed class AutoBattleSimulatorTests
     }
 
     [Fact]
+    public void AquilaUsaSeringaUmaVezERecarregaAntesDeUsarOutraUnidade()
+    {
+        GameBattleActionSpec gun = Action("aquila", 1,
+            magazine: new GameBattleMagazineSpec(10, 10, 0) { UnlimitedReserve = true }) with { AttacksPerTurn = 5 };
+        GameBattleActionSpec syringe = UtilityAction("seringa", new GameBattleUtilitySpec(3, RestoreLife: 30));
+        GameBattleActorSpec hero = Actor("hero", 500, gun, syringe) with { MaximumHitPoints = 1000,
+            Actions = [gun, syringe, Action("reserva", 1) with { IsFallback = true }] };
+        var result = _simulator.Simulate(Battle(hero, Actor("enemy", 5000, Action("ataque", 5))), new SequenceRandomSource(11));
+        var selected = result.Events.Where(entry => entry.Type == GameBattleEventTypes.ActionSelected && entry.ActorId == "hero")
+            .Select(entry => (ActionSelectedPayload)entry.Payload).Take(7).ToArray();
+        Assert.Equal(["aquila", "aquila", "seringa", "aquila", "aquila", "aquila", "seringa"],
+            selected.Select(entry => entry.ActionId));
+        Assert.True(selected[3].Reload);
+        Assert.False(selected[4].Reload);
+        Assert.DoesNotContain(result.Events, entry => entry.Type == GameBattleEventTypes.ActionSelected &&
+            entry.ActorId == "hero" && ((ActionSelectedPayload)entry.Payload).ActionId == "reserva");
+    }
+
+    [Fact]
+    public void UtilitarioEsperaAsArmasPosterioresEsgotaremAntesDeNovoCiclo()
+    {
+        GameBattleActionSpec gun = Action("aquila", 1,
+            magazine: new GameBattleMagazineSpec(10, 10, 0) { UnlimitedReserve = true }) with { AttacksPerTurn = 5 };
+        GameBattleActionSpec syringe = UtilityAction("seringa", new GameBattleUtilitySpec(3, RestoreLife: 30));
+        GameBattleActionSpec sword = Action("espada", 1) with { UsesUntilRest = 2 };
+        GameBattleActorSpec hero = Actor("hero", 500, gun) with { MaximumHitPoints = 1000,
+            Actions = [gun, syringe, sword, Action("reserva", 1) with { IsFallback = true }] };
+        var result = _simulator.Simulate(Battle(hero, Actor("enemy", 5000, Action("ataque", 5))), new SequenceRandomSource(11));
+        var selected = result.Events.Where(entry => entry.Type == GameBattleEventTypes.ActionSelected && entry.ActorId == "hero")
+            .Select(entry => (ActionSelectedPayload)entry.Payload).Take(9).ToArray();
+        Assert.Equal(["aquila", "aquila", "seringa", "espada", "espada", "aquila", "aquila", "aquila", "seringa"],
+            selected.Select(entry => entry.ActionId));
+        Assert.True(selected[5].Reload);
+    }
+
+    [Fact]
+    public void DescansoReabreCicloMasPrimeiroContinuaNaAcaoSeguinte()
+    {
+        GameBattleActionSpec gun = Action("aquila", 1,
+            magazine: new GameBattleMagazineSpec(1, 1, 0) { UnlimitedReserve = true });
+        GameBattleActionSpec syringe = UtilityAction("seringa", new GameBattleUtilitySpec(3, RestoreLife: 30));
+        var hero = Actor("hero", 500, gun) with { MaximumHitPoints = 1000,
+            Rest = new GameBattleRestSpec(2, 0, 0, 0, false),
+            Actions = [gun, syringe, Action("espada", 1), Action("reserva", 1) with { IsFallback = true }] };
+        var result = _simulator.Simulate(Battle(hero, Actor("enemy", 5000, Action("ataque", 5))), new SequenceRandomSource(11));
+        string[] selected = result.Events.Where(entry => entry.Type == GameBattleEventTypes.ActionSelected && entry.ActorId == "hero")
+            .Select(entry => ((ActionSelectedPayload)entry.Payload).ActionId).Take(6).ToArray();
+        Assert.Equal(["aquila", "seringa", "descanso", "espada", "aquila", "seringa"], selected);
+    }
+
+    [Fact]
+    public void CadaUtilitarioDoCicloUsaUmaUnidadeEAArmaContinuaNaPrioridade()
+    {
+        GameBattleActionSpec first = UtilityAction("cura-a", new GameBattleUtilitySpec(4, RestoreLife: 10));
+        GameBattleActionSpec second = UtilityAction("cura-b", new GameBattleUtilitySpec(4, RestoreLife: 10));
+        GameBattleActorSpec hero = Actor("hero", 50, first) with { MaximumHitPoints = 100,
+            Actions = [first, second, Action("espada", 10)] };
+        var result = _simulator.Simulate(Battle(hero, Actor("enemy", 30, Action("ataque", 1))), new SequenceRandomSource(11));
+        string[] selected = result.Events.Where(entry => entry.Type == GameBattleEventTypes.ActionSelected && entry.ActorId == "hero")
+            .Select(entry => ((ActionSelectedPayload)entry.Payload).ActionId).ToArray();
+        Assert.Equal(["cura-a", "cura-b", "espada", "espada", "espada"], selected);
+        Assert.Equal(3, result.Actors[0].Actions[0].RemainingQuantity);
+        Assert.Equal(3, result.Actors[0].Actions[1].RemainingQuantity);
+    }
+
+    [Fact]
+    public void SemOutraAcaoExecutavelAbreNovoCicloSemGastarTurnoNemUsarReserva()
+    {
+        GameBattleActionSpec syringe = UtilityAction("seringa", new GameBattleUtilitySpec(2, RestoreLife: 10));
+        GameBattleActorSpec hero = Actor("hero", 20, syringe) with { MaximumHitPoints = 100,
+            Actions = [syringe, Action("sem-estamina", 10, staminaCost: 1), Action("reserva", 1) with { IsFallback = true }],
+            Stamina = 0, MaximumStamina = 0 };
+        var result = _simulator.Simulate(Battle(hero, Actor("enemy", 10, Action("ataque", 1))), new SequenceRandomSource(11));
+        string[] selected = result.Events.Where(entry => entry.Type == GameBattleEventTypes.ActionSelected && entry.ActorId == "hero")
+            .Select(entry => ((ActionSelectedPayload)entry.Payload).ActionId).Take(3).ToArray();
+        Assert.Equal(["seringa", "seringa", "reserva"], selected);
+        Assert.Equal(0, result.Actors[0].Actions[0].RemainingQuantity);
+    }
+
+    [Fact]
+    public void AbrirNovoCicloNaoIgnoraCooldownDoUtilitario()
+    {
+        GameBattleActionSpec syringe = UtilityAction("seringa", new GameBattleUtilitySpec(2, RestoreLife: 10)) with { CooldownTurns = 2 };
+        GameBattleActorSpec hero = Actor("hero", 50, syringe) with { MaximumHitPoints = 100,
+            Actions = [syringe, Action("reserva", 1) with { IsFallback = true }] };
+        var result = _simulator.Simulate(Battle(hero, Actor("enemy", 10, Action("ataque", 1))), new SequenceRandomSource(11));
+        int[] usedOnTurns = result.Events.Where(entry => entry.Type == GameBattleEventTypes.ItemConsumed && entry.ActorId == "hero")
+            .Select(entry => ((TurnStartedPayload)result.Events.Last(previous => previous.Sequence < entry.Sequence &&
+                previous.ActorId == "hero" && previous.Type == GameBattleEventTypes.TurnStarted).Payload).ActorTurn).ToArray();
+        Assert.Equal([1, 4], usedOnTurns);
+    }
+
+    [Fact]
+    public void SuporteSemEstoqueComoMagiaTambemCedePrioridadeAProximaAcao()
+    {
+        GameBattleActionSpec support = UtilityAction("magia:suporte", new GameBattleUtilitySpec(null, RestoreLife: 10));
+        var hero = Actor("hero", 50, support, Action("espada", 10)) with { MaximumHitPoints = 100 };
+        var result = _simulator.Simulate(Battle(hero, Actor("enemy", 30, Action("ataque", 1))), new SequenceRandomSource(11));
+        string[] selected = result.Events.Where(entry => entry.Type == GameBattleEventTypes.ActionSelected && entry.ActorId == "hero")
+            .Select(entry => ((ActionSelectedPayload)entry.Payload).ActionId).ToArray();
+        Assert.Equal(["magia:suporte", "espada", "espada", "espada"], selected);
+        Assert.DoesNotContain(result.Events, entry => entry.Type == GameBattleEventTypes.ItemConsumed);
+    }
+
+    [Theory]
+    [InlineData(20)]
+    [InlineData(40)]
+    [InlineData(80)]
+    public void LimiteDeEventosPreservaConsumoECuraAoReabrirCiclo(int eventLimit)
+    {
+        GameBattleActionSpec syringe = UtilityAction("seringa", new GameBattleUtilitySpec(20, RestoreLife: 1));
+        GameBattleActorSpec hero = Actor("hero", 1, syringe) with { MaximumHitPoints = 100,
+            Mana = 0, MaximumMana = 0, Stamina = 0, MaximumStamina = 0,
+            Actions = [syringe, Action("mana", 1, manaCost: 1), Action("estamina", 1, staminaCost: 1)] };
+        GameBattleInput input = Battle(hero, Actor("enemy", 1000, Action("idle", 0))) with { MaxEvents = eventLimit };
+        var result = _simulator.Simulate(input, new SequenceRandomSource(11));
+        int consumed = result.Events.Count(entry => entry.Type == GameBattleEventTypes.ItemConsumed);
+        Assert.True(result.Events.Count <= eventLimit);
+        Assert.Equal(20 - consumed, result.Actors[0].Actions[0].RemainingQuantity);
+        Assert.Equal(1 + consumed, result.Actors[0].HitPoints);
+        Assert.Equal(GameBattleEventTypes.BattleEnded, result.Events[^1].Type);
+    }
+
+    [Fact]
     public void GranadaEquipadaAplicaReacoesSemTesteDeAcertoDoUsuario()
     {
         var blindness = new GameBattleConditionRule("CEGUEIRA", "Cegueira", "", "", 0,
             "", false, true, "DURACAO")
         { Effects = [new SistemaCondicaoEfeito("MODIFICAR_ROLAGEM", "TODOS", -5, "ENQUANTO_ATIVA")] };
-        GameBattleActionSpec grenade = UtilityAction("item:granada", new GameBattleUtilitySpec(1)) with
+        GameBattleActionSpec grenade = UtilityAction("item:granada", new GameBattleUtilitySpec(3)) with
         {
             Conditions = [new GameBattleConditionApplication(blindness, null, 3, "Turno", "AO_USAR", [])
             { Target = "TODOS_INIMIGOS", ResistanceTest = new GameBattleResistanceTest(1, 6, "AGILIDADE", 5) }],
@@ -62,6 +229,7 @@ public sealed class AutoBattleSimulatorTests
         GameBattleResult result = _simulator.Simulate(input, new SequenceRandomSource(1, 6, 11));
 
         Assert.Single(result.Events, item => item.Type == GameBattleEventTypes.ItemConsumed);
+        Assert.Equal(2, result.Actors[0].Actions[0].RemainingQuantity);
         Assert.Equal(2, result.Events.Count(item => item.Type == GameBattleEventTypes.ResistanceRolled));
         Assert.DoesNotContain(result.Events, item => item.Type == GameBattleEventTypes.DiceRolled &&
             item.ActorId == "hero" && ((DiceRolledPayload)item.Payload).ActionId == "item:granada");
@@ -165,6 +333,26 @@ public sealed class AutoBattleSimulatorTests
             item.ActorId == "enemy");
         Assert.Contains(result.Events, item => item.Type == GameBattleEventTypes.ConditionApplied &&
             item.TargetId == "enemy-2");
+    }
+
+    [Theory]
+    [InlineData(2)]
+    [InlineData(-5)]
+    public void EfeitoPrincipalDeAtributoAlteraTesteSemModificarAcaoOriginal(int adjustment)
+    {
+        var rule = new GameBattleConditionRule("ATRIBUTO", "Atributo temporário", "MODIFICAR_ATRIBUTO",
+            "PRECISAO", adjustment, "ENQUANTO_ATIVA", false, true, "DURACAO");
+        GameBattleActorSpec hero = Actor("hero", 100, Action("golpe", 1) with
+        { AttributeCode = "PRECISAO" }) with
+        { ActiveConditions = [new GameBattleActiveCondition(rule, adjustment, null)] };
+
+        GameBattleResult result = _simulator.Simulate(Battle(hero,
+            Actor("enemy", 100, Action("idle", 0)), maxRounds: 1), new SequenceRandomSource(15));
+
+        DiceRolledPayload roll = Assert.IsType<DiceRolledPayload>(result.Events.First(item =>
+            item.Type == GameBattleEventTypes.DiceRolled && item.ActorId == "hero").Payload);
+        Assert.Equal(adjustment, roll.Roll.Modificador);
+        Assert.Equal(0, hero.Actions[0].Roll.Modifier);
     }
 
     [Fact]

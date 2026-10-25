@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, memo, useCallback } from 'react';
+import { useEventCallback } from '../../../hooks/useEventCallback';
+import { useStableOptions } from '../../../hooks/useStableOptions';
 import { createPortal } from "react-dom";
 import {
   ContentController,
@@ -14,10 +16,13 @@ import {
 import { CheckBox } from '../CheckBox/CheckBox';
 import { FormLabelText } from '../FormLabelText';
 import { revealFirstValidationError } from '../../../utils/formValidationFeedback';
+import { FieldHelp } from '../FieldHelp/FieldHelp';
+import type { FieldHelpContent } from '../FieldHelp/FieldHelp.types';
 
 interface Option {
   value: string;
   label: string;
+  description?: string;
 }
 
 interface CheckSelectProps {
@@ -34,13 +39,17 @@ interface CheckSelectProps {
   height?: string;
   options: Option[];
   compactPreview?: boolean;
+  help?: FieldHelpContent;
+  helpKey?: string;
 }
 
+// A fresh [] here made the value-sync effect set state again after every render.
+const EMPTY_VALUES: string[] = [];
 const CheckSelectComponent = ({
   theme,
   neon,
   label,
-  value = [],
+  value = EMPTY_VALUES,
   onChange,
   error,
   errorMessage,
@@ -50,6 +59,8 @@ const CheckSelectComponent = ({
   height,
   options,
   compactPreview = false,
+  help,
+  helpKey,
 }: CheckSelectProps) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
@@ -199,7 +210,7 @@ const CheckSelectComponent = ({
         style={style}
       >
         {options.map(opt => (
-          <CheckListContainer key={opt.value}>
+          <CheckListContainer key={opt.value} title={opt.description}>
             <CheckBox
               neon={neon}
               label={opt.label}
@@ -216,11 +227,14 @@ const CheckSelectComponent = ({
   return (
     <ContentController
       width={width}
+      theme={theme} neon={neon} typeStyle={typeStyle}
       ref={containerRef}
       data-validation-error={error || undefined}
     >
       <Label width={width} height={height} onClick={toggleOpen}>
         <CheckDisplay
+          data-field-value="true"
+          data-field-active={open ? 'true' : undefined}
           theme={theme}
           neon={neon}
           focus={focus}
@@ -231,10 +245,11 @@ const CheckSelectComponent = ({
         >
           {preview}
         </CheckDisplay>
-        <LabelSpan active={focus || selectedValues.length > 0} typeStyle={typeStyle}>
+        <LabelSpan data-field-label="true" active={focus || selectedValues.length > 0} typeStyle={typeStyle}>
           <FormLabelText label={label} required={required} />
         </LabelSpan>
       </Label>
+      <FieldHelp label={label} help={help} helpKey={helpKey} theme={theme} neon={neon} />
 
       {/* portal dropdown */}
       {dropdownPortal}
@@ -244,4 +259,9 @@ const CheckSelectComponent = ({
   );
 };
 
-export const CheckSelect = memo(CheckSelectComponent);
+const MemoizedCheckSelect = memo(CheckSelectComponent);
+export const CheckSelect = (props: CheckSelectProps) => {
+  const onChange = useEventCallback(props.onChange);
+  const options = useStableOptions(props.options);
+  return <MemoizedCheckSelect {...props} options={options} onChange={props.onChange ? onChange : undefined} />;
+};

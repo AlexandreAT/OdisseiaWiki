@@ -1,4 +1,61 @@
 import type { GameBattleEvent, GameBattlePreview, GameBattlePreviewActor } from '../../../models/GameBattlePreview';
+import { snapshotConditions, type ActiveConditionDisplay } from '../../../components/Gameplay/ConditionBadges/conditionBadgeState';
+
+export const visibleActorConditions = (preview: GameBattlePreview, actor: GameBattlePreviewActor,
+  eventCount: number): ActiveConditionDisplay[] => {
+  const conditions = snapshotConditions(actor.condicoes);
+  for (const event of preview.resultado.events.slice(0, eventCount)) {
+    const code = event.payload.code;
+    if (!code) continue;
+    if (event.type === 'CONDITION_APPLIED' && event.targetId === actor.id) {
+      if (!event.payload.stackable) {
+        for (let index = conditions.length - 1; index >= 0; index--)
+          if (conditions[index].code.toUpperCase() === code.toUpperCase()) conditions.splice(index, 1);
+      }
+      conditions.push({ code, name: event.payload.name ?? code, image: event.payload.image,
+        remainingTurns: event.payload.remainingTurns, remainingHours: event.payload.remainingHours });
+    }
+    if (event.type === 'CONDITION_EXPIRED' && (event.targetId ?? event.actorId) === actor.id) {
+      const index = conditions.findIndex(condition => condition.code.toUpperCase() === code.toUpperCase());
+      if (index >= 0) conditions.splice(index, 1);
+    }
+  }
+  return conditions;
+};
+
+const durationLabel = (payload: GameBattleEvent['payload']) => payload.remainingTurns != null
+  ? `${payload.remainingTurns} ${payload.remainingTurns === 1 ? 'turno' : 'turnos'}`
+  : payload.remainingHours != null ? `${payload.remainingHours}h` : 'até recuperação';
+
+const conditionLabel = (event: GameBattleEvent) =>
+  `${event.payload.name ?? event.payload.code ?? 'Condição'} (${durationLabel(event.payload)})`;
+
+const resourceLabel = (resource?: string) => ({ VIDA: 'vida', HITPOINTS: 'vida', MANA: 'mana',
+  ESTAMINA: 'estamina', STAMINA: 'estamina', TODOS: 'todos os testes', ARMADURA: 'defesa' }[resource?.toUpperCase() ?? ''] ?? resource ?? 'recurso');
+
+const conditionEffectText = (preview: GameBattlePreview, event: GameBattleEvent): string => {
+  const p = event.payload;
+  const amount = p.value ?? 0;
+  const signed = (value: number) => `${value >= 0 ? '+' : ''}${value}`;
+  const resource = resourceLabel(p.resource);
+  const delta = p.before != null && p.after != null ? p.after - p.before : amount;
+  const change = ({
+    SOMAR: `${signed(delta)} ${resource}`, SUBTRAIR: `${signed(p.before == null ? -amount : delta)} ${resource}`,
+    DEFINIR: `${resource} = ${p.after ?? amount}`,
+    MODIFICAR_ATRIBUTO: `${signed(amount)} ${resource}`,
+    MODIFICAR_ROLAGEM: `${signed(amount)} no teste de ${resource}`,
+    REDUZIR_LIMITE_PERCENTUAL: `máximo de ${resource} −${amount}%`,
+    MODIFICAR_LIMITE_PERCENTUAL: `máximo de ${resource} ${signed(amount)}%`,
+    MODIFICAR_DANO: `${signed(amount)} de dano`, MODIFICAR_DEFESA: `${signed(amount)} de defesa`,
+    BLOQUEAR_RECUPERACAO: `recuperação de ${resource} bloqueada`,
+    VANTAGEM: 'vantagem no teste', DESVANTAGEM: 'desvantagem no teste',
+    PERDER_TURNOS: `perde ${amount} ${amount === 1 ? 'turno' : 'turnos'}`,
+  } as Record<string, string>)[p.operation ?? ''] ?? `${signed(delta)} ${resource}`;
+  const moment = ({ INICIO_TURNO: 'início do turno', FIM_TURNO: 'fim do turno',
+    AO_APLICAR: 'ao aplicar', ENQUANTO_ATIVA: 'enquanto ativa', NO_TESTE: 'no teste',
+    NO_DANO: 'no ataque', NA_DEFESA: 'ao defender' } as Record<string, string>)[p.moment ?? ''];
+  return `${actorName(preview, event.targetId ?? event.actorId)} — ${p.name ?? p.code ?? 'Condição'}: ${change}${moment ? ` · ${moment}` : ''}.`;
+};
 
 export type BattleResource = 'hitPoints' | 'mana' | 'stamina';
 export type BattleDefense = 'shield' | 'protection';
@@ -91,6 +148,7 @@ export interface BattleActionDisplay {
   absorbed: number;
   blocked: boolean;
   resourceEffects: string[];
+  conditions: string[];
   ammoRemaining: number | null;
   tone: BattleTone;
   critical: boolean;
@@ -127,14 +185,19 @@ const actionPresentation = (preview: GameBattlePreview, event: GameBattleEvent, 
   const resourceEffects = ([['mana', 'mana'], ['stamina', 'estamina']] as const)
     .map(([resource, label]) => {
       const delta = following.filter((item) => item.type === 'RESOURCE_CHANGED' &&
+        !item.payload.actionId?.startsWith('condicao:') &&
         item.payload.resource === resource && (item.targetId ?? item.actorId) === event.actorId)
         .reduce((total, item) => total + (item.payload.after ?? 0) - (item.payload.before ?? 0), 0);
       return delta === 0 ? null : `${delta > 0 ? '+' : ''}${delta} ${label}`;
     })
     .filter((effect): effect is string => effect !== null);
+  // Automatic conditions can fire while paying the action's costs, before its die.
+  // Keep their messages inline so they never hide the subsequent attack roll.
+  resourceEffects.push(...following.filter(item => item.type === 'CONDITION_EFFECT')
+    .map(item => conditionEffectText(preview, item).replace(/^.*? — /, '').replace(/\.$/, '')));
   const resourceText = resourceEffects.length > 0 ? ` · ${resourceEffects.join(', ')}` : '';
   const appliedConditions = following.filter((item) => item.type === 'CONDITION_APPLIED')
-    .map((item) => item.payload.name ?? item.payload.code ?? 'condição');
+    .map(conditionLabel);
   const conditionText = appliedConditions.length ? ` · aplicou ${appliedConditions.join(', ')}` : '';
   if (following.some((item) => item.type === 'REST_PERFORMED'))
     return { text: `${name} — descanso curto${resourceText}.` };
@@ -143,6 +206,7 @@ const actionPresentation = (preview: GameBattlePreview, event: GameBattleEvent, 
 
   if (event.payload.directUse) {
     const lifeRestored = following.filter((item) => item.type === 'RESOURCE_CHANGED' &&
+      !item.payload.actionId?.startsWith('condicao:') &&
       item.payload.resource === 'hitPoints' && (item.targetId ?? item.actorId) === event.actorId)
       .reduce((sum, item) => sum + Math.max(0, (item.payload.after ?? 0) - (item.payload.before ?? 0)), 0);
     const lifeText = lifeRestored > 0 ? ` · +${lifeRestored} vida` : '';
@@ -194,6 +258,7 @@ const actionPresentation = (preview: GameBattlePreview, event: GameBattleEvent, 
       absorbed,
       blocked: dealtDamage === 0 && damage > 0 && absorbed > 0,
       resourceEffects,
+      conditions: appliedConditions,
       ammoRemaining,
       tone,
       critical: criticalSuccess || criticalFailure,
@@ -225,9 +290,16 @@ export const buildBattleBeats = (preview: GameBattlePreview): BattleBeat[] => {
       phase = 'initiative';
     }
     if (event.type === 'ACTION_SELECTED') {
+      let actionEnd = index + 1;
+      while (actionEnd < events.length && !['ACTION_SELECTED', 'TURN_STARTED', 'BATTLE_ENDED',
+        'RESISTANCE_ROLLED'].includes(events[actionEnd].type)) actionEnd++;
+      const resolutionOffset = events.slice(index + 1, actionEnd).findIndex(item =>
+        ['DICE_ROLLED', 'REST_PERFORMED', 'RELOAD_PERFORMED', 'ITEM_CONSUMED'].includes(item.type));
+      const resolution = resolutionOffset < 0 ? event.payload.directUse ? index : actionEnd : index + 1 + resolutionOffset;
       let end = index + 1;
-      while (end < events.length && !['ACTION_SELECTED', 'TURN_STARTED', 'BATTLE_ENDED',
-        'RESISTANCE_ROLLED'].includes(events[end].type)) end++;
+      while (end < actionEnd && !(end > resolution &&
+        (['CONDITION_EFFECT', 'CONDITION_EXPIRED'].includes(events[end].type) ||
+        events[end].type === 'RESOURCE_CHANGED' && events[end].payload.actionId?.startsWith('condicao:')))) end++;
       const presentation = actionPresentation(preview, event, events.slice(index + 1, end));
       text = presentation.text;
       action = presentation.action;
@@ -245,7 +317,20 @@ export const buildBattleBeats = (preview: GameBattlePreview): BattleBeat[] => {
         `= ${event.payload.total ?? '?'} contra ${event.payload.difficulty ?? '?'} — ` +
         `${event.payload.passed ? 'resistiu' : 'foi afetado'}.`;
     }
-    if (event.type === 'CONDITION_APPLIED') text = `${actorName(preview, event.targetId)} recebeu ${event.payload.name ?? 'uma condição'}.`;
+    if (event.type === 'CONDITION_APPLIED') text = `${actorName(preview, event.targetId)} recebeu ${conditionLabel(event)}.`;
+    if (event.type === 'CONDITION_EFFECT') text = conditionEffectText(preview, event);
+    // Historical battles predate CONDITION_EFFECT, but already saved their resource deltas.
+    if (event.type === 'RESOURCE_CHANGED' && event.payload.actionId?.startsWith('condicao:')) {
+      const code = event.payload.actionId.slice('condicao:'.length);
+      let end = index + 1;
+      while (end < events.length && !['TURN_STARTED', 'ACTION_SELECTED', 'BATTLE_ENDED'].includes(events[end].type)) end++;
+      if (!events.slice(index + 1, end).some(next => next.type === 'CONDITION_EFFECT' && next.payload.code === code)) {
+        const application = events.slice(0, index).reverse().find(previous =>
+          previous.type === 'CONDITION_APPLIED' && previous.payload.code === code);
+        text = conditionEffectText(preview, { ...event, payload: { ...event.payload, code,
+          name: application?.payload.name ?? code, operation: 'SOMAR' } });
+      }
+    }
     if (event.type === 'CONDITION_EXPIRED') text = `${event.payload.name ?? 'Condição'} terminou em ${actorName(preview, event.actorId)}.`;
     if (event.type === 'BATTLE_ENDED') {
       text = preview.resultado.winnerActorId
@@ -254,7 +339,8 @@ export const buildBattleBeats = (preview: GameBattlePreview): BattleBeat[] => {
       phase = 'end';
     }
     if (text) {
-      const eventActorId = event.type === 'BATTLE_ENDED' ? preview.resultado.winnerActorId : event.actorId;
+      const eventActorId = event.type === 'BATTLE_ENDED' ? preview.resultado.winnerActorId
+        : event.type === 'CONDITION_APPLIED' ? event.targetId : event.actorId;
       const name = eventActorId ? actorName(preview, eventActorId) : undefined;
       beats.push({ throughIndex, sequence: event.sequence, round: event.round,
         turn: phase === 'action' ? turn : null, phase, text, action,

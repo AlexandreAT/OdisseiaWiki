@@ -9,16 +9,27 @@ public partial class OdisseiaContext
     public DbSet<GameRun> GameRuns { get; set; }
     public DbSet<GameRunCommand> GameRunCommands { get; set; }
     public DbSet<GameRunBattle> GameRunBattles { get; set; }
+    public DbSet<GameCharacterMemory> GameCharacterMemories { get; set; }
 
     private static void ConfigureGameRuns(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<GameCharacterMemory>(entity =>
+        {
+            entity.ToTable("gamecharactermemories");
+            entity.HasKey(item => item.IdPersonagemJogador);
+            entity.Property(item => item.IdPersonagemJogador).HasColumnName("IDPersonagemJogador").ValueGeneratedNever();
+            entity.Property(item => item.EstadoJson).HasColumnType("json");
+            entity.Property(item => item.AtualizadaEmUtc).HasColumnType("datetime(6)");
+            entity.HasOne(item => item.Personagem).WithMany().HasForeignKey(item => item.IdPersonagemJogador)
+                .OnDelete(DeleteBehavior.Cascade).HasConstraintName("FK_GameCharacterMemory_Personagem");
+        });
         modelBuilder.Entity<GameModeVersion>(entity =>
         {
             entity.ToTable("gamemodeversions");
             entity.HasKey(item => item.IdGameModeVersion);
             entity.Property(item => item.IdGameModeVersion).HasColumnName("IDGameModeVersion");
             entity.Property(item => item.IdSistemaVersao).HasColumnName("IDSistemaVersao");
-            entity.Property(item => item.IdMesa).HasColumnName("IDMesa");
+            entity.Property(item => item.IdMesa).HasColumnName("IDMesa").HasColumnType("int");
             entity.Property(item => item.IdUsuarioCriacao).HasColumnName("IDUsuarioCriacao");
             entity.Property(item => item.Nome).HasMaxLength(100);
             entity.Property(item => item.Descricao).HasMaxLength(500);

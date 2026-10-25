@@ -27,6 +27,7 @@ public class AssetService : IAssetService
         "item",
         "itens",
         "jogo",
+        "sistema",
         "mesa",
         "mesas",
         "mesawiki",

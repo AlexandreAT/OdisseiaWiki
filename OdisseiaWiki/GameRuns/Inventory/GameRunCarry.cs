@@ -339,7 +339,7 @@ public static class GameRunCarry
             var battleRule = new GameBattleConditionRule(rule.Codigo, rule.Nome, rule.OperacaoEfeito ?? "",
                 rule.CodigoRecurso ?? "", value, rule.MomentoEfeito ?? "", rule.Empilhavel,
                 rule.PermiteSobrescrever, rule.RegraRemocao ?? "MANUAL")
-            { Effects = SistemaCondicaoEfeitos.Read(rule) };
+            { Effects = SistemaCondicaoEfeitos.Read(rule), Image = SistemaCondicaoEfeitos.Image(rule) };
             int previous = Enumerable.Range(0, active.Count).FirstOrDefault(index =>
                 string.Equals(active[index]?["rule"]?["code"]?.ToString(), rule.Codigo,
                     StringComparison.OrdinalIgnoreCase), -1);

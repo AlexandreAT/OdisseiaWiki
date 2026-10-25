@@ -1,6 +1,8 @@
 import React from 'react';
 import toast from 'react-hot-toast';
 import { InputText } from '../../../../../components/Generic/InputText/InputText';
+import { Select } from '../../../../../components/Generic/Select/Select';
+import type { FlagFilter } from '../../../../../utils/listFilters';
 import { ConfirmDialog } from '../../../../../components/Generic/ConfirmDialog/ConfirmDialog';
 import { LoadingIndicator } from '../../../../../components/Generic/LoadingIndicator';
 import { SearchResultItem } from '../../../../../services/infoLoreService';
@@ -16,6 +18,7 @@ import {
   SearchInputContainer,
   FilterContainer,
   FilterButton,
+  StatusFilters,
   ResultsInfo,
   ResultsText,
   ResultsGrid,
@@ -51,12 +54,15 @@ export const FormBuscarConteúdo: React.FC<FormBuscarConteúdoProps> = ({ theme,
   const {
     termo,
     setTermo,
-    totalResultados,
     isSearching,
     hasSearched,
     errors,
     selectedFilter,
     setSelectedFilter,
+    visibilityFilter,
+    setVisibilityFilter,
+    featuredFilter,
+    setFeaturedFilter,
     handleSearch,
     getFilteredResults,
     getResultCountByType,
@@ -72,7 +78,7 @@ export const FormBuscarConteúdo: React.FC<FormBuscarConteúdoProps> = ({ theme,
 
   const renderFilterLabel = (filter: typeof FILTER_OPTIONS[0]) => {
     if (filter.key === 'Todos') {
-      return `${filter.label} (${totalResultados})`;
+      return `${filter.label} (${getResultCountByType('Todos')})`;
     }
     const count = getResultCountByType(filter.key as EntityType);
     return `${filter.label} (${count})`;
@@ -270,6 +276,17 @@ export const FormBuscarConteúdo: React.FC<FormBuscarConteúdoProps> = ({ theme,
                 </FilterButton>
               ))}
             </FilterContainer>
+
+            <StatusFilters>
+              <Select theme={theme} neon={neon} width="100%" label="Visibilidade"
+                value={visibilityFilter} allowEmptyOption={false}
+                options={[{ value: 'all', label: 'Todos' }, { value: 'yes', label: 'Visíveis' }, { value: 'no', label: 'Ocultos' }]}
+                onChange={event => setVisibilityFilter(event.target.value as FlagFilter)} />
+              <Select theme={theme} neon={neon} width="100%" label="Destaque"
+                value={featuredFilter} allowEmptyOption={false}
+                options={[{ value: 'all', label: 'Todos' }, { value: 'yes', label: 'Em destaque' }, { value: 'no', label: 'Sem destaque' }]}
+                onChange={event => setFeaturedFilter(event.target.value as FlagFilter)} />
+            </StatusFilters>
 
             <ResultsInfo theme={theme} neon={neon}>
               <ResultsText>

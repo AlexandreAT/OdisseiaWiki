@@ -82,6 +82,9 @@ export const ManagementGameEncounterCard = ({ code, encounter, npcs, outcomeCode
         error={!Number.isInteger(encounter.xpReward ?? 0) || (encounter.xpReward ?? 0) < 0 || (encounter.xpReward ?? 0) > 1000000}
         errorMessage="Defina de 0 a 1.000.000 XP por vitória."
         onChange={(event) => updateEncounter(code, { xpReward: Number(event.target.value) })} />
+      <InputText theme={theme} neon={neon} label="Moeda ao vencer" width="100%"
+        type="number" value={encounter.currencyReward ?? 0} disabled={!editable}
+        onChange={(event) => updateEncounter(code, { currencyReward: Number(event.target.value) })} />
       <InputText theme={theme} neon={neon} label="Quantidade de inimigos" width="100%"
         type="number" value={enemy.quantity ?? 1} disabled={!editable}
         onChange={(event) => updateEnemy(code, { quantity: Number(event.target.value) })} />

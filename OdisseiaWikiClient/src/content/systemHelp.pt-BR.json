@@ -1,0 +1,231 @@
+{
+  "schemaVersion": 1,
+  "language": "pt-BR",
+  "systemScope": "ODISSEIA",
+  "purpose": "Explicações da interface de configuração. Este catálogo não executa regras e não substitui a versão publicada do Sistema. Valores e nomes podem variar entre mesas e versões.",
+  "common": {
+    "codigo": { "title": "Código", "aliases": ["Código"], "text": "É o identificador usado para ligar esta configuração a outras regras. Prefira letras sem acento, números e sublinhado, como DEPENDENCIA_MANA. Alterar o código pode deixar referências antigas sem ligação." },
+    "ordem": { "title": "Ordem", "aliases": ["Ordem", "Ordem visual"], "text": "Define a posição desta linha na apresentação. Não muda a iniciativa nem a prioridade das ações de um personagem." },
+    "descricao": { "title": "Texto explicativo", "aliases": ["Descrição", "Descrição para jogadores (não executa)", "Observação"], "text": "É um texto para ajudar a leitura. Escrever uma regra aqui não faz o jogo executá-la; use também os campos de gatilho, efeito, custo ou limite que correspondem à regra." },
+    "formula": { "title": "Fórmula", "aliases": ["Fórmula", "Fórmula de teste", "Fórmula inicial", "Fórmula máxima"], "text": "Registra como esse valor ou teste deve ser calculado. Use referências existentes no Sistema. Texto livre não cria uma automação nova: apenas os formatos reconhecidos pelo mecanismo correspondente são executados." },
+    "ativo": { "title": "Ativo", "aliases": ["Ativo"], "text": "Indica se esta opção faz parte das regras disponíveis nesta versão. Desativar não deve ser usado para apagar o histórico das fichas antigas." }
+  },
+  "modules": {
+    "geral": {
+      "title": "Visão geral dos módulos",
+      "text": "Organize as regras desta versão do Odisseia. Trabalhe em um rascunho e publique quando estiver pronto. A publicação fica protegida; mudanças futuras usam outro rascunho. Atualizar regras não distribui novamente os pontos nem reescreve o inventário dos personagens.",
+      "sections": {
+        "base": { "title": "Regras fundamentais", "aliases": ["Regras fundamentais"], "text": "São as convenções gerais do Sistema. Uma configuração específica de combate ou de um item pode ter regras próprias, quando o mecanismo correspondente permitir." },
+        "modulos": { "title": "Módulos da versão", "aliases": ["Módulos da versão"], "text": "Cada módulo reúne um grupo de regras, como combate ou progressão. Habilitar um módulo disponibiliza suas configurações; não cria automaticamente valores que ainda não foram preenchidos." }
+      },
+      "fields": {
+        "dadoTesteGeral": { "title": "Dado do teste geral", "aliases": ["Dado do teste geral"], "text": "É o dado padrão para testes genéricos, como D6. Testes específicos, como ataque e iniciativa, podem usar outro dado configurado em seus próprios campos." },
+        "criticoNatural": { "title": "Crítico natural", "aliases": ["Crítico natural"], "text": "É o número que sai no dado antes de somar atributos e bônus e que identifica o crítico geral. Confira também as faixas de resultados dos testes de combate." },
+        "falhaCriticaNatural": { "title": "Falha crítica natural", "aliases": ["Falha crítica natural"], "text": "É o resultado puro do dado que identifica a falha crítica geral. O efeito, como permitir um revide, precisa estar configurado na regra executável desse teste; só este número não cria o efeito." },
+        "regraArredondamento": { "title": "Arredondamento", "aliases": ["Arredondamento"], "text": "Define como tratar valores quebrados, conforme as opções reconhecidas pelo Sistema. Confira a prévia de cálculos antes de publicar uma mudança." },
+        "usaVantagem": { "title": "Vantagem e desvantagem", "aliases": ["Usar vantagem", "Usar desvantagem"], "text": "Permite que os testes reconhecidos usem mais de uma chance. Na vantagem fica o melhor resultado; na desvantagem fica o pior. Um gatilho ou uma escolha válida ainda precisa pedir esse modo de teste." },
+        "regraEspecificaPrevalece": { "title": "Regra específica prevalece", "aliases": ["Regra específica prevalece"], "text": "Registra a convenção de preferir uma regra mais específica quando ela se aplica. Não permite que textos livres de itens substituam validações de segurança do site." },
+        "autoridadeMestre": { "title": "Autoridade final do mestre", "aliases": ["Autoridade final do mestre"], "text": "Registra que o mestre decide as situações da mesa que exigem interpretação. O roguelike continua executando apenas as regras estruturadas que conhece." },
+        "modulos.schemaVersion": { "title": "Versão do schema", "text": "É a versão técnica do formato deste módulo, não a versão do seu RPG. Não aumente esse número para publicar regras novas; use a numeração da versão do Sistema." }
+      }
+    },
+    "criacao": {
+      "title": "Criação de personagem",
+      "text": "Defina a base de novas fichas: pontos iniciais, atributos, recursos e raças disponíveis. Esses valores orientam a criação; não substituem automaticamente os valores já salvos de todos os personagens.",
+      "sections": {
+        "inicio": { "title": "Valores iniciais", "aliases": ["Valores iniciais"], "text": "São os valores de partida de um personagem novo. Não são recompensas de subir de nível. No roguelike, uma ficha que já distribuiu seus pontos iniciais não recebe esses pontos outra vez." },
+        "atributos": { "title": "Atributos", "aliases": ["Atributos"], "text": "Atributos representam capacidades usadas em testes e podem influenciar recursos. Para aumentar vida, mana ou estamina ao evoluir um atributo, configure também Influências dos atributos nos recursos, na aba Progressão." },
+        "recursos": { "title": "Recursos", "aliases": ["Recursos"], "text": "Recursos são valores que podem ser gastos ou recuperados, como vida, mana e estamina. Defina os limites e as recuperações. Condições que alteram esses valores são configuradas em Sobrevivência." },
+        "racas": { "title": "Raças na versão", "aliases": ["Raças na versão"], "text": "Define quais raças podem ser usadas e seus valores de base nesta versão. A raça fornece a base da ficha; itens, atributos e condições podem modificar o resultado depois." }
+      },
+      "fields": {
+        "nivelInicial": { "title": "Nível inicial", "aliases": ["Nível inicial"], "text": "É o nível de partida de uma ficha nova. A progressão dos níveis seguintes é configurada em Progressão." },
+        "pontosIniciais": { "title": "Pontos gerais iniciais", "aliases": ["Pontos iniciais", "Pontos gerais"], "text": "São os pontos gerais recebidos na criação da ficha. Não confunda com a coluna específica de pontos de atributo nem com recompensas de subir de nível." },
+        "pontosAtributoIniciais": { "title": "Pontos de atributo iniciais", "aliases": ["Pontos de atributo"], "text": "Quantidade de pontos de atributo distribuída na criação. Uma ficha já distribuída não recebe esse total novamente ao iniciar uma run." },
+        "pontosSkillIniciais": { "title": "Pontos de skill iniciais", "aliases": ["Pontos de skill"], "text": "São pontos destinados à evolução de skills na criação. Não são a mesma coisa que a quantidade de skills iniciais da ficha." },
+        "maximoSkillsIniciais": { "title": "Skills iniciais", "aliases": ["Skills iniciais"], "text": "É a quantidade de skills prevista para a criação. Não concede automaticamente skills novas à run sem a etapa de escolha e aprendizagem correspondente." },
+        "maximoMagiasIniciais": { "title": "Magias iniciais", "aliases": ["Magias iniciais"], "text": "É a quantidade de magias prevista na criação da ficha. As magias reais precisam ser cadastradas na ficha com seus próprios custos e efeitos." },
+        "maximoUltimatesIniciais": { "title": "Ultimates iniciais", "aliases": ["Ultimates iniciais"], "text": "É a quantidade de ultimates prevista para a criação. Não cria ou executa uma ultimate automaticamente no roguelike." },
+        "atributos.grupo": { "title": "Grupo do atributo", "text": "Organiza o atributo entre principais, secundários, defesa ou outro. O grupo facilita a apresentação; o nome sozinho não cria um efeito mecânico." },
+        "atributos.valorComum": { "title": "Valor comum", "text": "É o valor de referência deste atributo no Sistema. Não é um bônus somado automaticamente em todo teste." },
+        "atributos.valorMaximoNatural": { "title": "Máximo natural", "text": "É o teto normal de evolução deste atributo. A distribuição de pontos na run respeita o limite publicado do Sistema." },
+        "atributos.valorMaximoAbsoluto": { "title": "Máximo absoluto", "text": "É o teto superior previsto para exceções e efeitos que ultrapassem o valor natural. Não concede pontos extras por si só." },
+        "atributos.limiteUso": { "title": "Limite de uso", "text": "Registra uma restrição de uso do atributo. Preencha também o tipo do limite para explicar a que período ou situação ele se refere; isso não cria um comportamento novo no jogo sozinho." },
+        "atributos.tipoLimiteUso": { "title": "Tipo do limite", "text": "Identifica a situação à qual o limite de uso se aplica. Use o padrão adotado pelas regras do seu Sistema, em vez de uma descrição inventada esperando execução automática." },
+        "recursos.valorPadrao": { "title": "Valor padrão do recurso", "text": "É o valor de referência quando não há uma regra mais específica. A ficha pode usar a base racial e modificadores próprios para obter seu valor final." },
+        "recursos.permiteValorNegativo": { "title": "Permite negativo", "text": "Indica se este recurso pode ficar abaixo de zero nas regras que respeitam esta configuração. Isso não altera automaticamente as regras de morte ou de recuperação." },
+        "recursos.recuperacaoPadrao": { "title": "Recuperação padrão", "text": "É a recuperação de referência do recurso. Para definir o que um descanso faz, confira também a tabela Descansos em Sobrevivência, inclusive se os valores são fixos ou percentuais." },
+        "recursos.recuperacaoDescansoSimples": { "title": "Recuperação no descanso simples", "text": "Registra a recuperação desse recurso no descanso simples. Confira a configuração completa do descanso em Sobrevivência para evitar regras conflitantes." },
+        "recursos.recuperacaoDescansoNormal": { "title": "Recuperação no descanso normal", "text": "Registra a recuperação desse recurso no descanso normal. No jogo, o tipo de descanso escolhido pela Base precisa corresponder ao descanso configurado." },
+        "recursos.recuperacaoDescansoLongo": { "title": "Recuperação no descanso longo", "text": "Registra a recuperação desse recurso no descanso longo. Os valores completos do descanso ficam em Sobrevivência." },
+        "recursos.condicaoAoZerar": { "title": "Condição ao zerar", "text": "Referencia uma condição existente para quando o recurso acabar. Defina também a regra executável da condição em Sobrevivência; escrever o nome não descreve quanto ela deve reduzir ou recuperar." },
+        "racas.codigoAtributoInicial": { "title": "Atributo inicial da raça", "text": "Selecione o código de um atributo existente. Ele identifica o atributo favorecido pela raça na criação, não um atributo novo." },
+        "racas.capacidadeCargaBase": { "title": "Capacidade de carga base", "text": "É quanto a raça pode carregar antes dos modificadores da ficha. A carga considera os itens carregados, não apenas as ações equipadas." },
+        "racas.passivas": { "title": "Passivas da raça", "text": "As passivas vinculadas registram o que pertence à raça. Efeitos apenas narrativos não passam a ser executados pelo roguelike sem uma regra compatível." },
+        "racas.nivelDesbloqueio": { "title": "Nível de desbloqueio", "text": "Indica a partir de qual nível a raça está disponível segundo esta configuração." }
+      }
+    },
+    "progressao": {
+      "title": "Progressão",
+      "text": "Configure a experiência, os benefícios dos níveis e a influência dos atributos. XP, pontos de atributo e direitos de aprender poderes são coisas diferentes. Uma recompensa configurada não torna executável um poder que ainda não tenha regra de uso.",
+      "sections": {
+        "curva": { "title": "Parâmetros da curva", "aliases": ["Parâmetros da curva"], "text": "Ajuda a montar a tabela de XP dos níveis. Confira os valores gerados em Níveis e XP; a tabela salva é a referência da progressão." },
+        "jogo": { "title": "Recompensas do jogo", "aliases": ["Recompensas do jogo"], "text": "Define o dado usado na etapa de recompensa do roguelike. As chances e os itens de loot são configurados no jogo, não nesta tabela do Sistema." },
+        "influenciasAtributos": { "title": "Influências dos atributos nos recursos", "aliases": ["Influências dos atributos nos recursos"], "text": "Liga um atributo a um recurso máximo. Exemplo: Resistência pode aumentar a vida máxima em um percentual por ponto. Isso não cura a vida atual quando o atributo sobe." },
+        "niveis": { "title": "Níveis e XP", "aliases": ["Níveis e XP"], "text": "Cada linha define a experiência necessária e os benefícios do nível. Os níveis precisam formar uma sequência, começando no nível 1." },
+        "marcos": { "title": "Marcos e recompensas", "aliases": ["Marcos e recompensas"], "text": "São benefícios especiais ligados a um nível. A escolha de novas skills e ultimates no roguelike continua reservada à etapa futura de poderes; não confunda o direito registrado com uma habilidade já executável." },
+        "fontesExperiencia": { "title": "Fontes de experiência", "aliases": ["Fontes de experiência"], "text": "Registra de onde vem a experiência e quais testes ou fórmulas a acompanham. No roguelike, o XP de vitória também depende da recompensa configurada em cada encontro." }
+      },
+      "fields": {
+        "influenciasAtributos.codigoAtributo": { "title": "Código do atributo", "text": "Escolha o código de um atributo já criado. Não use um nome parecido: a ligação precisa apontar para o atributo correto desta versão." },
+        "influenciasAtributos.recurso": { "title": "Recurso influenciado", "text": "É o recurso cujo máximo aumenta com esse atributo, como vida, mana ou estamina." },
+        "influenciasAtributos.percentualPorValor": { "title": "Percentual por valor do atributo", "text": "Na evolução da run, este percentual é multiplicado pelo novo valor do atributo e aplicado ao máximo atual do recurso. Exemplo: máximo 1000, atributo passando de 2 para 3 e percentual 10 resultam em 1000 mais 30%, ou 1300. A prévia da evolução mostra o cálculo; o valor atual de vida, mana ou estamina não é recuperado por isso." },
+        "nivelMaximo": { "title": "Nível máximo", "aliases": ["Nível máximo"], "text": "É o último nível desta progressão. Confira se a tabela contém todos os níveis do 1 até esse limite." },
+        "permiteXpExcedente": { "title": "Permitir XP excedente", "aliases": ["Permitir XP excedente"], "text": "Registra como a progressão trata experiência além do necessário. Isso não cria níveis novos acima do nível máximo configurado." },
+        "niveis.xpParaProximoNivel": { "title": "XP necessário", "text": "Quantidade de XP prevista para a passagem ao nível seguinte nesta tabela. Confira a curva gerada antes de publicar." },
+        "niveis.pontosNivel": { "title": "Pontos gerais", "text": "São pontos de progressão gerais previstos na regra. Não substituem automaticamente a coluna de pontos de atributo." },
+        "niveis.pontosAtributo": { "title": "Pontos de atributo", "text": "Quantidade de pontos de atributo concedida ao evoluir por este nível. Na run, o jogador distribui os pontos disponíveis respeitando os limites dos atributos." },
+        "niveis.pontosSkill": { "title": "Pontos de skill", "text": "Registra o direito de evolução de skills. Aprender novas skills no roguelike depende da etapa futura de catálogo e execução de poderes." },
+        "niveis.pontosUltimate": { "title": "Pontos de ultimate", "text": "Registra o direito ligado à ultimate. A seleção e execução de novas ultimates no roguelike continuam para uma implementação futura." },
+        "niveis.permiteNovaMagia": { "title": "Nova magia", "text": "Registra o direito de aprender magia neste nível. Não adiciona automaticamente uma magia escolhida aleatoriamente ao inventário." },
+        "marcos.tipoRecompensa": { "title": "Tipo de recompensa", "text": "Identifica o benefício previsto no marco. Uma palavra nova aqui não cria uma mecânica nova no jogo; o benefício precisa ter suporte de execução." },
+        "dadoLoot": { "title": "Dado de recompensa", "aliases": ["Dado de loot", "Dado de recompensa", "Dado de XP"], "text": "É o dado da etapa de recompensa do jogo. O resultado pode favorecer os loots de menor peso na metade superior do dado. Os itens, quantidades e pesos continuam definidos nos encontros do jogo." }
+      }
+    },
+    "exploracao": {
+      "title": "Exploração e ações",
+      "text": "Organize movimento, ações e carga. Algumas regras servem à mesa assistida e não têm movimentação própria no roguelike. Descrições ajudam o mestre, mas não são interpretadas como comandos automáticos.",
+      "sections": {
+        "movimento": { "title": "Grid e movimento", "aliases": ["Grid e movimento"], "text": "Define a escala do mapa tático e os custos de deslocamento. Não altera o tamanho nem a quantidade de nós do mapa do roguelike." },
+        "pontosAcao": { "title": "Pontos de ação", "aliases": ["Pontos de ação"], "text": "Define o orçamento de ações de um turno na mesa. Não é a quantidade de armas que o jogador pode equipar na run." },
+        "carga": { "title": "Carga e furtividade", "aliases": ["Carga e furtividade"], "text": "Registra limites de carga e explicações de furtividade. Para executar penalidade de sobrepeso no jogo, configure uma condição com gatilho de excesso de carga e efeito estruturado em Sobrevivência." },
+        "acoes": { "title": "Ações", "aliases": ["Ações"], "text": "É o catálogo das ações da mesa e seus custos. O roguelike usa sua própria ordem de ações equipadas e apenas as ações que possuem regra executável compatível." }
+      },
+      "fields": {
+        "movimento.metrosPorQuadrado": { "title": "Metros por quadrado", "aliases": ["Metros por quadrado"], "text": "Define a distância real de cada quadrado do grid. Por exemplo, 2 significa dois metros por quadrado." },
+        "movimento.movimentoGratuito": { "title": "Movimento gratuito", "aliases": ["Movimento gratuito"], "text": "Quantidade de deslocamento que pode ocorrer sem gastar o custo adicional previsto na regra de movimento." },
+        "movimento.custoEstaminaPorQuadrado": { "title": "Estamina por quadrado", "aliases": ["Estamina por quadrado"], "text": "É o custo de estamina previsto por quadrado de deslocamento pago no mapa tático da mesa. Não é gasto ao clicar nos nós da jornada do roguelike." },
+        "movimento.maximoQuadradosTurno": { "title": "Máximo por turno", "aliases": ["Máximo por turno"], "text": "Limita os quadrados de movimento no turno da mesa. Deixar sem valor indica que não há um teto preenchido neste campo; os demais custos ainda devem ser considerados." },
+        "pontosAcao.permiteAcumular": { "title": "Permitir acumular", "aliases": ["Permitir acumular"], "text": "Registra se pontos de ação podem ser guardados conforme a regra da mesa. Confira também o limite acumulado; isso não altera a prioridade das armas da run." },
+        "pontosAcao.segundosPorPonto": { "title": "Segundos por ponto", "aliases": ["Segundos por ponto"], "text": "É a equivalência de tempo de jogo de cada ponto de ação. Não é um cronômetro obrigatório para o jogador responder no navegador." },
+        "pontosAcao.limiteAcumulado": { "title": "Limite acumulado", "aliases": ["Limite acumulado"], "text": "É o teto de pontos guardados quando a regra permite acumular. Se acumular estiver desativado, não considere este valor como pontos extras por turno." },
+        "penalidadeExcessoCarga": { "title": "Explicação de sobrecarga", "aliases": ["Sobrecarga (explicação, não executa)"], "text": "Este campo explica a regra aos jogadores. Para o jogo reduzir estamina ou aplicar outra penalidade, crie uma condição automática observando EXCESSO_CARGA maior que 0." },
+        "furtividadeObservacoes": { "title": "Explicação de furtividade", "aliases": ["Furtividade (explicação, não executa)"], "text": "Registra orientações para o mestre. Não faz o roguelike interpretar texto e inventar testes de furtividade." },
+        "acoes.encerraTurno": { "title": "Encerra turno", "text": "Indica que esta ação termina a participação do personagem no turno, conforme as regras da mesa." },
+        "acoes.permiteCombo": { "title": "Permite combo", "text": "Indica que esta ação pode participar de combos previstos pelas regras. Não cria uma sequência automática no loadout do roguelike." },
+        "acoes.exigeAlvo": { "title": "Exige alvo", "text": "Indica que o uso da ação precisa identificar quem ou o que será afetado." }
+      }
+    },
+    "combate": {
+      "title": "Combate",
+      "text": "Defina iniciativa, faixas de resultado, limites de ataques, dano e defesas. O dado e os intervalos precisam ser coerentes. Custos e limites do Sistema são combinados com a configuração real de cada arma.",
+      "sections": {
+        "iniciativa": { "title": "Iniciativa e turno", "aliases": ["Iniciativa e turno"], "text": "Define o teste que organiza quem age primeiro. No roguelike, cada participante rola iniciativa antes das ações normais; testes de reação não trocam essa ordem." },
+        "multiplos": { "title": "Custos de ataques múltiplos", "aliases": ["Custos de ataques múltiplos"], "text": "Define o gasto adicional ao usar mais de um tiro ou rajada na mesma ação. A ação usa uma rolagem de acerto, com dano e consumo multiplicados; erros também gastam os recursos previstos." },
+        "limitesAcoesPorArma": { "title": "Limites por tipo de arma", "aliases": ["Limites por tipo de arma"], "text": "Impõe limites por arquétipo. A quantidade escolhida pelo jogador também respeita o limite do item, a munição disponível e os custos aplicáveis." },
+        "resultadosDado": { "title": "Resultados de dados", "aliases": ["Resultados de dados"], "text": "Divide os resultados de cada teste em faixas de erro, acerto e críticos. As faixas devem cobrir os valores possíveis sem sobreposição dentro do mesmo teste." },
+        "tiposDano": { "title": "Tipos de dano", "aliases": ["Tipos de dano"], "text": "Define classificações de dano e quais defesas elas ignoram. A descrição do tipo de dano não cria condições, como sangramento; ligue a condição à origem do ataque." },
+        "tiposDefesa": { "title": "Tipos de defesa", "aliases": ["Tipos de defesa"], "text": "Organiza as camadas de mitigação. Escudo é gasto no impacto, proteção perde pontos e armadura reduz o dano sem ser consumida. Confira o comportamento e a ordem de aplicação configurados." }
+      },
+      "fields": {
+        "dadoIniciativa": { "title": "Dado de iniciativa", "aliases": ["Dado de iniciativa"], "text": "É o dado rolado por cada combatente para definir a ordem. O atributo de iniciativa é somado quando configurado, como D6 mais Agilidade." },
+        "formulaIniciativa": { "title": "Fórmula de iniciativa", "aliases": ["Fórmula de iniciativa"], "text": "Configure o dado e o atributo existentes usados na ordem de combate, no formato reconhecido pelo Sistema, como 1D6 + Agilidade. O teste usa os valores reais de cada participante." },
+        "segundosPorTurno": { "title": "Segundos por turno", "aliases": ["Segundos por turno"], "text": "É a duração de um turno no tempo do RPG. Não é a velocidade da animação nem um prazo real para clicar no navegador." },
+        "regraDeclaracaoAcoes": { "title": "Declaração e ordem das ações", "aliases": ["Declaração e ordem das ações"], "text": "Explica como os jogadores declaram ações na mesa. O texto não substitui a ordem das ações equipadas nem a iniciativa calculada na run." },
+        "atributoIniciativa": { "title": "Atributo de iniciativa", "aliases": ["Atributo da iniciativa", "Atributo de iniciativa"], "text": "Selecione o código do atributo usado no teste de iniciativa. O valor vem da ficha real de cada participante." },
+        "estaminaPorAtaqueAdicional": { "title": "Estamina por disparo adicional", "aliases": ["Estamina por ataque adicional"], "text": "É o custo de cada tiro ou rajada além do primeiro na ação. Exemplo: custo 5 e três tiros ou rajadas geram 10 de estamina adicional. A arma pode ter um custo adicional próprio maior; o modo tiro ou rajada vem dela. Para golpes corpo a corpo, confira também o custo por ataque do item." },
+        "limitesAcoesPorArma.tipoArma": { "title": "Tipo de arma", "text": "Use o código do arquétipo existente, como pistola ou arma branca. Esta linha só pode limitar corretamente uma arma quando o código corresponde ao tipo dela." },
+        "limitesAcoesPorArma.maximoTiros": { "title": "Tiros por turno", "text": "É o limite de disparos individuais deste arquétipo. O pente e as restrições do item continuam valendo; o jogador pode escolher uma quantidade menor." },
+        "limitesAcoesPorArma.maximoRajadas": { "title": "Rajadas por turno", "text": "Limita o número de rajadas completas. Uma rajada usa a quantidade de balas definida na arma, não uma única bala." },
+        "limitesAcoesPorArma.maximoGolpes": { "title": "Golpes por turno", "text": "Limita os golpes agrupados na ação da arma. O gasto de estamina também limita a quantidade utilizável, mesmo que este teto seja maior." },
+        "resultadosDado.codigoTeste": { "title": "Código do teste", "text": "Agrupa as faixas que pertencem ao mesmo teste. Use o mesmo código em todas as linhas desse teste. ATAQUE_COMUM é uma referência usada pelo combate automático." },
+        "resultadosDado.dado": { "title": "Dado", "text": "Define as faces do dado desse teste, como D20. Confira a quantidade de dados e as faixas possíveis antes de publicar." },
+        "resultadosDado.quantidadeDados": { "title": "Quantidade de dados", "text": "É a quantidade de dados do teste. Não é o número de tiros da arma nem um atalho para configurar vantagem." },
+        "resultadosDado.exigeNatural": { "title": "Exige natural", "text": "Faz a faixa considerar o resultado puro do dado, antes de atributos e bônus. É útil para críticos que só devem acontecer em um número natural." },
+        "resultadosDado.codigoResultado": { "title": "Código do resultado", "text": "Identifica o resultado para outras regras, como ACERTO, ERRO ou FALHA_CRITICA. Mudar somente o nome exibido não altera o comportamento de um código reconhecido." },
+        "resultadosDado.efeitoJson": { "title": "Efeito do resultado", "text": "É uma configuração técnica estruturada. Só as propriedades reconhecidas pelo motor são executadas; texto livre ou uma chave inventada não cria um efeito. O controle Aplica condição no êxito informa se esse resultado permite aplicar condições do ataque." },
+        "tiposDefesa.ordemAplicacao": { "title": "Ordem de aplicação", "text": "É a prioridade mecânica desta camada de defesa ao receber dano. Não confunda com a ordem visual da lista." },
+        "tiposDefesa.tipoComportamento": { "title": "Comportamento da defesa", "text": "Identifica como essa defesa funciona no motor. Renomear uma defesa não cria uma camada nova; use comportamentos suportados e confira o dano na prévia." }
+      }
+    },
+    "poderes": {
+      "title": "Poderes",
+      "text": "Configure limites e categorias de magias, skills e ultimates. O catálogo do Sistema define as opções das fichas; o texto de um poder não basta para torná-lo uma ação automática no jogo.",
+      "sections": {
+        "magias": { "title": "Magias e afinidades", "aliases": ["Magias e afinidades"], "text": "Organiza categorias e limites de magia. Magias que já pertencem à ficha e possuem teste e dano compatíveis podem ser equipadas nas ações da run." },
+        "tiposMagia": { "title": "Tipos de magia", "aliases": ["Tipos de magia"], "text": "São categorias usadas na criação das magias. O custo base é uma referência; confira o custo real salvo em cada magia." },
+        "skills": { "title": "Skills e ultimate", "aliases": ["Skills e ultimate"], "text": "Define limites e desbloqueios. A seleção de novas skills e ultimates pré-feitas do roguelike ainda depende da futura implementação de poderes; não confunda isso com usar um ataque executável que já existe na ficha." }
+      },
+      "fields": {
+        "limiteMagias": { "title": "Limite de magias", "aliases": ["Limite de magias", "Máximo de magias"], "text": "Limita quantas magias a ficha pode ter conforme esta regra. Não é a quantidade de vezes que uma magia pode ser lançada por turno." },
+        "permiteMagiasCompostas": { "title": "Permitir magias compostas", "aliases": ["Permitir magias compostas"], "text": "Registra a permissão para combinar categorias de magia conforme as regras. Não cria sozinho uma magia nova nem combina efeitos de textos livres no combate." },
+        "regraAprendizadoMagia": { "title": "Regra de aprendizado", "aliases": ["Regra de aprendizado"], "text": "Explica como os personagens aprendem magias. O texto não adiciona uma nova magia automaticamente ao inventário." },
+        "skillConfig.maximoSkills": { "title": "Máximo de skills", "aliases": ["Máximo de skills"], "text": "É o teto de skills previsto para a ficha. Não é o número de usos de uma skill durante o turno." },
+        "skillConfig.nivelMaximoSkill": { "title": "Nível máximo da skill", "aliases": ["Nível máximo da skill"], "text": "É o limite de evolução de uma skill. Não deve ser confundido com o nível do personagem." },
+        "skillConfig.maximoUltimates": { "title": "Máximo de ultimates", "aliases": ["Máximo de ultimates"], "text": "É o teto de ultimates previsto para a ficha. A execução de novas ultimates no roguelike continua para a etapa futura de poderes." },
+        "skillConfig.permiteArtesEtericas": { "title": "Permitir Artes Etéricas", "aliases": ["Permitir Artes Etéricas"], "text": "Registra a disponibilidade dessa categoria nas regras. Ativar a opção não torna efeitos abstratos automaticamente executáveis no jogo." },
+        "skillConfig.usaCooldown": { "title": "Usar cooldown", "aliases": ["Usar cooldown", "Usa cooldown"], "text": "Permite intervalos entre usos quando a habilidade possui esse dado. O tempo real de espera é definido na ação ou no poder, não apenas neste checkbox." },
+        "skillConfig.nivelDesbloqueioUltimate": { "title": "Nível de desbloqueio da ultimate", "aliases": ["Nível de desbloqueio da ultimate", "Nível da ultimate"], "text": "Define quando a ultimate pode ser liberada pelas regras. Não adiciona uma ultimate automaticamente ao personagem." }
+      }
+    },
+    "sobrevivencia": {
+      "title": "Sobrevivência",
+      "text": "Defina condições, recuperação, descansos e morte. Uma condição só funciona automaticamente com efeitos estruturados e uma forma de ativação. Ela pode começar pelo estado da ficha ou por um item, magia, skill ou prótese configurado para aplicá-la.",
+      "sections": {
+        "condicoes": { "title": "Condições", "aliases": ["Condições"], "text": "Uma condição é um conjunto de efeitos temporários, positivos ou negativos. Configure aqui o que ela faz e como termina. O item ou poder pode definir quando a aplica e substituir valores ou duração na sua própria cópia." },
+        "condicoes.inicio": { "title": "Quando começa", "aliases": ["Quando começa"], "text": "Use um gatilho automático para estados da ficha, como mana menor ou igual a zero. Se a condição deve ser aplicada apenas por uma granada, arma ou magia, deixe o gatilho automático vazio e configure a aplicação nessa origem." },
+        "condicoes.efeito": { "title": "O que acontece", "aliases": ["O que acontece"], "text": "Defina a operação, o que será afetado, o valor e o momento. Exemplo: diminuir VIDA em 50 no fim de cada turno cria um efeito periódico; reduzir o máximo de MANA em 30% mantém a penalidade enquanto a condição estiver ativa." },
+        "condicoes.maisEfeitos": { "title": "Mais efeitos desta condição", "aliases": ["Mais efeitos desta condição"], "text": "Adicione efeitos que duram junto com a condição. Uma cegueira pode reduzir Precisão e impor desvantagem ao mesmo tempo. Bônus e penalidades terminam quando a condição acaba." },
+        "condicoes.fim": { "title": "Quando termina", "aliases": ["Quando termina"], "text": "Marque as maneiras de encerrar a condição. Basta uma das formas escolhidas acontecer. Só preencher duração não seleciona a recuperação por duração; marque A duração terminou quando quiser essa expiração automática da regra." },
+        "descansos": { "title": "Descansos", "aliases": ["Descansos"], "text": "Defina o que cada descanso recupera e quanto tempo de jogo passa. O simples pode ser usado como ação da run; o normal e o longo dependem das opções disponíveis. O descanso da Base é escolhido na configuração do jogo." },
+        "morte": { "title": "Fluxo de morte e estabilização", "aliases": ["Fluxo de morte e estabilização"], "text": "Configura os limites e testes de sobrevivência da mesa. Nem toda etapa da mesa assistida corresponde ao fluxo de derrota do roguelike." },
+        "loot": { "title": "Loot e refeições", "aliases": ["Loot e refeições"], "text": "São orientações gerais para a mesa. Os itens sorteados e seus pesos no roguelike ficam na configuração de loot de cada encontro do jogo." }
+      },
+      "fields": {
+        "condicoes.tipo": { "title": "Tipo da condição", "text": "É a categoria usada para organizar a condição, como física ou mágica. O efeito real não vem deste nome: ele é definido nos campos de operação, recurso, valor e momento." },
+        "condicoes.regraRemocao": { "title": "Configurar condição", "text": "Abra para definir quando a condição começa, o que ela altera e como termina. A descrição da condição é apenas uma explicação para os jogadores." },
+        "condicoes.codigoRecursoGatilho": { "title": "Recurso observado", "aliases": ["Recurso observado"], "text": "É o valor que o jogo acompanha para ativar esta condição. Exemplo: MANA com comparação Menor ou igual a e valor 0. EXCESSO_CARGA é o peso carregado que ultrapassa a capacidade." },
+        "condicoes.operadorGatilho": { "title": "Comparação", "aliases": ["Comparação"], "text": "Compara o recurso observado com o valor do gatilho. Menor ou igual a 0 serve para detectar um recurso vazio; Maior que 0 pode detectar excesso de carga." },
+        "condicoes.valorGatilho": { "title": "Valor do gatilho", "aliases": ["Valor do gatilho"], "text": "É o número usado na comparação de ativação. Não é o valor do dano nem a intensidade da condição. Para mana acabando, use 0." },
+        "condicoes.operacaoEfeito": { "title": "Efeito", "aliases": ["Efeito"], "text": "Escolha o que a condição altera. Diminuir, recuperar ou definir recurso mexe na quantidade atual de um status. Alterar atributo aplica um bônus positivo ou penalidade negativa nos testes desse atributo enquanto a condição durar, sem mudar os pontos salvos da ficha. Máximo percentual, dano, defesa, vantagem e perda de turnos possuem opções próprias. Passe o mouse sobre cada opção para uma explicação curta." },
+        "condicoes.codigoRecurso": { "title": "Alvo do efeito", "aliases": ["Recurso afetado", "Atributo afetado"], "text": "Escolha o que recebe a alteração: um atributo para bônus ou penalidades nos testes, ou um recurso para mudar vida, mana ou estamina. A lista acompanha o efeito selecionado e os atributos criados no seu Sistema. O alvo pode ser diferente do recurso que ativou a condição." },
+        "condicoes.valorEfeito": { "title": "Valor do efeito", "aliases": ["Valor do efeito"], "text": "É a intensidade do efeito. Para diminuir 50 de vida, use 50; a operação já determina a subtração. Na redução de máximo, 30 significa 30%. Nos efeitos adicionais de atributo, dano ou defesa, valores negativos penalizam e positivos dão bônus." },
+        "condicoes.momentoEfeito": { "title": "Quando aplicar", "aliases": ["Quando aplicar", "Quando"], "text": "Ao aplicar executa uma vez. Início ou fim do turno repete nesse momento do turno do afetado. Enquanto ativa mantém um modificador, como redução de máximo ou desvantagem, sem subtrair novamente a cada turno." },
+        "condicoes.duracaoPadrao": { "title": "Duração", "aliases": ["Duração"], "text": "É a duração de referência da condição. Para a regra terminar por esse tempo, marque A duração terminou. Uma origem, como um item, também pode definir sua própria duração." },
+        "condicoes.unidadeDuracao": { "title": "Unidade da duração", "aliases": ["Unidade"], "text": "Define o significado da duração. A expiração automática configurada aqui aceita turnos ou horas de jogo. Horas avançam por eventos e descansos, não por deixar o site aberto nem pelo tempo fora do jogo. Outras unidades podem depender da condução do mestre." },
+        "condicoes.cooldownTurnos": { "title": "Intervalo para reativar", "aliases": ["Intervalo para reativar (turnos)"], "text": "É o intervalo de turnos antes de uma nova ativação automática permitida. Não é a duração da condição nem o cooldown da arma que a aplica." },
+        "condicoes.empilhavel": { "title": "Acumula", "aliases": ["Acumula"], "text": "Permite que aplicações da condição se acumulem conforme as regras de acúmulo do motor. Deixe desmarcado quando quiser apenas uma ocorrência ativa." },
+        "condicoes.permiteSobrescrever": { "title": "Reaplicação substitui a atual", "aliases": ["Reaplicação substitui a atual"], "text": "Permite que uma nova aplicação substitua a configuração ativa anterior, em vez de manter aquela aplicação sem mudança. É útil quando uma nova origem tem intensidade ou duração diferentes." },
+        "condicoes.valorPadrao": { "title": "Intensidade padrão", "aliases": ["Intensidade padrão (opcional)"], "text": "Quando preenchida, substitui o valor do efeito principal na aplicação. Deixe vazia para usar o Valor do efeito. Não substitui os valores de todos os efeitos adicionais." },
+        "condicoes.efeitos.operacao": { "title": "Efeito adicional", "text": "Pode alterar um atributo, resultado de teste, dano, defesa ou máximo de recurso, além de recuperar ou gastar status. Vantagem e desvantagem mudam a escolha do dado. Perder turnos faz o afetado pular a quantidade configurada de ações normais." },
+        "condicoes.efeitos.recurso": { "title": "Afeta", "aliases": ["Afeta"], "text": "Selecione o atributo ou recurso que este efeito adicional modifica. As opções mudam conforme a operação. Exemplo: em Alterar atributo, escolha Precisão para configurar uma penalidade de cegueira." },
+        "condicoes.efeitos.valor": { "title": "Valor do efeito adicional", "aliases": ["Valor", "Turnos perdidos"], "text": "Para modificar atributo, teste, dano ou defesa, use um número negativo para reduzir ou positivo para aumentar. Recuperar ou diminuir recurso usa uma quantidade positiva com a operação correta. Perder turnos usa a quantidade de turnos a pular." },
+        "condicoes.gatilhoCessou": { "title": "O gatilho deixou de valer", "aliases": ["O gatilho deixou de valer"], "text": "Encerra a condição quando seu gatilho deixa de ser verdadeiro, conforme a origem. Exemplo: sair do excesso de carga. Não use como única recuperação de uma penalidade que deve continuar mesmo após recuperar o recurso." },
+        "condicoes.duracaoTerminou": { "title": "A duração terminou", "aliases": ["A duração terminou"], "text": "Faz a regra expirar ao completar a duração configurada em turnos ou horas de jogo. Preencha uma duração maior que zero e a unidade correspondente." },
+        "condicoes.descansoSimples": { "title": "Descanso simples ou maior", "aliases": ["Descanso simples ou maior"], "text": "Encerra a condição ao realizar descanso simples, normal ou longo. Não é preciso marcar as três opções." },
+        "condicoes.descansoNormal": { "title": "Descanso normal ou longo", "aliases": ["Descanso normal ou longo"], "text": "Encerra a condição ao realizar descanso normal ou longo. Descanso simples não remove a condição com esta opção." },
+        "condicoes.descansoLongo": { "title": "Descanso longo", "aliases": ["Descanso longo"], "text": "Encerra a condição apenas no descanso longo, a menos que outra recuperação marcada aconteça antes." },
+        "condicoes.cura": { "title": "Ao receber cura", "aliases": ["Ao receber cura"], "text": "Encerra a condição quando ocorre a cura reconhecida pelas regras. É útil para sangramento que deve parar ao usar uma cura de vida." },
+        "condicoes.magia": { "title": "Por magia de remoção", "aliases": ["Por magia de remoção"], "text": "Permite remover a condição por uma magia configurada para removê-la. Apenas lançar qualquer magia não é suficiente; a origem precisa selecionar a condição e satisfazer seu teste quando exigido." },
+        "descansos.tipo": { "title": "Tipo do descanso", "text": "Use o tipo reconhecido pela regra: SIMPLES, NORMAL ou LONGO. O nome exibido pode ser mais amigável, como descanso médio para o tipo NORMAL." },
+        "descansos.tipoRecuperacao": { "title": "Tipo da recuperação", "text": "Valor fixo recupera a quantidade escrita. Percentual recupera uma porcentagem do máximo. Fórmula depende de uma regra de fórmula reconhecida; escrever uma descrição não cria esse cálculo automaticamente." },
+        "descansos.duracaoMinimaMinutos": { "title": "Duração mínima do descanso", "text": "É o tempo mínimo de jogo deste descanso, em minutos. Esse tempo também pode avançar condições que duram horas de jogo." },
+        "descansos.duracaoMaximaMinutos": { "title": "Duração máxima do descanso", "text": "É o limite superior de duração, quando existir. Não pode ser menor que a duração mínima." },
+        "descansos.recuperacaoVida": { "title": "Vida recuperada", "text": "Quantidade de vida recuperada por este descanso. O tipo de recuperação da linha determina se é um número fixo ou percentual; o recurso não ultrapassa o máximo permitido." },
+        "descansos.recuperacaoMana": { "title": "Mana recuperada", "text": "Quantidade de mana recuperada pelo descanso, em valor fixo ou percentual conforme a linha. Condições que bloqueiam recuperação precisam ser consideradas." },
+        "descansos.recuperacaoEstamina": { "title": "Estamina recuperada", "text": "Quantidade de estamina recuperada pelo descanso. O tipo de recuperação determina se o valor é fixo ou percentual." },
+        "descansos.exigeGuarda": { "title": "Exige guarda", "text": "Registra que o descanso exige alguém de guarda na mesa. Isso não cria automaticamente um encontro ou inimigo no mapa do roguelike." },
+        "morte.limiteBeiraDaMorte": { "title": "Limite à beira da morte", "aliases": ["Limite à beira da morte"], "text": "É o limite de vida usado pela regra de sobrevivência para o estado à beira da morte. Confira os testes e a recuperação previstos no Sistema." },
+        "morte.quantidadeTestesCombate": { "title": "Testes em combate", "aliases": ["Testes em combate"], "text": "É a quantidade de testes de sobrevivência prevista quando a situação acontece durante um combate da mesa." },
+        "morte.quantidadeTestesForaCombate": { "title": "Testes fora de combate", "aliases": ["Testes fora de combate"], "text": "É a quantidade de testes de sobrevivência prevista fora do combate da mesa. Pode ser diferente da quantidade usada durante o combate." },
+        "morte.dadoSobrevivencia": { "title": "Dado de sobrevivência", "aliases": ["Dado de sobrevivência"], "text": "É o dado usado nos testes para sobreviver ou estabilizar. O resultado mínimo de sucesso precisa existir nesse dado." },
+        "regraLoot": { "title": "Regras de loot e drops", "aliases": ["Regras de loot e drops"], "text": "É uma explicação geral para a mesa. As chances, quantidades e itens de loot do roguelike são configurados nos encontros do jogo, não neste texto." },
+        "regraRefeicoes": { "title": "Refeições e bebidas", "aliases": ["Refeições e bebidas"], "text": "Registra orientações para refeições e bebidas da mesa. Para um item recuperar vida, mana ou estamina automaticamente, configure a recuperação no item ou em uma condição estruturada." },
+        "morte.sucessosNecessarios": { "title": "Sucessos necessários", "aliases": ["Sucessos necessários"], "text": "É a quantidade de testes bem-sucedidos exigida pela regra de estabilização. Não é o número mínimo que precisa sair no dado." },
+        "morte.resultadoMinimoSucesso": { "title": "Resultado mínimo", "aliases": ["Resultado mínimo"], "text": "É o menor resultado que conta como sucesso no teste de sobrevivência. Precisa caber nas faces do dado escolhido." },
+        "morte.multiplicadorDanoDesmembramento": { "title": "Multiplicador de desmembramento", "aliases": ["Multiplicador de desmembramento"], "text": "Registra o multiplicador de dano usado pela regra de desmembramento. Não é dano extra aplicado automaticamente a toda arma." },
+        "morte.multiplicadorDanoInstaKill": { "title": "Multiplicador de morte instantânea", "aliases": ["Multiplicador de insta kill", "Multiplicador de morte instantânea"], "text": "Registra o multiplicador usado na regra de morte instantânea. Confira os demais limites da sobrevivência e o fluxo de jogo em que essa regra é usada." }
+      }
+    }
+  }
+}

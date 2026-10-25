@@ -59,6 +59,31 @@ public class GameRunMutationRequestDto
     public Guid ChaveIdempotencia { get; set; }
 }
 
+public sealed class GameRunVendorPurchaseRequestDto : GameRunMutationRequestDto
+{
+    [Required, MaxLength(100)] public string ItemId { get; set; } = string.Empty;
+    public bool ToStash { get; set; }
+}
+
+public sealed class GameRunStashTransferRequestDto : GameRunMutationRequestDto
+{
+    [Required, MaxLength(100)] public string ItemId { get; set; } = string.Empty;
+    public bool ToStash { get; set; }
+}
+
+public sealed class GameRunVendorSaleLineDto
+{
+    [Required, MaxLength(100)] public string ItemId { get; set; } = string.Empty;
+    [Range(1, 1_000_000)] public int Quantity { get; set; } = 1;
+}
+
+public sealed class GameRunVendorSaleRequestDto : GameRunMutationRequestDto
+{
+    [Required, MinLength(1), MaxLength(100)]
+    public IReadOnlyList<GameRunVendorSaleLineDto> Items { get; set; } = [];
+    public bool FromStash { get; set; }
+}
+
 public sealed record GameRunTargetDto(string ActorId, string TargetId);
 
 public sealed class GameRunBattleRequestDto : GameRunMutationRequestDto
@@ -175,6 +200,13 @@ public sealed class GameRunMapNodePayloadDto
     public string? EncounterCode { get; init; }
     public string? SecretAreaCode { get; init; }
     public int GameMinutes { get; init; }
+    public List<GameModeVendorOfferDto>? Offers { get; init; }
+}
+
+public sealed class GameRunEconomyDto
+{
+    public int Balance { get; init; }
+    public List<System.Text.Json.Nodes.JsonObject> Stash { get; init; } = [];
 }
 
 public sealed class GameRunSystemSnapshotDto
@@ -194,6 +226,7 @@ public sealed class GameRunSystemSnapshotDto
 
 public sealed class GameRunCharacterSnapshotDto
 {
+    public GameRunEconomyDto? Economy { get; init; }
     public System.Text.Json.JsonElement? Carga { get; init; }
     public System.Text.Json.JsonElement? LimitesCondicoes { get; init; }
     public System.Text.Json.JsonElement? CondicoesAtivas { get; init; }

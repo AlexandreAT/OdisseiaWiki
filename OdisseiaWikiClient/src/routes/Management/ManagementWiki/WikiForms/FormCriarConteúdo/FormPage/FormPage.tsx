@@ -1,5 +1,7 @@
 
 import React, { useState } from 'react';
+import wikiHelp from '../../../../../../content/wikiHelp.pt-BR.json';
+import type { FieldHelpContent } from '../../../../../../components/Generic/FieldHelp/FieldHelp.types';
 import { FormPageProps } from './FormPage.type';
 import { useFormPage } from './useFormPage';
 import { PageBlockType } from '../../../../../../models/Pages';
@@ -24,9 +26,6 @@ import {
   GridInputs,
   FullWidthInput,
   PageVisibilityControls,
-  SlugField,
-  SlugInfoButton,
-  SlugInfoPopover,
   BlocksContainer,
   BlockItem,
   BlockHeader,
@@ -43,7 +42,7 @@ import {
   EmptyBlocksMessage,
   BlocksValidationMessage,
 } from './FormPage.style';
-import { BiTrash, BiPlus, BiMoveVertical, BiInfoCircle } from 'react-icons/bi';
+import { BiTrash, BiPlus, BiMoveVertical } from 'react-icons/bi';
 import { EntityEditFloatingActions } from '../../FormBuscarConteúdo/EntityEditFloatingActions';
 import { revealFirstValidationError } from '../../../../../../utils/formValidationFeedback';
 import { useEntityEditSync } from '../../../../../../hooks/useEntityEditSync';
@@ -112,13 +111,11 @@ export const FormPage: React.FC<FormPageProps> = ({
 
   const [selectedBlockType, setSelectedBlockType] = useState<PageBlockType | null>(null);
   const [coverImageUrl, setCoverImageUrl] = useState(initialPage?.coverImage || '');
-  const [showSlugInfo, setShowSlugInfo] = useState(false);
   const [draggingBlockId, setDraggingBlockId] = useState<string | null>(null);
   const [dragPointer, setDragPointer] = useState({ x: 0, y: 0 });
   const draggingBlockIdRef = React.useRef<string | null>(null);
   const dragPointerRef = React.useRef({ x: 0, y: 0 });
   const autoScrollFrameRef = React.useRef<number | null>(null);
-  const slugInfoRef = React.useRef<HTMLDivElement>(null);
   const persistInFlightRef = React.useRef(false);
   const blocksContainerRef = React.useRef<HTMLDivElement>(null);
 
@@ -126,23 +123,6 @@ export const FormPage: React.FC<FormPageProps> = ({
     if (blocksError) revealFirstValidationError(blocksContainerRef.current);
   }, [blocksError]);
 
-  React.useEffect(() => {
-    if (!showSlugInfo) return;
-
-    const closeOnOutsideClick = (event: PointerEvent) => {
-      if (!slugInfoRef.current?.contains(event.target as Node)) setShowSlugInfo(false);
-    };
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setShowSlugInfo(false);
-    };
-
-    document.addEventListener('pointerdown', closeOnOutsideClick);
-    document.addEventListener('keydown', closeOnEscape);
-    return () => {
-      document.removeEventListener('pointerdown', closeOnOutsideClick);
-      document.removeEventListener('keydown', closeOnEscape);
-    };
-  }, [showSlugInfo]);
 
   const snapshot = React.useMemo(() => JSON.stringify({
     titulo,
@@ -305,43 +285,19 @@ export const FormPage: React.FC<FormPageProps> = ({
             required
           />
 
-          <SlugField ref={slugInfoRef}>
-            <InputText
-              theme={theme}
-              neon={neon}
-              label="Slug *"
-              value={slug}
-              onChange={(e) => setSlug(e.target.value)}
-              onFocus={() => setSlugError('')}
-              width="100%"
-              error={!!slugError}
-              errorMessage={slugError}
-              required
-            />
-            <SlugInfoButton
-              type="button"
-              $isDark={theme === 'dark'}
-              $neon={neon === 'on'}
-              aria-label="Como o slug funciona"
-              aria-expanded={showSlugInfo}
-              onClick={() => setShowSlugInfo((visible) => !visible)}
-            >
-              <BiInfoCircle aria-hidden="true" />
-            </SlugInfoButton>
-            {showSlugInfo && (
-              <SlugInfoPopover $isDark={theme === 'dark'} $neon={neon === 'on'} role="status">
-                <strong>Como funciona o slug</strong>
-                <p>{'Ele forma o endere\u00e7o da p\u00e1gina. Enquanto voc\u00ea digita o t\u00edtulo, o valor \u00e9 criado automaticamente; ao edit\u00e1-lo manualmente, sua escolha passa a ser mantida.'}</p>
-                <ul>
-                  <li>{'Use palavras sem acentos, separadas por h\u00edfen: '}<code>teste-de-pagina</code>.</li>
-                  <li>{'Cada p\u00e1gina deve possuir um slug \u00fanico.'}</li>
-                  <li><code>MainPage</code>{' identifica a p\u00e1gina principal da wiki.'}</li>
-                  <li><code>search</code>{' \u00e9 reservado para a busca e n\u00e3o deve ser usado.'}</li>
-                  <li><code>conexoes</code>{' \u00e9 reservado para a Teia de Conex\u00f5es.'}</li>
-                </ul>
-              </SlugInfoPopover>
-            )}
-          </SlugField>
+          <InputText
+            help={wikiHelp.slug as FieldHelpContent}
+            theme={theme}
+            neon={neon}
+            label="Slug *"
+            value={slug}
+            onChange={(e) => setSlug(e.target.value)}
+            onFocus={() => setSlugError('')}
+            width="100%"
+            error={!!slugError}
+            errorMessage={slugError}
+            required
+          />
         </GridInputs>
 
         <FullWidthInput>

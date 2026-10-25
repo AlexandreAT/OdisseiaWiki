@@ -15,6 +15,56 @@ public sealed class GameRunEncountersController : ControllerBase
 
     public GameRunEncountersController(IGameRunEncounterService service) => _service = service;
 
+    [HttpPost("nodes/{noId}/vendor")]
+    public async Task<IActionResult> EnterVendor(long idGameRun, string noId,
+        GameRunMutationRequestDto request, CancellationToken token)
+    {
+        int? userId = User.GetUserId();
+        if (userId is null) return Unauthorized();
+        var result = await _service.EnterVendorAsync(idGameRun, noId, userId.Value, request, token);
+        return result.Sucesso ? Ok(result.Dados) : Failure(result.Codigo, result.Mensagem);
+    }
+
+    [HttpPost("vendor/buy")]
+    public async Task<IActionResult> BuyVendorItem(long idGameRun,
+        GameRunVendorPurchaseRequestDto request, CancellationToken token)
+    {
+        int? userId = User.GetUserId();
+        if (userId is null) return Unauthorized();
+        var result = await _service.BuyVendorItemAsync(idGameRun, userId.Value, request, token);
+        return result.Sucesso ? Ok(result.Dados) : Failure(result.Codigo, result.Mensagem);
+    }
+
+    [HttpPost("vendor/leave")]
+    public async Task<IActionResult> LeaveVendor(long idGameRun,
+        GameRunMutationRequestDto request, CancellationToken token)
+    {
+        int? userId = User.GetUserId();
+        if (userId is null) return Unauthorized();
+        var result = await _service.LeaveVendorAsync(idGameRun, userId.Value, request, token);
+        return result.Sucesso ? Ok(result.Dados) : Failure(result.Codigo, result.Mensagem);
+    }
+
+    [HttpPost("vendor/sell")]
+    public async Task<IActionResult> SellVendorItems(long idGameRun,
+        GameRunVendorSaleRequestDto request, CancellationToken token)
+    {
+        int? userId = User.GetUserId();
+        if (userId is null) return Unauthorized();
+        var result = await _service.SellVendorItemsAsync(idGameRun, userId.Value, request, token);
+        return result.Sucesso ? Ok(result.Dados) : Failure(result.Codigo, result.Mensagem);
+    }
+
+    [HttpPost("stash/transfer")]
+    public async Task<IActionResult> TransferStashItem(long idGameRun,
+        GameRunStashTransferRequestDto request, CancellationToken token)
+    {
+        int? userId = User.GetUserId();
+        if (userId is null) return Unauthorized();
+        var result = await _service.TransferStashItemAsync(idGameRun, userId.Value, request, token);
+        return result.Sucesso ? Ok(result.Dados) : Failure(result.Codigo, result.Mensagem);
+    }
+
     [HttpGet("attributes")]
     public async Task<IActionResult> GetAttributes(long idGameRun, CancellationToken token)
     {
@@ -218,7 +268,8 @@ public sealed class GameRunEncountersController : ControllerBase
             "REVISAO_DESATUALIZADA" or "CHAVE_IDEMPOTENCIA_REUTILIZADA" or
                 "RUN_ENCERRADA" or "NO_JA_SELECIONADO" or "NO_INDISPONIVEL" or
                 "COMBATE_JA_RESOLVIDO" or "MAPA_INDISPONIVEL" or "COMBATE_PENDENTE" or
-                "BASE_INDISPONIVEL" or "DESCANSO_JA_USADO" => Conflict(error),
+                "BASE_INDISPONIVEL" or "DESCANSO_JA_USADO" or "VENDEDOR_INDISPONIVEL" or
+                "ESTOQUE_ESGOTADO" => Conflict(error),
             _ => BadRequest(error),
         };
     }

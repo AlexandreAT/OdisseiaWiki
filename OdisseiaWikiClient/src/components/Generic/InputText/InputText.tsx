@@ -1,8 +1,11 @@
-import { useState, forwardRef, useCallback, useEffect, useRef } from 'react';
+import { useState, forwardRef, useCallback, useEffect, useRef, memo } from 'react';
+import { useEventCallback } from '../../../hooks/useEventCallback';
 import { ContentController, LoginLabel, LoginInput, LoginLabelSpan, SpanError } from './InputText.style';
 import { FormLabelText } from '../FormLabelText';
 import { revealFirstValidationError } from '../../../utils/formValidationFeedback';
 import { selectNumericInputValue } from '../../../utils/numericInput';
+import { FieldHelp } from '../FieldHelp/FieldHelp';
+import type { FieldHelpContent } from '../FieldHelp/FieldHelp.types';
 
 interface Props {
     theme: 'dark' | 'light';
@@ -23,9 +26,11 @@ interface Props {
     disabled?: boolean;
     min?: number;
     max?: number;
+    help?: FieldHelpContent;
+    helpKey?: string;
 }
 
-export const InputText = forwardRef<HTMLInputElement, Props>(
+const InputTextComponent = forwardRef<HTMLInputElement, Props>(
   ({
     theme,
     neon,
@@ -45,6 +50,8 @@ export const InputText = forwardRef<HTMLInputElement, Props>(
     disabled = false,
     min,
     max,
+    help,
+    helpKey,
   }, ref) => {
     const [focus, setFocus] = useState(false);
     const [nativeError, setNativeError] = useState('');
@@ -80,7 +87,8 @@ export const InputText = forwardRef<HTMLInputElement, Props>(
     }, [errorMessage]);
 
     return (
-      <ContentController ref={controllerRef} width={width} data-validation-error={hasError || undefined}>
+      <ContentController ref={controllerRef} width={width} theme={theme} neon={neon} typeStyle={typeStyle}
+        data-validation-error={hasError || undefined}>
         <LoginLabel width={width} height={height}>
           <LoginInput
               theme={theme}
@@ -104,14 +112,24 @@ export const InputText = forwardRef<HTMLInputElement, Props>(
               min={min}
               max={max}
           />
-          <LoginLabelSpan active={focus || hasValue}>
+          <LoginLabelSpan data-field-label="true" active={focus || hasValue}>
             <FormLabelText label={label} required={required} />
           </LoginLabelSpan>
         </LoginLabel>
+        <FieldHelp label={label} help={help} helpKey={helpKey} theme={theme} neon={neon} />
         {hasError && <SpanError>{errorMessage || nativeError}</SpanError>}
       </ContentController>
     );
   }
 );
 
+InputTextComponent.displayName = 'InputTextControl';
+const MemoizedInputText = memo(InputTextComponent);
+
+export const InputText = forwardRef<HTMLInputElement, Props>((props, ref) => {
+  const onChange = useEventCallback(props.onChange);
+  const onFocus = useEventCallback(props.onFocus);
+  return <MemoizedInputText {...props} ref={ref}
+    onChange={props.onChange ? onChange : undefined} onFocus={props.onFocus ? onFocus : undefined} />;
+});
 InputText.displayName = 'InputText';

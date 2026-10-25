@@ -1,4 +1,5 @@
 import styled from 'styled-components';
+import { cyberButtonActionRow } from '../HighlightButton/HighlightButton.styles';
 
 interface ThemeProps {
   theme: 'dark' | 'light';
@@ -209,6 +210,7 @@ export const EditorWrapper = styled.div<ThemeProps>`
 `;
 
 export const ModalFooter = styled.div<ThemeProps>`
+  ${cyberButtonActionRow}
   padding: 16px 24px;
   border-top: 1px solid ${({ theme, neon }) =>
     theme === "dark"
@@ -226,6 +228,5 @@ export const ModalFooter = styled.div<ThemeProps>`
   @media (max-width: 768px) {
     padding: 10px 12px;
     gap: 6px;
-    overflow-x: auto;
   }
 `;

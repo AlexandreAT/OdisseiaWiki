@@ -10,6 +10,7 @@ interface Props {
   height?: string;
   colorType?: 'primary' | 'secondary';
   $disabled?: boolean;
+  $facePath?: string;
 }
 
 interface ColorConfig {
@@ -37,19 +38,30 @@ const colorConfigs: Record<'primary' | 'secondary', ColorConfig> = {
   },
 };
 
+// All layers share one grid cell. Intrinsic sizing keywords cannot be used in calc().
+const framedSize = (size: string | undefined, fallback: string) => !size ? fallback
+  : ['auto', 'fit-content', 'min-content', 'max-content'].includes(size) ? size : `calc(${size} + 15px)`;
+
 export const ButtonClipController = styled.div<Props>`
+  --cyber-button-edge-start: ${({ theme, neon, colorType = 'primary', borderColor }) => borderColor ||
+    (neon === 'on' && theme === 'dark' ? colorConfigs[colorType].neon : colorConfigs[colorType].clearNeon)};
+  --cyber-button-edge-end: ${({ theme, neon, colorType = 'primary', borderColor }) => borderColor ||
+    (neon === 'on' && theme === 'dark' ? colorConfigs[colorType].clearNeon : colorConfigs[colorType].neon)};
   position: relative;
-  width: ${({ width }) => width ? `calc(${width} + 15px)` : '115px'};
-  height: ${({ height }) => height ? `calc(${height} + 15px)` : '65px'};
+  width: ${({ width }) => framedSize(width, 'fit-content')};
+  min-width: ${({ width }) => width ? '0' : '115px'};
+  max-width: 100%;
+  height: auto;
+  min-height: ${({ height }) => framedSize(height, '65px')};
+  box-sizing: border-box;
   background: transparent;
   border: none;
-  padding: 0;
+  padding: 7.5px;
   margin: 0;
   border-radius: 8px;
-  clip-path: polygon(0 0, 100% 0, 100% 100%, 25% 100%, 0% 63%, 0 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: inline-grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   overflow: visible;
   cursor: default;
   opacity: ${({ $disabled }) => $disabled ? 0.58 : 1};
@@ -57,55 +69,57 @@ export const ButtonClipController = styled.div<Props>`
   transition: opacity 180ms ease;
 `;
 
-export const ButtonBoxShadow = styled.div<Props>`
+const frameLayer = css`
+  // SVGs must not contribute their intrinsic 300px width to fit-content buttons.
   position: absolute;
-  width: ${({ width }) => width || '100px'};
-  height: ${({ height }) => height || '50px'};
-  border-radius: 8px;
-  cursor: default;
-  z-index: 0;
-  box-shadow: ${({ theme = 'light', neon = 'off', colorType = 'primary' }) =>
-    neon === 'on'
-      ? theme === 'light'
-        ? `0 0 10px ${colorConfigs[colorType].clearNeon}, inset 0 0 20px ${colorConfigs[colorType].clearNeon}`
-        : `0 0 10px ${colorConfigs[colorType].neon}, inset 0 0 20px ${colorConfigs[colorType].neon}`
-      : 'none'};
+  grid-area: 1 / 1 / 2 / 2;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  pointer-events: none;
+  overflow: visible;
+  fill: none;
+  stroke-width: 2px;
+  stroke-linejoin: round;
 `;
 
-export const ButtonClipBorder = styled.div<Props>`
-  position: absolute;
-  width: ${({ width }) => width || '100px'};
-  height: ${({ height }) => height || '50px'};
-  border-radius: 8px;
-  cursor: default;
-  z-index: 1;
-  background: ${({ theme = 'light', neon = 'off', colorType = 'primary' }) =>
-    neon === 'on'
-      ? theme === 'light'
-        ? `linear-gradient(45deg, ${colorConfigs[colorType].clearNeon}, ${colorConfigs[colorType].neon})`
-        : `linear-gradient(45deg, ${colorConfigs[colorType].neon}, ${colorConfigs[colorType].clearNeon})`
-      : theme === 'light'
-        ? `linear-gradient(45deg, ${colorConfigs[colorType].clearNeon}, ${colorConfigs[colorType].neon})`
-        : `linear-gradient(45deg, ${colorConfigs[colorType].clearNeon}, ${colorConfigs[colorType].neon})`};
-        
-  clip-path: polygon(0 70%, 18% 100%, 0% 100%, 0 0%);
+export const ButtonBoxShadow = styled.svg<Props>`
+  ${frameLayer}
+  z-index: 0;
+  visibility: ${({ neon }) => neon === 'on' ? 'visible' : 'hidden'};
+  stroke: var(--cyber-button-edge-start);
+  filter: drop-shadow(0 0 4px var(--cyber-button-edge-start))
+    drop-shadow(0 0 8px var(--cyber-button-edge-start));
+`;
+
+export const ButtonClipBorder = styled.svg<Props>`
+  ${frameLayer}
+  z-index: 3;
 `;
 
 export const ButtonContentContainer = styled.button<Props>`
   position: relative;
+  grid-area: 1 / 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: ${({ width }) => width || '100px'};
-  height: ${({ height }) => height || '50px'};
+  width: 100%;
+  height: auto;
+  min-width: 0;
+  min-height: ${({ height }) => !height || ['auto', 'fit-content'].includes(height) ? '50px' : height};
+  box-sizing: border-box;
   border-radius: 8px;
   border: none;
   background-color: ${({ backgroundColor }) => backgroundColor || '#0004'};
-  clip-path: polygon(0 0, 100% 0, 100% 100%, 15% 100%, 0% 75%, 0 100%);
+  clip-path: ${({ $facePath }) => $facePath ? `path('${$facePath}')` : 'none'};
   z-index: 2;
-  padding: 0 12px;
+  padding: 10px 12px;
   font-family: 'Cyberpunk Is Not Dead', sans-serif;
   font-size: 12px;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
   text-transform: uppercase;
   color: ${({ textColor, colorType = 'primary', neon }) =>
     textColor || (neon === 'on' ? colorConfigs[colorType].textNeon : colorConfigs[colorType].text)};
@@ -118,30 +132,6 @@ export const ButtonContentContainer = styled.button<Props>`
     vertical-align: middle;
   }
 
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: 8px;
-    clip-path: polygon(0 0, 100% 0, 100% 100%, 15% 100%, 0% 75%, 0 100%);
-    background: ${({ theme = 'light', neon = 'off', colorType = 'primary' }) =>
-      neon === 'on'
-        ? theme === 'light'
-          ? `linear-gradient(45deg, ${colorConfigs[colorType].clearNeon}, ${colorConfigs[colorType].neon})`
-          : `linear-gradient(45deg, ${colorConfigs[colorType].neon}, ${colorConfigs[colorType].clearNeon})`
-        : theme === 'light'
-          ? `linear-gradient(45deg, ${colorConfigs[colorType].clearNeon}, ${colorConfigs[colorType].neon})`
-          : `linear-gradient(45deg, ${colorConfigs[colorType].clearNeon}, ${colorConfigs[colorType].neon})`};
-    -webkit-mask: 
-      linear-gradient(#fff 0 0) content-box, 
-      linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    padding: 2px;
-    z-index: 0;
-    transition: all 0.5s ease;
-  }
-
   &:not(:disabled):hover {
     color: var(--black);
     background: ${({ colorType = 'primary' }) => colorConfigs[colorType].hover};
@@ -152,13 +142,28 @@ export const ButtonContentContainer = styled.button<Props>`
   }
 `;
 
-// Use on action groups that fill their row on narrow screens. The clipped
-// controller has 15px more width than its visible button by design.
+// The controller's padding reserves the same glow space at every viewport size.
 export const cyberButtonsFillWidth = css`
   > ${ButtonClipController} { width: 100%; min-width: 0; }
   > ${ButtonClipController} > ${ButtonBoxShadow},
   > ${ButtonClipController} > ${ButtonClipBorder},
   > ${ButtonClipController} > ${ButtonContentContainer} {
-    width: calc(100% - 15px);
+    width: 100%;
+  }
+`;
+
+/** Paired actions stay on one row on desktop; wrapped mobile rows fill their width. */
+export const cyberButtonActionRow = css`
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  min-width: 0;
+  gap: 12px;
+  > ${ButtonClipController} { flex: 0 1 auto; min-width: 0; }
+
+  @media (max-width: 768px) {
+    flex-wrap: wrap;
+    > ${ButtonClipController} { flex: 1 1 auto; width: 100%; }
   }
 `;

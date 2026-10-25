@@ -218,6 +218,18 @@ export const RunXpLabel = styled.p<{ $pulse: boolean }>`
   @media (prefers-reduced-motion: reduce) { animation: none; }
 `;
 
+const currencyHudReveal = keyframes`
+  from { text-shadow: 0 0 12px var(--neonYellow); filter: brightness(1.4); }
+  to { text-shadow: none; filter: brightness(1); }
+`;
+
+export const RunCurrency = styled.p`
+  margin: 2px 0 0; color: var(--clearneonYellow); font-size: .78rem;
+  font-variant-numeric: tabular-nums; letter-spacing: .04em;
+  animation: ${currencyHudReveal} 1.1s ease-out both;
+  @media (prefers-reduced-motion: reduce) { animation: none; }
+`;
+
 export const ResourceAndAttributes = styled.div`
   display: grid;
   gap: 9px;
@@ -225,12 +237,25 @@ export const ResourceAndAttributes = styled.div`
 `;
 
 export const RunDefenseRow = styled.div`
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(110px, min(40%, 320px)) minmax(0, 1fr);
   align-items: center;
-  flex-wrap: wrap;
-  justify-content: flex-start;
   gap: 10px 18px;
   min-width: 0;
+  @media (max-width: 600px) { grid-template-columns: minmax(0, 1fr); }
+`;
+
+export const RunDefenseDetails = styled.div`
+  display: grid;
+  grid-template-columns: max-content max-content minmax(0, 1fr);
+  align-items: center;
+  justify-content: start;
+  gap: 8px;
+  min-width: 0;
+  > [aria-label='Condições ativas'] {
+    margin-top: 0;
+    max-width: 100%;
+  }
 `;
 
 export const RunProtection = styled.div`
@@ -470,7 +495,7 @@ export const RunActionRail = styled.nav`
     box-shadow: 0 0 9px rgba(0, 187, 255, .18);
   }
   button:active { background: rgba(0, 167, 214, .3); }
-  button:disabled { opacity: .5; cursor: wait; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
   button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
   button[data-attention='true'] { animation: ${backpackHeartbeat} .75s ease-in-out infinite; }
   button svg { pointer-events: none; }

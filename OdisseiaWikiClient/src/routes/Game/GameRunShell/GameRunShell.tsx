@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import BackpackOutlinedIcon from '@mui/icons-material/BackpackOutlined';
+import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import CloseIcon from '@mui/icons-material/Close';
 import HistoryIcon from '@mui/icons-material/History';
 import HotelOutlinedIcon from '@mui/icons-material/HotelOutlined';
@@ -12,6 +13,8 @@ import { RunAttributeModal } from './RunAttributeModal';
 import { RunLootModal } from './RunLootModal';
 import { RunVictoryScreen } from './RunVictoryScreen';
 import { RunResourceBar } from './RunResourceBar/RunResourceBar';
+import { ConditionBadges } from '../../../components/Gameplay/ConditionBadges/ConditionBadges';
+import { snapshotConditions } from '../../../components/Gameplay/ConditionBadges/conditionBadgeState';
 import { UpgradeArrow } from './RunRewards.style';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
@@ -31,6 +34,9 @@ import { getRunAreaImage } from '../RunMapCanvas/mapAreaImage';
 import { getVisibleRunMap } from '../RunMapCanvas/visibleRunMap';
 import { RunInventory } from './RunInventory';
 import { RunLoadout } from './RunLoadout';
+import { RunEconomyDialog } from './RunEconomyDialog';
+import { canAccessRunStash, RUN_DEPOSIT_UNAVAILABLE } from './runEconomy';
+import { RunTraining } from './RunTraining/RunTraining';
 import { parseRunInventoryEntries } from './runInventoryEntries';
 import { RunRegionBackdrops } from './RunRegionBackdrops';
 import { GameHint, GameNotice, GamePage, GameSectionTitle, GameTextLink } from '../GameShared.style';
@@ -38,8 +44,9 @@ import {
   AttributeList, ResourceAndAttributes, GameRunPage, ReplaySection, ResourceList,
   RunActionRail, RunBattleHistoryNav, RunConclusion, RunFooterActions, RunHudHeader, RunHudMeta, RunHudPanel,
   RunHudTopline, RunLoadingPage, RunMapArea, RunRouteBusy, RunPanel, RunStickyHeader, RunTrainingBody, RunTrainingDialog,
-  RunDefenseRow, RunDefenseValue, RunProtection,
+  RunDefenseRow, RunDefenseDetails, RunDefenseValue, RunProtection,
   RunTrainingPanel, RunXpLabel, SnapshotHeader, SnapshotPortrait, TrainingIcon,
+  RunCurrency,
 } from './GameRunShell.style';
 import { canUpgradeGameRunMap, useGameRun } from './useGameRun';
 import { getGameRunMediumRestPreview } from '../../../services/gameRunService';
@@ -75,6 +82,7 @@ export default function GameRunShell() {
   const currentRunId = run?.idGameRun;
   const currentRevision = run?.revisao;
   const [inventoryOpen, setInventoryOpen] = useState(false);
+  const [stashOpen, setStashOpen] = useState(false);
   const [attributesOpen, setAttributesOpen] = useState(false);
   const [trainingOpen, setTrainingOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -226,7 +234,9 @@ export default function GameRunShell() {
   const combatScene = state.combatScene;
   const lootModal = state.lootSpeed !== null && run.estadoAtual.loot
     ? <RunLootModal key={run.estadoAtual.loot.nodeId} run={run} speed={state.lootSpeed} theme={theme} neon={neon}
-      onUpdate={state.updateRewardRun} onClose={state.closeLoot} /> : null;
+      onUpdate={state.updateRewardRun} onClose={state.closeLoot}
+      onUseItem={state.consumeItem} onEquipDefense={state.equipDefense}
+      busyItemId={state.consumingItemId} actionError={state.actionError} /> : null;
   const visibleAreas = getVisibleRunMap(run.mapa, run.configuracaoModo).areas;
   const areaImage = visibleAreas.at(-1)?.image ?? getRunAreaImage(run.fase, run.mapa, run.configuracaoModo);
   if (state.targetSelectionOpen && state.targetSetup && run.noAtualId) {
@@ -283,7 +293,10 @@ export default function GameRunShell() {
     .map(([code, value]) => ({ code, value,
       short: attributeNames[code]?.[0] ?? code.slice(0, 4),
       name: attributeNames[code]?.[1] ?? code }));
+  const activeConditions = snapshotConditions((current.status as typeof current.status & { condicoesJogo?: unknown }).condicoesJogo);
   const selectedNode = run.mapa.nodes.find((node) => node.id === run.noAtualId);
+  const vendorOpen = selectedNode?.type === 'VENDEDOR' && selectedNode.state === 'SELECIONADO';
+  const stashAvailable = canAccessRunStash(run);
   const dismissEmptyLoadoutNotice = () => {
     setEmptyLoadoutNoticeOpen(false);
     noticeShownForRun.current = run.idGameRun;
@@ -366,6 +379,9 @@ export default function GameRunShell() {
                 <UpgradeArrow type="button" aria-label="Distribuir pontos de atributos" title="Evoluir atributos"
                   onClick={() => setAttributesOpen(true)}><UpgradeIcon fontSize="small" /></UpgradeArrow>}
               </RunXpLabel>
+              <RunCurrency key={current.economy?.balance ?? 0}>
+                {current.economy?.balance ?? 0} moedas
+              </RunCurrency>
               </div>
           </SnapshotHeader>
           <ResourceAndAttributes>
@@ -375,13 +391,16 @@ export default function GameRunShell() {
             <RunDefenseRow aria-label="Defesas atuais">
               <RunProtection><RunResourceBar label="Proteção" value={protection}
                 max={protectionMax} tone="protection" /></RunProtection>
-              <RunDefenseValue title="Defesa fixa" aria-label={`Defesa: ${defenses?.armadura ?? 0}`}>
-                <SecurityOutlinedIcon aria-hidden="true" />{defenses?.armadura ?? 0}
-              </RunDefenseValue>
-              <RunDefenseValue $shield title="Escudo: absorvido no primeiro impacto"
-                aria-label={`Escudo: ${defenses?.escudo ?? 0}`}>
-                <ShieldOutlinedIcon aria-hidden="true" />{defenses?.escudo ?? 0}
-              </RunDefenseValue>
+              <RunDefenseDetails>
+                <RunDefenseValue title="Defesa fixa" aria-label={`Defesa: ${defenses?.armadura ?? 0}`}>
+                  <SecurityOutlinedIcon aria-hidden="true" />{defenses?.armadura ?? 0}
+                </RunDefenseValue>
+                <RunDefenseValue $shield title="Escudo: absorvido no primeiro impacto"
+                  aria-label={`Escudo: ${defenses?.escudo ?? 0}`}>
+                  <ShieldOutlinedIcon aria-hidden="true" />{defenses?.escudo ?? 0}
+                </RunDefenseValue>
+                <ConditionBadges neon={neon === 'on'} conditions={activeConditions} />
+              </RunDefenseDetails>
             </RunDefenseRow>
             {attributes.length > 0 && <AttributeList $neon={neonEnabled} aria-label="Atributos atuais">
               {attributes.map(({ code, short, name, value }) => <button key={code} type="button"
@@ -411,6 +430,9 @@ export default function GameRunShell() {
             data-attention={backpackAttention}
             disabled={state.acting}
             onClick={() => setInventoryOpen(true)}><BackpackOutlinedIcon /></button>
+          <button type="button" aria-label="Abrir depósito" title={stashAvailable ? 'Depósito' : RUN_DEPOSIT_UNAVAILABLE}
+            disabled={state.acting || !stashAvailable}
+            onClick={() => setStashOpen(true)}><Inventory2OutlinedIcon /></button>
           {run.status === 'Ativa' && <button type="button" aria-label="Abrir treino livre" title="Treino livre"
             disabled={state.acting} onClick={() => setTrainingOpen(true)}>
             <TrainingIcon><TrackChangesOutlinedIcon /><NorthEastIcon /></TrainingIcon>
@@ -433,13 +455,21 @@ export default function GameRunShell() {
         <CyberButton theme={theme} neon={neon} width="180px" text="Atualizar mapa"
           loading={state.acting} disabled={state.acting || state.savingWeapons} onClick={() => void state.upgradeMap()} />
       </RunFooterActions>}
-      {run.status === 'Ativa' && selectedNode?.state === 'SELECIONADO' && <RunFooterActions>
+      {run.status === 'Ativa' && selectedNode?.state === 'SELECIONADO' && !vendorOpen && <RunFooterActions>
         <CyberButton theme={theme} neon={neon} width="180px" text="Retomar"
           loading={state.acting} disabled={state.acting} onClick={() => void state.resumeEncounter()} />
       </RunFooterActions>}
       {run.status === 'Ativa' && !run.noAtualId && !hasAvailableNode && !canUpgradeMap &&
         <GameHint>Este trecho terminou. Novas etapas chegam na próxima camada.</GameHint>}
     </RunHudPanel>
+
+    {(vendorOpen || stashOpen) && <RunEconomyDialog run={run} theme={theme} neon={neon}
+      vendor={vendorOpen} busy={state.economyBusy} error={state.actionError}
+      onBuy={state.buyVendorItem} onTransfer={state.transferStashItem} onSell={state.sellVendorItems}
+      onClose={() => {
+        if (vendorOpen) void state.leaveVendor();
+        else setStashOpen(false);
+      }} />}
 
     {victoryOpen && run.status === 'Vitoria' && <RunVictoryScreen run={run} battles={state.battles}
       theme={theme} neon={neon} onClose={closeVictory}
@@ -497,7 +527,7 @@ export default function GameRunShell() {
           <button type="button" aria-label="Fechar treino" onClick={() => setTrainingOpen(false)}><CloseIcon /></button>
         </RunHudTopline>
         <RunTrainingBody>
-          {trainingOpen && <BattleReplay key={run.idGameRun} runId={run.idGameRun} theme={theme} neon={neon}
+          {trainingOpen && <RunTraining key={run.idGameRun} runId={run.idGameRun} theme={theme} neon={neon}
             playerImage={run.estadoAtual.imagem} />}
         </RunTrainingBody>
       </RunTrainingPanel>

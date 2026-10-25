@@ -1,4 +1,5 @@
 import styled from 'styled-components';
+import { cyberButtonActionRow } from '../../../components/Generic/HighlightButton/HighlightButton.styles';
 
 export const Form = styled.form`
     width: 70%;
@@ -40,6 +41,7 @@ export const InputContainer = styled.div`
 `
 
 export const ButtonContainer = styled.div`
+    ${cyberButtonActionRow}
     width: 70%;
     display: flex;
     flex-direction: row;
@@ -55,9 +57,6 @@ export const ButtonContainer = styled.div`
         flex-wrap: wrap;
         justify-content: center;
 
-        > div {
-            width: min(100%, 175px) !important;
-        }
     }
 `;
 

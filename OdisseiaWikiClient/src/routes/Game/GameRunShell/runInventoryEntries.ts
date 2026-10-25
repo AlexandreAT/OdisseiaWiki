@@ -271,16 +271,28 @@ export const parseRunInventoryEntries = (raw: unknown, tipo: RunInventoryKind): 
         ? weight * quantity : null }];
   });
 
+/** Stash items keep the same inventory kind when they move out of the character's load. */
+export const parseRunStoredItems = (raw: unknown): RunInventoryEntry[] => entries(raw).flatMap((item) => {
+  const type = String(field(object(item) ?? {}, 'tipo') ?? '').toLowerCase();
+  return parseRunInventoryEntries([item], type === 'implante' || type === 'protese' ? 'PROTESE' : 'ITEM');
+});
+
+/** Null means the instance must keep its own card (weapons, powers and equipment). */
+export const runConsumableStackKey = (entry: RunInventoryEntry): string | null => {
+  if (entry.tipo !== 'ITEM' || !['consumiveis', 'outro'].includes(entry.subtype) ||
+      !Object.values(entry.restore).some((value) => value > 0) && entry.useConditions.length === 0 ||
+      (entry.subtype === 'outro' && (entry.damageByRange.base > 0 ||
+        Object.values(entry.defense).some((value) => value > 0)))) return null;
+  return JSON.stringify([entry.baseItemId, entry.name, entry.image, entry.value, entry.stackSignature]);
+};
+
 /** Only consumables with the same source and effects share a card. */
 export const stackRunConsumables = (all: RunInventoryEntry[]): RunInventoryEntry[] => {
   const stacks = new Map<string, RunInventoryEntry>();
   const result: RunInventoryEntry[] = [];
   for (const entry of all) {
-    if (entry.tipo !== 'ITEM' || !['consumiveis', 'outro'].includes(entry.subtype) ||
-        !Object.values(entry.restore).some((value) => value > 0) && entry.useConditions.length === 0 ||
-        (entry.subtype === 'outro' && (entry.damageByRange.base > 0 ||
-          Object.values(entry.defense).some((value) => value > 0)))) { result.push(entry); continue; }
-    const group = JSON.stringify([entry.baseItemId, entry.name, entry.image, entry.value, entry.stackSignature]);
+    const group = runConsumableStackKey(entry);
+    if (group === null) { result.push(entry); continue; }
     const existing = stacks.get(group);
     if (existing) {
       existing.quantity += entry.quantity;

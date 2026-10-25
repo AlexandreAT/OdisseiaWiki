@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using OdisseiaWiki.Dtos;
@@ -25,19 +26,22 @@ public sealed class GameRunService : IGameRunService
     private readonly ISistemaRpgResolver _sistemaResolver;
     private readonly IGameRunSnapshotFactory _snapshotFactory;
     private readonly ISistemaRpgRepository? _systemRepository;
+    private readonly GameRunItemValueResolver? _itemValues;
 
     public GameRunService(
         IGameRunRepository repository,
         IPersonagemJogadorRepository personagemRepository,
         ISistemaRpgResolver sistemaResolver,
         IGameRunSnapshotFactory snapshotFactory,
-        ISistemaRpgRepository? systemRepository = null)
+        ISistemaRpgRepository? systemRepository = null,
+        GameRunItemValueResolver? itemValues = null)
     {
         _repository = repository;
         _personagemRepository = personagemRepository;
         _sistemaResolver = sistemaResolver;
         _snapshotFactory = snapshotFactory;
         _systemRepository = systemRepository;
+        _itemValues = itemValues;
     }
 
     public async Task<IReadOnlyList<GameRunCharacterOptionDto>> GetCharactersAsync(
@@ -127,14 +131,16 @@ public sealed class GameRunService : IGameRunService
     public async Task<GameRunDto?> GetActiveAsync(int idUsuario, CancellationToken cancellationToken)
     {
         GameRun? run = await _repository.GetActiveAsync(idUsuario, cancellationToken);
-        return run is null ? null : Map(run);
+        return run is null ? null : Map(run, _itemValues is null ? null :
+            await _itemValues.ResolveAsync(run.EstadoAtualJson, run.GameModeVersion, cancellationToken));
     }
 
     public async Task<GameRunDto?> GetByIdAsync(
         long idGameRun, int idUsuario, CancellationToken cancellationToken)
     {
         GameRun? run = await _repository.GetByIdAsync(idGameRun, idUsuario, cancellationToken);
-        return run is null ? null : Map(run);
+        return run is null ? null : Map(run, _itemValues is null ? null :
+            await _itemValues.ResolveAsync(run.EstadoAtualJson, run.GameModeVersion, cancellationToken));
     }
 
     public async Task<GameRunOperationResult<GameRunDto>> CreateAsync(
@@ -383,6 +389,20 @@ public sealed class GameRunService : IGameRunService
                 snapshotJson = GameRunCarry.Reconcile(snapshotJson, pinnedSystem);
         }
         snapshotJson = GameRunDefensiveEquipment.AddInitialBonuses(snapshotJson);
+        using (JsonDocument publishedMode = JsonDocument.Parse(mode.ConfiguracaoJson))
+        {
+            int startingCurrency = publishedMode.RootElement.TryGetProperty("startingCurrency", out JsonElement configuredCurrency) &&
+                configuredCurrency.TryGetInt32(out int value) ? Math.Clamp(value, 0, 1000000000) : 0;
+            JsonObject runSnapshot = JsonNode.Parse(snapshotJson)!.AsObject();
+            runSnapshot["economy"] = new JsonObject
+            {
+                ["balance"] = startingCurrency,
+                ["stash"] = new JsonArray(),
+            };
+            snapshotJson = runSnapshot.ToJsonString(SnapshotJsonOptions);
+        }
+        if (_itemValues is not null)
+            snapshotJson = await _itemValues.ResolveAsync(snapshotJson, mode, cancellationToken);
         int seed;
         do { seed = RandomNumberGenerator.GetInt32(1, int.MaxValue); }
         while (seed == previousSeed);
@@ -408,9 +428,12 @@ public sealed class GameRunService : IGameRunService
             run.MapaJson = JsonSerializer.Serialize(
                 new GameRunMapGenerator().Create(run.Seed, mode.ConfiguracaoJson), SnapshotJsonOptions);
         }
-        catch (Exception error) when (error is JsonException or InvalidOperationException or ArgumentException)
+        catch (Exception error) when (error is JsonException or InvalidOperationException or ArgumentException or KeyNotFoundException)
         {
-            return (null, GameRunOperationResult<GameRunDto>.Fail("MAPA_INDISPONIVEL", error.Message));
+            string message = error is KeyNotFoundException
+                ? "O mapa publicado referencia uma configuração que não existe mais. O responsável pelo jogo precisa revisar as rotas e publicar a correção."
+                : error.Message;
+            return (null, GameRunOperationResult<GameRunDto>.Fail("MAPA_INDISPONIVEL", message));
         }
         return (run, null);
     }
@@ -461,13 +484,13 @@ public sealed class GameRunService : IGameRunService
         return GameRunOperationResult<GameRunDto>.Ok(response, repetido: true);
     }
 
-    internal static GameRunDto Map(GameRun run)
+    internal static GameRunDto Map(GameRun run, string? currentSnapshot = null)
     {
         GameRunCharacterSnapshotDto initial = JsonSerializer.Deserialize<GameRunCharacterSnapshotDto>(
             run.SnapshotInicialJson, SnapshotJsonOptions)
             ?? throw new JsonException("O snapshot inicial da run está vazio.");
         GameRunCharacterSnapshotDto current = JsonSerializer.Deserialize<GameRunCharacterSnapshotDto>(
-            run.EstadoAtualJson, SnapshotJsonOptions)
+            currentSnapshot ?? run.EstadoAtualJson, SnapshotJsonOptions)
             ?? throw new JsonException("O estado da run está vazio.");
 
         using JsonDocument modeDocument = JsonDocument.Parse(run.GameModeVersion.ConfiguracaoJson);

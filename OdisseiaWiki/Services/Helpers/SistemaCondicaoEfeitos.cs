@@ -8,6 +8,21 @@ public sealed record SistemaCondicaoEfeito(string Operacao, string Recurso, int 
 /// <summary>Reads executable primitives; never interprets narrative descriptions.</summary>
 public static class SistemaCondicaoEfeitos
 {
+    public static string? Image(SistemaCondicao rule)
+    {
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(rule.ConfiguracaoPadraoJson ?? "{}");
+            if (!document.RootElement.TryGetProperty("imagem", out JsonElement image) ||
+                image.ValueKind != JsonValueKind.String) return null;
+            string? path = image.GetString()?.Trim();
+            return path?.Length is > 0 and <= 2048 &&
+                (path.StartsWith('/') && !path.StartsWith("//") ||
+                 Uri.TryCreate(path, UriKind.Absolute, out Uri? uri) && uri.Scheme is "https" or "http") ? path : null;
+        }
+        catch (Exception error) when (error is JsonException or InvalidOperationException) { return null; }
+    }
+
     public static bool HasOverride(string? activeSnapshot, int index)
     {
         if (string.IsNullOrWhiteSpace(activeSnapshot)) return false;

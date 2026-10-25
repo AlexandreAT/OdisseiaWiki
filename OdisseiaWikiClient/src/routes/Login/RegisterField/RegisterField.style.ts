@@ -1,4 +1,5 @@
 import styled from 'styled-components';
+import { cyberButtonActionRow } from '../../../components/Generic/HighlightButton/HighlightButton.styles';
 
 interface Props {
     theme?: 'dark' | 'light';
@@ -88,6 +89,7 @@ export const SpanError = styled.span`
 `
 
 export const ContainerButtons = styled.div<Props>`
+    ${cyberButtonActionRow}
     width: 100%;
     display: flex;
     flex-direction: row;
@@ -99,8 +101,5 @@ export const ContainerButtons = styled.div<Props>`
         gap: 8px;
         flex-wrap: wrap;
 
-        > div {
-            width: min(100%, 165px) !important;
-        }
     }
 `

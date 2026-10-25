@@ -20,6 +20,14 @@ public sealed class AssetReferenceRepository : IAssetReferenceRepository
         if (string.IsNullOrWhiteSpace(assetUrl))
             return false;
 
+        var conditionImages = await _context.SistemaCondicoes.AsNoTracking()
+            .Select(entity => entity.ConfiguracaoPadraoJson).ToListAsync(cancellationToken);
+        if (conditionImages.Any(value => ContainsAsset(assetUrl, value))) return true;
+
+        var gameMemories = await _context.GameCharacterMemories.AsNoTracking()
+            .Select(entity => entity.EstadoJson).ToListAsync(cancellationToken);
+        if (gameMemories.Any(value => ContainsAsset(assetUrl, value))) return true;
+
         var gameModes = await _context.GameModeVersions.AsNoTracking()
             .Select(entity => entity.ConfiguracaoJson)
             .ToListAsync(cancellationToken);

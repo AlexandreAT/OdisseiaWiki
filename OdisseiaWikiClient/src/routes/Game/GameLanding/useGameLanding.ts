@@ -86,7 +86,7 @@ export const useGameLanding = () => {
         } catch {
           // A mensagem de conflito permanece visível até a próxima tentativa.
         }
-        setActionError('Já existe uma run ativa ou os dados mudaram. Atualize a página para continuar.');
+        setActionError(getApiErrorMessage(error, 'Já existe uma run ativa ou os dados mudaram. Confira a jornada ativa antes de tentar novamente.'));
       } else {
         setActionError(getApiErrorMessage(error, 'Não foi possível iniciar a run. Tente novamente.'));
       }

@@ -30,6 +30,35 @@ namespace OdisseiaWiki.Tests;
 public sealed class GameplayMariaDbIntegrationTests
 {
     [Fact]
+    public async Task GameCharacterMemory_PersistsBetweenContextsIsOwnedAndCascadesOnCharacterDeletion()
+    {
+        if (!TestDatabase.Enabled) return;
+        await using TestDatabase database = await TestDatabase.CreateAsync();
+        Seed seed = await database.SeedAsync(includeCharacter: true);
+        int characterId = seed.Character!.IdpersonagemJogador;
+        await using (var context = database.CreateContext())
+        {
+            var state = new GameCharacterMilestones();
+            state.Learn(1, "JOGO", "MAGA", new() { Enemy = new() { NpcId = 7, Name = "Maga", MaxVida = 100 }, DamageByResult = new() });
+            await new GameRunRepository(context).AddCharacterMemoryAsync(new() {
+                IdPersonagemJogador = characterId, EstadoJson = state.Serialize() }, default);
+            await context.SaveChangesAsync();
+        }
+        await using (var context = database.CreateContext())
+        {
+            var repository = new GameRunRepository(context);
+            var memory = await repository.GetCharacterMemoryAsync(seed.Player.Idusuario, characterId, default);
+            Assert.NotNull(memory);
+            Assert.Single(GameCharacterMilestones.Read(memory.EstadoJson).DefeatedEnemies);
+            Assert.Null(await repository.GetCharacterMemoryAsync(seed.Owner.Idusuario, characterId, default));
+            // Run history is intentionally not deleted with the source sheet; memory is.
+            await new PersonagemJogadorRepository(context).DeleteAsync(characterId);
+        }
+        await using var verify = database.CreateContext();
+        Assert.False(await verify.GameCharacterMemories.AnyAsync(item => item.IdPersonagemJogador == characterId));
+    }
+
+    [Fact]
     public async Task GameAdventure_MigrationScopesGamesAndPrefersMesaItemCopy()
     {
         if (!TestDatabase.Enabled) return;

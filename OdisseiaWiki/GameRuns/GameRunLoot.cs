@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using OdisseiaWiki.GameRuns.Battle;
+using OdisseiaWiki.GameRuns.Inventory;
 
 namespace OdisseiaWiki.GameRuns;
 
@@ -43,6 +44,10 @@ public static class GameRunLoot
     public static GameRunLootState? Read(string snapshot) =>
         JsonNode.Parse(snapshot)?["loot"]?.Deserialize<GameRunLootState>(JsonOptions);
 
+    public static bool IsReceivedItem(string snapshot, string itemId) =>
+        Read(snapshot) is { Roll: not null } loot &&
+        loot.Rewards.Any(item => item["id"]?.ToString() == itemId);
+
     public static (string Snapshot, GameRunLootState Loot) Claim(string snapshot,
         Func<int, int>? random = null)
     {
@@ -66,7 +71,7 @@ public static class GameRunLoot
             item["idItemBase"] = loot.Pool[selected].ItemId;
             item["quantidade"] = 1;
             string inventoryKey = item["tipo"]?.ToString() == "implante" ? "implantes" : "inventario";
-            JsonArray inventory = ReadInventory(root, inventoryKey);
+            JsonArray inventory = GameRunInventory.ReadOrCreate(root, inventoryKey);
             inventory.Add(item.DeepClone());
             loot.Rewards.Add(item);
         }
@@ -79,25 +84,4 @@ public static class GameRunLoot
         return (root.ToJsonString(JsonOptions), loot);
     }
 
-    private static JsonArray ReadInventory(JsonObject root, string key)
-    {
-        JsonNode? source = root[key];
-        if (source is JsonValue value && value.TryGetValue<string>(out string? json) &&
-            !string.IsNullOrWhiteSpace(json))
-        {
-            source = JsonNode.Parse(json);
-            root[key] = source;
-        }
-        if (source is JsonArray array) return array;
-        if (source is JsonObject wrapper)
-        {
-            string? listKey = new[] { "itens", "inventario", "items", "implantes", "proteses" }
-                .FirstOrDefault(candidate => wrapper.ContainsKey(candidate));
-            if (listKey is not null && wrapper[listKey] is JsonArray listed) return listed;
-            wrapper[listKey ?? "itens"] = new JsonArray();
-            return wrapper[listKey ?? "itens"]!.AsArray();
-        }
-        root[key] = new JsonArray();
-        return root[key]!.AsArray();
-    }
 }

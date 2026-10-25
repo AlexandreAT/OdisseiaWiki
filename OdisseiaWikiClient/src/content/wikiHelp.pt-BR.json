@@ -1,0 +1,25 @@
+{
+  "slug": {
+    "id": "wiki.page.slug",
+    "title": "Como funciona o slug",
+    "text": "Ele forma o endereço da página. Enquanto você digita o título, o valor é criado automaticamente; ao editá-lo manualmente, sua escolha passa a ser mantida.",
+    "items": [
+      { "text": "Use palavras sem acentos, separadas por hífen: teste-de-pagina.", "highlights": [{ "text": "teste-de-pagina", "style": "code" }] },
+      { "text": "Cada página deve possuir um slug único." },
+      { "text": "MainPage identifica a página principal da wiki.", "highlights": [{ "text": "MainPage", "style": "code" }] },
+      { "text": "search é reservado para a busca e não deve ser usado.", "highlights": [{ "text": "search", "style": "code" }] },
+      { "text": "conexoes é reservado para a Teia de Conexões.", "highlights": [{ "text": "conexoes", "style": "code" }] }
+    ]
+  },
+  "itemTags": {
+    "id": "wiki.item.tags",
+    "title": "Tags especiais",
+    "text": "",
+    "presentation": { "density": "compact", "listStyle": "plain", "accent": "accent" },
+    "items": [
+      { "text": "Único: destaca o item em verde na página pública.", "highlights": [{ "text": "Único:", "tone": "positive" }] },
+      { "text": "Lendário: destaca o item em amarelo dourado na página pública.", "highlights": [{ "text": "Lendário:", "tone": "gold" }] }
+    ],
+    "footer": { "text": "Com o neon ativo, essas tags recebem uma animação contínua na borda." }
+  }
+}

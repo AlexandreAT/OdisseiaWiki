@@ -1,0 +1,138 @@
+{
+  "conditionOperation": {
+    "SUBTRAIR": "Tira o valor informado da quantidade atual do recurso.",
+    "SOMAR": "Recupera o valor informado, sem ultrapassar o máximo do recurso.",
+    "DEFINIR": "Troca a quantidade atual do recurso pelo valor informado.",
+    "REDUZIR_LIMITE_PERCENTUAL": "Reduz o máximo do recurso pelo percentual informado enquanto a condição durar.",
+    "BLOQUEAR_RECUPERACAO": "Impede recuperar o recurso enquanto a condição durar.",
+    "MODIFICAR_ATRIBUTO": "Aplica um bônus (+) ou penalidade (−) ao atributo nos testes enquanto a condição durar.",
+    "MODIFICAR_ROLAGEM": "Soma ou subtrai do resultado dos testes que usam o atributo escolhido.",
+    "MODIFICAR_DANO": "Soma (+) ou subtrai (−) do dano causado enquanto a condição durar.",
+    "MODIFICAR_DEFESA": "Soma (+) ou subtrai (−) da armadura fixa enquanto a condição durar.",
+    "MODIFICAR_LIMITE_PERCENTUAL": "Aumenta (+) ou reduz (−) o máximo do recurso em porcentagem; não recupera o valor atual.",
+    "DESVANTAGEM": "Rola dois dados e usa o menor resultado. Vantagem e desvantagem se anulam.",
+    "VANTAGEM": "Rola dois dados e usa o maior resultado. Vantagem e desvantagem se anulam.",
+    "PERDER_TURNOS": "Faz o afetado pular a quantidade informada de turnos normais."
+  },
+  "conditionMoment": {
+    "AO_APLICAR": "Executa uma vez, assim que a condição começa.",
+    "INICIO_TURNO": "Repete no início de cada turno do personagem afetado.",
+    "FIM_TURNO": "Repete no fim de cada turno do personagem afetado.",
+    "ENQUANTO_ATIVA": "Mantém um modificador até a condição terminar; não repete a alteração a cada turno."
+  },
+  "comparison": {
+    "<=": "Ativa quando o valor observado fica igual ou abaixo do limite.",
+    "<": "Ativa quando o valor observado fica abaixo do limite.",
+    "==": "Ativa quando o valor observado é exatamente igual ao limite.",
+    ">": "Ativa quando o valor observado fica acima do limite.",
+    ">=": "Ativa quando o valor observado fica igual ou acima do limite.",
+    "!=": "Ativa quando o valor observado é diferente do limite."
+  },
+  "conditionTriggerResource": {
+    "EXCESSO_CARGA": "Observa apenas o peso que ultrapassa a capacidade de carga.",
+    "CARGA": "Observa o peso total carregado pelo personagem."
+  },
+  "conditionTrigger": {
+    "ACERTO": "Aplica a condição quando a ação acerta.",
+    "RESULTADO_NATURAL": "Usa o número tirado no dado, antes de somar os bônus.",
+    "RESULTADO_CLASSIFICADO": "Aplica quando o Sistema classifica a rolagem com o resultado escolhido.",
+    "AO_USAR": "Aplica ao usar a ação ou consumir o item, sem exigir acerto.",
+    "AO_EQUIPAR": "Aplica ao equipar o item defensivo."
+  },
+  "conditionEffectTarget": {
+    "TODOS": "Afeta todos os testes ou todo o dano causado, conforme a operação escolhida.",
+    "ARMADURA": "Afeta a defesa fixa que reduz o dano recebido, não a barra de proteção nem o escudo.",
+    "TESTE": "Muda a escolha do dado nos testes: maior com vantagem, menor com desvantagem.",
+    "TURNO": "Afeta as ações normais do personagem nos próximos turnos."
+  },
+  "conditionTarget": {
+    "ALVO": "Aplica no alvo escolhido para a ação.",
+    "USUARIO": "Aplica no próprio personagem que usa o item ou poder.",
+    "TODOS_INIMIGOS": "Aplica em todos os inimigos vivos; cada um faz seu teste de reação, se configurado."
+  },
+  "catalogStatus": {
+    "todos": "Mostra sistemas ativos e inativos.",
+    "ativos": "Mostra apenas sistemas habilitados.",
+    "inativos": "Mostra apenas sistemas desativados."
+  },
+  "catalogSort": {
+    "atualizacao": "Coloca os sistemas atualizados mais recentemente no início.",
+    "nome": "Ordena os sistemas pelo nome.",
+    "versoes": "Coloca os sistemas com mais versões no início."
+  },
+  "conditionRecovery": {
+    "MANUAL": "Só termina quando o mestre a remove.",
+    "GATILHO_CESSOU": "Termina quando o gatilho que a ativou deixa de valer.",
+    "DURACAO": "Termina após a duração configurada, em turnos ou horas de jogo.",
+    "DESCANSO_SIMPLES": "Um descanso simples, normal ou longo encerra a condição.",
+    "DESCANSO_NORMAL": "Um descanso normal ou longo encerra a condição; o simples não.",
+    "DESCANSO_LONGO": "Somente um descanso longo encerra a condição por descanso.",
+    "CURA": "Termina ao receber recuperação de vida.",
+    "MAGIA": "Termina por uma magia configurada para remover esta condição."
+  },
+  "durationUnit": {
+    "Turno": "Conta os turnos do personagem afetado; permite expiração automática no combate.",
+    "Minuto": "Registra uma duração em minutos; não possui expiração automática no jogo.",
+    "Hora": "Conta tempo de jogo avançado por eventos e descansos, não o relógio real.",
+    "Descanso": "Registra duração em descansos; configure também a forma de recuperação.",
+    "Sessao": "Registra duração em sessões de mesa; não possui expiração automática no jogo.",
+    "Permanente": "Não termina por passagem de tempo; depende de uma forma de recuperação."
+  },
+  "attributeGroup": {
+    "Principal": "Agrupa os atributos principais da ficha e da evolução.",
+    "Secundario": "Agrupa os atributos secundários da ficha e da evolução.",
+    "Defesa": "Agrupa atributos defensivos; o grupo sozinho não cria uma defesa.",
+    "Outro": "Agrupa atributos que não se encaixam nas categorias anteriores."
+  },
+  "moduleType": {
+    "RegrasBase": "Regras gerais que servem de base ao Sistema.",
+    "CriacaoPersonagem": "Regras usadas para criar uma ficha.",
+    "Progressao": "XP, níveis e benefícios da evolução.",
+    "Atributos": "Definições e limites dos atributos.",
+    "Recursos": "Valores como vida, mana e estamina.",
+    "Movimento": "Regras de deslocamento dos personagens.",
+    "PontosAcao": "Regras de gasto de pontos de ação.",
+    "Combate": "Regras de ataques, testes e turnos.",
+    "Furtividade": "Regras de ocultação e detecção.",
+    "Equipamentos": "Regras de itens e equipamentos.",
+    "Defesas": "Regras de absorção e redução de dano.",
+    "Danos": "Tipos e regras de dano.",
+    "Magias": "Regras e limites das magias.",
+    "Skills": "Regras e limites das skills.",
+    "Condicoes": "Efeitos temporários, gatilhos e recuperação.",
+    "Descanso": "Duração e recuperação dos descansos.",
+    "Exploracao": "Ações e regras fora do combate.",
+    "Morte": "Regras de morte e sobrevivência.",
+    "Poderes": "Regras gerais de magias, skills e ultimates.",
+    "Sobrevivencia": "Condições, descansos e regras de sobrevivência."
+  },
+  "progressionResource": {
+    "vida": "O atributo aumenta a vida máxima conforme o percentual configurado.",
+    "mana": "O atributo aumenta a mana máxima conforme o percentual configurado.",
+    "estamina": "O atributo aumenta a estamina máxima conforme o percentual configurado."
+  },
+  "recoveryType": {
+    "ValorFixo": "Recupera exatamente a quantidade informada.",
+    "Percentual": "Recupera uma porcentagem do máximo do recurso.",
+    "Formula": "Registra recuperação por fórmula; confira se o contexto de jogo executa essa fórmula."
+  },
+  "itemFieldType": {
+    "Texto": "Aceita palavras ou frases.",
+    "Inteiro": "Aceita números sem casas decimais.",
+    "Decimal": "Aceita números com casas decimais.",
+    "Booleano": "Aceita uma escolha de sim ou não.",
+    "Codigo": "Guarda um identificador usado para referenciar uma regra.",
+    "Lista": "Guarda uma lista de valores."
+  },
+  "itemReferenceType": {
+    "TipoDano": "Referencia um tipo de dano do catálogo.",
+    "TipoDefesa": "Referencia um tipo de defesa do catálogo.",
+    "Alcance": "Referencia uma faixa ou categoria de alcance.",
+    "Material": "Referencia o material do item.",
+    "ParteCorpo": "Referencia a parte do corpo usada pelo item.",
+    "Lado": "Referencia o lado do corpo usado pelo item.",
+    "Modificacao": "Referencia uma modificação do item.",
+    "Lacrima": "Referencia uma lácrima do catálogo.",
+    "Outro": "Referencia uma opção que não se encaixa nas categorias anteriores."
+  }
+}

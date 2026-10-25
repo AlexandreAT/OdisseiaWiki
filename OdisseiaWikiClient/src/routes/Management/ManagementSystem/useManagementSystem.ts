@@ -30,7 +30,7 @@ import { getApiErrorMessage } from '../../../utils/apiError';
 import { revealFirstValidationError } from '../../../utils/formValidationFeedback';
 import { RaceOption } from './components/ModuleForms/ModuleForm.types';
 import { createDefaultModuleConfig, normalizeModuleConfig } from './systemDefaults';
-import { SistemaValidationErrors, validateSistemaModule } from './systemValidation';
+import { describeSistemaValidationErrors, SistemaValidationErrors, validateSistemaModule } from './systemValidation';
 
 type AnyModuleConfig = SistemaModuloConfigMap[SistemaModuloKey];
 
@@ -170,7 +170,8 @@ export const useManagementSystem = () => {
     () => ({ ...localValidationErrors, ...serverValidationErrors }),
     [localValidationErrors, serverValidationErrors],
   );
-  const dirty = Boolean(moduleConfig) && JSON.stringify(moduleConfig) !== savedSnapshot;
+  const dirty = useMemo(() => Boolean(moduleConfig) && JSON.stringify(moduleConfig) !== savedSnapshot,
+    [moduleConfig, savedSnapshot]);
   const isReadOnly = !selectedVersion || !isSistemaVersaoRascunho(selectedVersion.status);
 
   const loadSystems = useCallback(async (signal?: AbortSignal) => {
@@ -336,7 +337,7 @@ export const useManagementSystem = () => {
   const saveModule = useCallback(async (): Promise<boolean> => {
     if (!selectedVersionId || !moduleConfig || isReadOnly) return false;
     if (Object.keys(localValidationErrors).length > 0) {
-      toast.error('Corrija os campos destacados antes de salvar.');
+      toast.error(describeSistemaValidationErrors(localValidationErrors, moduleConfig)[0] || 'Corrija os campos destacados antes de salvar.');
       window.requestAnimationFrame(() => revealFirstValidationError(document.body));
       return false;
     }

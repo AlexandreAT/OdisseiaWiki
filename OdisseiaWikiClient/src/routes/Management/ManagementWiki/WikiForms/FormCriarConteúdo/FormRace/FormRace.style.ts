@@ -1,4 +1,5 @@
 import styled from "styled-components";
+import { cyberButtonActionRow } from '../../../../../../components/Generic/HighlightButton/HighlightButton.styles';
 import { managementEntityToolbarResponsive } from '../../ManagementEntityToolbar.style';
 
 interface Props {
@@ -217,6 +218,7 @@ export const CheckboxSection = styled.div`
 `;
 
 export const ButtonsContainer = styled.div`
+  ${cyberButtonActionRow}
   display: flex;
   flex-direction: row;
   gap: 15px;

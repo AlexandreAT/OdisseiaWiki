@@ -1,4 +1,5 @@
 import styled from "styled-components";
+import { cyberButtonActionRow } from '../../../../../../components/Generic/HighlightButton/HighlightButton.styles';
 import { managementEntityToolbarResponsive } from '../../ManagementEntityToolbar.style';
 
 interface Props {
@@ -270,6 +271,7 @@ export const DescriptionSection = styled.div`
 `;
 
 export const ButtonsContainer = styled.div`
+  ${cyberButtonActionRow}
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -277,7 +279,7 @@ export const ButtonsContainer = styled.div`
   gap: 20px;
   width: 100%;
   margin-top: 20px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 
   @media (max-width: 768px) {
     > * {

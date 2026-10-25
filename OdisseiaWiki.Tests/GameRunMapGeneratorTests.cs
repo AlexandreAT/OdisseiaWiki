@@ -7,6 +7,122 @@ namespace OdisseiaWiki.Tests;
 
 public sealed class GameRunMapGeneratorTests
 {
+    [Theory]
+    [InlineData("VENDEDOR")]
+    [InlineData("ELITE")]
+    [InlineData("BOSS")]
+    [InlineData("EVENTO")]
+    [InlineData("DESCANSO")]
+    [InlineData("ATALHO")]
+    [InlineData("CACADA")]
+    public void OpcaoUnicaNaoFavoreceInicioDaAreaIndependentementeDoTipo(string type)
+    {
+        string config = DistributionConfiguration(type, "BASE", 3);
+        var positions = new int[17];
+        var generator = new GameRunMapGenerator();
+        for (int seed = 1; seed <= 600; seed++)
+        {
+            var nodes = generator.Create(seed, config).Nodes.Where(node => node.Type != "INICIO").ToArray();
+            Assert.Equal("BASE", nodes[^1].Type);
+            int[] found = nodes.Select((node, index) => (node, index)).Where(entry => entry.node.Type == type)
+                .Select(entry => entry.index).ToArray();
+            Assert.InRange(found.Length, 0, 1);
+            if (found.Length == 1) positions[found[0]]++;
+        }
+        // Fixed seeds and broad bounds: detects the old geometric bias, not random noise.
+        Assert.All(positions, count => Assert.InRange(count, 12, 65));
+    }
+
+    [Fact]
+    public void FinalAleatorioDistribuiOpcaoUnicaInclusiveNoUltimoNoSemFavorecerOFinal()
+    {
+        string config = DistributionConfiguration("VENDEDOR", "ALEATORIO", 3);
+        var positions = new int[18];
+        var generator = new GameRunMapGenerator();
+        for (int seed = 1; seed <= 1800; seed++)
+        {
+            var nodes = generator.Create(seed, config).Nodes.Where(node => node.Type != "INICIO").ToArray();
+            Assert.InRange(nodes.Count(node => node.Type == "VENDEDOR"), 0, 1);
+            for (int index = 0; index < nodes.Length; index++)
+                if (nodes[index].Type == "VENDEDOR") positions[index]++;
+        }
+        Assert.All(positions, count => Assert.InRange(count, 55, 150));
+    }
+
+    [Fact]
+    public void PesoContinuaControlandoInclusaoDaOpcaoUnicaEmVezDaSuaPosicao()
+    {
+        int Included(int weight)
+        {
+            var config = System.Text.Json.Nodes.JsonNode.Parse(DistributionConfiguration("VENDEDOR", "BASE", weight))!;
+            config["areas"]![0]!["nodeCount"] = 3;
+            config["areas"]![0]!["options"]![0]!["weight"] = 9;
+            string json = config.ToJsonString();
+            return Enumerable.Range(1, 600).Count(seed => new GameRunMapGenerator().Create(seed, json)
+                .Nodes.Any(node => node.Type == "VENDEDOR"));
+        }
+        int rare = Included(1), frequent = Included(100);
+        Assert.InRange(rare, 65, 165);
+        Assert.InRange(frequent, 570, 600);
+    }
+
+    [Fact]
+    public void EmbaralharMantemPesosDeOpcoesRepetiveisEFinalFixoUnico()
+    {
+        var config = System.Text.Json.Nodes.JsonNode.Parse(DistributionConfiguration("ELITE", "BASE", 9))!;
+        config["areas"]![0]!["options"]![1]!["unique"] = false;
+        string json = config.ToJsonString();
+        int elites = 0, total = 0;
+        for (int seed = 1; seed <= 400; seed++)
+        {
+            var nodes = new GameRunMapGenerator().Create(seed, json).Nodes.Where(node => node.Type != "INICIO").ToArray();
+            elites += nodes.Count(node => node.Type == "ELITE");
+            total += nodes.Length - 1;
+            Assert.Equal("BASE", nodes[^1].Type);
+        }
+        Assert.InRange((double)elites / total, .86, .94);
+        for (int seed = 1; seed <= 50; seed++)
+        {
+            var nodes = new GameRunMapGenerator().Create(seed, DistributionConfiguration("VENDEDOR", "ROTA:1", 3)).Nodes;
+            Assert.Equal("VENDEDOR", Assert.Single(nodes, node => node.Type == "VENDEDOR").Type);
+            Assert.Equal("VENDEDOR", nodes[^1].Type);
+        }
+    }
+
+    [Fact]
+    public void FinalAleatorioComPoolSomenteDeUnicosRespeitaLimiteEDeterminismo()
+    {
+        string config = JsonSerializer.Serialize(new { map = new { schemaVersion = 5 }, encounters = new { },
+            areas = new[] { new GameModeAreaDto { Code = "F1", Name = "Eventos", NodeCount = 3,
+                UseBase = false, FinalOption = "ALEATORIO", Options = Enumerable.Range(1, 3)
+                    .Select(index => new GameModeAreaOptionDto { Type = "EVENTO", Label = $"Evento {index}",
+                        Weight = index, Unique = true }).ToList() } } }, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        var generator = new GameRunMapGenerator();
+        for (int seed = 1; seed <= 20; seed++)
+        {
+            var map = generator.Create(seed, config);
+            Assert.Equal(3, map.Nodes.Count(node => node.Type == "EVENTO"));
+            Assert.Equal(3, map.Nodes.Where(node => node.Type == "EVENTO").Select(node => node.Name).Distinct().Count());
+            Assert.Equal(JsonSerializer.Serialize(map), JsonSerializer.Serialize(generator.Create(seed, config)));
+        }
+        var insufficient = System.Text.Json.Nodes.JsonNode.Parse(config)!;
+        insufficient["areas"]![0]!["options"]!.AsArray().RemoveAt(2);
+        Assert.Throws<InvalidOperationException>(() => generator.Create(1, insufficient.ToJsonString()));
+    }
+
+    private static string DistributionConfiguration(string type, string finalOption, int weight) => JsonSerializer.Serialize(new
+    {
+        map = new { schemaVersion = 5 },
+        encounters = new Dictionary<string, object> { ["A"] = new { mapName = "Patrulha" },
+            ["B"] = new { mapName = "Especial" } },
+        areas = new[] { new GameModeAreaDto { Code = "F1", Name = "Floresta", NodeCount = 18,
+            UseBase = true, BaseName = "Base", FinalOption = finalOption,
+            Options = [new() { Type = "COMBATE", EncounterCode = "A", Weight = 1 },
+                new() { Type = type, EncounterCode = "B", EncounterCodes = ["B"], Label = "Especial",
+                    Weight = weight, Unique = true, Offers = [new() { ItemId = "item", Stock = 1,
+                        Snapshot = new() { ["nome"] = "Item", ["tipo"] = "outro" } }] }] } },
+    }, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
     private const string Configuration = """
         {"map":{"schemaVersion":2,"branchEncounterCodes":["CACADOR","GUARDIAO"]},
          "encounters":{"CACADOR":{"mapName":"Rota do Caçador"},

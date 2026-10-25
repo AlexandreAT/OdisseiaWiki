@@ -1,5 +1,6 @@
 import styled from "styled-components";
 import { managementEntityToolbarResponsive } from '../../ManagementEntityToolbar.style';
+import { cyberButtonsFillWidth } from '../../../../../../components/Generic/HighlightButton/HighlightButton.styles';
 import { handleNumericInputFocus } from '../../../../../../utils/numericInput';
 
 interface Props {
@@ -133,7 +134,7 @@ export const NavegationButtons = styled.div`
     flex-direction: row;
     align-items: center;
     gap: 20px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
 
     @media (max-width: 1100px) {
         order: -1;
@@ -152,12 +153,13 @@ export const NavegationButtons = styled.div`
 
         > div {
             width: 155px !important;
-            height: 51px !important;
+            height: auto !important;
+            min-height: 51px;
 
-            > div,
             > button {
-                width: 140px !important;
-                height: 38px !important;
+                width: 100% !important;
+                height: auto !important;
+                min-height: 38px;
             }
 
             > button {
@@ -834,20 +836,17 @@ export const ProsthesisActions = styled.div<{ $compact?: boolean }>`
     justify-content: center;
     gap: ${({ $compact }) => $compact ? '8px' : '12px'};
     width: 100%;
+    ${cyberButtonsFillWidth}
 
     > * {
-        width: 100% !important;
         min-width: 0;
-        height: ${({ $compact }) => $compact ? '53px' : '61px'} !important;
-    }
-
-    > * > div,
-    > * > button {
-        width: calc(100% - 15px) !important;
-        height: ${({ $compact }) => $compact ? '38px' : '46px'} !important;
+        height: auto;
+        min-height: ${({ $compact }) => $compact ? '53px' : '61px'};
     }
 
     > * > button {
+        height: auto;
+        min-height: ${({ $compact }) => $compact ? '38px' : '46px'};
         padding: ${({ $compact }) => $compact ? '6px 10px' : '8px 14px'};
         white-space: normal;
         text-align: center;
@@ -867,17 +866,6 @@ export const ProsthesisActions = styled.div<{ $compact?: boolean }>`
         gap: 8px;
         max-width: ${({ $compact }) => $compact ? '220px' : '100%'};
         margin-inline: auto;
-
-        > * {
-            width: 100% !important;
-            height: ${({ $compact }) => $compact ? '53px' : '61px'} !important;
-        }
-
-        > * > div,
-        > * > button {
-            width: calc(100% - 15px) !important;
-            height: ${({ $compact }) => $compact ? '38px' : '46px'} !important;
-        }
 
         > * > button {
             padding: ${({ $compact }) => $compact ? '6px 10px' : '9px 14px'};

@@ -1,9 +1,6 @@
-import { BiInfoCircle } from 'react-icons/bi';
-import {
-  TagInfoDetails,
-  TagInfoPopover,
-  TagInfoSummary,
-} from './FormItem.style';
+import { FieldHelp } from '../../../../../../components/Generic/FieldHelp/FieldHelp';
+import type { FieldHelpContent } from '../../../../../../components/Generic/FieldHelp/FieldHelp.types';
+import wikiHelp from '../../../../../../content/wikiHelp.pt-BR.json';
 
 interface ItemTagInfoProps {
   theme: 'dark' | 'light';
@@ -11,15 +8,5 @@ interface ItemTagInfoProps {
 }
 
 export const ItemTagInfo = ({ theme, neon }: ItemTagInfoProps) => (
-  <TagInfoDetails theme={theme} neon={neon}>
-    <TagInfoSummary theme={theme} neon={neon} aria-label="Informações sobre tags especiais">
-      <BiInfoCircle aria-hidden="true" />
-    </TagInfoSummary>
-    <TagInfoPopover theme={theme} neon={neon}>
-      <strong>Tags especiais</strong>
-      <p><b>Único:</b> destaca o item em verde na página pública.</p>
-      <p><b>Lendário:</b> destaca o item em amarelo dourado na página pública.</p>
-      <p>Com o neon ativo, essas tags recebem uma animação contínua na borda.</p>
-    </TagInfoPopover>
-  </TagInfoDetails>
+  <FieldHelp label="Tags especiais" theme={theme} neon={neon} help={wikiHelp.itemTags as FieldHelpContent} inline />
 );

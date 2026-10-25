@@ -1,4 +1,5 @@
 import styled, { css, keyframes } from 'styled-components';
+import { fieldHelpSpacing } from '../FieldHelp/FieldHelp.style';
 
 interface Props {
   theme?: 'dark' | 'light';
@@ -24,6 +25,7 @@ const getPink = (typeStyle?: 'primary' | 'secondary') =>
   typeStyle === 'secondary' ? 'var(--clearneonBlue)' : 'var(--clearneonPink)';
 
 export const ContentController = styled.div<Props>`
+  ${fieldHelpSpacing}
   position: relative;
   border: none;
   padding: 0;

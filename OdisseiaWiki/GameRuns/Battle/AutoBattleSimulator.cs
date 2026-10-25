@@ -77,8 +77,13 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                 // The bound also covers an unavailable event for every action and every cooldown.
                 int worstCaseTurnEvents = (pendingReaction[actorIndex] ? 2 : 1) *
                     (12 + 2 * actor.Actions.Count +
+                     (actor.Actions.Any(action => action.Spec.Utility is not null) ? actor.Actions.Count : 0) +
                      (actor.Spec.Rest is null ? 0 : 4 + 3 * actor.Actions.Count) +
-                     4 * (actor.ActiveConditions.Count + actor.Actions.Sum(action => action.Spec.Conditions.Count)) +
+                     actor.ActiveConditions.Sum(condition => 4 + 6 * EffectiveEffects(condition).Count()) +
+                     target.ActiveConditions.Sum(condition => 2 * EffectiveEffects(condition).Count()) +
+                     actor.Actions.Sum(action => action.Spec.Conditions.Sum(condition =>
+                         (10 + 6 * Math.Max(1, condition.Rule.Effects.Count)) *
+                         (condition.Target == "TODOS_INIMIGOS" ? actors.Length - 1 : 1))) +
                      actor.Actions.Sum(action => action.Spec.Conditions.Sum(condition =>
                          condition.Target == "TODOS_INIMIGOS" ? 4 * (actors.Length - 1) :
                          condition.ResistanceTest is null ? 0 : 1)));
@@ -130,6 +135,10 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                 bool skipRest = actor.SkipRestNextTurn;
                 if (!reaction) actor.SkipRestNextTurn = false;
                 int startIndex = !reaction && skipRest ? actor.Spec.Rest?.AfterActionIndex ?? 0 : 0;
+                // Utilities run once per priority cycle. A second scan only starts a new cycle
+                // after every equipped alternative has been checked, never in place of a reload.
+                for (int selectionPass = 0; selectionPass < 2; selectionPass++)
+                {
                 for (int actionIndex = startIndex; actionIndex < actor.Actions.Count; actionIndex++)
                 {
                     if (!openingOpportunity && !reaction && !skipRest && actor.Spec.Rest is { } rest &&
@@ -157,12 +166,19 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                         }
                         foreach (ActionState limited in actor.Actions.Where(candidate => candidate.Spec.UsesUntilRest > 0))
                             limited.UsesRemaining = limited.Spec.UsesUntilRest;
+                        // Rest renews the cycle like a reload, but the next turn still
+                        // continues after this bonus slot before returning to top priority.
+                        foreach (ActionState candidate in actor.Actions)
+                            candidate.UtilityUsedInCycle = false;
                         actor.SkipRestNextTurn = true;
                         acted = true;
                         break;
                     }
                     ActionState action = actor.Actions[actionIndex];
-                    if (action.Spec.IsFallback && reloadCandidate is not null)
+                    if (action.UtilityUsedInCycle)
+                        continue;
+                    if (action.Spec.IsFallback && (reloadCandidate is not null ||
+                        selectionPass == 0 && actor.Actions.Any(candidate => candidate.UtilityUsedInCycle)))
                         continue;
                     int quantity = EffectiveQuantity(action);
                     string? unavailable = UnavailableReason(actor, action, quantity);
@@ -212,6 +228,7 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
 
                     if (action.Spec.Utility is { } utility)
                     {
+                        action.UtilityUsedInCycle = true;
                         if (action.RemainingQuantity is int remaining)
                         {
                             action.RemainingQuantity = remaining - 1;
@@ -296,6 +313,16 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                             target.Protection != protectionBefore;
                     }
 
+                    ReportContributions(actor, effect =>
+                        (effect.Operacao is "MODIFICAR_ROLAGEM" or "MODIFICAR_ATRIBUTO") &&
+                        (effect.Recurso == "TODOS" || effect.Recurso.Equals(action.Spec.AttributeCode, StringComparison.OrdinalIgnoreCase)) ||
+                        effect.Operacao is "VANTAGEM" or "DESVANTAGEM", "NO_TESTE");
+                    if (baseDamage > 0)
+                        ReportContributions(actor, effect => effect.Operacao == "MODIFICAR_DANO" &&
+                            effect.Recurso == "TODOS", "NO_DANO");
+                    if (damage > 0)
+                        ReportContributions(target, effect => effect.Operacao == "MODIFICAR_DEFESA", "NA_DEFESA");
+
                     // Uma origem em área ainda alcança os outros inimigos vivos quando
                     // o alvo primário cai pelo dano da mesma ação.
                     ApplyActionConditions(actor, action, roll, range, target);
@@ -322,9 +349,17 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                     acted = true;
                     break;
                 }
+                if (acted || reloadCandidate is not null ||
+                    !actor.Actions.Any(candidate => candidate.UtilityUsedInCycle))
+                    break;
+                foreach (ActionState candidate in actor.Actions)
+                    candidate.UtilityUsedInCycle = false;
+                }
 
                 if (!acted && reloadCandidate is { Spec.Magazine: not null } reload)
                 {
+                    foreach (ActionState candidate in actor.Actions)
+                        candidate.UtilityUsedInCycle = false;
                     int loadedBefore = reload.Loaded;
                     int reserveBefore = reload.Reserve;
                     int amount = reload.Spec.Magazine.UnlimitedReserve
@@ -491,6 +526,10 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                             new ResistanceRolledPayload(rule.Code, dice, resistance.AttributeCode,
                                 modifier, total, resistance.Difficulty, passed)
                             { AlternativeDice = alternativeDice, Mode = mode });
+                        ReportContributions(recipient, effect =>
+                            (effect.Operacao is "MODIFICAR_ROLAGEM" or "MODIFICAR_ATRIBUTO") &&
+                            (effect.Recurso == "TODOS" || effect.Recurso.Equals(resistance.AttributeCode, StringComparison.OrdinalIgnoreCase)) ||
+                            effect.Operacao is "VANTAGEM" or "DESVANTAGEM", "NO_TESTE");
                         if (passed) continue;
                     }
                     int previous = recipient.ActiveConditions.FindIndex(condition => condition.Rule.Code == rule.Code);
@@ -500,9 +539,10 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                     { RemainingMinutes = hours.HasValue ? checked(hours.Value * 60) : null,
                       OverrideValue = origin.Value, EffectValues = origin.EffectValues });
                     Emit(GameBattleEventTypes.ConditionApplied, source.Spec.Id, recipient.Spec.Id,
-                        new ConditionAppliedPayload(rule.Code, rule.Name, value, turns, hours));
+                        new ConditionAppliedPayload(rule.Code, rule.Name, value, turns, hours)
+                        { Image = rule.Image, Stackable = rule.Stackable });
                     foreach (SistemaCondicaoEfeito effect in EffectiveEffects(recipient.ActiveConditions[^1])
-                        .Where(effect => effect.Momento.Equals("AO_APLICAR", StringComparison.OrdinalIgnoreCase)))
+                        .Where(effect => effect.Momento is "AO_APLICAR" or "ENQUANTO_ATIVA"))
                         ApplyConditionEffect(recipient, rule, effect);
                     ClampToConditionLimits(recipient);
                 }
@@ -513,8 +553,17 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
         {
             foreach (GameBattleActiveCondition condition in target.ActiveConditions.ToArray())
                 foreach (SistemaCondicaoEfeito effect in EffectiveEffects(condition)
-                    .Where(effect => effect.Momento.Equals(moment, StringComparison.OrdinalIgnoreCase)))
+                    .Where(effect => effect.Momento.Equals(moment, StringComparison.OrdinalIgnoreCase) ||
+                        moment == "INICIO_TURNO" && effect.Momento == "ENQUANTO_ATIVA" &&
+                        effect.Operacao is "REDUZIR_LIMITE_PERCENTUAL" or "MODIFICAR_LIMITE_PERCENTUAL" or "BLOQUEAR_RECUPERACAO"))
                     ApplyConditionEffect(target, condition.Rule, effect);
+        }
+
+        void ReportContributions(ActorState actor, Func<SistemaCondicaoEfeito, bool> applies, string moment)
+        {
+            foreach (GameBattleActiveCondition condition in actor.ActiveConditions)
+                foreach (SistemaCondicaoEfeito effect in EffectiveEffects(condition).Where(applies))
+                    ReportConditionEffect(actor, condition.Rule, effect with { Momento = moment });
         }
 
         void ApplyConditionEffect(ActorState target, GameBattleConditionRule rule, SistemaCondicaoEfeito effect)
@@ -522,6 +571,7 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
             if (effect.Operacao.Equals("PERDER_TURNOS", StringComparison.OrdinalIgnoreCase))
             {
                 target.TurnsToSkip = Math.Clamp(checked(target.TurnsToSkip + effect.Valor), 0, 100);
+                ReportConditionEffect(target, rule, effect);
                 return;
             }
             if (effect.Operacao.Equals("REDUZIR_LIMITE_PERCENTUAL", StringComparison.OrdinalIgnoreCase) ||
@@ -532,7 +582,11 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                 effect.Operacao.Equals("MODIFICAR_DEFESA", StringComparison.OrdinalIgnoreCase) ||
                 effect.Operacao.Equals("MODIFICAR_LIMITE_PERCENTUAL", StringComparison.OrdinalIgnoreCase) ||
                 effect.Operacao.Equals("DESVANTAGEM", StringComparison.OrdinalIgnoreCase) ||
-                effect.Operacao.Equals("VANTAGEM", StringComparison.OrdinalIgnoreCase)) return;
+                effect.Operacao.Equals("VANTAGEM", StringComparison.OrdinalIgnoreCase))
+            {
+                ReportConditionEffect(target, rule, effect);
+                return;
+            }
             string resource = effect.Recurso.ToUpperInvariant();
             int before = resource switch
             {
@@ -541,7 +595,11 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
             };
             if (before < 0) return;
             if (effect.Operacao.Equals("SOMAR", StringComparison.OrdinalIgnoreCase) &&
-                target.BlocksRecovery(resource)) return;
+                target.BlocksRecovery(resource))
+            {
+                ReportConditionEffect(target, rule, effect, before, before);
+                return;
+            }
             int maximum = target.EffectiveMaximum(resource);
             int after = effect.Operacao.ToUpperInvariant() switch
             {
@@ -558,7 +616,13 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
             }
             EmitChange(resource switch { "VIDA" => "hitPoints", "MANA" => "mana", _ => "stamina" },
                 before, after, $"condicao:{rule.Code}", target.Spec.Id, null);
+            ReportConditionEffect(target, rule, effect, before, after);
         }
+
+        void ReportConditionEffect(ActorState target, GameBattleConditionRule rule, SistemaCondicaoEfeito effect,
+            int? before = null, int? after = null) => Emit(GameBattleEventTypes.ConditionEffect,
+                target.Spec.Id, target.Spec.Id, new ConditionEffectPayload(rule.Code, rule.Name,
+                    effect.Operacao, effect.Recurso, effect.Valor, effect.Momento, before, after));
 
         void ClampToConditionLimits(ActorState target)
         {
@@ -665,9 +729,10 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                     actor.ActiveConditions.Add(active);
                     Emit(GameBattleEventTypes.ConditionApplied, actor.Spec.Id, actor.Spec.Id,
                         new ConditionAppliedPayload(automatic.Rule.Code, automatic.Rule.Name,
-                            automatic.Rule.Value, turns, hours));
+                            automatic.Rule.Value, turns, hours)
+                        { Image = automatic.Rule.Image, Stackable = automatic.Rule.Stackable });
                     foreach (SistemaCondicaoEfeito effect in EffectiveEffects(active).Where(effect =>
-                        effect.Momento.Equals("AO_APLICAR", StringComparison.OrdinalIgnoreCase)))
+                        effect.Momento is "AO_APLICAR" or "ENQUANTO_ATIVA"))
                         ApplyConditionEffect(actor, automatic.Rule, effect);
                     ClampToConditionLimits(actor);
                 }
@@ -1076,6 +1141,7 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
         public int Reserve { get; set; }
         public int UsesRemaining { get; set; }
         public int? RemainingQuantity { get; set; }
+        public bool UtilityUsedInCycle { get; set; }
         public int NextAvailableTurn { get; set; }
     }
 }

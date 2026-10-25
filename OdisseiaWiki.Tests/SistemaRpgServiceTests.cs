@@ -12,6 +12,55 @@ namespace OdisseiaWiki.Tests;
 
 public sealed class SistemaRpgServiceTests
 {
+    [Theory]
+    [InlineData("RESISTENCIA", 2)]
+    [InlineData("PRECISAO", -5)]
+    public async Task CondicaoPodeAlterarAtributoComoEfeitoPrincipal(string attribute, int value)
+    {
+        Mock<ISistemaRpgRepository> repository = new();
+        SistemaVersao version = NovaVersao(SistemaVersaoStatus.Rascunho);
+        repository.Setup(row => row.GetVersionAsync(42, true, true)).ReturnsAsync(version);
+        var dto = new SistemaSobrevivenciaConfigDto { Condicoes = [new() {
+            Codigo = "MODIFICADOR", Nome = "Modificador temporário", Tipo = "Atributo",
+            DuracaoPadrao = 3, UnidadeDuracao = SistemaUnidadeDuracao.Turno,
+            RegraRemocao = "DURACAO", CodigoRecurso = attribute, OperacaoEfeito = "MODIFICAR_ATRIBUTO",
+            ValorEfeito = value, MomentoEfeito = "ENQUANTO_ATIVA",
+        }] };
+
+        var result = await NovoService(repository).AtualizarSobrevivenciaAsync(42, dto);
+
+        Assert.True(result.Sucesso, result.MensagemErro);
+        var saved = Assert.Single(result.Dados!.Condicoes);
+        Assert.Equal(attribute, saved.CodigoRecurso);
+        Assert.Equal(value, saved.ValorEfeito);
+        Assert.Equal("MODIFICAR_ATRIBUTO", saved.OperacaoEfeito);
+        Assert.Equal("ENQUANTO_ATIVA", saved.MomentoEfeito);
+    }
+
+    [Theory]
+    [InlineData("DESCANSO_NORMAL")]
+    [InlineData("DESCANSO_NORMAL;CURA")]
+    [InlineData("DESCANSO_NORMAL_OU_LONGO;CURA")]
+    public async Task CondicaoComOitoHorasPodeTerminarSomentePorDescanso(string recovery)
+    {
+        Mock<ISistemaRpgRepository> repository = new();
+        SistemaVersao version = NovaVersao(SistemaVersaoStatus.Rascunho);
+        repository.Setup(row => row.GetVersionAsync(42, true, true)).ReturnsAsync(version);
+        var dto = new SistemaSobrevivenciaConfigDto { Condicoes = [new() {
+            Codigo = "DEPENDENCIA", Nome = "Dependência de mana", Tipo = "Recurso",
+            DuracaoPadrao = 8, UnidadeDuracao = SistemaUnidadeDuracao.Hora,
+            RegraRemocao = recovery, CodigoRecurso = "MANA", OperacaoEfeito = "REDUZIR_LIMITE_PERCENTUAL",
+            ValorEfeito = 30, MomentoEfeito = "ENQUANTO_ATIVA", CodigoRecursoGatilho = "MANA",
+            OperadorGatilho = "<=", ValorGatilho = 0,
+        }] };
+        var result = await NovoService(repository).AtualizarSobrevivenciaAsync(42, dto);
+        Assert.True(result.Sucesso, result.MensagemErro);
+        var saved = Assert.Single(result.Dados!.Condicoes);
+        Assert.Equal(recovery, saved.RegraRemocao);
+        Assert.Equal(8, saved.DuracaoPadrao);
+        repository.Verify(row => row.SaveChangesAsync(), Times.Once);
+    }
+
     [Fact]
     public async Task RemocaoDeCondicaoReferenciadaExigeConfirmacaoAntesDePersistir()
     {

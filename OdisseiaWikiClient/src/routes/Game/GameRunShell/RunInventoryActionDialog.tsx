@@ -8,11 +8,15 @@ interface Props {
   entry: RunInventoryEntry;
   neon: boolean;
   onClose: () => void;
+  aboveModal?: boolean;
 }
 
-export function RunInventoryActionDialog({ entry, neon, onClose, children }: PropsWithChildren<Props>) {
+export function RunInventoryActionDialog({ entry, neon, onClose, aboveModal = false, children }: PropsWithChildren<Props>) {
   return <RunOverlayDialog open onClose={onClose} maxWidth="xs" fullWidth
-    aria-labelledby="run-inventory-action-title">
+    aria-labelledby="run-inventory-action-title" sx={aboveModal ? { zIndex: 11000 } : undefined}
+    onKeyDownCapture={aboveModal ? (event) => {
+      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); onClose(); }
+    } : undefined}>
     <ActionDialogFrame neon={neon}>
       <ActionDialogHeader>
         <div>

@@ -1,4 +1,5 @@
 import { CheckBox } from '../../../../../components/Generic/CheckBox/CheckBox';
+import { HelpHeading } from '../../../../../components/Generic/HelpHeading/HelpHeading';
 import { InputText } from '../../../../../components/Generic/InputText/InputText';
 import { TextArea } from '../../../../../components/Generic/TextArea/TextArea';
 import { SistemaAcaoConfig } from '../../../../../models/SistemaRpg';
@@ -71,7 +72,7 @@ export const ExplorationModuleForm = ({
     <ModuleFieldset disabled={readOnly}>
       <ModuleIntro theme={theme} neon={neon}>
         <div>
-          <h3>Exploração e ações</h3>
+          <HelpHeading level="h3" label="Exploração e ações" />
           <p>
             Regras de grid, movimento, carga, furtividade e custos das ações. Valores ambíguos
             podem permanecer documentados até que o mestre escolha a interpretação da mesa.
@@ -80,7 +81,7 @@ export const ExplorationModuleForm = ({
       </ModuleIntro>
 
       <SectionCard theme={theme} neon={neon}>
-        <h4>Grid e movimento</h4>
+        <HelpHeading label="Grid e movimento" />
         <p>Defina a escala espacial e os custos básicos usados durante turnos e exploração.</p>
         <InlineChecks>
           <CheckBox neon={neon} label="Usar grid" checked={movimento.usaGrid} onChange={(usaGrid) => onChange({ ...value, movimento: { ...movimento, usaGrid } })} disabled={readOnly} />
@@ -96,7 +97,7 @@ export const ExplorationModuleForm = ({
       </SectionCard>
 
       <SectionCard theme={theme} neon={neon}>
-        <h4>Pontos de ação</h4>
+        <HelpHeading label="Pontos de ação" />
         <p>O módulo pode ser desativado para sistemas que usam apenas ações narrativas ou cadência.</p>
         <InlineChecks>
           <CheckBox neon={neon} label="Habilitar pontos de ação" checked={pontosAcao.habilitado} onChange={(habilitado) => onChange({ ...value, pontosAcao: { ...pontosAcao, habilitado } })} disabled={readOnly} />
@@ -110,7 +111,7 @@ export const ExplorationModuleForm = ({
       </SectionCard>
 
       <SectionCard theme={theme} neon={neon}>
-        <h4>Carga e furtividade</h4>
+        <HelpHeading label="Carga e furtividade" />
         <p>Os textos abaixo orientam a mesa, mas não são executados. Para automatizar a sobrecarga, configure em Sobrevivência uma condição com gatilho EXCESSO_CARGA &gt; 0, recurso afetado, efeito e recuperação. Furtividade contextual permanece decisão do mestre.</p>
         <InlineChecks>
           <CheckBox neon={neon} label="Carga possui limite" checked={value.cargaUsaLimite} onChange={(cargaUsaLimite) => onChange({ ...value, cargaUsaLimite })} disabled={readOnly} />

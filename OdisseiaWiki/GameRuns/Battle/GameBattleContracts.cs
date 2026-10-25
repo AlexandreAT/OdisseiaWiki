@@ -56,6 +56,7 @@ public sealed record GameBattleConditionRule(
     string Code, string Name, string Operation, string Resource, int Value,
     string Moment, bool Stackable, bool ReplaceExisting, string Recovery)
 {
+    public string? Image { get; init; }
     public IReadOnlyList<SistemaCondicaoEfeito> Effects { get; init; } = [];
 }
 
@@ -244,6 +245,7 @@ public static class GameBattleEventTypes
     public const string BattleEnded = "BATTLE_ENDED";
     public const string ConditionApplied = "CONDITION_APPLIED";
     public const string ConditionExpired = "CONDITION_EXPIRED";
+    public const string ConditionEffect = "CONDITION_EFFECT";
     public const string ResistanceRolled = "RESISTANCE_ROLLED";
     public const string ItemConsumed = "ITEM_CONSUMED";
 }
@@ -267,6 +269,7 @@ public static class GameBattleEventTypes
 [JsonDerivedType(typeof(BattleEndedPayload), GameBattleEventTypes.BattleEnded)]
 [JsonDerivedType(typeof(ConditionAppliedPayload), GameBattleEventTypes.ConditionApplied)]
 [JsonDerivedType(typeof(ConditionExpiredPayload), GameBattleEventTypes.ConditionExpired)]
+[JsonDerivedType(typeof(ConditionEffectPayload), GameBattleEventTypes.ConditionEffect)]
 [JsonDerivedType(typeof(ResistanceRolledPayload), GameBattleEventTypes.ResistanceRolled)]
 [JsonDerivedType(typeof(ItemConsumedPayload), GameBattleEventTypes.ItemConsumed)]
 public abstract record GameBattleEventPayload;
@@ -297,7 +300,13 @@ public sealed record CooldownAdvancedPayload(string ActionId, int RemainingActor
 public sealed record TurnPassedPayload(string Reason) : GameBattleEventPayload;
 public sealed record ActorDefeatedPayload(string ActorId) : GameBattleEventPayload;
 public sealed record BattleEndedPayload(string? WinnerActorId, GameBattleEndReason Reason) : GameBattleEventPayload;
-public sealed record ConditionAppliedPayload(string Code, string Name, int Value, int? RemainingTurns, int? RemainingHours) : GameBattleEventPayload;
+public sealed record ConditionAppliedPayload(string Code, string Name, int Value, int? RemainingTurns, int? RemainingHours) : GameBattleEventPayload
+{
+    public string? Image { get; init; }
+    public bool Stackable { get; init; }
+}
+public sealed record ConditionEffectPayload(string Code, string Name, string Operation, string Resource,
+    int Value, string Moment, int? Before = null, int? After = null) : GameBattleEventPayload;
 public sealed record ConditionExpiredPayload(string Code, string Name, string Reason) : GameBattleEventPayload;
 public sealed record ResistanceRolledPayload(string Code, IReadOnlyList<int> Dice, string AttributeCode,
     int Modifier, int Total, int Difficulty, bool Passed) : GameBattleEventPayload

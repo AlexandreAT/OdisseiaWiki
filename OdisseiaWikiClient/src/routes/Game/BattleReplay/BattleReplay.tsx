@@ -2,11 +2,12 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import CloseIcon from '@mui/icons-material/Close';
 import SecurityOutlinedIcon from '@mui/icons-material/SecurityOutlined';
 import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
+import { ConditionBadges } from '../../../components/Gameplay/ConditionBadges/ConditionBadges';
 import type { GameBattlePreview, GameBattlePreviewActor } from '../../../models/GameBattlePreview';
 import { CyberButton } from '../../../components/Generic/HighlightButton/HighlightButton';
 import { GameNotice } from '../GameShared.style';
 import { normalizeImagePath } from '../../Wiki/utils/imagePathHelper';
-import { activeBattleActor, latestBattleImpact, visibleActorDefense, visibleActorResource, type BattleBeat, type BattleResource } from './battlePresentation';
+import { activeBattleActor, latestBattleImpact, visibleActorConditions, visibleActorDefense, visibleActorResource, type BattleBeat, type BattleResource } from './battlePresentation';
 import { useBattleReplay } from './useBattleReplay';
 import { InlineBattleDie } from './InlineBattleDie/InlineBattleDie';
 import {
@@ -138,6 +139,7 @@ const BeatText = ({ beat, rolling = false, speed = 1 }: {
     </>}
     {action.blocked && `, dano bloqueado (${action.absorbed} absorvido)`}
     {action.resourceEffects.length > 0 && ` · ${action.resourceEffects.join(', ')}`}
+    {action.conditions.length > 0 && ` · aplicou ${action.conditions.join(', ')}`}
     {action.ammoRemaining !== null && <AmmoRemaining> · Munição {action.ammoRemaining}</AmmoRemaining>}
     {'.'}
     </>}
@@ -271,6 +273,7 @@ const Combatant = ({ preview, actor, eventCount, active, enemy, result, neon, fa
         tone={key} enemy={enemy} speed={speed} protectedLife={key === 'hitPoints' && protection > 0} />;
     })}
   </CombatantResources>
+  <ConditionBadges conditions={visibleActorConditions(preview, actor, eventCount)} neon={neon} />
   {(actor.defesas.armor > 0 || initialShield > 0) && <CombatantDefenses aria-label="Defesas">
     {actor.defesas.armor > 0 && <span className="armor" title="Defesa fixa">
       <SecurityOutlinedIcon aria-hidden="true" />{actor.defesas.armor}</span>}
@@ -373,6 +376,8 @@ export const BattleReplay = ({ runId, theme, neon, savedBattle, playerImage, onC
         {savedBattle && winner === preview.personagem.id && (preview.xpConcedido ?? 0) > 0 &&
           <ReplayXpGain amount={preview.xpConcedido ?? 0} levels={preview.niveisAlcancados ?? []}
             points={preview.pontosConcedidos} />}
+        {savedBattle && winner === preview.personagem.id && (preview.moedaConcedida ?? 0) > 0 &&
+          <span>+{preview.moedaConcedida} moedas</span>}
       </ReplayResult>}
       {complete && <EventList aria-label="Histórico completo da batalha">
         {visibleBeats.map((beat) => (

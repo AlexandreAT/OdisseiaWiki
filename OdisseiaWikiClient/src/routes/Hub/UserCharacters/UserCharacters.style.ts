@@ -89,6 +89,11 @@ export const ListHeaderTools = styled.div<Props>`
   }
 `;
 
+export const CharacterSearch = styled.div`
+  width: 100%;
+  min-width: 0;
+`;
+
 export const ToolField = styled.label`
   display: flex;
   align-items: center;

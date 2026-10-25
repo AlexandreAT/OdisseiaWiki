@@ -1,4 +1,5 @@
 import styled, { css } from 'styled-components';
+import { cyberButtonActionRow } from '../Generic/HighlightButton/HighlightButton.styles';
 
 interface ThemeProps {
   $theme: 'dark' | 'light';
@@ -188,8 +189,7 @@ export const ErrorState = styled.div`
 `;
 
 export const ModalFooter = styled.div`
-  display: flex;
-  flex-wrap: wrap;
+  ${cyberButtonActionRow}
   justify-content: flex-end;
   gap: 8px;
 `;

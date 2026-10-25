@@ -70,7 +70,7 @@ const CharacterCreateComponent = ({ theme, neon, userId, onSave, cloneSource }: 
     [selectedRace]
   );
   
-  const itemColumns = React.useMemo(() => createItemColumns(theme, neon), [theme, neon]);
+  const itemColumns = React.useMemo(() => createItemColumns(theme, neon, runtimeContext), [theme, neon, runtimeContext]);
   const skillsColumns = React.useMemo(
     () => createSkillsColumns(theme, neon, runtimeContext),
     [theme, neon, runtimeContext],

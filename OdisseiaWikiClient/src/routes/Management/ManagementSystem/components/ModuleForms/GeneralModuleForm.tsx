@@ -1,4 +1,6 @@
 import { CheckBox } from '../../../../../components/Generic/CheckBox/CheckBox';
+import { describeSystemOptions } from '../../../../../content/systemOptionHelp';
+import { HelpHeading } from '../../../../../components/Generic/HelpHeading/HelpHeading';
 import { InputText } from '../../../../../components/Generic/InputText/InputText';
 import { TextArea } from '../../../../../components/Generic/TextArea/TextArea';
 import { SistemaModulo } from '../../../../../models/SistemaRpg';
@@ -13,7 +15,7 @@ import {
   SectionCard,
 } from './ModuleForms.style';
 
-const moduleTypeOptions = [
+const moduleTypeOptions = describeSystemOptions('moduleType', [
   { value: 'RegrasBase', label: 'Regras base' },
   { value: 'CriacaoPersonagem', label: 'Criação de personagem' },
   { value: 'Progressao', label: 'Progressão' },
@@ -34,7 +36,7 @@ const moduleTypeOptions = [
   { value: 'Morte', label: 'Morte' },
   { value: 'Poderes', label: 'Poderes' },
   { value: 'Sobrevivencia', label: 'Sobrevivência' },
-];
+]);
 
 const columns: ConfigTableColumn<SistemaModulo>[] = [
   { key: 'tipoModulo', label: 'Tipo do módulo', type: 'select', width: '220px', options: moduleTypeOptions },
@@ -61,7 +63,7 @@ export const GeneralModuleForm = ({
   <ModuleFieldset disabled={readOnly}>
     <ModuleIntro theme={theme} neon={neon}>
       <div>
-        <h3>Visão geral dos módulos</h3>
+        <HelpHeading level="h3" label="Visão geral dos módulos" />
         <p>
           Controle quais partes desta versão estão habilitadas e qual versão de schema cada
           configuração utiliza. Os dados mecânicos continuam separados nos módulos seguintes.
@@ -76,7 +78,7 @@ export const GeneralModuleForm = ({
     )}
 
     <SectionCard theme={theme} neon={neon}>
-      <h4>Regras fundamentais</h4>
+      <HelpHeading label="Regras fundamentais" />
       <p>Convenções usadas como base quando uma regra mais específica não determinar outro comportamento.</p>
       <FieldGrid $columns={4}>
         <InputText theme={theme} neon={neon} label="Dado do teste geral" value={value.dadoTesteGeral} onChange={(event) => onChange({ ...value, dadoTesteGeral: event.target.value.toUpperCase() })} error={Boolean(errors.dadoTesteGeral)} errorMessage={errors.dadoTesteGeral} required />

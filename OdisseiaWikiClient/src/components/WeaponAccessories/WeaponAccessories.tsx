@@ -31,7 +31,7 @@ export const WeaponAccessories = ({ value, onChange, theme, neon }: WeaponAccess
             <ModifierList>{describeAccessory(accessory.atributos).map((description, position) => <li key={position}>{description}</li>)}</ModifierList>
             {!isAccessoryCompatible(value, accessory.atributos) && <p>Incompatível com este tipo de arma: seus modificadores não se aplicam.</p>}
           </div>
-          <CyberButton type="button" theme={theme} neon={neon} text={`Remover ${accessory.nome}`} onClick={() => state.remove(index)} />
+          <CyberButton type="button" theme={theme} neon={neon} width="fit-content" text={`Remover ${accessory.nome}`} onClick={() => state.remove(index)} />
         </ModifierEntry>
       ))}
       <h4>Resultado com acessórios</h4>

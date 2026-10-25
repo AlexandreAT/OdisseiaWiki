@@ -9,7 +9,7 @@ export interface RaceOption {
   nome: string;
 }
 
-export interface SystemReferenceOption { value: string; label: string }
+export interface SystemReferenceOption { value: string; label: string; description?: string }
 export interface SystemReferenceCatalog {
   attributes: SystemReferenceOption[];
   resources: SystemReferenceOption[];
@@ -29,4 +29,5 @@ export interface ModuleFormProps<K extends SistemaModuloKey> {
   systemCode?: string;
   references?: SystemReferenceCatalog;
   idSistemaVersao?: number;
+  onUploadBusyChange?: (busy: boolean) => void;
 }

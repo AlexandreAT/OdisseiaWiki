@@ -1,6 +1,8 @@
 import RefreshIcon from '@mui/icons-material/Refresh';
+import { FieldHelpProvider } from '../../../../../components/Generic/FieldHelp/FieldHelpProvider';
+import { getSystemHelp } from '../../../../../content/systemHelp';
 import SettingsSuggestOutlinedIcon from '@mui/icons-material/SettingsSuggestOutlined';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { obterCatalogoItensSistemaRpg, obterConfiguracaoSistemaRpg } from '../../../../../services/sistemasRpgService';
 import { LoadingIndicator } from '../../../../../components/Generic/LoadingIndicator';
 import {
@@ -13,7 +15,7 @@ import {
   ModuleContent,
   StatePanel,
 } from '../../ManagementSystem.style';
-import { SistemaValidationErrors } from '../../systemValidation';
+import { describeSistemaValidationErrors, SistemaValidationErrors } from '../../systemValidation';
 import { CombatModuleForm } from '../ModuleForms/CombatModuleForm';
 import { CreationModuleForm } from '../ModuleForms/CreationModuleForm';
 import { ExplorationModuleForm } from '../ModuleForms/ExplorationModuleForm';
@@ -41,6 +43,7 @@ interface ModuleEditorProps {
   onChange: (config: AnyModuleConfig) => void;
   onRetry: () => void;
   onCreateEmpty: () => void;
+  onUploadBusyChange?: (busy: boolean) => void;
 }
 
 export const ModuleEditor = ({
@@ -59,7 +62,9 @@ export const ModuleEditor = ({
   onChange,
   onRetry,
   onCreateEmpty,
+  onUploadBusyChange,
 }: ModuleEditorProps) => {
+  const resolveHelp = useCallback((target: string) => getSystemHelp(moduleKey, target), [moduleKey]);
   const [references, setReferences] = useState<SystemReferenceCatalog>({
     attributes: [], resources: [], conditions: [], testCodes: [], weaponTypes: [],
   });
@@ -124,11 +129,15 @@ export const ModuleEditor = ({
 
   const errorCount = Object.keys(errors).length;
   return (
+    <FieldHelpProvider theme={theme} neon={neon} resolve={resolveHelp}>
     <ModuleContent data-system-module={moduleKey}>
       {errorCount > 0 && (
-        <CurrentModuleError role="alert">
+        <CurrentModuleError role="alert" data-validation-error="true" tabIndex={-1}>
           Este módulo possui {errorCount} {errorCount === 1 ? 'inconsistência' : 'inconsistências'}.
           Corrija os campos destacados antes de salvar ou publicar.
+          <ul>{describeSistemaValidationErrors(errors, config).map((message, index) => (
+            <li key={index}>{message}</li>
+          ))}</ul>
         </CurrentModuleError>
       )}
 
@@ -199,6 +208,7 @@ export const ModuleEditor = ({
       )}
       {moduleKey === 'sobrevivencia' && (
         <SurvivalModuleForm
+          onUploadBusyChange={onUploadBusyChange}
           idSistemaVersao={idSistemaVersao}
           references={references}
           value={config as SistemaModuloConfigMap['sobrevivencia']}
@@ -210,5 +220,6 @@ export const ModuleEditor = ({
         />
       )}
     </ModuleContent>
+    </FieldHelpProvider>
   );
 };

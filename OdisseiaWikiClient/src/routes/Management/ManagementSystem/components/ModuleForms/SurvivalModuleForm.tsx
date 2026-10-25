@@ -1,4 +1,6 @@
 import { CheckBox } from '../../../../../components/Generic/CheckBox/CheckBox';
+import { describeSystemOptions } from '../../../../../content/systemOptionHelp';
+import { HelpHeading } from '../../../../../components/Generic/HelpHeading/HelpHeading';
 import { InputText } from '../../../../../components/Generic/InputText/InputText';
 import { TextArea } from '../../../../../components/Generic/TextArea/TextArea';
 import {
@@ -28,11 +30,11 @@ const restColumns: ConfigTableColumn<SistemaDescansoConfig>[] = [
     key: 'tipoRecuperacao',
     label: 'Tipo da recuperação',
     type: 'select',
-    options: [
+    options: describeSystemOptions('recoveryType', [
       { value: 'ValorFixo', label: 'Valor fixo' },
       { value: 'Percentual', label: 'Percentual' },
       { value: 'Formula', label: 'Fórmula' },
-    ],
+    ]),
   },
   { key: 'exigeGuarda', label: 'Exige guarda', type: 'checkbox' },
   { key: 'intervaloTesteGuardaMinutos', label: 'Intervalo da guarda', type: 'number', min: 0, nullable: true },
@@ -64,6 +66,7 @@ export const SurvivalModuleForm = ({
   neon,
   references,
   idSistemaVersao,
+  onUploadBusyChange,
 }: ModuleFormProps<'sobrevivencia'>) => {
   const morte = value.morte ?? {
     limiteBeiraDaMorte: 0,
@@ -84,7 +87,7 @@ export const SurvivalModuleForm = ({
     <ModuleFieldset disabled={readOnly}>
       <ModuleIntro theme={theme} neon={neon}>
         <div>
-          <h3>Sobrevivência</h3>
+          <HelpHeading level="h3" label="Sobrevivência" />
           <p>
             Condições, descanso, refeições, loot e estados de morte. Só gatilho, efeito,
             destino e recuperação configurados em campos próprios podem virar regra automática;
@@ -95,6 +98,7 @@ export const SurvivalModuleForm = ({
       </ModuleIntro>
 
       <ConditionRulesEditor
+        onUploadBusyChange={onUploadBusyChange}
         idSistemaVersao={idSistemaVersao}
         rows={value.condicoes}
         onChange={(condicoes) => onChange({ ...value, condicoes })}
@@ -118,7 +122,7 @@ export const SurvivalModuleForm = ({
       />
 
       <SectionCard theme={theme} neon={neon}>
-        <h4>Fluxo de morte e estabilização</h4>
+        <HelpHeading label="Fluxo de morte e estabilização" />
         <p>Os limites podem ser negativos e devem refletir explicitamente a regra decidida para esta versão.</p>
         <InlineChecks>
           <CheckBox
@@ -155,7 +159,7 @@ export const SurvivalModuleForm = ({
       </SectionCard>
 
       <SectionCard theme={theme} neon={neon}>
-        <h4>Loot e refeições</h4>
+        <HelpHeading label="Loot e refeições" />
         <FieldGrid $columns={2}>
           <TextArea theme={theme} neon={neon} label="Regras de loot e drops" value={value.regraLoot ?? ''} onChange={(event) => onChange({ ...value, regraLoot: event.target.value })} fullWidth />
           <TextArea theme={theme} neon={neon} label="Refeições e bebidas" value={value.regraRefeicoes ?? ''} onChange={(event) => onChange({ ...value, regraRefeicoes: event.target.value })} fullWidth />

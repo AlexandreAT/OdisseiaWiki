@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import type { GameRunActionSelection, GameRunBaseResolution, GameRunBattleRecord, GameRunConsumeItemResult, GameRunDto, GameRunEncounterSetup, GameRunMediumRestResolution, GameRunConditionOriginRequest } from '../../../models/GameRun';
+import type { GameRunActionSelection, GameRunBaseResolution, GameRunBattleRecord, GameRunConsumeItemResult, GameRunDto, GameRunEncounterSetup, GameRunMediumRestResolution, GameRunConditionOriginRequest, GameRunMutationRequest } from '../../../models/GameRun';
 import {
   abandonGameRun, enterGameRunBase, getGameRun, getGameRunBattles,
   consumeGameRunItem,
@@ -11,9 +11,11 @@ import {
   performGameRunMediumRest,
   updateGameRunLoadout, updateGameRunWeaponOrder,
   updateGameRunConditionOrigin,
+  enterGameRunVendor, buyGameRunVendorItem, leaveGameRunVendor, transferGameRunStashItem, sellGameRunVendorItems,
 } from '../../../services/gameRunService';
 import { getApiErrorMessage } from '../../../utils/apiError';
 import { shouldAutoCloseCombat, type CombatOrigin } from './battleReplayFlow';
+import { canManageRunItem } from './runRewardActions';
 
 interface CombatScene {
   record: GameRunBattleRecord;
@@ -74,6 +76,7 @@ export const useGameRun = () => {
   const { id } = useParams<'id'>();
   const runId = Number(id);
   const [run, setRun] = useState<GameRunDto | null>(null);
+  const [economyBusy, setEconomyBusy] = useState(false);
   const [battles, setBattles] = useState<GameRunBattleRecord[]>([]);
   const [combatScene, setCombatScene] = useState<CombatScene | null>(null);
   const [lootSpeed, setLootSpeed] = useState<1 | 2 | null>(null);
@@ -104,6 +107,8 @@ export const useGameRun = () => {
   const pendingWeaponOrder = useRef<{ revision: number; key: string; signature: string } | null>(null);
   const pendingLoadout = useRef<{ revision: number; key: string; signature: string } | null>(null);
   const pendingConsumable = useRef<{ revision: number; key: string; itemId: string; quantity: number } | null>(null);
+  const pendingEconomy = useRef<{ runId: number; revision: number; signature: string; key: string } | null>(null);
+  const economyInFlight = useRef(false);
   const rewardReturnTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestSequence = useRef(0);
   const currentRun = run?.idGameRun === runId ? run : null;
@@ -134,6 +139,7 @@ export const useGameRun = () => {
     pendingWeaponOrder.current = null;
     pendingLoadout.current = null;
     pendingConsumable.current = null;
+    pendingEconomy.current = null;
     if (!Number.isInteger(runId) || runId <= 0) {
       setError('Run inválida. Verifique o endereço.');
       setLoading(false);
@@ -245,7 +251,7 @@ export const useGameRun = () => {
       savingWeapons || savingLoadout) return;
     const node = currentRun.mapa.nodes.find((entry) => entry.id === nodeId);
     if (currentRun.noAtualId !== null || node?.state !== 'DISPONIVEL' ||
-      !['COMBATE', 'ELITE', 'BOSS', 'CACADA', 'BASE', 'DESCANSO', 'EVENTO', 'ATALHO', 'AREA_SECRETA'].includes(node.type)) return;
+      !['COMBATE', 'ELITE', 'BOSS', 'CACADA', 'BASE', 'DESCANSO', 'EVENTO', 'ATALHO', 'AREA_SECRETA', 'VENDEDOR'].includes(node.type)) return;
     encounterInFlight.current = true;
     setActing(true);
     setActionError(null);
@@ -259,6 +265,13 @@ export const useGameRun = () => {
       };
     pendingEncounter.current = pending;
     try {
+      if (node.type === 'VENDEDOR') {
+        setRun(await enterGameRunVendor(pending.runId, pending.nodeId, {
+          revisaoEsperada: pending.revision, chaveIdempotencia: pending.selectKey,
+        }));
+        pendingEncounter.current = null;
+        return;
+      }
       if (['BASE', 'DESCANSO', 'EVENTO', 'ATALHO', 'AREA_SECRETA'].includes(node.type)) {
         const result = await (['EVENTO', 'ATALHO', 'AREA_SECRETA'].includes(node.type) ? resolveGameRunEvent : enterGameRunBase)(
           pending.runId, pending.nodeId, {
@@ -296,7 +309,8 @@ export const useGameRun = () => {
   };
 
   const resumeEncounter = async () => {
-    if (!currentRun || currentRun.status !== 'Ativa' || !currentRun.noAtualId || acting || savingWeapons || savingLoadout) return;
+    if (!currentRun || currentRun.status !== 'Ativa' || !currentRun.noAtualId || acting || savingWeapons || savingLoadout ||
+      currentRun.mapa.nodes.some((node) => node.id === currentRun.noAtualId && node.type === 'VENDEDOR')) return;
     setActing(true);
     setActionError(null);
     const pending = pendingAction.current?.revision === currentRun.revisao
@@ -393,7 +407,7 @@ export const useGameRun = () => {
   };
 
   const consumeItem = async (itemId: string, quantity = 1): Promise<GameRunConsumeItemResult | null> => {
-    if (!currentRun || currentRun.status !== 'Ativa' || currentRun.noAtualId !== null ||
+    if (!currentRun || !canManageRunItem(currentRun, itemId) || currentRun.noAtualId !== null ||
       acting || savingWeapons || savingLoadout || consumingItemId) return null;
     const pending = pendingConsumable.current?.revision === currentRun.revisao &&
       pendingConsumable.current.itemId === itemId && pendingConsumable.current.quantity === quantity
@@ -436,7 +450,7 @@ export const useGameRun = () => {
   };
 
   const equipDefense = async (itemId: string, equipado: boolean): Promise<boolean> => {
-    if (!currentRun || currentRun.status !== 'Ativa' || currentRun.noAtualId || acting || consumingItemId) return false;
+    if (!currentRun || !canManageRunItem(currentRun, itemId) || currentRun.noAtualId || acting || consumingItemId) return false;
     setConsumingItemId(itemId);
     setActionError(null);
     try {
@@ -555,8 +569,37 @@ export const useGameRun = () => {
     catch { /* A escolha ainda vale nesta montagem quando o armazenamento estiver indisponivel. */ }
   };
 
+  const economyAction = async (signature: string,
+    action: (run: GameRunDto, request: GameRunMutationRequest) => Promise<GameRunDto>): Promise<boolean> => {
+    if (!currentRun || economyInFlight.current || acting || savingWeapons || savingLoadout || consumingItemId) return false;
+    economyInFlight.current = true;
+    const pending = pendingEconomy.current?.runId === currentRun.idGameRun &&
+      pendingEconomy.current.revision === currentRun.revisao && pendingEconomy.current.signature === signature
+      ? pendingEconomy.current : { runId: currentRun.idGameRun, revision: currentRun.revisao,
+        signature, key: crypto.randomUUID() };
+    pendingEconomy.current = pending;
+    setEconomyBusy(true); setActionError(null);
+    try {
+      setRun(await action(currentRun, { revisaoEsperada: pending.revision, chaveIdempotencia: pending.key }));
+      pendingEconomy.current = null;
+      return true;
+    } catch (reason: unknown) {
+      await handleActionError(reason, 'Não foi possível atualizar a economia desta run.');
+      return false;
+    } finally { economyInFlight.current = false; setEconomyBusy(false); }
+  };
+
   return {
     run: currentRun,
+    economyBusy,
+    buyVendorItem: (itemId: string, toStash: boolean) => economyAction(`buy:${itemId}:${toStash}`, (active, request) =>
+      buyGameRunVendorItem(active.idGameRun, { ...request, itemId, toStash })),
+    sellVendorItems: (items: import('./runEconomy').RunSaleLine[], fromStash: boolean) =>
+      economyAction(`sell:${fromStash}:${JSON.stringify(items)}`, (active, request) =>
+        sellGameRunVendorItems(active.idGameRun, { ...request, items, fromStash })),
+    leaveVendor: () => economyAction('leave', (active, request) => leaveGameRunVendor(active.idGameRun, request)),
+    transferStashItem: (itemId: string, toStash: boolean) => economyAction(`transfer:${itemId}:${toStash}`, (active, request) =>
+      transferGameRunStashItem(active.idGameRun, { ...request, itemId, toStash })),
     battles,
     historyError,
     reloadBattles,

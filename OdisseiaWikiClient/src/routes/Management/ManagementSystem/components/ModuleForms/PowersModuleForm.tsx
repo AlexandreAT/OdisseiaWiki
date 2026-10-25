@@ -1,4 +1,5 @@
 import { CheckBox } from '../../../../../components/Generic/CheckBox/CheckBox';
+import { HelpHeading } from '../../../../../components/Generic/HelpHeading/HelpHeading';
 import { InputText } from '../../../../../components/Generic/InputText/InputText';
 import { TextArea } from '../../../../../components/Generic/TextArea/TextArea';
 import { SistemaTipoMagia } from '../../../../../models/SistemaRpg';
@@ -55,7 +56,7 @@ export const PowersModuleForm = ({
     <ModuleFieldset disabled={readOnly}>
       <ModuleIntro theme={theme} neon={neon}>
         <div>
-          <h3>Poderes</h3>
+          <HelpHeading level="h3" label="Poderes" />
           <p>
             Tipos de magia, aprendizado, skills, ultimate, cooldowns e Artes Etéricas permanecem
             configurados em um módulo próprio, sem acoplar as entidades narrativas da Wiki.
@@ -64,7 +65,7 @@ export const PowersModuleForm = ({
       </ModuleIntro>
 
       <SectionCard theme={theme} neon={neon}>
-        <h4>Magias e afinidades</h4>
+        <HelpHeading label="Magias e afinidades" />
         <FieldGrid $columns={2}>
           <InputText theme={theme} neon={neon} label="Limite de magias" type="number" value={value.limiteMagias} onChange={(event) => onChange({ ...value, limiteMagias: Number(event.target.value) })} error={Boolean(errors.limiteMagias)} errorMessage={errors.limiteMagias} />
           <InlineChecks>
@@ -89,7 +90,7 @@ export const PowersModuleForm = ({
       />
 
       <SectionCard theme={theme} neon={neon}>
-        <h4>Skills e ultimate</h4>
+        <HelpHeading label="Skills e ultimate" />
         <p>Limites globais usados como referência para slots e progressão das fichas.</p>
         <FieldGrid $columns={5}>
           <InputText theme={theme} neon={neon} label="Máximo de skills" type="number" value={skillConfig.maximoSkills} onChange={(event) => onChange({ ...value, skillConfig: { ...skillConfig, maximoSkills: Number(event.target.value) } })} error={Boolean(errors['skillConfig.maximoSkills'])} errorMessage={errors['skillConfig.maximoSkills']} />

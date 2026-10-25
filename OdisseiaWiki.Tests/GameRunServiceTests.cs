@@ -12,6 +12,71 @@ namespace OdisseiaWiki.Tests;
 public sealed class GameRunServiceTests
 {
     [Fact]
+    public async Task NovaRunHerdaPrecoAusenteDaFichaELeituraLegadaNaoGravaNemAlteraFicha()
+    {
+        var catalogue = new Mock<IGameModeManagementRepository>();
+        catalogue.Setup(repo => repo.GetLootItemsAsync(It.IsAny<int?>(), 42, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new Item { Iditem = "espada", Valor = 650 }]);
+        Fixture fixture = new(new GameRunItemValueResolver(catalogue.Object));
+        fixture.Character.InventarioJson = """[{"id":"a","idItemBase":"espada","nome":"Espada"}]""";
+        string sheet = fixture.Character.InventarioJson;
+        var created = await fixture.Service.CreateAsync(fixture.UserId, new()
+            { IdPersonagemJogador = fixture.Character.IdpersonagemJogador, ChaveIdempotencia = Guid.NewGuid() }, default);
+        Assert.True(created.Sucesso, created.Mensagem);
+        Assert.Equal(650, created.Dados!.EstadoAtual.Inventario!.Value[0].GetProperty("valor").GetDecimal());
+        fixture.Run!.EstadoAtualJson = fixture.Run.EstadoAtualJson.Replace("\"valor\":650", "\"valor\":null", StringComparison.Ordinal);
+        string stored = fixture.Run.EstadoAtualJson;
+        var loaded = await fixture.Service.GetByIdAsync(fixture.Run.IdGameRun, fixture.UserId, default);
+        Assert.Equal(650, loaded!.EstadoAtual.Inventario!.Value[0].GetProperty("valor").GetDecimal());
+        Assert.Equal(stored, fixture.Run.EstadoAtualJson);
+        Assert.Equal(sheet, fixture.Character.InventarioJson);
+    }
+
+    [Fact]
+    public async Task InicioComReferenciaRemovidaExplicaRotaSemCriarRunNemLancarErroInterno()
+    {
+        Fixture fixture = new();
+        var mode = System.Text.Json.Nodes.JsonNode.Parse(fixture.Mode.ConfiguracaoJson)!;
+        mode["encounters"]!.AsObject().Remove("CACADOR");
+        fixture.Mode.ConfiguracaoJson = mode.ToJsonString();
+        var result = await fixture.Service.CreateAsync(fixture.UserId, new()
+        {
+            IdPersonagemJogador = fixture.Character.IdpersonagemJogador,
+            ChaveIdempotencia = Guid.NewGuid(),
+        }, default);
+        Assert.False(result.Sucesso);
+        Assert.Equal("MAPA_INDISPONIVEL", result.Codigo);
+        Assert.Contains("rota", result.Mensagem);
+        Assert.Contains("Encontro da rota", result.Mensagem);
+        Assert.Null(fixture.Run);
+    }
+
+    [Fact]
+    public async Task NovaRunRecebeMoedaDoModoEReinicioLimpaSaldoEStashAnterior()
+    {
+        Fixture fixture = new();
+        var mode = System.Text.Json.Nodes.JsonNode.Parse(fixture.Mode.ConfiguracaoJson)!;
+        mode["startingCurrency"] = 120;
+        fixture.Mode.ConfiguracaoJson = mode.ToJsonString();
+        var created = await fixture.Service.CreateAsync(fixture.UserId, new GameRunCreateRequestDto
+        {
+            IdPersonagemJogador = fixture.Character.IdpersonagemJogador,
+            ChaveIdempotencia = Guid.NewGuid(),
+        }, default);
+        Assert.True(created.Sucesso, created.Mensagem);
+        Assert.Equal(120, created.Dados!.EstadoAtual.Economy!.Balance);
+        Assert.Empty(created.Dados.EstadoAtual.Economy.Stash);
+        fixture.Run!.EstadoAtualJson = OdisseiaWiki.GameRuns.GameRunEconomy.Buy(fixture.Run.EstadoAtualJson,
+            System.Text.Json.Nodes.JsonNode.Parse("""{"nome":"Poção","tipo":"consumiveis"}""")!.AsObject(), "pocao", 20, true);
+
+        var restarted = await fixture.Service.RestartAsync(fixture.Run.IdGameRun, fixture.UserId,
+            new() { RevisaoEsperada = 0, ChaveIdempotencia = Guid.NewGuid() }, default);
+        Assert.True(restarted.Sucesso, restarted.Mensagem);
+        Assert.Equal(120, restarted.Dados!.EstadoAtual.Economy!.Balance);
+        Assert.Empty(restarted.Dados.EstadoAtual.Economy.Stash);
+    }
+
+    [Fact]
     public async Task EscolhaDeJogoRespeitaMesaEReinicioMantemJogo()
     {
         Fixture fixture = new();
@@ -442,7 +507,7 @@ public sealed class GameRunServiceTests
         private GameRunCommand? _lastCommand;
         private long _nextRunId = 123;
 
-        public Fixture()
+        public Fixture(GameRunItemValueResolver? itemValues = null)
         {
             Mode = new GameModeVersion
             {
@@ -523,7 +588,7 @@ public sealed class GameRunServiceTests
 
             Service = new GameRunService(
                 Repository.Object, CharacterRepository.Object,
-                SystemResolver.Object, new GameRunSnapshotFactory());
+                SystemResolver.Object, new GameRunSnapshotFactory(), itemValues: itemValues);
         }
     }
 }

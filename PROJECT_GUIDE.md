@@ -945,6 +945,7 @@ Regras:
 - Manter nomes semânticos;
 - Não criar tags HTML sem estilo quando já existe componente estilizado adequado.
 - Antes de estilizar um novo modal ou fluxo, localizar um equivalente já usado no site e reaproveitar seus componentes, hierarquia, espaçamentos, tipografia e disposição das ações. Não criar um padrão visual paralelo para a mesma função.
+- O modal genérico usa a aparência da Central de ações (`Generic/HudFrame/modalAppearance.ts` + `HudFrame`): fundo, cantos SVG alinhados à borda, neon, título DO Futuristic, X e scrollbar compartilhados. Alterações dessa aparência devem manter os componentes existentes de conteúdo/footer e o subtítulo opcional, sem recriar estilos locais divergentes.
 - Nos modais de item da run, manter informações relacionadas em um bloco compacto e as ações principais e secundárias no mesmo rodapé, lado a lado quando houver espaço. Textos de apoio devem ser curtos e visualmente subordinados; validar também a composição no mobile.
 
 ---
@@ -966,6 +967,10 @@ Formulários devem:
 - Separar roleplay, gameplay, mídia e relações quando fizer sentido.
 - Em formulários com etapas, usar `MultiStepNavigation` no topo e na base da etapa atual. A posição é sempre após o indicador de etapa e antes do primeiro campo, com os mesmos rótulos, ações e estados desabilitados nas duas cópias.
 - Em fichas genéricas, a navegação das etapas continua usando `MultiStepNavigation` no topo e na base. A troca entre variantes usa as setas laterais, sem duplicar os controles do formulário.
+- Explicações opcionais de campos e seções devem reutilizar `FieldHelp`, o padrão extraído da ajuda do slug, e não criar outro popover local. Os inputs genéricos aceitam `help` ou `helpKey`; sem ajuda, o layout anterior deve permanecer igual.
+- O popover padrão mantém título sci-fi em maiúsculas e cor de destaque mesmo sem neon. Listas, exemplos contornados e destaques semânticos devem usar `items`, `highlights` e `presentation` do conteúdo, sem HTML e sem estilos locais paralelos. A ajuda das tags de itens também segue esse padrão, preservando verde para Único e dourado para Lendário.
+- Textos de configuração do Sistema ficam em `OdisseiaWikiClient/src/content/systemHelp.pt-BR.json`, ligados às abas e campos por chaves estáveis. Mantenha linguagem simples e diferencie regra executável, orientação narrativa e funcionalidade futura. Veja `docs/SYSTEM_HELP.md` para o contrato e o uso futuro pela IA.
+- Espaçamento entre inputs, títulos e textos deve ser corrigido no contêiner correspondente, evitando margens globais nos inputs que possam afetar formulários de outras telas.
 
 ---
 

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using OdisseiaWiki.GameRuns.Inventory;
 
 namespace OdisseiaWiki.GameRuns.Battle;
 
@@ -206,18 +207,7 @@ public static class GameRunDefensiveEquipment
         }
     }
 
-    private static JsonArray Items(JsonObject root)
-    {
-        JsonNode? inventory = ReadNode(root, "inventario");
-        if (inventory is JsonValue serialized && serialized.TryGetValue<string>(out string? json))
-        {
-            inventory = JsonNode.Parse(json);
-            root["inventario"] = inventory;
-        }
-        return inventory as JsonArray ?? ReadNode(inventory as JsonObject, "itens") as JsonArray
-            ?? ReadNode(inventory as JsonObject, "inventario") as JsonArray
-            ?? throw new JsonException("O inventário da run está inválido.");
-    }
+    private static JsonArray Items(JsonObject root) => GameRunInventory.ReadOrCreate(root, "inventario");
 
     private static JsonNode? ReadNode(JsonObject? source, string name) => source?.FirstOrDefault(entry =>
         string.Equals(entry.Key, name, StringComparison.OrdinalIgnoreCase)).Value;

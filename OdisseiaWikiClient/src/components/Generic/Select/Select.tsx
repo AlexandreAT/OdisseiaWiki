@@ -6,7 +6,10 @@ import {
   useMemo,
   useRef,
   useState,
+  memo,
 } from 'react';
+import { useEventCallback } from '../../../hooks/useEventCallback';
+import { useStableOptions } from '../../../hooks/useStableOptions';
 import { createPortal } from 'react-dom';
 import {
   ContentController,
@@ -22,10 +25,13 @@ import {
 } from './Select.style';
 import { FormLabelText } from '../FormLabelText';
 import { revealFirstValidationError } from '../../../utils/formValidationFeedback';
+import { FieldHelp } from '../FieldHelp/FieldHelp';
+import type { FieldHelpContent } from '../FieldHelp/FieldHelp.types';
 
 interface Option {
   value: number | string;
   label: string;
+  description?: string;
 }
 
 interface Props {
@@ -45,13 +51,15 @@ interface Props {
   disabled?: boolean;
   allowEmptyOption?: boolean;
   portal?: boolean;
+  help?: FieldHelpContent;
+  helpKey?: string;
 }
 
 const valuesMatch = (left: number | string | undefined, right: number | string) => (
   String(left ?? '') === String(right)
 );
 
-export const Select = forwardRef<HTMLSelectElement, Props>(({
+const SelectComponent = forwardRef<HTMLSelectElement, Props>(({
   theme,
   neon,
   label,
@@ -68,6 +76,8 @@ export const Select = forwardRef<HTMLSelectElement, Props>(({
   disabled,
   allowEmptyOption = true,
   portal = false,
+  help,
+  helpKey,
 }, forwardedRef) => {
   const [focus, setFocus] = useState(false);
   const [open, setOpen] = useState(false);
@@ -89,7 +99,9 @@ export const Select = forwardRef<HTMLSelectElement, Props>(({
     [options, value],
   );
   const selectedOption = selectedIndex >= 0 ? options[selectedIndex] : undefined;
-  const hasValue = value !== '' && value !== null && value !== undefined;
+  // An empty code can be a real option (e.g. automatic/default behaviour).
+  // Float whenever text is displayed, not only when the stored code is truthy.
+  const hasValue = (value !== '' && value !== null && value !== undefined) || Boolean(selectedOption?.label);
 
   const setSelectRef = useCallback((element: HTMLSelectElement | null) => {
     nativeSelectRef.current = element;
@@ -257,6 +269,7 @@ export const Select = forwardRef<HTMLSelectElement, Props>(({
           $selected={valuesMatch(value, option.value)}
           $active={activeIndex === index}
           aria-selected={valuesMatch(value, option.value)}
+          title={option.description}
           onMouseEnter={() => setActiveIndex(index)}
           onMouseDown={(event) => event.preventDefault()}
           onClick={() => selectOption(option)}
@@ -288,7 +301,8 @@ export const Select = forwardRef<HTMLSelectElement, Props>(({
   })();
 
   return (
-    <ContentController ref={controllerRef} width={width} data-validation-error={hasError || undefined}>
+    <ContentController ref={controllerRef} width={width} theme={theme} neon={neon} typeStyle={typeStyle}
+      data-validation-error={hasError || undefined}>
       <Label width={width} height={height}>
         <NativeSelect
           ref={setSelectRef}
@@ -302,7 +316,7 @@ export const Select = forwardRef<HTMLSelectElement, Props>(({
         >
           {allowEmptyOption && <option value="" />}
           {options.map((option) => (
-            <option key={option.value} value={option.value}>{option.label}</option>
+            <option key={option.value} value={option.value} title={option.description}>{option.label}</option>
           ))}
         </NativeSelect>
 
@@ -315,6 +329,7 @@ export const Select = forwardRef<HTMLSelectElement, Props>(({
           height={height}
           disabled={disabled}
           aria-haspopup="listbox"
+          title={selectedOption?.description}
           aria-expanded={open}
           aria-required={required}
           aria-invalid={hasError}
@@ -328,16 +343,26 @@ export const Select = forwardRef<HTMLSelectElement, Props>(({
           <SelectArrow $open={open} aria-hidden="true" />
         </SelectControl>
 
-        <LabelSpan active={focus || hasValue}>
+        <LabelSpan data-field-label="true" active={focus || hasValue}>
           <FormLabelText label={label} required={required} />
         </LabelSpan>
 
         {open && !portal && renderDropdown()}
       </Label>
+      <FieldHelp label={label} help={help} helpKey={helpKey} theme={theme} neon={neon} />
       {portalDropdown}
       {hasError && <SpanError>{errorMessage || nativeError}</SpanError>}
     </ContentController>
   );
 });
 
+SelectComponent.displayName = 'SelectControl';
+const MemoizedSelect = memo(SelectComponent);
+export const Select = forwardRef<HTMLSelectElement, Props>((props, ref) => {
+  const onChange = useEventCallback(props.onChange);
+  const onFocus = useEventCallback(props.onFocus);
+  const options = useStableOptions(props.options);
+  return <MemoizedSelect {...props} ref={ref} options={options}
+    onChange={props.onChange ? onChange : undefined} onFocus={props.onFocus ? onFocus : undefined} />;
+});
 Select.displayName = 'Select';

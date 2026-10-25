@@ -2,7 +2,16 @@ using OdisseiaWiki.GameRuns.Battle;
 
 namespace OdisseiaWiki.Dtos;
 
-public sealed record GameModeLootOptionDto(string Id, string Name, string Type, string? Image);
+public sealed record GameModeLootOptionDto(string Id, string Name, string Type, string? Image, decimal? Value = null);
+
+public sealed class GameModeVendorOfferDto
+{
+    public string ItemId { get; set; } = string.Empty;
+    public int Price { get; set; }
+    public int Stock { get; set; } = 1;
+    public int Weight { get; set; } = 1;
+    public System.Text.Json.Nodes.JsonObject? Snapshot { get; set; }
+}
 
 public sealed class GameModePowerOptionDto
 {
@@ -43,6 +52,8 @@ public sealed class GameModeAreaOptionDto
     public string? Description { get; set; }
     public string? Image { get; set; }
     public int GameMinutes { get; set; }
+    public List<GameModeVendorOfferDto> Offers { get; set; } = [];
+    public int OfferCount { get; set; } = 3;
 }
 
 public sealed class GameModeEditorDto
@@ -62,6 +73,7 @@ public sealed class GameModeEditorDto
     public GameBattleFallbackAction FallbackAction { get; init; } = new();
     public Dictionary<string, GameBattleDamageModifier> PlayerDamageByResult { get; init; } = [];
     public int SaleDiscountPercent { get; init; }
+    public int StartingCurrency { get; init; }
     public bool RepairProtectionAtBase { get; init; } = true;
     public List<GameModePowerOptionDto> PowerCatalog { get; init; } = [];
     public IReadOnlyList<string> AttackOutcomeCodes { get; init; } = [];
@@ -86,6 +98,7 @@ public sealed class GameModeEditorUpdateDto
     public GameBattleFallbackAction FallbackAction { get; set; } = new();
     public Dictionary<string, GameBattleDamageModifier> PlayerDamageByResult { get; set; } = [];
     public int SaleDiscountPercent { get; set; }
+    public int StartingCurrency { get; set; }
     public bool RepairProtectionAtBase { get; set; } = true;
     // Null preserves a catalog when an older client saves the rest of a draft.
     public List<GameModePowerOptionDto>? PowerCatalog { get; set; }

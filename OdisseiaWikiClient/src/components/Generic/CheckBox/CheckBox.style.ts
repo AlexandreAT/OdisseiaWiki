@@ -15,7 +15,12 @@ export const ContainerController = styled.div<Props>`
     display: flex;
     align-items: center;
     width: ${({ width }) => width || '100%'};
-    height: ${({ height }) => height || '20px'}
+    height: ${({ height }) => height || '20px'};
+    &:has(> [data-field-help]) {
+        height: auto;
+        min-height: 25px;
+        label { width: auto; }
+    }
 `
 
 export const CheckboxLabel = styled.label<Props>`

@@ -4,7 +4,7 @@ export const MultiStepNavigationContainer = styled.nav<{ $position: 'top' | 'bot
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   width: 100%;
   gap: 20px;
   margin: ${({ $position }) => $position === 'top' ? '0 0 4px' : '4px 0 0'};
@@ -29,16 +29,19 @@ export const MultiStepNavigationContainer = styled.nav<{ $position: 'top' | 'bot
       flex: 1 1 0;
       width: auto !important;
       min-width: 0;
-      height: 44px !important;
+      height: auto !important;
+      min-height: 44px;
+      padding: 4px;
 
-      > div,
       > button {
         width: 100% !important;
-        height: 36px !important;
+        height: auto !important;
+        min-height: 36px;
       }
 
       > button {
         padding-inline: 4px;
+        padding-block: 6px;
         font-size: 9px;
       }
     }

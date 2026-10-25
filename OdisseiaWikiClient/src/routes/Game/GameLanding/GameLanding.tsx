@@ -278,6 +278,7 @@ export default function GameLanding() {
       />
       {state.gameChoices && <Modal title="Escolha o jogo" theme={theme} neon={neon}
         width="1040px" showFooter={false} onClose={state.closeGameChoices}>
+        {state.actionError && <GameNotice $danger role="alert">{state.actionError}</GameNotice>}
         <GameChoiceGrid>
           {state.gameChoices.games.map((game) => <GameChoiceCard key={game.codigo}
             type="button" disabled={state.creating}

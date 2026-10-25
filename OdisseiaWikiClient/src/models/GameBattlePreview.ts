@@ -1,4 +1,5 @@
 export interface GameBattlePreviewActor {
+  condicoes?: { rule: { code: string; name: string; image?: string | null }; remainingTurns?: number | null; remainingHours?: number | null }[];
   id: string;
   nome: string;
   imagem?: string | null;
@@ -59,6 +60,10 @@ export interface GameBattleEvent {
     attributeCode?: string;
     difficulty?: number;
     passed?: boolean;
+    image?: string | null;
+    stackable?: boolean;
+    operation?: string;
+    moment?: string;
   };
 }
 
@@ -73,6 +78,7 @@ export interface GameBattlePreview {
   oponente: GameBattlePreviewActor;
   oponentes?: GameBattlePreviewActor[];
   xpConcedido?: number;
+  moedaConcedida?: number;
   niveisAlcancados?: number[];
   pontosConcedidos?: { gerais: number; atributo: number; skill: number; ultimate: number };
   resultado: {

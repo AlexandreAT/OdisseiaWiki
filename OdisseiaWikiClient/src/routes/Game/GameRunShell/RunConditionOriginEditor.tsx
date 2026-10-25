@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { getSystemOptionDescription } from '../../../content/systemOptionHelp';
 import type { GameRunConditionOriginRequest } from '../../../models/GameRun';
 import type { SistemaCondicao } from '../../../models/SistemaRpg';
 import { obterConfiguracaoCriacaoSistemaRpg, obterConfiguracaoSobrevivenciaSistemaRpg } from '../../../services/sistemasRpgService';
@@ -91,12 +92,12 @@ export function RunConditionOriginEditor({ entry, condition, systemVersionId, di
         <select value={draft.gatilho ?? 'ACERTO'} disabled={disabled} onChange={(event) => update({
           gatilho: event.target.value as RunConditionOrigin['gatilho'],
         })}>
-          <option value="ACERTO">Acertar</option>
-          <option value="RESULTADO_NATURAL">Resultado natural do D20</option>
-          <option value="RESULTADO_CLASSIFICADO">Resultado classificado pelo Sistema</option>
-          <option value="AO_USAR">Usar ação ou item</option>
+          <option value="ACERTO" title={getSystemOptionDescription('conditionTrigger', 'ACERTO')}>Acertar</option>
+          <option value="RESULTADO_NATURAL" title={getSystemOptionDescription('conditionTrigger', 'RESULTADO_NATURAL')}>Resultado natural do D20</option>
+          <option value="RESULTADO_CLASSIFICADO" title={getSystemOptionDescription('conditionTrigger', 'RESULTADO_CLASSIFICADO')}>Resultado classificado pelo Sistema</option>
+          <option value="AO_USAR" title={getSystemOptionDescription('conditionTrigger', 'AO_USAR')}>Usar ação ou item</option>
           {entry.tipo === 'ITEM' && (entry.subtype === 'traje' || entry.subtype === 'outro') &&
-            <option value="AO_EQUIPAR">Equipar</option>}
+            <option value="AO_EQUIPAR" title={getSystemOptionDescription('conditionTrigger', 'AO_EQUIPAR')}>Equipar</option>}
         </select>
       </label>
       {draft.gatilho === 'RESULTADO_CLASSIFICADO' && <label>Resultado publicado
@@ -110,8 +111,9 @@ export function RunConditionOriginEditor({ entry, condition, systemVersionId, di
       <label>Quem recebe
         <select value={draft.alvo ?? defaultTarget} disabled={disabled}
           onChange={(event) => update({ alvo: event.target.value as RunConditionOrigin['alvo'] })}>
-          <option value="ALVO">Alvo da ação</option><option value="USUARIO">Quem usa</option>
-          <option value="TODOS_INIMIGOS">Todos os inimigos</option>
+          <option value="ALVO" title={getSystemOptionDescription('conditionTarget', 'ALVO')}>Alvo da ação</option>
+          <option value="USUARIO" title={getSystemOptionDescription('conditionTarget', 'USUARIO')}>Quem usa</option>
+          <option value="TODOS_INIMIGOS" title={getSystemOptionDescription('conditionTarget', 'TODOS_INIMIGOS')}>Todos os inimigos</option>
         </select>
       </label>
       <CyberButton theme={theme} neon={neon} colorType="secondary" width="100%" height="38px"
@@ -177,7 +179,9 @@ export function RunConditionOriginEditor({ entry, condition, systemVersionId, di
       <label>Unidade da duração
         <select value={draft.unidadeDuracao ?? ''} disabled={disabled}
           onChange={(event) => update({ unidadeDuracao: event.target.value as RunConditionOrigin['unidadeDuracao'] || undefined })}>
-          <option value="">Padrão do Sistema</option><option value="Turno">Turnos</option><option value="Hora">Horas de jogo</option>
+          <option value="">Padrão do Sistema</option>
+          <option value="Turno" title={getSystemOptionDescription('durationUnit', 'Turno')}>Turnos</option>
+          <option value="Hora" title={getSystemOptionDescription('durationUnit', 'Hora')}>Horas de jogo</option>
         </select>
       </label>
       {message && <GameHint role="status">{message}</GameHint>}

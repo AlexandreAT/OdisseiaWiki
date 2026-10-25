@@ -1,4 +1,5 @@
-import styled from 'styled-components';
+import styled, { css } from 'styled-components';
+import { ItemTag } from '../../../../../../components/Generic/ItemTag/ItemTag.style';
 import { FallbackImage } from '../../../../../../components/Generic/FallbackImage/FallbackImage';
 import { EntityType } from '../types';
 
@@ -23,7 +24,8 @@ export const CardContainer = styled.article<StyledCardProps & { $type: EntityTyp
   gap: 11px;
   width: 100%;
   max-width: 290px;
-  height: 415px;
+  min-height: 415px;
+  align-self: stretch;
   min-width: 0;
   padding: 12px;
   box-sizing: border-box;
@@ -44,7 +46,7 @@ export const CardContainer = styled.article<StyledCardProps & { $type: EntityTyp
 
   @media (max-width: 768px) {
     max-width: none;
-    height: clamp(310px, calc(50vw + 145px), 390px);
+    min-height: clamp(310px, calc(50vw + 145px), 390px);
     padding: 8px;
     gap: 7px;
   }
@@ -119,7 +121,7 @@ export const EntityBadge = styled.span<{ $type: EntityType }>`
 
 export const CardContent = styled.div`
   display: flex;
-  flex: 1;
+  flex: 1 0 auto;
   flex-direction: column;
   gap: 7px;
   min-height: 0;
@@ -128,6 +130,7 @@ export const CardContent = styled.div`
 export const ManagementMetadata = styled.div`
   display: flex;
   flex-wrap: wrap;
+  flex-shrink: 0;
   gap: 6px;
 `;
 
@@ -153,18 +156,24 @@ export const TagsContainer = styled.div`
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
-  min-height: 0;
-  overflow: hidden;
+  flex-shrink: 0;
+  min-width: 0;
 `;
 
-export const Tag = styled.span`
+export const Tag = styled(ItemTag)`
   max-width: 100%;
   padding: 2px 6px;
   overflow: hidden;
   border-radius: 999px;
-  background: rgba(125, 132, 145, 0.18);
-  color: rgba(235, 238, 244, 0.72);
+  ${({ $rarity }) => !$rarity && css`
+    border-color: transparent;
+    background: rgba(125, 132, 145, 0.18);
+    color: rgba(235, 238, 244, 0.72) !important;
+    text-transform: none;
+    letter-spacing: normal;
+  `}
   font-size: 9px;
+  line-height: 1.4;
   text-overflow: ellipsis;
   white-space: nowrap;
 `;
@@ -180,6 +189,7 @@ export const SlugText = styled.p<StyledCardProps>`
 
 export const CardActions = styled.footer`
   display: flex;
+  flex-shrink: 0;
   gap: 7px;
   margin-top: auto;
 `;

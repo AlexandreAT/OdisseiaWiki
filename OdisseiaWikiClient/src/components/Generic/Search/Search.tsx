@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, ReactNode, memo, useCallback, useMemo, CSSProperties } from 'react';
+import { useEventCallback } from '../../../hooks/useEventCallback';
 import { createPortal } from 'react-dom';
 import {
   ContentController,
@@ -13,6 +14,8 @@ import { getRankedSuggestions, getSuggestionDisplayLabel } from '../../../utils/
 import { FormLabelText } from '../FormLabelText';
 import { revealFirstValidationError } from '../../../utils/formValidationFeedback';
 import { LoadingIndicator } from '../LoadingIndicator';
+import { FieldHelp } from '../FieldHelp/FieldHelp';
+import type { FieldHelpContent } from '../FieldHelp/FieldHelp.types';
 
 interface Props {
   theme: 'dark' | 'light';
@@ -35,6 +38,8 @@ interface Props {
   onSelectSuggestion?: (value: string) => void;
   loading?: boolean;
   portal?: boolean;
+  help?: FieldHelpContent;
+  helpKey?: string;
 }
 
 const SearchComponent = ({
@@ -57,7 +62,9 @@ const SearchComponent = ({
   maxSuggestions = 5,
   onSelectSuggestion,
   loading = false,
-  portal = false
+  portal = false,
+  help,
+  helpKey,
 }: Props) => {
   const [focus, setFocus] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -73,8 +80,9 @@ const SearchComponent = ({
   const [suggestionsTop, setSuggestionsTop] = useState<number | null>(null);
   const hasError = Boolean(error || nativeError);
   const rankedSuggestions = useMemo(() => (
-    getRankedSuggestions(suggestions, value ?? '', maxSuggestions, getSuggestionDisplayLabel)
-  ), [maxSuggestions, suggestions, value]);
+    showSuggestions && !disabled
+      ? getRankedSuggestions(suggestions, value ?? '', maxSuggestions, getSuggestionDisplayLabel) : []
+  ), [disabled, maxSuggestions, showSuggestions, suggestions, value]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -206,6 +214,7 @@ const SearchComponent = ({
   return (
     <ContentController
       ref={containerRef}
+      theme={theme} neon={neon} typeStyle={typeStyle}
       width={width}
       height={height}
       data-validation-error={hasError || undefined}
@@ -229,15 +238,16 @@ const SearchComponent = ({
           iconSize={iconSize}
           disabled={disabled}
         />
-        <SearchLabelSpan active={focus || !!value}>
+        <SearchLabelSpan data-field-label="true" active={focus || !!value}>
           <FormLabelText label={label} required={required} />
         </SearchLabelSpan>
         {icon && (
-          <IconWrapper theme={theme} neon={neon} active={focus || !!value} size={iconSize}>
+          <IconWrapper data-search-icon="true" theme={theme} neon={neon} active={focus || !!value} size={iconSize}>
             {icon}
           </IconWrapper>
         )}
       </SearchLabel>
+      <FieldHelp label={label} help={help} helpKey={helpKey} theme={theme} neon={neon} />
 
       {hasSuggestions && !portal && renderSuggestions()}
       {portalSuggestions}
@@ -247,4 +257,12 @@ const SearchComponent = ({
   );
 };
 
-export const Search = memo(SearchComponent);
+const MemoizedSearch = memo(SearchComponent);
+export const Search = (props: Props) => {
+  const onChange = useEventCallback(props.onChange);
+  const onFocus = useEventCallback(props.onFocus);
+  const onSelectSuggestion = useEventCallback(props.onSelectSuggestion);
+  return <MemoizedSearch {...props} onChange={props.onChange ? onChange : undefined}
+    onFocus={props.onFocus ? onFocus : undefined}
+    onSelectSuggestion={props.onSelectSuggestion ? onSelectSuggestion : undefined} />;
+};

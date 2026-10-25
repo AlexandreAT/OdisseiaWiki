@@ -45,7 +45,7 @@ public sealed partial class GameModeManagementService : IGameModeManagementServi
         (idMesa.HasValue && idSistemaVersao.HasValue
             ? await _management.GetLootItemsAsync(idMesa, idSistemaVersao.Value, cancellationToken)
             : await _management.GetLootItemsAsync(cancellationToken)).Where(item => item.Visivel).Select(item =>
-            new GameModeLootOptionDto(item.Iditem, item.Nome, item.Tipo.ToString().ToLowerInvariant(), item.Imagem)).ToArray();
+            new GameModeLootOptionDto(item.Iditem, item.Nome, item.Tipo.ToString().ToLowerInvariant(), item.Imagem, item.Valor)).ToArray();
 
     private async Task<string?> FreezeLootAsync(IEnumerable<GameBattleEncounterConfig> encounters,
         CancellationToken token, int? idMesa = null, int? idSistemaVersao = null)
@@ -70,20 +70,43 @@ public sealed partial class GameModeManagementService : IGameModeManagementServi
                 if (item is null) return "Um item de loot não está mais disponível no catálogo da Wiki.";
                 try
                 {
-                    entry.Snapshot = new JsonObject
-                    {
-                        ["nome"] = item.Nome, ["tipo"] = item.Tipo.ToString().ToLowerInvariant(),
-                        ["imagem"] = item.Imagem, ["peso"] = item.Peso, ["valor"] = item.Valor,
-                        ["discricao"] = item.Discricao,
-                        ["descricao"] = item.Descricao, ["efeito"] = item.Efeito,
-                        ["atributos"] = string.IsNullOrWhiteSpace(item.AtributosJson) ? new JsonObject() : JsonNode.Parse(item.AtributosJson),
-                    };
+                    entry.Snapshot = FreezeCatalogItem(item);
                 }
                 catch (JsonException) { return $"O item {item.Nome} possui atributos inválidos para o loot."; }
             }
         }
         return null;
     }
+
+    private async Task<string?> FreezeVendorOffersAsync(IEnumerable<GameModeAreaDto> areas,
+        CancellationToken token, int? idMesa, int idSistemaVersao)
+    {
+        GameModeVendorOfferDto[] offers = areas.SelectMany(area => area.Options)
+            .Where(option => option.Type == "VENDEDOR").SelectMany(option => option.Offers).ToArray();
+        if (offers.Length == 0) return null;
+        IReadOnlyList<Item> items = (idMesa.HasValue
+            ? await _management.GetLootItemsAsync(idMesa, idSistemaVersao, token)
+            : await _management.GetLootItemsAsync(token)).Where(item => item.Visivel).ToArray();
+        foreach (GameModeVendorOfferDto offer in offers)
+        {
+            Item? item = items.FirstOrDefault(candidate => candidate.Iditem == offer.ItemId);
+            if (item is null) return "Uma oferta do vendedor aponta para um item oculto ou indisponível.";
+            try
+            {
+                offer.Snapshot = FreezeCatalogItem(item);
+            }
+            catch (JsonException) { return $"O item {item.Nome} possui atributos inválidos para a loja."; }
+        }
+        return null;
+    }
+
+    private static JsonObject FreezeCatalogItem(Item item) => new()
+    {
+        ["nome"] = item.Nome, ["tipo"] = item.Tipo.ToString().ToLowerInvariant(),
+        ["imagem"] = item.Imagem, ["peso"] = item.Peso, ["valor"] = item.Valor,
+        ["discricao"] = item.Discricao, ["descricao"] = item.Descricao, ["efeito"] = item.Efeito,
+        ["atributos"] = string.IsNullOrWhiteSpace(item.AtributosJson) ? new JsonObject() : JsonNode.Parse(item.AtributosJson),
+    };
 
     public async Task<IReadOnlyList<GameModeRestOptionDto>> GetRestOptionsAsync(
         int? idSistemaVersao, CancellationToken cancellationToken)
@@ -380,6 +403,8 @@ public sealed partial class GameModeManagementService : IGameModeManagementServi
         if (error is not null) return GameRunOperationResult<GameModeEditorDto>.Fail("DESCANSO_INVALIDO", error);
         error = await FreezeLootAsync(update.Encounters.Values, cancellationToken, idMesa, draft.IdSistemaVersao);
         if (error is not null) return GameRunOperationResult<GameModeEditorDto>.Fail("LOOT_INVALIDO", error);
+        error = await FreezeVendorOffersAsync(update.Areas, cancellationToken, idMesa, draft.IdSistemaVersao);
+        if (error is not null) return GameRunOperationResult<GameModeEditorDto>.Fail("OFERTA_INVALIDA", error);
 
         JsonObject config = JsonNode.Parse(draft.ConfiguracaoJson)?.AsObject()
             ?? throw new JsonException("A configuração do rascunho é inválida.");
@@ -390,6 +415,7 @@ public sealed partial class GameModeManagementService : IGameModeManagementServi
         config["previewFallbackAction"] = JsonSerializer.SerializeToNode(update.FallbackAction, JsonOptions);
         config["previewPlayerDamageByResult"] = JsonSerializer.SerializeToNode(update.PlayerDamageByResult, JsonOptions);
         config["saleDiscountPercent"] = update.SaleDiscountPercent;
+        config["startingCurrency"] = update.StartingCurrency;
         config["repairProtectionAtBase"] = update.RepairProtectionAtBase;
         if (update.PowerCatalog is not null)
             config["powerCatalog"] = JsonSerializer.SerializeToNode(update.PowerCatalog, JsonOptions);
@@ -410,6 +436,7 @@ public sealed partial class GameModeManagementService : IGameModeManagementServi
             Areas = editor.Areas, Encounters = editor.Encounters,
             FallbackAction = editor.FallbackAction, PlayerDamageByResult = editor.PlayerDamageByResult,
             SaleDiscountPercent = editor.SaleDiscountPercent,
+            StartingCurrency = editor.StartingCurrency,
             RepairProtectionAtBase = editor.RepairProtectionAtBase,
             PowerCatalog = editor.PowerCatalog,
         }, outcomes);
@@ -428,6 +455,8 @@ public sealed partial class GameModeManagementService : IGameModeManagementServi
                 "Configure e publique o dado de loot em Sistema > Progressão antes de publicar encontros com loot.");
         error = await FreezeLootAsync(editor.Encounters.Values, cancellationToken, idMesa, draft.IdSistemaVersao);
         if (error is not null) return GameRunOperationResult<GameModeEditorDto>.Fail("LOOT_INVALIDO", error);
+        error = await FreezeVendorOffersAsync(editor.Areas, cancellationToken, idMesa, draft.IdSistemaVersao);
+        if (error is not null) return GameRunOperationResult<GameModeEditorDto>.Fail("OFERTA_INVALIDA", error);
         foreach (GameBattleEncounterConfig encounter in editor.Encounters.Values)
         {
             if (encounter.Enemy?.NpcId is not int npcId) continue;
@@ -455,6 +484,7 @@ public sealed partial class GameModeManagementService : IGameModeManagementServi
             Areas = editor.Areas, Encounters = editor.Encounters,
             FallbackAction = editor.FallbackAction, PlayerDamageByResult = editor.PlayerDamageByResult,
             SaleDiscountPercent = editor.SaleDiscountPercent,
+            StartingCurrency = editor.StartingCurrency,
             RepairProtectionAtBase = editor.RepairProtectionAtBase,
             PowerCatalog = editor.PowerCatalog,
         }, outcomes);
@@ -462,6 +492,7 @@ public sealed partial class GameModeManagementService : IGameModeManagementServi
         JsonObject config = JsonNode.Parse(draft.ConfiguracaoJson)?.AsObject()
             ?? throw new JsonException("A configuração do rascunho é inválida.");
         config["encounters"] = JsonSerializer.SerializeToNode(editor.Encounters, JsonOptions);
+        config["areas"] = JsonSerializer.SerializeToNode(editor.Areas, JsonOptions);
         config["map"] ??= new JsonObject();
         config["map"]!["schemaVersion"] = 5;
         draft.ConfiguracaoJson = config.ToJsonString(JsonOptions);
@@ -672,6 +703,8 @@ public sealed partial class GameModeManagementService : IGameModeManagementServi
             return "Configure o dano do personagem para cada resultado de ATAQUE_COMUM do Sistema.";
         if (update.SaleDiscountPercent is < 0 or > 100)
             return "O desconto de venda deve ser um percentual inteiro entre 0 e 100.";
+        if (update.StartingCurrency is < 0 or > 1000000000)
+            return "A moeda inicial deve ficar entre 0 e 1.000.000.000.";
         if (update.PowerCatalog is { } powers &&
             (powers.Count > 40 || powers.Any(power => power is null ||
                 !Guid.TryParse(power.Id, out _) ||
@@ -734,31 +767,15 @@ public sealed partial class GameModeManagementService : IGameModeManagementServi
                  !int.TryParse(finalOption.AsSpan(5), out int finalIndex) ||
                  finalIndex < 0 || finalIndex >= area.Options.Count)))
                 return $"Escolha um fim válido para {area.Name}.";
-            if (area.Options.Any(option => option.Weight is < 1 or > 100 ||
-                option.GameMinutes is < 0 or > 1000000 ||
-                option.Image?.Length > 500 ||
-                option.Type is not ("COMBATE" or "ELITE" or "BOSS" or "EVENTO" or "DESCANSO" or "ATALHO" or "CACADA" or "AREA_SECRETA") ||
-                (option.Type is "EVENTO" or "DESCANSO" or "ATALHO"
-                    ? string.IsNullOrWhiteSpace(option.Label) || option.Label.Length > 100 ||
-                      option.Description?.Length > 500
-                    : option.Type == "AREA_SECRETA"
-                    ? string.IsNullOrWhiteSpace(option.Label) ||
-                      string.IsNullOrWhiteSpace(option.SecretAreaCode) ||
-                      !update.Areas.Any(secret => secret.IsSecret && secret.Code == option.SecretAreaCode)
-                    : option.Type == "CACADA"
-                    ? string.IsNullOrWhiteSpace(option.Label) || option.Label.Length > 100 ||
-                      option.EncounterCodes is null || option.EncounterCodes.Count < 2 ||
-                      option.EncounterCodes.Distinct(StringComparer.Ordinal).Count() != option.EncounterCodes.Count ||
-                      option.EncounterCodes.Any(code => !update.Encounters.ContainsKey(code))
-                    : string.IsNullOrWhiteSpace(option.EncounterCode) ||
-                      !update.Encounters.ContainsKey(option.EncounterCode))))
-                return $"As rotas de {area.Name} precisam apontar para encontros executáveis.";
+            string? routeError = GameModeRouteValidation.Validate(area, update.Encounters.Keys, update.Areas);
+            if (routeError is not null) return routeError;
         }
         foreach ((string code, GameBattleEncounterConfig encounter) in update.Encounters)
         {
             if (string.IsNullOrWhiteSpace(code) || code.Length > 50 ||
                 string.IsNullOrWhiteSpace(encounter.MapName) || encounter.MapName.Length > 100 ||
                 encounter.XpReward is < 0 or > 1000000 ||
+                encounter.CurrencyReward is < 0 or > 1000000000 ||
                 encounter.LootCount is < 0 or > 100 || encounter.Loot is null || encounter.Loot.Any(entry => entry is null) ||
                 encounter.Enemy is null || string.IsNullOrWhiteSpace(encounter.Enemy.Name) ||
                 encounter.Enemy.Image?.Length > 500 ||
@@ -818,6 +835,8 @@ public sealed partial class GameModeManagementService : IGameModeManagementServi
             AttackOutcomeCodes = outcomes,
             SaleDiscountPercent = root.TryGetProperty("saleDiscountPercent", out JsonElement saleDiscount) &&
                 saleDiscount.TryGetInt32(out int discount) ? discount : 0,
+            StartingCurrency = root.TryGetProperty("startingCurrency", out JsonElement startingCurrency) &&
+                startingCurrency.TryGetInt32(out int currency) ? currency : 0,
             RepairProtectionAtBase = !root.TryGetProperty("repairProtectionAtBase", out JsonElement repairProtection) ||
                 repairProtection.ValueKind != JsonValueKind.False,
             PowerCatalog = root.TryGetProperty("powerCatalog", out JsonElement catalog) &&

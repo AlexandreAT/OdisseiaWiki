@@ -96,6 +96,8 @@ public sealed partial class GameRunEncounterService
                             "SISTEMA_INDISPONIVEL", "Sistema indisponível.");
                         run.EstadoAtualJson = GameRunCarry.Reconcile(
                             GameRunLoot.Claim(run.EstadoAtualJson).Snapshot, version);
+                        if (_itemValues is not null)
+                            run.EstadoAtualJson = await _itemValues.ResolveAsync(run.EstadoAtualJson, run.GameModeVersion, token);
                     }
                     else
                     {

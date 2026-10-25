@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { GameAdventure, GameModeArea, GameModeEditor, GameModeEncounter, GameModeNpcOption, GameModePowerOption, GameModeRestOption, GameModeSystemVersion } from '../../../models/GameModeManagement';
 import { saveAsset } from '../../../services/assetsService';
 import {
@@ -10,6 +10,12 @@ import {
 import { getApiErrorMessage } from '../../../utils/apiError';
 
 const copy = (editor: GameModeEditor): GameModeEditor => structuredClone(editor);
+const editableSnapshot = (value: GameModeEditor | null) => value && JSON.stringify({
+  areas: value.areas, encounters: value.encounters, fallbackAction: value.fallbackAction,
+  playerDamageByResult: value.playerDamageByResult, saleDiscountPercent: value.saleDiscountPercent,
+  startingCurrency: value.startingCurrency, repairProtectionAtBase: value.repairProtectionAtBase,
+  powerCatalog: value.powerCatalog,
+});
 const nextEncounterNumber = (editor: GameModeEditor, after = 0) => {
   let number = Object.keys(editor.encounters).length + 1 + after;
   while (editor.encounters[`ENCONTRO_${number}`]) number++;
@@ -19,6 +25,7 @@ const createEncounter = (editor: GameModeEditor, number: number): GameModeEncoun
   mapName: `Encontro ${number}`,
   configured: false,
   xpReward: 0,
+  currencyReward: 0,
   enemy: { name: `Inimigo ${number}`, image: null, npcId: null, variantId: null,
     attributes: {}, attackAttributeCode: null, maxVida: 100, defesa: 0,
     maxMana: 0, maxEstamina: 0, custoManaAtaque: 0, custoEstaminaAtaque: 0,
@@ -43,14 +50,9 @@ export const useManagementGame = (mesaId?: number) => {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const changed = !!saved && !!editor && JSON.stringify({ areas: saved.areas, encounters: saved.encounters,
-    fallbackAction: saved.fallbackAction, playerDamageByResult: saved.playerDamageByResult,
-    saleDiscountPercent: saved.saleDiscountPercent, repairProtectionAtBase: saved.repairProtectionAtBase,
-    powerCatalog: saved.powerCatalog }) !==
-    JSON.stringify({ areas: editor.areas, encounters: editor.encounters,
-      fallbackAction: editor.fallbackAction, playerDamageByResult: editor.playerDamageByResult,
-      saleDiscountPercent: editor.saleDiscountPercent, repairProtectionAtBase: editor.repairProtectionAtBase,
-      powerCatalog: editor.powerCatalog });
+  const savedSnapshot = useMemo(() => editableSnapshot(saved), [saved]);
+  const currentSnapshot = useMemo(() => editableSnapshot(editor), [editor]);
+  const changed = savedSnapshot !== null && currentSnapshot !== null && savedSnapshot !== currentSnapshot;
 
   const load = useCallback(async (versionId?: number, gameCode?: string) => {
     setLoading(true); setError(null);
@@ -293,6 +295,10 @@ export const useManagementGame = (mesaId?: number) => {
       setEditor((current) => current && ({ ...current,
         saleDiscountPercent: Math.max(0, Math.min(100, Math.trunc(value || 0))),
       })),
+    updateStartingCurrency: (value: number) =>
+      setEditor((current) => current && ({ ...current,
+        startingCurrency: Math.max(0, Math.min(1_000_000_000, Math.trunc(value || 0))),
+      })),
     updateRepairProtectionAtBase: (value: boolean) =>
       setEditor((current) => current && ({ ...current, repairProtectionAtBase: value })),
     addRoute: (areaIndex: number) => setEditor((current) => {
@@ -354,6 +360,7 @@ export const useManagementGame = (mesaId?: number) => {
         fallbackAction: editor.fallbackAction,
         playerDamageByResult: editor.playerDamageByResult,
         saleDiscountPercent: editor.saleDiscountPercent,
+        startingCurrency: editor.startingCurrency,
         repairProtectionAtBase: editor.repairProtectionAtBase,
         powerCatalog: editor.powerCatalog }, mesaId), 'Rascunho salvo.'),
     publish: () => editor && run(async () => {
@@ -362,6 +369,7 @@ export const useManagementGame = (mesaId?: number) => {
           fallbackAction: editor.fallbackAction,
           playerDamageByResult: editor.playerDamageByResult,
           saleDiscountPercent: editor.saleDiscountPercent,
+          startingCurrency: editor.startingCurrency,
           repairProtectionAtBase: editor.repairProtectionAtBase,
           powerCatalog: editor.powerCatalog }, mesaId);
       return publishGameAdventureDraft(editor.idGameModeVersion, mesaId);
