@@ -1,4 +1,5 @@
 import { createPortal } from 'react-dom';
+import { getItemTagRarity } from '../../utils/itemTagRarity';
 import CloseIcon from '@mui/icons-material/Close';
 import { ReactNode } from 'react';
 import { describeAccessory, describeModifiers, getAccessoryCompatibilityLabel, getAttachedAccessories, getEffectiveItemAttributes, isAccessoryCompatible } from '../../utils/weaponModifiers';
@@ -279,15 +280,6 @@ const uniqueTags = (item: Item, typeLabel: string, extraTags: string[] = []) => 
     tags.findIndex((candidate) => candidate.localeCompare(tag, 'pt-BR', { sensitivity: 'base' }) === 0) === index
   ))
 );
-
-const getTagRarity = (tag: string): 'unique' | 'legendary' | undefined => {
-  const normalizedTag = formatCyberpunkTitle(tag).toLocaleLowerCase('pt-BR').trim();
-
-  if (/\blendari[oa]s?\b/.test(normalizedTag)) return 'legendary';
-  if (/\bunic[oa]s?\b/.test(normalizedTag)) return 'unique';
-
-  return undefined;
-};
 
 const HudCorners = ({ neon, accent }: { neon: boolean; accent?: 'gold' }) => (
   <>
@@ -931,7 +923,7 @@ const ItemPage = () => {
                     <ItemTag
                       key={tag}
                       $primary={index === 1}
-                      $rarity={getTagRarity(tag)}
+                      $rarity={getItemTagRarity(tag)}
                       $neon={isNeonActive}
                     >
                       {tag}

@@ -23,7 +23,7 @@ export const WeaponModifiers = ({ value: source, onChange, mode, theme, neon }: 
         <CyberButton type="button" theme={theme} neon={neon} text="Remover efeito" onClick={() => onChange({ ...value, efeitos: value.efeitos?.filter((_, position) => position !== index) })} />
       </ModifierEntry>
     ))}
-    <CyberButton type="button" theme={theme} neon={neon} text="Adicionar efeito especial" onClick={() => onChange({ ...value, efeitos: [...(value.efeitos ?? []), ''] })} />
+    <CyberButton type="button" theme={theme} neon={neon} width="fit-content" text="Adicionar efeito especial" onClick={() => onChange({ ...value, efeitos: [...(value.efeitos ?? []), ''] })} />
   </ModifierSection>
   );
 };

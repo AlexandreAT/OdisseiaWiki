@@ -61,6 +61,19 @@ public sealed class GameRunRepository : IGameRunRepository
 
     public GameRunRepository(OdisseiaContext context) => _context = context;
 
+    public Task<GameCharacterMemory?> GetCharacterMemoryAsync(int userId, int characterId, CancellationToken token) =>
+        _context.GameCharacterMemories.FirstOrDefaultAsync(item => item.IdPersonagemJogador == characterId &&
+            item.Personagem.Idusuario == userId, token);
+    public Task AddCharacterMemoryAsync(GameCharacterMemory memory, CancellationToken token) =>
+        _context.GameCharacterMemories.AddAsync(memory, token).AsTask();
+    public async Task<IReadOnlyList<GameRunBattle>> GetCharacterVictoriesAsync(
+        int userId, int characterId, int systemId, CancellationToken token) =>
+        await _context.GameRunBattles.AsNoTracking().Where(battle => battle.VencedorId == "player" &&
+            battle.Run.IdUsuario == userId && battle.Run.IdPersonagemJogadorOrigem == characterId &&
+            battle.Run.SistemaVersao.IdSistemaRpg == systemId)
+            .Include(battle => battle.Run).ThenInclude(run => run.GameModeVersion)
+            .OrderBy(battle => battle.CriadaEmUtc).ThenBy(battle => battle.IdGameRunBattle).ToListAsync(token);
+
     public async Task<IReadOnlyList<PersonagemJogador>> GetCharactersAsync(
         int idUsuario, CancellationToken cancellationToken) =>
         await _context.PersonagemJogadores.AsNoTracking()
@@ -199,8 +212,20 @@ public sealed class GameRunRepository : IGameRunRepository
 
     internal static string CreateBaseConfigurationForDraft() => BaseConfiguration();
 
-    public Task AddRunAsync(GameRun run, CancellationToken cancellationToken) =>
-        _context.GameRuns.AddAsync(run, cancellationToken).AsTask();
+    public Task AddRunAsync(GameRun run, CancellationToken cancellationToken)
+    {
+        // Published modes are read without tracking. Adding their detached graph
+        // with the run would attempt to INSERT the already-published version.
+        if (run.GameModeVersion is { } mode)
+        {
+            GameModeVersion? tracked = _context.GameModeVersions.Local
+                .FirstOrDefault(item => item.IdGameModeVersion == mode.IdGameModeVersion);
+            if (tracked is not null) run.GameModeVersion = tracked;
+            else if (_context.Entry(mode).State == EntityState.Detached)
+                _context.Entry(mode).State = EntityState.Unchanged;
+        }
+        return _context.GameRuns.AddAsync(run, cancellationToken).AsTask();
+    }
 
     public Task AddCommandAsync(GameRunCommand command, CancellationToken cancellationToken) =>
         _context.GameRunCommands.AddAsync(command, cancellationToken).AsTask();

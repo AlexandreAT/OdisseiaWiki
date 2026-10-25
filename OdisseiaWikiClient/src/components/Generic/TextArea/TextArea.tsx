@@ -1,4 +1,5 @@
 import { useState, useRef, memo, useCallback, useEffect } from 'react';
+import { useEventCallback } from '../../../hooks/useEventCallback';
 import {
   ContentController,
   TextAreaLabel,
@@ -8,6 +9,8 @@ import {
 } from './TextArea.style';
 import { FormLabelText } from '../FormLabelText';
 import { revealFirstValidationError } from '../../../utils/formValidationFeedback';
+import { FieldHelp } from '../FieldHelp/FieldHelp';
+import type { FieldHelpContent } from '../FieldHelp/FieldHelp.types';
 
 interface Props {
   theme: 'dark' | 'light';
@@ -25,6 +28,8 @@ interface Props {
   rows?: number;
   resize?: 'none' | 'both' | 'horizontal' | 'vertical';
   fullWidth?: boolean;
+  help?: FieldHelpContent;
+  helpKey?: string;
 }
 
 const TextAreaComponent = ({
@@ -43,6 +48,8 @@ const TextAreaComponent = ({
   rows = 4,
   resize = 'vertical',
   fullWidth = false,
+  help,
+  helpKey,
 }: Props) => {
   const [focus, setFocus] = useState(false);
   const [atTop, setAtTop] = useState(true);
@@ -82,6 +89,7 @@ const TextAreaComponent = ({
   return (
     <ContentController
       ref={controllerRef}
+      theme={theme} neon={neon} typeStyle={typeStyle}
       width={width}
       height={height}
       fullWidth={fullWidth}
@@ -108,15 +116,23 @@ const TextAreaComponent = ({
           resize={resize}
         />
         <TextAreaLabelSpan
+          data-field-label="true"
           active={focus || !!value}
           style={{ opacity: atTop ? 1 : 0, transition: 'opacity 0.2s' }}
         >
           <FormLabelText label={label} required={required} />
         </TextAreaLabelSpan>
       </TextAreaLabel>
+      <FieldHelp label={label} help={help} helpKey={helpKey} theme={theme} neon={neon} />
       {hasError && <SpanError>{errorMessage || nativeError}</SpanError>}
     </ContentController>
   );
 };
 
-export const TextArea = memo(TextAreaComponent);
+const MemoizedTextArea = memo(TextAreaComponent);
+export const TextArea = (props: Props) => {
+  const onChange = useEventCallback(props.onChange);
+  const onFocus = useEventCallback(props.onFocus);
+  return <MemoizedTextArea {...props}
+    onChange={props.onChange ? onChange : undefined} onFocus={props.onFocus ? onFocus : undefined} />;
+};

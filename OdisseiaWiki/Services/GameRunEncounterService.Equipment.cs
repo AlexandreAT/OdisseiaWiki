@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using OdisseiaWiki.Dtos;
 using OdisseiaWiki.Enums;
+using OdisseiaWiki.GameRuns;
 using OdisseiaWiki.GameRuns.Battle;
 using OdisseiaWiki.GameRuns.Inventory;
 using OdisseiaWiki.Models;
@@ -58,7 +59,8 @@ public sealed partial class GameRunEncounterService
                 var run = await _runs.GetByIdAsync(runId, userId, token);
                 if (run is null) return GameRunOperationResult<GameRunDto>.Fail("RUN_NAO_ENCONTRADA", "Run não encontrada.");
                 if (run.Revisao != request.RevisaoEsperada) return Stale<GameRunDto>();
-                if (run.Status != GameRunStatus.Ativa || run.NoAtualId is not null)
+                if (run.NoAtualId is not null || run.Status != GameRunStatus.Ativa &&
+                    !(run.Status == GameRunStatus.Vitoria && GameRunLoot.IsReceivedItem(run.EstadoAtualJson, itemId)))
                     return GameRunOperationResult<GameRunDto>.Fail("RUN_INDISPONIVEL", "Conclua o combate antes de alterar o equipamento.");
                 try
                 {

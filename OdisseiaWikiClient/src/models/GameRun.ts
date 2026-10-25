@@ -25,6 +25,7 @@ export interface GameCharacterOption {
 }
 
 export interface GameRunCharacterSnapshot {
+  economy?: { balance: number; stash: import('./Itens').Item[] } | null;
   carga?: { pesoAtual: number; capacidade: number; penalidadePercentual: number; sobrecarregado: boolean } | null;
   loot?: GameRunLoot | null;
   schemaVersion: 1;
@@ -133,12 +134,15 @@ export interface GameRunMapNode {
   type: string;
   state: 'DISPONIVEL' | 'SELECIONADO' | 'CONCLUIDO' | 'BLOQUEADO' | 'IGNORADO';
   connections: string[];
-  payload: { encounterCode: string | null; secretAreaCode?: string | null } | null;
+  payload: { encounterCode?: string | null; secretAreaCode?: string | null;
+    offers?: import('./GameModeManagement').GameModeVendorOffer[] | null } | null;
   revealed: boolean;
 }
 
 export interface GameRunModeConfig {
   schemaVersion: number;
+  startingCurrency?: number;
+  saleDiscountPercent?: number;
   repairProtectionAtBase?: boolean;
   areas?: { image?: string | null; isSecret?: boolean }[];
   encounters?: Record<string, {
@@ -148,6 +152,8 @@ export interface GameRunModeConfig {
     damageByResult: Record<string, number>;
   }>;
 }
+
+export interface GameRunSaleLine { itemId: string; quantity: number; }
 
 export interface GameRunBattleRecord {
   noId: string;

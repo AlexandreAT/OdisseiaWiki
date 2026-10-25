@@ -183,7 +183,7 @@ export const CharacterEdit = ({ theme, neon, personagem, userId, initialStep = 1
         [selectedRace]
     );
 
-    const itemColumns = React.useMemo(() => createItemColumns(theme, neon), [theme, neon]);
+    const itemColumns = React.useMemo(() => createItemColumns(theme, neon, runtimeContext), [theme, neon, runtimeContext]);
     const skillsColumns = React.useMemo(
       () => createSkillsColumns(theme, neon, runtimeContext),
       [theme, neon, runtimeContext],

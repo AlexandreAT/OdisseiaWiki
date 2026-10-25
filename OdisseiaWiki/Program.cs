@@ -421,8 +421,8 @@ public class Program
                     return;
                 }
 
-                logger.LogError(exception, "Erro inesperado ao processar {Method} {Path}",
-                    context.Request.Method, context.Request.Path);
+                logger.LogError(exception, "Erro inesperado ao processar {Method} {Path}. TraceId: {TraceId}",
+                    context.Request.Method, context.Request.Path, context.TraceIdentifier);
 
                 await WriteProblemAsync(
                     context,
@@ -618,6 +618,7 @@ public class Program
         services.AddScoped<IGameplayEngineService, GameplayEngineService>();
         services.AddScoped<IGameplayCombatService, GameplayCombatService>();
         services.AddScoped<IGameRunService, GameRunService>();
+        services.AddScoped<GameRunItemValueResolver>();
         services.AddScoped<GameModeManagementService>();
         services.AddScoped<IGameModeManagementService>(provider =>
             provider.GetRequiredService<GameModeManagementService>());

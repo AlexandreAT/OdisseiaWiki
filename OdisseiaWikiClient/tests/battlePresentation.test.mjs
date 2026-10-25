@@ -1,6 +1,84 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { activeBattleActor, buildBattleBeats, latestBattleImpact, visibleActorDefense, visibleActorResource } from '../src/routes/Game/BattleReplay/battlePresentation.ts';
+import { build } from 'esbuild';
+const bundle = await build({ entryPoints: ['src/routes/Game/BattleReplay/battlePresentation.ts'],
+  bundle: true, write: false, format: 'esm', platform: 'node' });
+const { activeBattleActor, buildBattleBeats, latestBattleImpact, visibleActorConditions, visibleActorDefense, visibleActorResource } =
+  await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
+
+test('condição informa duração e cada efeito periódico no turno correto sem duplicar deltas', () => {
+  const event = (type, payload, actorId = 'hero', targetId = null) => ({ type, payload, actorId, targetId, round: 1 });
+  const events = [event('ACTION_SELECTED', { actionName: 'Seringa', directUse: true }),
+    event('CONDITION_APPLIED', { code: 'REGEN', name: 'Regeneração', remainingTurns: 4 }, 'hero', 'hero'),
+    event('RESOURCE_CHANGED', { actionId: 'condicao:REGEN', resource: 'hitPoints', before: 100, after: 200 }),
+    event('CONDITION_EFFECT', { code: 'REGEN', name: 'Regeneração', operation: 'SOMAR', resource: 'VIDA',
+      value: 100, before: 100, after: 200, moment: 'AO_APLICAR' }, 'hero', 'hero'),
+    event('TURN_STARTED', {}),
+    event('RESOURCE_CHANGED', { actionId: 'condicao:REGEN', resource: 'hitPoints', before: 200, after: 300 }),
+    event('CONDITION_EFFECT', { code: 'REGEN', name: 'Regeneração', operation: 'SOMAR', resource: 'VIDA',
+      value: 100, before: 200, after: 300, moment: 'INICIO_TURNO' }, 'hero', 'hero'),
+    event('CONDITION_EXPIRED', { code: 'REGEN', name: 'Regeneração' })];
+  events.forEach((value, index) => { value.sequence = index + 1; });
+  const preview = { personagem: { id: 'hero', nome: 'Herói' }, oponente: { id: 'enemy', nome: 'Inimigo' },
+    resultado: { events } };
+  const beats = buildBattleBeats(preview);
+  assert.match(beats[0].text, /aplicou Regeneração \(4 turnos\)/);
+  assert.equal(beats.filter(beat => /\+100 vida/.test(beat.text)).length, 2);
+  assert.match(beats[2].text, /início do turno/);
+  assert.ok(beats[1].throughIndex < beats[2].throughIndex);
+  assert.match(beats.at(-1).text, /terminou/);
+});
+
+test('efeitos genéricos positivos e negativos mostram valor, recurso e alvo', () => {
+  const cases = [['MODIFICAR_ATRIBUTO', -5, 'PRECISAO', /-5 PRECISAO/],
+    ['MODIFICAR_ATRIBUTO', 3, 'RES', /\+3 RES/], ['MODIFICAR_DEFESA', 40, 'ARMADURA', /\+40 de defesa/],
+    ['MODIFICAR_DANO', -30, 'TODOS', /-30 de dano/], ['DESVANTAGEM', 0, 'TODOS', /desvantagem/],
+    ['REDUZIR_LIMITE_PERCENTUAL', 30, 'MANA', /máximo de mana −30%/]];
+  for (const [operation, value, resource, expected] of cases) {
+    const preview = { personagem: { id: 'hero', nome: 'Herói' }, oponente: { id: 'enemy', nome: 'Inimigo' },
+      resultado: { events: [{ sequence: 1, round: 1, type: 'CONDITION_EFFECT', actorId: 'enemy', targetId: 'enemy',
+        payload: { operation, value, resource, name: 'Efeito', moment: 'ENQUANTO_ATIVA' } }] } };
+    assert.match(buildBattleBeats(preview)[0].text, expected);
+    assert.match(buildBattleBeats(preview)[0].text, /^Inimigo — Efeito/);
+  }
+});
+
+test('ícones acompanham aplicação, empilhamento e expiração sem antecipar o resultado', () => {
+  const actor = { id: 'hero', condicoes: [{ rule: { code: 'INICIAL', name: 'Inicial' } }] };
+  const preview = { resultado: { events: [
+    { type: 'CONDITION_APPLIED', targetId: 'hero', payload: { code: 'REGEN', name: 'Regeneração', image: '/regen.png', remainingTurns: 4 } },
+    { type: 'CONDITION_APPLIED', targetId: 'enemy', payload: { code: 'CEGUEIRA', name: 'Cegueira' } },
+    { type: 'CONDITION_APPLIED', targetId: 'hero', payload: { code: 'REGEN', name: 'Regeneração', stackable: true } },
+    { type: 'CONDITION_EXPIRED', actorId: 'hero', payload: { code: 'REGEN' } },
+    { type: 'CONDITION_EXPIRED', actorId: 'hero', payload: { code: 'REGEN' } },
+  ] } };
+  assert.equal(visibleActorConditions(preview, actor, 0).length, 1);
+  assert.equal(visibleActorConditions(preview, actor, 1)[1].image, '/regen.png');
+  assert.equal(visibleActorConditions(preview, actor, 2).length, 2);
+  assert.equal(visibleActorConditions(preview, actor, 3).length, 3);
+  assert.equal(visibleActorConditions(preview, actor, 4).length, 2);
+  assert.equal(visibleActorConditions(preview, actor, 5).length, 1);
+});
+
+test('logs antigos também mostram os ticks de recurso da condição', () => {
+  const preview = { personagem: { id: 'hero', nome: 'Herói' }, oponente: { id: 'enemy', nome: 'Inimigo' },
+    resultado: { events: [{ sequence: 1, round: 1, type: 'RESOURCE_CHANGED', actorId: 'hero', targetId: null,
+      payload: { actionId: 'condicao:SANGRAR', resource: 'hitPoints', before: 100, after: 50 } }] } };
+  assert.match(buildBattleBeats(preview)[0].text, /SANGRAR: -50 vida/);
+});
+
+test('condição automática ao pagar mana não esconde a rolagem e o dano da ação', () => {
+  const preview = previewFor('hero', 'ACERTO', 100, false, false);
+  preview.resultado.events.splice(2, 0,
+    { type: 'CONDITION_APPLIED', actorId: 'hero', targetId: 'hero', payload: { code: 'FADIGA', name: 'Fadiga' } },
+    { type: 'CONDITION_EFFECT', actorId: 'hero', targetId: 'hero', payload: { code: 'FADIGA', name: 'Fadiga',
+      operation: 'MODIFICAR_ATRIBUTO', resource: 'PRECISAO', value: -5, moment: 'ENQUANTO_ATIVA' } });
+  const action = buildBattleBeats(preview).find(beat => beat.action)?.action;
+  assert.ok(action);
+  assert.equal(action.damage, 100);
+  assert.equal(action.result, 'acerto');
+  assert.ok(action.resourceEffects.some(message => message.includes('Fadiga: -5 PRECISAO')));
+});
 
 test('escudo e proteção aparecem somente quando o impacto correspondente é revelado', () => {
   const actor = { id: 'hero', defesas: { shield: 500, protection: 200, armor: 25 } };

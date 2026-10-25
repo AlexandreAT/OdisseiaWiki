@@ -4,6 +4,7 @@ using Moq;
 using OdisseiaWiki.Dtos;
 using OdisseiaWiki.Enums;
 using OdisseiaWiki.GameRuns.Battle;
+using OdisseiaWiki.GameRuns;
 using OdisseiaWiki.Models;
 using OdisseiaWiki.Repositories.Interfaces;
 using OdisseiaWiki.Services;
@@ -993,6 +994,66 @@ public sealed class GameBattlePreviewFactoryTests
         Assert.True(samples.Distinct().Count() > 1,
             "Novas simulações de treino não devem reutilizar a seed da run.");
         Assert.Equal(12345, run.Seed);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task TreinoListaVitoriasDoPersonagemSemDuplicarEValidaSelecaoNoServidor(bool historical)
+    {
+        var original = Run("[]");
+        var run = new GameRunDto { IdGameRun = 99, IdPersonagemJogadorOrigem = 12,
+            IdSistemaVersao = 7, Status = "Ativa", ConfiguracaoModo = original.ConfiguracaoModo,
+            EstadoAtual = original.EstadoAtual };
+        var version = Version(); version.IdSistemaRpg = 8;
+        var enemy = new GameBattleEncounterConfig { Enemy = new() { NpcId = 33, Name = "Maga de fogo", MaxVida = 200,
+            MaxMana = 60, MaxEstamina = 20, Quantity = 3, Image = "/maga.png" }, DamageByResult = new()
+            { ["FALHA_CRITICA"] = 0, ["ERRO"] = 0, ["ACERTO"] = 10, ["ACERTO_PRECISO"] = 15, ["CRITICO"] = 20 } };
+        var state = new GameCharacterMilestones();
+        state.Learn(8, "JOGO", "MAGA", enemy);
+        string key = Assert.Single(state.DefeatedEnemies).Key;
+        state.Learn(9, "OUTRO_SISTEMA", "MAGA", enemy);
+        var repository = new Mock<IGameRunRepository>();
+        repository.Setup(item => item.GetOwnedCharacterAsync(4, 12, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PersonagemJogador { IdpersonagemJogador = 12 });
+        repository.Setup(item => item.GetCharacterMemoryAsync(4, 12, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(historical ? null : new GameCharacterMemory { IdPersonagemJogador = 12, EstadoJson = state.Serialize() });
+        var oldConfig = JsonNode.Parse(original.ConfiguracaoModo.GetRawText())!;
+        oldConfig["encounters"] = new JsonObject { ["MAGA"] = JsonSerializer.SerializeToNode(enemy, new JsonSerializerOptions(JsonSerializerDefaults.Web)) };
+        var victory = new GameRunBattle { NoId = "maga-1", VencedorId = "player", Run = new GameRun {
+            GameModeVersion = new() { Codigo = "JOGO", ConfiguracaoJson = oldConfig.ToJsonString() },
+            MapaJson = """{"nodes":[],"historicalNodes":[{"id":"maga-1","payload":{"encounterCode":"MAGA"}}]}""" } };
+        repository.Setup(item => item.GetCharacterVictoriesAsync(4, 12, 8, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([victory, victory]);
+        var runs = new Mock<IGameRunService>();
+        runs.Setup(item => item.GetByIdAsync(99, 4, It.IsAny<CancellationToken>())).ReturnsAsync(run);
+        var systems = new Mock<ISistemaRpgRepository>();
+        systems.Setup(item => item.GetVersionAsync(7, true, false)).ReturnsAsync(version);
+        GameBattleInput? received = null;
+        var simulator = new Mock<IAutoBattleSimulator>();
+        simulator.Setup(item => item.Simulate(It.IsAny<GameBattleInput>(), It.IsAny<IDiceRandomSource>()))
+            .Returns((GameBattleInput input, IDiceRandomSource _) => {
+                received = input; return new GameBattleResult(null, GameBattleEndReason.RoundLimit, 0, [], []);
+            });
+        var service = new GameBattlePreviewService(runs.Object, systems.Object, _factory, simulator.Object, repository.Object);
+        string before = run.EstadoAtual.Status.GetRawText() + run.EstadoAtual.Inventario?.GetRawText() + run.ConfiguracaoModo.GetRawText();
+        var choices = await service.GetOpponentsAsync(99, 4, default);
+        Assert.True(choices.Sucesso);
+        Assert.Equal(2, choices.Dados!.Count);
+        Assert.Equal("default", choices.Dados[0].Key);
+        Assert.Equal("Maga de fogo", choices.Dados[1].Nome);
+        Assert.Equal(200, choices.Dados[1].Vida);
+        Assert.Equal("OPONENTE_NAO_DESBLOQUEADO", (await service.PreviewAsync(99, 4, "forjado", default)).Codigo);
+        Assert.Null(received);
+        var battle = await service.PreviewAsync(99, 4, key, default);
+        Assert.True(battle.Sucesso, battle.Mensagem);
+        Assert.Equal("Maga de fogo", received!.SecondActor.Name);
+        Assert.Empty(received.AdditionalEnemies);
+        Assert.Equal(before, run.EstadoAtual.Status.GetRawText() + run.EstadoAtual.Inventario?.GetRawText() + run.ConfiguracaoModo.GetRawText());
+        repository.Verify(item => item.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        repository.Verify(item => item.AddCharacterMemoryAsync(It.IsAny<GameCharacterMemory>(), It.IsAny<CancellationToken>()), Times.Never);
+        Assert.Equal("RUN_NAO_ENCONTRADA", (await service.GetOpponentsAsync(99, 55, default)).Codigo);
+        Assert.Equal("RUN_NAO_ENCONTRADA", (await service.PreviewAsync(99, 55, key, default)).Codigo);
     }
 
     private static GameRunDto Run(string inventory) => new()

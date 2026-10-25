@@ -22,6 +22,20 @@ import type { GameAdventure } from '../models/GameModeManagement';
 
 const basePath = '/game-runs';
 
+export const enterGameRunVendor = async (id: number, nodeId: string, payload: GameRunMutationRequest): Promise<GameRunDto> =>
+  (await api.post<GameRunDto>(`${basePath}/${id}/nodes/${encodeURIComponent(nodeId)}/vendor`, payload)).data;
+export const buyGameRunVendorItem = async (id: number, payload: GameRunMutationRequest & {
+  itemId: string; toStash: boolean }): Promise<GameRunDto> =>
+  (await api.post<GameRunDto>(`${basePath}/${id}/vendor/buy`, payload)).data;
+export const leaveGameRunVendor = async (id: number, payload: GameRunMutationRequest): Promise<GameRunDto> =>
+  (await api.post<GameRunDto>(`${basePath}/${id}/vendor/leave`, payload)).data;
+export const sellGameRunVendorItems = async (id: number, payload: GameRunMutationRequest & {
+  items: import('../models/GameRun').GameRunSaleLine[]; fromStash: boolean }): Promise<GameRunDto> =>
+  (await api.post<GameRunDto>(`${basePath}/${id}/vendor/sell`, payload)).data;
+export const transferGameRunStashItem = async (id: number, payload: GameRunMutationRequest & {
+  itemId: string; toStash: boolean }): Promise<GameRunDto> =>
+  (await api.post<GameRunDto>(`${basePath}/${id}/stash/transfer`, payload)).data;
+
 export const getGameRunAttributes = async (id: number): Promise<import('../models/GameRun').GameAttributeOptions> =>
   (await api.get(`${basePath}/${id}/attributes`)).data;
 export const upgradeGameRunAttribute = async (id: number, payload: GameRunMutationRequest & { codigo: string }): Promise<GameRunDto> =>

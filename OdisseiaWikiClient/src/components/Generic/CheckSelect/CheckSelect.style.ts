@@ -79,6 +79,8 @@ export const CheckDisplay = styled.div<DisplayProps & { height?: string; $compac
       box-shadow: 0 0 1px 1px rgba(50,50,50,0.8);
     `}
 
+  &[data-field-active='true'] { border-color: var(--field-help-active-border); }
+
   ${({ error }) =>
     error &&
     css`

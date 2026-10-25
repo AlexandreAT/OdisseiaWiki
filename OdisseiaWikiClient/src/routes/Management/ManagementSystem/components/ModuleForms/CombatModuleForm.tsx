@@ -1,4 +1,5 @@
 import { CheckBox } from '../../../../../components/Generic/CheckBox/CheckBox';
+import { HelpHeading } from '../../../../../components/Generic/HelpHeading/HelpHeading';
 import { InputText } from '../../../../../components/Generic/InputText/InputText';
 import { TextArea } from '../../../../../components/Generic/TextArea/TextArea';
 import {
@@ -135,7 +136,7 @@ export const CombatModuleForm = ({
   <ModuleFieldset disabled={readOnly}>
     <ModuleIntro theme={theme} neon={neon}>
       <div>
-        <h3>Combate</h3>
+        <HelpHeading level="h3" label="Combate" />
         <p>
           Modele iniciativa, turnos, intervalos de resultado e catálogos de dano e defesa. O editor
           detecta sobreposições, lacunas e resultados fora do dado informado.
@@ -144,7 +145,7 @@ export const CombatModuleForm = ({
     </ModuleIntro>
 
     <SectionCard theme={theme} neon={neon}>
-      <h4>Iniciativa e turno</h4>
+      <HelpHeading label="Iniciativa e turno" />
       <InlineChecks>
         <CheckBox neon={neon} label="Usar iniciativa" checked={value.usaIniciativa} onChange={(usaIniciativa) => onChange({ ...value, usaIniciativa })} disabled={readOnly} />
       </InlineChecks>
@@ -156,7 +157,7 @@ export const CombatModuleForm = ({
     </SectionCard>
 
     <SectionCard theme={theme} neon={neon}>
-      <h4>Custos de ataques múltiplos</h4>
+      <HelpHeading label="Custos de ataques múltiplos" />
       <p>Valor cobrado por cada tiro ou rajada além do primeiro. Armas de fogo usam o maior valor entre esta regra e o custo adicional definido no item; 0 não cobra custo extra. Publique uma nova versão para aplicar a regra em novas jornadas.</p>
       <FieldGrid $columns={2}>
         <InputText theme={theme} neon={neon} label="Estamina por ataque adicional" type="number" value={value.estaminaPorAtaqueAdicional ?? 0} onChange={(event) => onChange({ ...value, estaminaPorAtaqueAdicional: Number(event.target.value) })} error={Boolean(errors.estaminaPorAtaqueAdicional)} errorMessage={errors.estaminaPorAtaqueAdicional} />

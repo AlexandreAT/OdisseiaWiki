@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react';
+import { describeSystemOptions } from '../../../../../content/systemOptionHelp';
+import { HelpHeading } from '../../../../../components/Generic/HelpHeading/HelpHeading';
 import { CheckBox } from '../../../../../components/Generic/CheckBox/CheckBox';
 import { InputText } from '../../../../../components/Generic/InputText/InputText';
 import { Select } from '../../../../../components/Generic/Select/Select';
@@ -136,7 +138,7 @@ export const ProgressionModuleForm = ({
     <ModuleFieldset disabled={readOnly}>
       <ModuleIntro theme={theme} neon={neon}>
         <div>
-          <h3>Progressão</h3>
+          <HelpHeading level="h3" label="Progressão" />
           <p>
             Configure a curva nível a nível, recompensas e fontes de experiência. Lacunas, níveis
             repetidos e valores negativos são sinalizados antes do salvamento e da publicação.
@@ -145,7 +147,7 @@ export const ProgressionModuleForm = ({
       </ModuleIntro>
 
       <SectionCard theme={theme} neon={neon}>
-        <h4>Parâmetros da curva</h4>
+        <HelpHeading label="Parâmetros da curva" />
         <p>Total de pontos concedidos na curva atual: {totalPoints}.</p>
         <FieldGrid $columns={3}>
           <InputText
@@ -185,10 +187,12 @@ export const ProgressionModuleForm = ({
       </SectionCard>
 
       <SectionCard theme={theme} neon={neon}>
-        <h4>Recompensas do jogo</h4>
+        <HelpHeading label="Recompensas do jogo" />
         <Select theme={theme} neon={neon} label="Dado de loot"
           value={value.dadoLootFaces?.toString() ?? ''}
-          options={[{ label: 'Não configurado', value: '' }, ...[4, 6, 8, 10, 12, 20].map((faces) => ({ label: `D${faces}`, value: String(faces) }))]}
+          options={[{ label: 'Não configurado', value: '', description: 'Deixa o dado de loot sem uma escolha explícita.' },
+            ...[4, 6, 8, 10, 12, 20].map((faces) => ({ label: `D${faces}`, value: String(faces),
+              description: `Rola um dado de ${faces} faces; resultados acima de ${faces / 2} favorecem os loots mais raros.` }))]}
           onChange={(event) => onChange({ ...value, dadoLootFaces: Number(event.target.value) || null })} />
         <p>Apenas o dado vem do Sistema. A quantidade e os pesos dos itens são definidos por encontro no gerenciamento do jogo.</p>
       </SectionCard>
@@ -198,10 +202,10 @@ export const ProgressionModuleForm = ({
         rows={value.influenciasAtributos ?? []}
         columns={[
           { key: 'codigoAtributo', label: 'Código do atributo', type: 'text', suggestions: references?.attributes },
-          { key: 'recurso', label: 'Recurso', type: 'select', options: [
+          { key: 'recurso', label: 'Recurso', type: 'select', options: describeSystemOptions('progressionResource', [
             { label: 'Vida', value: 'vida' }, { label: 'Mana', value: 'mana' },
             { label: 'Estamina', value: 'estamina' },
-          ] },
+          ]) },
           { key: 'percentualPorValor', label: '% por valor', type: 'number', min: 0 },
         ]}
         createRow={() => ({ codigoAtributo: '', recurso: 'mana', percentualPorValor: 10 })}

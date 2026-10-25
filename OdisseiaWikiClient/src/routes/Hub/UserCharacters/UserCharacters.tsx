@@ -4,6 +4,11 @@ import toast from 'react-hot-toast';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ConfirmDialog } from '../../../components/Generic/ConfirmDialog/ConfirmDialog';
 import { LoadingIndicator } from '../../../components/Generic/LoadingIndicator';
+import { Search } from '../../../components/Generic/Search/Search';
+import { BiSearchAlt } from 'react-icons/bi';
+import { useStoredPreferences } from '../../../hooks/useStoredPreferences';
+import { DEFAULT_CHARACTER_FILTERS, characterFiltersKey, normalizeCharacterFilters, filterCharacterResults,
+  type CharacterOrder, type CharacterFilter } from '../../../utils/listFilters';
 import { PersonagemJogador, StatusBase } from '../../../models/PersonagemJogador';
 import { CidadePayload, getCidades, getCidadesByIds } from '../../../services/cidadesService';
 import { getMesas } from '../../../services/mesaService';
@@ -18,6 +23,7 @@ import {
   DeleteSelectedButton,
   FilterValueField,
   ListHeaderTools,
+  CharacterSearch,
   ListController,
   Main,
   SelectModeButton,
@@ -50,8 +56,6 @@ interface PersonagemComStatus extends PersonagemJogador {
 }
 
 export type ViewMode = 'list' | 'create' | 'edit';
-type CharacterOrder = 'name' | 'date';
-type CharacterFilter = 'none' | 'race' | 'city' | 'mesa';
 
 const emptyStatus: StatusBase = {
   vida: 0,
@@ -182,9 +186,9 @@ export const UserCharacters = ({
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [selectedCharacter, setSelectedCharacter] = useState<PersonagemJogador | null>(null);
-  const [orderBy, setOrderBy] = useState<CharacterOrder>('name');
-  const [filterBy, setFilterBy] = useState<CharacterFilter>('none');
-  const [filterValue, setFilterValue] = useState('');
+  const [filters, setFilters] = useStoredPreferences(characterFiltersKey(userId), DEFAULT_CHARACTER_FILTERS, normalizeCharacterFilters);
+  const { orderBy, filterBy, filterValue } = filters;
+  const [characterQuery, setCharacterQuery] = useState('');
   const [availableRaces, setAvailableRaces] = useState<RacaPayload[]>([]);
   const [availableCities, setAvailableCities] = useState<CidadePayload[]>([]);
   const [availableMesas, setAvailableMesas] = useState<Mesa[]>([]);
@@ -329,27 +333,11 @@ export const UserCharacters = ({
     return [];
   }, [availableCities, availableMesas, availableRaces, filterBy, personagens]);
 
-  const displayedCharacters = useMemo(() => {
-    const selectedFilterId = Number(filterValue);
-    const filtered = filterBy === 'none' || !selectedFilterId
-      ? [...personagens]
-      : personagens.filter((personagem) => {
-          if (filterBy === 'race') return Number(personagem.idraca) === selectedFilterId;
-          if (filterBy === 'city') return Number(personagem.idcidade) === selectedFilterId;
-          return Number(personagem.idmesa) === selectedFilterId;
-        });
-
-    return filtered.sort((a, b) => {
-      if (orderBy === 'date') {
-        return new Date(b.dataCriacao || 0).getTime() - new Date(a.dataCriacao || 0).getTime();
-      }
-      return a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' });
-    });
-  }, [filterBy, filterValue, orderBy, personagens]);
+  const displayedCharacters = useMemo(() => filterCharacterResults(personagens, filters, characterQuery),
+    [personagens, filters, characterQuery]);
 
   const handleFilterChange = (nextFilter: CharacterFilter) => {
-    setFilterBy(nextFilter);
-    setFilterValue('');
+    setFilters(previous => ({ ...previous, filterBy: nextFilter, filterValue: '' }));
     setSelectedIds(new Set());
   };
 
@@ -472,7 +460,10 @@ export const UserCharacters = ({
           <ToolField>
             <SortByAlpha aria-hidden="true" />
             <span>Ordenar</span>
-            <ToolSelect value={orderBy} onChange={(event) => setOrderBy(event.target.value as CharacterOrder)}>
+            <ToolSelect value={orderBy} onChange={(event) => {
+              const nextOrder = event.target.value as CharacterOrder;
+              setFilters(previous => ({ ...previous, orderBy: nextOrder }));
+            }}>
               <option value="name">Nome</option>
               <option value="date">Data de criação</option>
             </ToolSelect>
@@ -490,8 +481,14 @@ export const UserCharacters = ({
           {filterBy !== 'none' && (
             <FilterValueField>
               <span>Valor</span>
-              <ToolSelect value={filterValue} onChange={(event) => setFilterValue(event.target.value)}>
+              <ToolSelect value={filterValue} onChange={(event) => {
+                const nextValue = event.target.value;
+                setFilters(previous => ({ ...previous, filterValue: nextValue }));
+              }}>
                 <option value="">Todos</option>
+                {filterValue && !filterOptions.some(option => String(option.id) === filterValue) && (
+                  <option value={filterValue}>Filtro salvo indisponível</option>
+                )}
                 {filterOptions.map((option) => (
                   <option key={option.id} value={option.id}>{option.name}</option>
                 ))}
@@ -515,6 +512,13 @@ export const UserCharacters = ({
           )}
         </ListHeaderTools>
       )}
+      {personagens.length > 0 && (
+        <CharacterSearch>
+          <Search theme={theme} neon={neon} width="100%" label="Pesquisar personagens"
+            icon={<BiSearchAlt />} value={characterQuery}
+            onChange={event => setCharacterQuery(event.target.value)} />
+        </CharacterSearch>
+      )}
       <ButtonDiv theme={theme} neon={neon}>
         <StyledIconButton theme={theme} neon={neon} onClick={() => updateRouteState('create')}>
           <Add className="icon" />
@@ -522,6 +526,7 @@ export const UserCharacters = ({
       </ButtonDiv>
       {error ? error : (
         <ListController>
+          {personagens.length > 0 && displayedCharacters.length === 0 && <p role="status">Nenhum personagem corresponde à pesquisa e aos filtros.</p>}
           {displayedCharacters.map((personagem) => (
             <CharacterSelectionCard
               key={personagem.idpersonagemJogador}

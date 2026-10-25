@@ -1,4 +1,5 @@
 import styled, { keyframes, css } from 'styled-components';
+import { fieldHelpSpacing } from '../FieldHelp/FieldHelp.style';
 
 interface Props {
   theme?: 'dark' | 'light';
@@ -22,6 +23,7 @@ const getPink = (typeStyle?: 'primary' | 'secondary') =>
   typeStyle === 'secondary' ? 'var(--clearneonBlue)' : 'var(--clearneonPink)';
 
 export const ContentController = styled.div<Props>`
+  ${fieldHelpSpacing}
   position: relative;
   border: none;
   padding: 0;
@@ -196,6 +198,11 @@ export const SelectArrow = styled.span<{ $open: boolean }>`
   border-top: 6px solid var(--whitesmoke);
   transform: ${({ $open }) => ($open ? 'rotate(180deg)' : 'none')};
   transition: transform 0.2s ease;
+
+  ${ContentController}:has(> [data-field-help]) & {
+    position: relative;
+    top: 6px;
+  }
 `;
 
 export const SelectDropdown = styled.div`

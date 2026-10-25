@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { describeSystemOptions } from '../../../../../content/systemOptionHelp';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
@@ -115,11 +116,11 @@ export const SystemCatalog = ({
           label="Status"
           value={statusFilter}
           onChange={(event) => setStatusFilter(event.target.value)}
-          options={[
+          options={describeSystemOptions('catalogStatus', [
             { label: 'Todos', value: 'todos' },
             { label: 'Ativos', value: 'ativos' },
             { label: 'Inativos', value: 'inativos' },
-          ]}
+          ])}
           allowEmptyOption={false}
           height="56px"
         />
@@ -129,11 +130,11 @@ export const SystemCatalog = ({
           label="Ordenar por"
           value={sort}
           onChange={(event) => setSort(event.target.value)}
-          options={[
+          options={describeSystemOptions('catalogSort', [
             { label: 'Atualização', value: 'atualizacao' },
             { label: 'Nome', value: 'nome' },
             { label: 'Quantidade de versões', value: 'versoes' },
-          ]}
+          ])}
           allowEmptyOption={false}
           height="56px"
         />

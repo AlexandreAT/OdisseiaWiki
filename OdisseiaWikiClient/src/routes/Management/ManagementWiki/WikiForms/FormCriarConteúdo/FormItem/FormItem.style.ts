@@ -1,4 +1,5 @@
 import styled from 'styled-components';
+import { cyberButtonActionRow } from '../../../../../../components/Generic/HighlightButton/HighlightButton.styles';
 import { managementEntityToolbarResponsive } from '../../ManagementEntityToolbar.style';
 import { handleNumericInputFocus } from '../../../../../../utils/numericInput';
 
@@ -78,96 +79,6 @@ export const TagSectionHeader = styled.div`
   }
 `;
 
-export const TagInfoDetails = styled.details<Props>`
-  position: relative;
-  z-index: 8;
-  margin-bottom: 15px;
-
-  &[open] {
-    z-index: 12;
-  }
-`;
-
-export const TagInfoSummary = styled.summary<Props>`
-  display: grid;
-  width: 30px;
-  height: 30px;
-  place-items: center;
-  border: 1px solid ${({ theme, neon }) => theme === 'dark'
-    ? neon === 'on' ? 'var(--clearneonBlue)' : 'var(--grey)'
-    : neon === 'on' ? 'var(--neonViolet)' : 'var(--grey)'};
-  border-radius: 4px;
-  background: ${({ theme }) => theme === 'dark' ? 'rgba(0, 10, 22, 0.82)' : 'var(--clearWhite)'};
-  color: ${({ theme, neon }) => theme === 'dark'
-    ? neon === 'on' ? 'var(--clearneonBlue)' : 'var(--lightGrey)'
-    : neon === 'on' ? 'var(--neonViolet)' : 'var(--deepgrey)'};
-  cursor: pointer;
-  list-style: none;
-  transition: border-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
-
-  &::-webkit-details-marker { display: none; }
-
-  svg,
-  svg path {
-    width: 18px;
-    height: 18px;
-    color: currentColor !important;
-    fill: currentColor !important;
-    stroke: currentColor !important;
-  }
-
-  &:hover,
-  &:focus-visible {
-    border-color: ${({ theme }) => theme === 'dark' ? 'var(--clearneonBlue)' : 'var(--neonViolet)'};
-    color: ${({ theme }) => theme === 'dark' ? 'var(--clearneonBlue)' : 'var(--neonViolet)'};
-    box-shadow: 0 0 8px rgba(0, 190, 255, 0.18);
-    outline: none;
-  }
-`;
-
-export const TagInfoPopover = styled.div<Props>`
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  display: flex;
-  width: min(360px, calc(100vw - 48px));
-  flex-direction: column;
-  gap: 8px;
-  border: 1px solid ${({ theme, neon }) => theme === 'dark'
-    ? neon === 'on' ? 'var(--clearneonBlue)' : 'var(--grey)'
-    : neon === 'on' ? 'var(--neonViolet)' : 'var(--grey)'};
-  border-radius: 4px;
-  padding: 12px 14px;
-  background: ${({ theme }) => theme === 'dark' ? 'rgba(2, 10, 22, 0.98)' : 'rgba(248, 249, 252, 0.98)'};
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.38);
-  box-sizing: border-box;
-
-  strong {
-    color: ${({ theme }) => theme === 'dark' ? 'var(--clearneonBlue)' : 'var(--neonViolet)'};
-    font-family: 'DO Futuristic', sans-serif;
-    font-size: 11px;
-    font-weight: 100;
-    letter-spacing: 0.8px;
-    text-transform: uppercase;
-  }
-
-  p {
-    margin: 0;
-    color: ${({ theme }) => theme === 'dark' ? 'var(--lightGrey)' : 'var(--deepgrey)'};
-    font-size: 11px;
-    line-height: 1.55;
-  }
-
-  b { color: inherit; }
-
-  p:nth-of-type(1) b { color: var(--clearneonGreen); }
-  p:nth-of-type(2) b { color: #d6a900; }
-
-  @media (max-width: 480px) {
-    width: min(310px, calc(100vw - 36px));
-    padding: 11px 12px;
-  }
-`;
 
 export const AtributosSection = styled.div<Props>`
   display: flex;
@@ -211,6 +122,7 @@ export const AtributosGrid = styled.div`
 `;
 
 export const ButtonsContainer = styled.div<Props>`
+  ${cyberButtonActionRow}
   display: flex;
   flex-direction: row;
   justify-content: flex-end;

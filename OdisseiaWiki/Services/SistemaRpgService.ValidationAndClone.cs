@@ -291,12 +291,12 @@ public sealed partial class SistemaRpgService
              !c.ValorEfeito.HasValue)))
             erros.Add("Um efeito automático de condição precisa de operação, recurso, momento e valor quando aplicável.");
         if (dto.Condicoes.Any(c =>
-            (c.RegraRemocao ?? "").Split(';').Any(code => code.Trim().Equals("DURACAO", StringComparison.OrdinalIgnoreCase)) && c.DuracaoPadrao is not > 0 ||
-            (c.RegraRemocao ?? "").Split(';').Any(code => code.Trim().Equals("DURACAO", StringComparison.OrdinalIgnoreCase)) &&
+            SistemaCondicaoRemocao.Codigos(c.RegraRemocao).Contains("DURACAO") && c.DuracaoPadrao is not > 0 ||
+            SistemaCondicaoRemocao.Codigos(c.RegraRemocao).Contains("DURACAO") &&
             c.UnidadeDuracao is not (SistemaUnidadeDuracao.Turno or SistemaUnidadeDuracao.Hora)))
             erros.Add("A recuperação automática da condição precisa de duração ou gatilho correspondente.");
         if (dto.Condicoes.Any(c => c.RegraRemocao?.Contains(';') == true &&
-            c.RegraRemocao.Split(';').Any(code => !new[] { "DURACAO", "GATILHO_CESSOU",
+            SistemaCondicaoRemocao.Codigos(c.RegraRemocao).Any(code => !new[] { "MANUAL", "DURACAO", "GATILHO_CESSOU",
                 "DESCANSO_SIMPLES", "DESCANSO_NORMAL", "DESCANSO_LONGO", "CURA", "MAGIA" }
                 .Contains(code.Trim().ToUpperInvariant()))))
             erros.Add("A condição possui uma forma de recuperação desconhecida.");

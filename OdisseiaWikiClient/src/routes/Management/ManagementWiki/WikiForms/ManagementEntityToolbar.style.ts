@@ -15,7 +15,7 @@ export const managementEntityToolbarResponsive = css`
     border-radius: 8px;
     background: rgba(0, 8, 18, 0.78);
     box-sizing: border-box;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
   }
 
   @media (max-width: 768px) {
@@ -29,16 +29,19 @@ export const managementEntityToolbarResponsive = css`
       flex: 1 1 0;
       width: auto !important;
       min-width: 0;
-      height: 44px !important;
+      height: auto !important;
+      min-height: 44px;
+      padding: 4px;
 
-      > div,
       > button {
         width: 100% !important;
-        height: 36px !important;
+        height: auto !important;
+        min-height: 36px;
       }
 
       > button {
         padding-inline: 4px;
+        padding-block: 6px;
         font-size: 9px;
       }
     }

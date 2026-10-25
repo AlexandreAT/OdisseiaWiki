@@ -1,4 +1,5 @@
 import React from 'react';
+import { describeSystemOptions } from '../../../../../../content/systemOptionHelp';
 import { InputText } from '../../../../../../components/Generic/InputText/InputText';
 import { Select } from '../../../../../../components/Generic/Select/Select';
 import { CheckBox } from '../../../../../../components/Generic/CheckBox/CheckBox';
@@ -8,7 +9,7 @@ import { AttributeRow, AttributeSubsection, AttributeSubsectionTitle, FormItemAt
 import { ArmaAtributos, ArmaTipo, ArmaTipoDano, ImplanteAtributos, TrajeAtributos } from '../../../../../../models/Itens';
 import { ACERTO_DADO_OPTIONS, ARMA_TIPO_DANO_OPTIONS, ARMA_TIPO_OPTIONS, getPrimeiroAtaqueComGastoEstamina, normalizeDadoAcerto, TRAJE_TIPO_OPTIONS } from '../../../../../../constants';
 import { DadoAcerto } from '../../../../../../models/Dados';
-import { catalogReferenceOptions, ItemFormOption, SistemaItemFormCatalog } from '../../../../../../utils/systemItemFormCatalog';
+import { catalogReferenceOptions, ItemFormOption, SistemaItemFormCatalog, normalizeSystemItemCode } from '../../../../../../utils/systemItemFormCatalog';
 import { WeaponModifiers } from '../../../../../../components/WeaponModifiers/WeaponModifiers';
 import { WeaponAccessories } from '../../../../../../components/WeaponAccessories/WeaponAccessories';
 import { getWeaponModifierMode } from '../../../../../../utils/weaponModifiers';
@@ -200,8 +201,8 @@ const ConditionEffectFields = ({
   onChange,
   theme,
   neon,
-  options = [],
-  resultOptions = [],
+  options: catalogOptions,
+  resultOptions: resultCatalogOptions,
   allowEquipTrigger = false,
   useOnly = false,
 }: {
@@ -215,20 +216,40 @@ const ConditionEffectFields = ({
   useOnly?: boolean;
 }) => {
   const [expanded, setExpanded] = React.useState(value.length > 0);
+  const options = catalogOptions ?? [];
+  const catalogAvailable = catalogOptions !== undefined;
+  const resultOptions = resultCatalogOptions ?? [];
+  const resultCatalogAvailable = resultCatalogOptions !== undefined;
+  const findCondition = (code: string) => options.find(option =>
+    normalizeSystemItemCode(option.value) === normalizeSystemItemCode(code));
+  const findResult = (code?: string) => code ? resultOptions.find(option =>
+    normalizeSystemItemCode(option.value) === normalizeSystemItemCode(code)) : undefined;
   const [naturalInputs, setNaturalInputs] = React.useState<Record<number, string>>({});
   const update = (index: number, changes: Partial<GameplayConditionEffectConfig>) => onChange(
     value.map((condition, currentIndex) => currentIndex === index ? { ...condition, ...changes } : condition),
   );
-  const available = options.filter((option) => !value.some((condition) => condition.codigo === option.value));
+  const available = options.filter((option) => !value.some((condition) =>
+    normalizeSystemItemCode(condition.codigo) === normalizeSystemItemCode(option.value)));
+  const addCondition = () => {
+    if (!available.length) return;
+    onChange([...value, { codigo: available[0].value,
+      gatilho: useOnly ? 'AO_USAR' : allowEquipTrigger ? 'AO_EQUIPAR' : 'ACERTO',
+      alvo: useOnly ? 'USUARIO' : 'ALVO', unidadeDuracao: 'Turno' }]);
+    setExpanded(true);
+  };
   return (
     <AttributeSubsection theme={theme} neon={neon}>
       <CyberButton theme={theme} neon={neon} colorType="secondary" width="fit-content"
-        text={expanded ? 'Ocultar condições' : `Adicionar condição${value.length ? ` · ${value.length}` : ''}`}
-        onClick={() => setExpanded(!expanded)} />
+        text={expanded ? 'Ocultar condições' : value.length ? `Mostrar condições · ${value.length}` : 'Adicionar condição'}
+        onClick={() => {
+          if (!expanded && value.length === 0) addCondition();
+          setExpanded(!expanded);
+        }} />
       {expanded && <>
       <AttributeSubsectionTitle theme={theme} neon={neon}>Condições aplicadas</AttributeSubsectionTitle>
       <p>Escolha uma condição do Sistema. Aqui você pode ajustar o gatilho, a duração e cada efeito desta origem. Valores vazios usam o padrão publicado.</p>
-      {options.length === 0 && <p>Escolha um Sistema publicado com condições para configurar este efeito.</p>}
+      {!catalogAvailable && <p role="status">As condições do Sistema ainda não foram carregadas.</p>}
+      {catalogAvailable && options.length === 0 && <p>Este Sistema não tem condições configuradas.</p>}
       {value.map((condition, index) => (
         <React.Fragment key={`${condition.codigo}-${index}`}>
         <AttributeRow $columns={4}>
@@ -236,16 +257,17 @@ const ConditionEffectFields = ({
             label="Condição"
             theme={theme}
             neon={neon}
-            value={condition.codigo}
-            options={condition.codigo && !options.some((option) => option.value === condition.codigo)
-              ? [{ value: condition.codigo, label: `${condition.codigo} (não existe nesta versão)` }, ...options]
+            value={findCondition(condition.codigo)?.value ?? condition.codigo}
+            disabled={!catalogAvailable}
+            options={condition.codigo && !findCondition(condition.codigo)
+              ? [{ value: condition.codigo, label: catalogAvailable ? `${condition.codigo} (não existe nesta versão)` : condition.codigo }, ...options]
               : options}
             onChange={(event) => update(index, { codigo: event.target.value,
               valor: undefined, valoresEfeitos: {}, testeResistencia: undefined })}
             width="100%"
           />
           {(condition.valor !== undefined ||
-            editableConditionEffects(options.find((option) => option.value === condition.codigo)?.rule).length === 0) &&
+            editableConditionEffects(findCondition(condition.codigo)?.rule).length === 0) &&
             <InputText label="Valor do primeiro efeito (opcional)" type="number" theme={theme} neon={neon}
               value={condition.valor ?? ''} onChange={(event) => update(index, {
                 valor: event.target.value === '' ? undefined : Number(event.target.value),
@@ -253,9 +275,9 @@ const ConditionEffectFields = ({
           <InputText label="Duração (opcional)" type="number" theme={theme} neon={neon} value={condition.duracao ?? ''} onChange={(event) => update(index, { duracao: event.target.value === '' ? undefined : Number(event.target.value) })} />
           <CyberButton theme={theme} neon={neon} colorType="secondary" width="100%" text="Remover" onClick={() => onChange(value.filter((_, currentIndex) => currentIndex !== index))} />
         </AttributeRow>
-        {condition.codigo && !options.some((option) => option.value === condition.codigo) &&
+        {catalogAvailable && condition.codigo && !findCondition(condition.codigo) &&
           <p role="alert">Esta condição não existe no Sistema atual. Escolha outra antes de usar este conteúdo.</p>}
-        {editableConditionEffects(options.find((option) => option.value === condition.codigo)?.rule)
+        {editableConditionEffects(findCondition(condition.codigo)?.rule)
           .map((effect) => <InputText key={effect.index} type="number" theme={theme} neon={neon}
             label={`${effect.label} (padrão ${effect.value}${effect.percentage ? '%' : ''})`}
             min={effect.minimum ?? (effect.signed ? effect.percentage ? -100 : -1000000 : 0)}
@@ -270,7 +292,7 @@ const ConditionEffectFields = ({
         <AttributeRow $columns={3}>
           <Select label="Quando aplicar" theme={theme} neon={neon}
             value={condition.gatilho ?? 'ACERTO'}
-            options={[
+            options={describeSystemOptions('conditionTrigger', [
               ...(!useOnly ? [{ value: 'ACERTO', label: 'Em qualquer acerto' },
                 { value: 'RESULTADO_NATURAL', label: 'Ao tirar números no dado' },
                 { value: 'RESULTADO_CLASSIFICADO', label: 'Resultado classificado pelo Sistema' }] : []),
@@ -279,7 +301,7 @@ const ConditionEffectFields = ({
               ...(useOnly && condition.gatilho !== 'AO_USAR'
                 ? [{ value: condition.gatilho ?? 'ACERTO',
                   label: `${condition.gatilho ?? 'ACERTO'} (não executa ao consumir)` }] : []),
-            ]}
+            ])}
             onChange={(event) => update(index, { gatilho: event.target.value as GameplayConditionEffectConfig['gatilho'] })} />
           {condition.gatilho === 'RESULTADO_NATURAL' &&
             <InputText label="Números naturais (ex.: 18, 19, 20)" theme={theme} neon={neon}
@@ -292,22 +314,22 @@ const ConditionEffectFields = ({
               }} />}
           <Select label="Duração em" theme={theme} neon={neon}
             value={condition.unidadeDuracao ?? 'Turno'}
-            options={[{ value: 'Turno', label: 'Turnos' }, { value: 'Hora', label: 'Horas de jogo (eventos/descansos)' }]}
+            options={describeSystemOptions('durationUnit', [{ value: 'Turno', label: 'Turnos' }, { value: 'Hora', label: 'Horas de jogo (eventos/descansos)' }])}
             onChange={(event) => update(index, { unidadeDuracao: event.target.value as GameplayConditionEffectConfig['unidadeDuracao'] })} />
         </AttributeRow>
         <AttributeRow $columns={2}>
           <Select label="Quem recebe a condição" theme={theme} neon={neon}
             value={condition.alvo ?? (useOnly ? 'USUARIO' : 'ALVO')}
-            options={[{ value: 'ALVO', label: 'Alvo da ação' },
+            options={describeSystemOptions('conditionTarget', [{ value: 'ALVO', label: 'Alvo da ação' },
               { value: 'USUARIO', label: 'Quem usa o item ou poder' },
-              { value: 'TODOS_INIMIGOS', label: 'Todos os inimigos' }]}
+              { value: 'TODOS_INIMIGOS', label: 'Todos os inimigos' }])}
             onChange={(event) => update(index, { alvo: event.target.value as GameplayConditionEffectConfig['alvo'] })} />
         </AttributeRow>
         <CyberButton theme={theme} neon={neon} colorType="secondary" width="fit-content"
           text={condition.testeResistencia ? 'Remover teste de reação' : 'Exigir teste de reação'}
           onClick={() => update(index, { testeResistencia: condition.testeResistencia ? undefined : {
             dados: 1, faces: 6,
-            atributo: options.find((option) => option.value === condition.codigo)?.attributeOptions?.[0]?.value ?? '',
+            atributo: findCondition(condition.codigo)?.attributeOptions?.[0]?.value ?? '',
             dificuldade: 4,
           } })} />
         {condition.testeResistencia && <>
@@ -323,7 +345,7 @@ const ConditionEffectFields = ({
               })} />
             <Select label="Atributo do afetado" theme={theme} neon={neon}
               value={condition.testeResistencia.atributo}
-              options={options.find((option) => option.value === condition.codigo)?.attributeOptions ?? []}
+              options={findCondition(condition.codigo)?.attributeOptions ?? []}
               onChange={(event) => update(index, {
                 testeResistencia: { ...condition.testeResistencia!, atributo: event.target.value },
               })} />
@@ -345,14 +367,15 @@ const ConditionEffectFields = ({
         </AttributeRow>}
         {condition.gatilho === 'RESULTADO_CLASSIFICADO' && <Select
           label="Qual resultado do Sistema?" theme={theme} neon={neon}
-          value={condition.codigoResultado ?? ''}
+          value={findResult(condition.codigoResultado)?.value ?? condition.codigoResultado ?? ''}
+          disabled={!resultCatalogAvailable}
           options={[{ value: '', label: 'Selecione um resultado' },
-            ...(condition.codigoResultado && !resultOptions.some((option) => option.value === condition.codigoResultado)
-              ? [{ value: condition.codigoResultado, label: `${condition.codigoResultado} (não existe nesta versão)` }]
+            ...(condition.codigoResultado && !findResult(condition.codigoResultado)
+              ? [{ value: condition.codigoResultado, label: resultCatalogAvailable ? `${condition.codigoResultado} (não existe nesta versão)` : condition.codigoResultado }]
               : []), ...resultOptions]}
           onChange={(event) => update(index, { codigoResultado: event.target.value })} />}
-        {condition.gatilho === 'RESULTADO_CLASSIFICADO' && condition.codigoResultado &&
-          !resultOptions.some((option) => option.value === condition.codigoResultado) &&
+        {resultCatalogAvailable && condition.gatilho === 'RESULTADO_CLASSIFICADO' && condition.codigoResultado &&
+          !findResult(condition.codigoResultado) &&
           <p role="alert">Este resultado não existe no Sistema atual. Escolha outro antes de usar a condição.</p>}
         </React.Fragment>
       ))}
@@ -362,10 +385,8 @@ const ConditionEffectFields = ({
           neon={neon}
           colorType="primary"
           width="fit-content"
-          text="Adicionar condição"
-          onClick={() => onChange([...value, { codigo: available[0].value,
-            gatilho: useOnly ? 'AO_USAR' : allowEquipTrigger ? 'AO_EQUIPAR' : 'ACERTO',
-            unidadeDuracao: 'Turno' }])}
+          text={value.length ? 'Adicionar outra condição' : 'Adicionar condição'}
+          onClick={addCondition}
         />
       )}
       </>}

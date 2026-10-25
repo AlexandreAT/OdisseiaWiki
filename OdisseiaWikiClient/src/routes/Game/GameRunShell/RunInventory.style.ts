@@ -1,4 +1,5 @@
 import styled from 'styled-components';
+import { cyberButtonActionRow } from '../../../components/Generic/HighlightButton/HighlightButton.styles';
 
 export const InventoryHeader = styled.div`
   display: flex;
@@ -149,9 +150,7 @@ export const InventoryControls = styled.div`
 `;
 
 export const InventorySaveActions = styled.div`
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
+  ${cyberButtonActionRow}
   gap: 9px;
 `;
 

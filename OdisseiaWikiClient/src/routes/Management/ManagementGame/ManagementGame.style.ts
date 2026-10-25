@@ -1,5 +1,5 @@
 import styled, { keyframes } from 'styled-components';
-import { cyberButtonsFillWidth } from '../../../components/Generic/HighlightButton/HighlightButton.styles';
+import { cyberButtonsFillWidth, cyberButtonActionRow } from '../../../components/Generic/HighlightButton/HighlightButton.styles';
 import { GameFrame } from '../../Game/GameShared.style';
 import { CardContainer, ManagementMetadata } from '../ManagementWiki/WikiForms/FormBuscarConteúdo/ResultCard/ResultCard.style';
 
@@ -34,8 +34,7 @@ export const GameAdminHeader = styled.header`
 `;
 
 export const GameAdminActions = styled.div`
-  display: flex;
-  flex-wrap: wrap;
+  ${cyberButtonActionRow}
   gap: 12px;
   @media (max-width: 600px) {
     flex-direction: column;

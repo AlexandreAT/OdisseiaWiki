@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+import { ConditionImageField } from './ConditionImageField';
+import { HelpHeading } from '../../../../../components/Generic/HelpHeading/HelpHeading';
+import { CONDITION_RECOVERY_CODES, conditionRecoveryCodes, toggleConditionRecovery } from '../../../../../utils/conditionRecovery';
 import { obterReferenciasCondicaoSistemaRpg } from '../../../../../services/sistemasRpgService';
 import SettingsIcon from '@mui/icons-material/Settings';
 import { CyberButton } from '../../../../../components/Generic/HighlightButton/HighlightButton';
@@ -11,8 +14,11 @@ import { IconAction } from '../ConfigTable/ConfigTable.style';
 import { SistemaValidationErrors } from '../../systemValidation';
 import { SystemReferenceCatalog } from './ModuleForm.types';
 import { FieldGrid, InlineChecks, SectionCard } from './ModuleForms.style';
+import { describeSystemOptions } from '../../../../../content/systemOptionHelp';
+import { conditionEffectHasValue, conditionEffectTargets, conditionEffectValueLimits, conditionMomentOptions,
+  conditionOperationOptions, conditionRequiredMoment, configureConditionOperation } from './conditionEffectFields';
 
-const removalOptions = [
+const removalOptions = describeSystemOptions('conditionRecovery', [
   { value: 'MANUAL', label: 'O mestre remove' },
   { value: 'GATILHO_CESSOU', label: 'O gatilho deixou de valer' },
   { value: 'DURACAO', label: 'A duração terminou' },
@@ -21,18 +27,7 @@ const removalOptions = [
   { value: 'DESCANSO_LONGO', label: 'Descanso longo' },
   { value: 'CURA', label: 'Ao receber cura' },
   { value: 'MAGIA', label: 'Por magia de remoção' },
-];
-
-const removalCodes = (value?: string | null): string[] => (value || 'MANUAL').split(';')
-  .map((entry) => entry.trim().toUpperCase()).filter(Boolean);
-
-const operationOptions = [
-  { value: 'SUBTRAIR', label: 'Diminuir recurso' },
-  { value: 'SOMAR', label: 'Recuperar recurso' },
-  { value: 'DEFINIR', label: 'Definir valor do recurso' },
-  { value: 'REDUZIR_LIMITE_PERCENTUAL', label: 'Reduzir máximo (%) enquanto ativa' },
-  { value: 'BLOQUEAR_RECUPERACAO', label: 'Bloquear recuperação enquanto ativa' },
-];
+]);
 
 interface AdditionalConditionEffect {
   operacao: string;
@@ -40,18 +35,6 @@ interface AdditionalConditionEffect {
   valor: number;
   momento: string;
 }
-
-const extraOperationOptions = [
-  ...operationOptions,
-  { value: 'MODIFICAR_ROLAGEM', label: 'Somar ou subtrair de teste com atributo' },
-  { value: 'MODIFICAR_ATRIBUTO', label: 'Alterar atributo nos testes (− penalidade, + bônus)' },
-  { value: 'MODIFICAR_DANO', label: 'Alterar dano causado (− ou +)' },
-  { value: 'MODIFICAR_DEFESA', label: 'Alterar armadura fixa (− ou +)' },
-  { value: 'MODIFICAR_LIMITE_PERCENTUAL', label: 'Alterar máximo do recurso em % (− ou +)' },
-  { value: 'DESVANTAGEM', label: 'Impor desvantagem no teste' },
-  { value: 'VANTAGEM', label: 'Conceder vantagem no teste' },
-  { value: 'PERDER_TURNOS', label: 'Fazer perder turnos ao aplicar' },
-];
 
 const parseExtraEffects = (json?: string | null): AdditionalConditionEffect[] => {
   try {
@@ -69,21 +52,14 @@ const serializeExtraEffects = (json: string | null | undefined, effects: Additio
   return JSON.stringify({ ...root, efeitos: effects });
 };
 
-const timeOptions = [
-  { value: 'AO_APLICAR', label: 'Uma vez, quando ativar' },
-  { value: 'INICIO_TURNO', label: 'No início de cada turno' },
-  { value: 'FIM_TURNO', label: 'No fim de cada turno' },
-  { value: 'ENQUANTO_ATIVA', label: 'Enquanto estiver ativa' },
-];
-
-const unitOptions = [
+const unitOptions = describeSystemOptions('durationUnit', [
   { value: 'Turno', label: 'Turnos' },
   { value: 'Minuto', label: 'Minutos' },
   { value: 'Hora', label: 'Horas' },
   { value: 'Descanso', label: 'Descansos' },
   { value: 'Sessao', label: 'Sessões' },
   { value: 'Permanente', label: 'Permanente' },
-];
+]);
 
 const createCondition = (): SistemaCondicao => ({
   codigo: '', nome: '', descricao: '', tipo: '', duracaoPadrao: null,
@@ -104,9 +80,10 @@ interface Props {
   neon: 'on' | 'off';
   references?: SystemReferenceCatalog;
   idSistemaVersao?: number;
+  onUploadBusyChange?: (busy: boolean) => void;
 }
 
-export const ConditionRulesEditor = ({ rows, onChange, onConfirmedRemoval, errors, readOnly, theme, neon, references, idSistemaVersao }: Props) => {
+export const ConditionRulesEditor = ({ rows, onChange, onConfirmedRemoval, errors, readOnly, theme, neon, references, idSistemaVersao, onUploadBusyChange }: Props) => {
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [removalWarning, setRemovalWarning] = useState('');
   const [pendingRemoval, setPendingRemoval] = useState<{ codigo: string } | null>(null);
@@ -173,11 +150,23 @@ export const ConditionRulesEditor = ({ rows, onChange, onConfirmedRemoval, error
   ];
   const triggerOptions = [
     ...(references?.resources ?? []),
-    { value: 'EXCESSO_CARGA', label: 'Excesso de carga (peso menos capacidade)' },
-    { value: 'CARGA', label: 'Peso carregado' },
+    ...describeSystemOptions('conditionTriggerResource', [
+      { value: 'EXCESSO_CARGA', label: 'Excesso de carga (peso menos capacidade)' },
+      { value: 'CARGA', label: 'Peso carregado' },
+    ]),
   ];
-  const resourceOptions = references?.resources ?? [];
-  const withCurrent = (options: { value: string; label: string }[], current: string | null | undefined) =>
+  const selectedOperation = selected?.operacaoEfeito ?? '';
+  const selectedTargets = conditionEffectTargets(selectedOperation, references);
+  const selectedLimits = conditionEffectValueLimits(selectedOperation);
+  const changePrimaryOperation = (operation: string) => {
+    const next = configureConditionOperation(operation, { operacao: selectedOperation,
+      recurso: selected.codigoRecurso ?? '', valor: selected.valorEfeito ?? null,
+      momento: selected.momentoEfeito ?? '' }, references);
+    onChange(rows.map((row, index) => index === selectedIndex ? { ...row,
+      operacaoEfeito: next.operacao, codigoRecurso: next.recurso, valorEfeito: next.valor,
+      momentoEfeito: next.momento } : row));
+  };
+  const withCurrent = (options: { value: string; label: string; description?: string }[], current: string | null | undefined) =>
     current && !options.some((option) => option.value === current)
       ? [{ value: current, label: `Valor anterior: ${current}` }, ...options] : options;
 
@@ -200,91 +189,76 @@ export const ConditionRulesEditor = ({ rows, onChange, onConfirmedRemoval, error
     </InlineChecks>}
     {selected && <SectionCard id="condition-rule-configuration" ref={configurationRef} tabIndex={-1}
       theme={theme} neon={neon}>
-      <h4>Regra de {selected.nome || selected.codigo || 'nova condição'}</h4>
+      <HelpHeading label={`Regra de ${selected.nome || selected.codigo || 'nova condição'}`} helpKey="condicoes" />
+      <ConditionImageField key={`${selectedIndex}:${selected.idSistemaCondicao ?? selected.codigo}`} json={selected.configuracaoPadraoJson} code={selected.codigo}
+        theme={theme} neon={neon} readOnly={readOnly}
+        onUploadBusyChange={onUploadBusyChange}
+        onChange={(json) => update('configuracaoPadraoJson', json)} />
       <p>Sem gatilho automático, a condição precisa ser aplicada por uma origem, como um item, magia ou skill. Defina aqui o efeito estruturado; textos descritivos não alteram recursos.</p>
-      {errors[`condicoes.${selectedIndex}.regra`] && <p role="alert">{errors[`condicoes.${selectedIndex}.regra`]}</p>}
-      <h4>Quando começa</h4>
+      {errors[`condicoes.${selectedIndex}.regra`] && <p role="alert" data-validation-error="true">{errors[`condicoes.${selectedIndex}.regra`]}</p>}
+      <HelpHeading label="Quando começa" />
       <FieldGrid $columns={3}>
         <Select theme={theme} neon={neon} label="Recurso observado" value={selected.codigoRecursoGatilho ?? ''}
           options={withCurrent(triggerOptions, selected.codigoRecursoGatilho)} disabled={readOnly}
           onChange={(event) => update('codigoRecursoGatilho', event.target.value)} />
         <Select theme={theme} neon={neon} label="Comparação" value={selected.operadorGatilho ?? ''}
-          options={[
+          options={describeSystemOptions('comparison', [
             { value: '<=', label: 'Menor ou igual a' }, { value: '<', label: 'Menor que' },
             { value: '==', label: 'Igual a' }, { value: '>', label: 'Maior que' },
             { value: '>=', label: 'Maior ou igual a' },
-          ]} disabled={readOnly} onChange={(event) => update('operadorGatilho', event.target.value)} />
+          ])} disabled={readOnly} onChange={(event) => update('operadorGatilho', event.target.value)} />
         <InputText theme={theme} neon={neon} label="Valor do gatilho" type="number"
           value={selected.valorGatilho ?? ''} disabled={readOnly}
           error={Boolean(errors[`condicoes.${selectedIndex}.valorGatilho`])}
           errorMessage={errors[`condicoes.${selectedIndex}.valorGatilho`]}
           onChange={(event) => update('valorGatilho', event.target.value === '' ? null : Number(event.target.value))} />
       </FieldGrid>
-      <h4>O que acontece</h4>
+      <HelpHeading label="O que acontece" />
       <FieldGrid $columns={4}>
         <Select theme={theme} neon={neon} label="Efeito" value={selected.operacaoEfeito ?? ''}
-          options={withCurrent(operationOptions, selected.operacaoEfeito)} disabled={readOnly}
-          onChange={(event) => update('operacaoEfeito', event.target.value)} />
-        <Select theme={theme} neon={neon} label="Recurso afetado" value={selected.codigoRecurso ?? ''}
-          options={withCurrent(resourceOptions, selected.codigoRecurso)} disabled={readOnly}
+          options={withCurrent(conditionOperationOptions, selected.operacaoEfeito)} disabled={readOnly}
+          onChange={(event) => changePrimaryOperation(event.target.value)} />
+        <Select theme={theme} neon={neon} label={['MODIFICAR_ATRIBUTO', 'MODIFICAR_ROLAGEM'].includes(selectedOperation)
+          ? 'Atributo afetado' : 'Recurso afetado'} helpKey="condicoes.codigoRecurso" value={selected.codigoRecurso ?? ''}
+          options={withCurrent(selectedTargets, selected.codigoRecurso)} disabled={readOnly || selectedTargets.length === 1}
+          allowEmptyOption={false}
           onChange={(event) => update('codigoRecurso', event.target.value)} />
         <InputText theme={theme} neon={neon} label="Valor do efeito" type="number"
-          value={selected.valorEfeito ?? ''} disabled={readOnly}
+          {...selectedLimits} value={selected.valorEfeito ?? ''} disabled={readOnly || !conditionEffectHasValue(selectedOperation)}
           error={Boolean(errors[`condicoes.${selectedIndex}.valorEfeito`])}
           errorMessage={errors[`condicoes.${selectedIndex}.valorEfeito`]}
           onChange={(event) => update('valorEfeito', event.target.value === '' ? null : Number(event.target.value))} />
         <Select theme={theme} neon={neon} label="Quando aplicar" value={selected.momentoEfeito ?? ''}
-          options={withCurrent(timeOptions, selected.momentoEfeito)} disabled={readOnly}
+          options={withCurrent(conditionMomentOptions, selected.momentoEfeito)}
+          disabled={readOnly || Boolean(conditionRequiredMoment(selectedOperation))}
           onChange={(event) => update('momentoEfeito', event.target.value)} />
       </FieldGrid>
-      <h4>Mais efeitos desta condição</h4>
+      {selectedOperation === 'MODIFICAR_ATRIBUTO' &&
+        <p>Use um valor positivo para aumentar ou negativo para diminuir. Ex.: +2 em Resistência ou −5 em Precisão. O modificador vale nos testes enquanto a condição durar, sem gastar ou redistribuir pontos da ficha.</p>}
+      <HelpHeading label="Mais efeitos desta condição" />
       <p>Uma condição pode alterar vários recursos e testes ao mesmo tempo. Use valores negativos para penalidades e positivos para bônus de atributo ou rolagem. Recuperação de recurso usa valor positivo. Todos os efeitos terminam juntos.</p>
       {extraEffects.map((effect, index) => {
         const updateEffect = (changes: Partial<AdditionalConditionEffect>) => updateExtraEffects(
           extraEffects.map((entry, current) => current === index ? { ...entry, ...changes } : entry));
-        const continuousEffect = effect.operacao === 'MODIFICAR_ROLAGEM' ||
-          effect.operacao === 'MODIFICAR_ATRIBUTO' ||
-          effect.operacao === 'MODIFICAR_DANO' || effect.operacao === 'MODIFICAR_DEFESA' ||
-          effect.operacao === 'MODIFICAR_LIMITE_PERCENTUAL' ||
-          effect.operacao === 'DESVANTAGEM' || effect.operacao === 'VANTAGEM';
-        const resourceOptionsForEffect = effect.operacao === 'MODIFICAR_DANO'
-          ? [{ value: 'TODOS', label: 'Todo dano causado' }]
-          : effect.operacao === 'MODIFICAR_DEFESA'
-            ? [{ value: 'ARMADURA', label: 'Armadura fixa' }]
-            : effect.operacao === 'MODIFICAR_ATRIBUTO'
-              ? references?.attributes ?? []
-              : effect.operacao === 'MODIFICAR_ROLAGEM'
-          ? [...(references?.attributes ?? []), { value: 'TODOS', label: 'Todos os testes' }]
-          : effect.operacao === 'DESVANTAGEM' || effect.operacao === 'VANTAGEM'
-            ? [{ value: 'TESTE', label: 'Teste' }]
-            : effect.operacao === 'PERDER_TURNOS'
-              ? [{ value: 'TURNO', label: 'Turno' }] : resourceOptions;
+        const resourceOptionsForEffect = conditionEffectTargets(effect.operacao, references);
         return <FieldGrid $columns={5} key={`${index}-${effect.operacao}`}>
           <Select theme={theme} neon={neon} label={`Efeito ${index + 2}`}
-            value={effect.operacao} options={extraOperationOptions} disabled={readOnly}
-            onChange={(event) => updateEffect({ operacao: event.target.value,
-              recurso: event.target.value === 'DESVANTAGEM' || event.target.value === 'VANTAGEM'
-                ? 'TESTE' : event.target.value === 'MODIFICAR_DANO' ? 'TODOS'
-                  : event.target.value === 'MODIFICAR_DEFESA' ? 'ARMADURA'
-                  : event.target.value === 'PERDER_TURNOS' ? 'TURNO'
-                  : event.target.value === 'MODIFICAR_ROLAGEM' || event.target.value === 'MODIFICAR_ATRIBUTO'
-                  ? references?.attributes[0]?.value ?? 'TODOS'
-                  : resourceOptions[0]?.value ?? 'VIDA',
-              momento: event.target.value === 'PERDER_TURNOS' ? 'AO_APLICAR' : ['MODIFICAR_ROLAGEM', 'MODIFICAR_ATRIBUTO', 'MODIFICAR_DANO',
-                'MODIFICAR_DEFESA', 'MODIFICAR_LIMITE_PERCENTUAL', 'DESVANTAGEM', 'VANTAGEM'].includes(event.target.value)
-                ? 'ENQUANTO_ATIVA' : effect.momento })} />
+            helpKey="condicoes.efeitos.operacao" value={effect.operacao} options={conditionOperationOptions}
+            disabled={readOnly} allowEmptyOption={false}
+            onChange={(event) => {
+              const next = configureConditionOperation(event.target.value, effect, references);
+              updateEffect({ ...next, valor: next.valor ?? 0 });
+            }} />
           <Select theme={theme} neon={neon} label="Afeta" value={effect.recurso}
-            options={withCurrent(resourceOptionsForEffect, effect.recurso)} disabled={readOnly ||
-              effect.operacao === 'PERDER_TURNOS' ||
-              effect.operacao === 'DESVANTAGEM' || effect.operacao === 'VANTAGEM'}
+            options={withCurrent(resourceOptionsForEffect, effect.recurso)}
+            disabled={readOnly || resourceOptionsForEffect.length === 1} allowEmptyOption={false}
             onChange={(event) => updateEffect({ recurso: event.target.value })} />
           <InputText theme={theme} neon={neon} label={effect.operacao === 'PERDER_TURNOS' ? 'Turnos perdidos' : 'Valor'}
-            type="number" value={effect.valor} min={effect.operacao === 'PERDER_TURNOS' ? 1 : undefined}
-            max={effect.operacao === 'PERDER_TURNOS' ? 100 : undefined}
-            disabled={readOnly || effect.operacao === 'DESVANTAGEM' || effect.operacao === 'VANTAGEM'}
+            type="number" value={effect.valor} {...conditionEffectValueLimits(effect.operacao)}
+            disabled={readOnly || !conditionEffectHasValue(effect.operacao)}
             onChange={(event) => updateEffect({ valor: Number(event.target.value) })} />
           <Select theme={theme} neon={neon} label="Quando" value={effect.momento}
-            options={timeOptions} disabled={readOnly || continuousEffect || effect.operacao === 'PERDER_TURNOS'}
+            options={conditionMomentOptions} disabled={readOnly || Boolean(conditionRequiredMoment(effect.operacao))}
             onChange={(event) => updateEffect({ momento: event.target.value })} />
           {!readOnly && <CyberButton theme={theme} neon={neon} colorType="secondary" width="100%"
             text="Remover efeito" onClick={() => updateExtraEffects(extraEffects.filter((_, current) => current !== index))} />}
@@ -294,17 +268,16 @@ export const ConditionRulesEditor = ({ rows, onChange, onConfirmedRemoval, error
         colorType="secondary" width="fit-content" text="Adicionar efeito"
         onClick={() => updateExtraEffects([...extraEffects,
           { operacao: 'SUBTRAIR', recurso: 'VIDA', valor: 1, momento: 'FIM_TURNO' }])} />}
-      <h4>Quando termina</h4>
+      <HelpHeading label="Quando termina" />
+      {conditionRecoveryCodes(selected.regraRemocao).some((code) => !CONDITION_RECOVERY_CODES.includes(code)) &&
+        <p role="note">Regra anterior: {selected.regraRemocao}. Marcar uma opção abaixo substitui esse texto pela recuperação automática escolhida.</p>}
       <p>Marque as formas de recuperação. Magia exige uma magia da ficha que selecione esta condição e acerte seu teste. Ao retirar um traje, a opção de cessar o gatilho encerra a condição criada ao equipá-lo. A duração da origem termina sozinha; horas avançam somente pelo tempo de jogo dos eventos e descansos.</p>
       <InlineChecks>
         {removalOptions.filter((option) => option.value !== 'MANUAL').map((option) =>
-          <CheckBox key={option.value} neon={neon} label={option.label}
-            checked={removalCodes(selected.regraRemocao).includes(option.value)} disabled={readOnly}
-            onChange={(checked) => {
-              const codes = removalCodes(selected.regraRemocao).filter((code) => code !== 'MANUAL' && code !== option.value);
-              if (checked) codes.push(option.value);
-              update('regraRemocao', codes.length ? codes.join(';') : 'MANUAL');
-            }} />)}
+          <CheckBox key={option.value} neon={neon} label={option.label} title={option.description}
+            checked={conditionRecoveryCodes(selected.regraRemocao).includes(option.value)} disabled={readOnly}
+            onChange={(checked) => update('regraRemocao',
+              toggleConditionRecovery(selected.regraRemocao, option.value, checked))} />)}
       </InlineChecks>
       <FieldGrid $columns={3}>
         <InputText theme={theme} neon={neon} label="Duração" type="number"

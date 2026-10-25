@@ -1,4 +1,5 @@
 import AddIcon from '@mui/icons-material/Add';
+import { describeSystemOptions } from '../../../../../content/systemOptionHelp';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -8,6 +9,7 @@ import toast from 'react-hot-toast';
 import { InputText } from '../../../../../components/Generic/InputText/InputText';
 import { LoadingIndicator } from '../../../../../components/Generic/LoadingIndicator';
 import { TextArea } from '../../../../../components/Generic/TextArea/TextArea';
+import { useEventCallback } from '../../../../../hooks/useEventCallback';
 import {
   SistemaItemCampoRuntime,
   SistemaItemEscopoRuntime,
@@ -42,12 +44,20 @@ import {
 
 type ScopeLevel = 'Tipo' | 'Categoria' | 'Arquetipo';
 
+export interface SystemItemCatalogQuickSave {
+  versionId: number;
+  dirty: boolean;
+  saving: boolean;
+  save: () => void;
+}
+
 interface SystemItemCatalogProps {
   idSistemaVersao: number;
   readOnly: boolean;
   theme: 'dark' | 'light';
   neon: 'on' | 'off';
   onDirtyChange?: (dirty: boolean) => void;
+  onQuickSaveChange?: (state: SystemItemCatalogQuickSave) => void;
 }
 
 interface ScopeEditorProps {
@@ -82,7 +92,7 @@ const fieldColumns: ConfigTableColumn<SistemaItemCampoRuntime>[] = [
     key: 'tipo',
     label: 'Tipo do valor',
     type: 'select',
-    options: FIELD_TYPES.map((value) => ({ label: value, value })),
+    options: describeSystemOptions('itemFieldType', FIELD_TYPES.map((value) => ({ label: value, value }))),
   },
   { key: 'unidade', label: 'Unidade', type: 'text', maxLength: 50 },
   { key: 'obrigatorio', label: 'Obrigatório', type: 'checkbox' },
@@ -106,7 +116,7 @@ const referenceColumns: ConfigTableColumn<SistemaItemReferenciaRuntime>[] = [
     key: 'tipo',
     label: 'Tipo',
     type: 'select',
-    options: REFERENCE_TYPES.map((value) => ({ label: value, value })),
+    options: describeSystemOptions('itemReferenceType', REFERENCE_TYPES.map((value) => ({ label: value, value }))),
   },
   { key: 'codigo', label: 'Código', type: 'text', maxLength: 50 },
   { key: 'nome', label: 'Nome', type: 'text', maxLength: 150 },
@@ -407,6 +417,7 @@ export const SystemItemCatalog = ({
   theme,
   neon,
   onDirtyChange,
+  onQuickSaveChange,
 }: SystemItemCatalogProps) => {
   const [catalog, setCatalog] = useState<SistemaItensConfig | null>(null);
   const [savedSnapshot, setSavedSnapshot] = useState('');
@@ -504,8 +515,8 @@ export const SystemItemCatalog = ({
     setValidationError(null);
   }, []);
 
-  const save = useCallback(async () => {
-    if (!catalog || readOnly || !dirty) return;
+  const save = useEventCallback(async () => {
+    if (!catalog || readOnly || !dirty || saving || loading) return;
     const localError = validateCatalog(catalog);
     if (localError) {
       setValidationError(localError);
@@ -530,7 +541,11 @@ export const SystemItemCatalog = ({
     } finally {
       setSaving(false);
     }
-  }, [catalog, dirty, idSistemaVersao, readOnly]);
+  });
+
+  useEffect(() => {
+    onQuickSaveChange?.({ versionId: idSistemaVersao, dirty, saving, save });
+  }, [onQuickSaveChange, idSistemaVersao, dirty, saving, save]);
 
   return (
     <CatalogPanel theme={theme} neon={neon}>

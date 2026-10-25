@@ -11,8 +11,23 @@ import {
   SistemaModuloConfigMap,
   SistemaModuloKey,
 } from '../../../models/SistemaRpg';
+import { CONDITION_RECOVERY_CODES, conditionRecoveryCodes } from '../../../utils/conditionRecovery';
 
 export type SistemaValidationErrors = Record<string, string>;
+
+export const describeSistemaValidationErrors = (errors: SistemaValidationErrors, config: object): string[] => {
+  const collections: Record<string, string> = { condicoes: 'Condição', descansos: 'Descanso',
+    atributos: 'Atributo', recursos: 'Recurso', niveis: 'Nível', tiposMagia: 'Tipo de magia' };
+  return Object.entries(errors).map(([path, message]) => {
+    const [collection, index] = path.split('.');
+    const rows = (config as Record<string, unknown>)[collection];
+    if (Array.isArray(rows) && /^\d+$/.test(index ?? '')) {
+      const row = rows[Number(index)] as { nome?: string; codigo?: string } | undefined;
+      return `${collections[collection] ?? collection} ${row?.nome || row?.codigo || Number(index) + 1}: ${message}`;
+    }
+    return message;
+  });
+};
 
 const CODE_PATTERN = /^[A-Z0-9][A-Z0-9_-]*$/;
 const SYSTEM_CODE_PATTERN = /^[A-Z][A-Z0-9_]{2,49}$/;
@@ -426,10 +441,9 @@ const validateSurvival = (config: ConfiguracaoSobrevivenciaSistema): SistemaVali
     if (row.operacaoEfeito && (!row.codigoRecurso || !row.momentoEfeito ||
         row.operacaoEfeito !== 'BLOQUEAR_RECUPERACAO' && (row.valorEfeito === null || row.valorEfeito === undefined)))
       errors[`condicoes.${index}.regra`] = 'Para executar o efeito, escolha operação, recurso afetado, momento e valor quando necessário.';
-    const recovery = (row.regraRemocao ?? '').split(';').map((code) => code.trim().toUpperCase());
+    const recovery = conditionRecoveryCodes(row.regraRemocao);
     if ((row.regraRemocao ?? '').includes(';') && recovery.some((code) =>
-        !['DURACAO', 'GATILHO_CESSOU', 'DESCANSO_SIMPLES', 'DESCANSO_NORMAL',
-          'DESCANSO_LONGO', 'CURA', 'MAGIA'].includes(code)))
+        !CONDITION_RECOVERY_CODES.includes(code)))
       errors[`condicoes.${index}.regra`] = 'Escolha apenas as formas de recuperação oferecidas.';
     if (recovery.includes('DURACAO') && !(Number(row.duracaoPadrao) > 0))
       errors[`condicoes.${index}.duracaoPadrao`] = 'Defina uma duração maior que zero.';
@@ -441,6 +455,7 @@ const validateSurvival = (config: ConfiguracaoSobrevivenciaSistema): SistemaVali
     if (row.operacaoEfeito === 'REDUZIR_LIMITE_PERCENTUAL' && row.valorPadrao !== null &&
         row.valorPadrao !== undefined && (row.valorPadrao < 0 || row.valorPadrao > 100))
       errors[`condicoes.${index}.regra`] = 'A intensidade padrão da redução percentual deve estar entre 0 e 100.';
+    addNonNegative(errors, `condicoes.${index}.cooldownTurnos`, row.cooldownTurnos, 'Intervalo para reativar');
   });
   addDuplicateErrors(errors, config.condicoes, 'condicoes', 'codigo', 'Código');
 

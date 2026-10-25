@@ -24,14 +24,17 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
     private readonly ISistemaRpgRepository _systems;
     private readonly GameBattlePreviewFactory _factory;
     private readonly IAutoBattleSimulator _simulator;
+    private readonly GameRunItemValueResolver? _itemValues;
 
     public GameRunEncounterService(IGameRunRepository runs, ISistemaRpgRepository systems,
-        GameBattlePreviewFactory factory, IAutoBattleSimulator simulator)
+        GameBattlePreviewFactory factory, IAutoBattleSimulator simulator,
+        GameRunItemValueResolver? itemValues = null)
     {
         _runs = runs;
         _systems = systems;
         _factory = factory;
         _simulator = simulator;
+        _itemValues = itemValues;
     }
 
     public async Task<GameRunOperationResult<GameRunDto>> SelectAsync(
@@ -153,6 +156,7 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
                 GameBattleResult result;
                 GameBattleActorState player;
                 int xpReward = 0;
+                int currencyReward = 0;
                 IReadOnlyList<int> reachedLevels = [];
                 GameRunGrantedPoints grantedPoints = new();
                 string before = run.EstadoAtualJson;
@@ -181,9 +185,11 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
                         if (mode?.Encounters?.TryGetValue(encounterCode, out GameBattleEncounterConfig? encounter) == true)
                         {
                             xpReward = encounter.XpReward;
+                            currencyReward = encounter.CurrencyReward;
                             var progressionRules = SistemaRpgConfiguration.LerRegras<SistemaRpgConfiguration.RegrasProgressao>(version, SistemaModuloTipo.Progressao);
                             after = GameRunLoot.Prepare(after, run.NoAtualId, encounter, progressionRules.DadoLootFaces ?? 0);
                             after = GameRunXpReward.Apply(after, xpReward);
+                            after = GameRunEconomy.Credit(after, encounter.CurrencyReward);
                             if (xpReward > 0)
                             {
                                 GameRunProgressionResult progression = GameRunProgression.Apply(after, version);
@@ -206,6 +212,7 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
                     MapActor(setup.Input.FirstActor), MapActor(setup.Input.SecondActor), result)
                 {
                     XpConcedido = xpReward,
+                    MoedaConcedida = currencyReward,
                     NiveisAlcancados = reachedLevels,
                     PontosConcedidos = grantedPoints,
                     Oponentes = new[] { setup.Input.SecondActor }
@@ -275,6 +282,8 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
                 run.AtualizadaEmUtc = now;
                 var response = new GameRunBattleResolutionDto(
                     GameRunService.Map(run), battle, completedNodeId, battleOrder, now);
+                if (result.WinnerActorId == "player")
+                    await RememberVictory(run, version, node.Payload?.EncounterCode, cancellationToken);
                 await SaveCommand(run, idUsuario, request, "RESOLVER_COMBATE", hash, response, cancellationToken);
                 return GameRunOperationResult<GameRunBattleResolutionDto>.Ok(response);
             }, cancellationToken);
@@ -510,7 +519,8 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
 
                 GameRun? run = await _runs.GetByIdAsync(idGameRun, idUsuario, cancellationToken);
                 GameRunOperationResult<GameRunConsumeItemResultDto>? failure =
-                    Check<GameRunConsumeItemResultDto>(run, request.RevisaoEsperada!.Value);
+                    Check<GameRunConsumeItemResultDto>(run, request.RevisaoEsperada!.Value,
+                        allowVictory: run is not null && GameRunLoot.IsReceivedItem(run.EstadoAtualJson, request.IdInstancia));
                 if (failure is not null) return failure;
                 if (run!.NoAtualId is not null)
                     return GameRunOperationResult<GameRunConsumeItemResultDto>.Fail(
@@ -1089,10 +1099,10 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
         await _runs.SaveChangesAsync(token);
     }
 
-    private static GameRunOperationResult<T>? Check<T>(GameRun? run, long revision)
+    private static GameRunOperationResult<T>? Check<T>(GameRun? run, long revision, bool allowVictory = false)
     {
         if (run is null) return GameRunOperationResult<T>.Fail("RUN_NAO_ENCONTRADA", "Run não encontrada.");
-        if (run.Status != GameRunStatus.Ativa)
+        if (run.Status != GameRunStatus.Ativa && !(allowVictory && run.Status == GameRunStatus.Vitoria))
             return GameRunOperationResult<T>.Fail("RUN_ENCERRADA", "Esta run já foi encerrada.");
         if (GameRunLoot.Read(run.EstadoAtualJson) is { Roll: null })
             return GameRunOperationResult<T>.Fail("LOOT_PENDENTE", "Revele o loot do último combate antes de continuar.");
@@ -1135,7 +1145,8 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
         }
         return new GameBattlePreviewActorDto(actor.Id, actor.Name, actor.HitPoints,
             Maximum("VIDA", actor.MaximumHitPoints), actor.Mana, Maximum("MANA", actor.MaximumMana),
-            actor.Stamina, Maximum("ESTAMINA", actor.MaximumStamina), actor.Defenses, actor.Image);
+            actor.Stamina, Maximum("ESTAMINA", actor.MaximumStamina), actor.Defenses, actor.Image)
+            { Condicoes = actor.ActiveConditions };
     }
 
     private static JsonSerializerOptions CreateOptions()

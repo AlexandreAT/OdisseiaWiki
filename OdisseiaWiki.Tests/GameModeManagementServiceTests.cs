@@ -3,6 +3,7 @@ using Moq;
 using OdisseiaWiki.Dtos;
 using OdisseiaWiki.Enums;
 using OdisseiaWiki.GameRuns.Battle;
+using OdisseiaWiki.GameRuns.Map;
 using OdisseiaWiki.Models;
 using OdisseiaWiki.Repositories.Interfaces;
 using OdisseiaWiki.Services;
@@ -12,6 +13,105 @@ namespace OdisseiaWiki.Tests;
 
 public sealed class GameModeManagementServiceTests
 {
+    [Theory]
+    [InlineData("ROTA:0")]
+    [InlineData("ROTA:1")]
+    [InlineData("ALEATORIO")]
+    public async Task FlorestaComCombateEMercadorSalvaPublicaEGeraMapaSemExigirEncontroNoMercador(string finalOption)
+    {
+        var draft = new GameModeVersion { IdGameModeVersion = 81, IdSistemaVersao = 7,
+            Status = GameModeVersionStatus.Rascunho, ConfiguracaoJson = "{}" };
+        Mock<IGameModeManagementRepository> management = new();
+        management.Setup(repo => repo.GetDraftByIdAsync(81, It.IsAny<CancellationToken>())).ReturnsAsync(draft);
+        management.Setup(repo => repo.GetAttackOutcomeCodesAsync(7, It.IsAny<CancellationToken>())).ReturnsAsync(["ACERTO"]);
+        management.Setup(repo => repo.GetLootItemsAsync(It.IsAny<CancellationToken>())).ReturnsAsync([
+            new Item { Iditem = "seringa", Nome = "Seringa", Visivel = true, Tipo = ItemTipo.Consumiveis,
+                Valor = 100, AtributosJson = """{"restaura":{"vida":100}}""" }]);
+        Mock<ISistemaRpgRepository> systems = new();
+        systems.Setup(repo => repo.GetVersionAsync(7, true, false)).ReturnsAsync(new SistemaVersao { IdSistemaVersao = 7 });
+        var service = new GameModeManagementService(management.Object, new Mock<IGameRunRepository>().Object,
+            systems.Object, new GameplayActionResolver());
+        var update = new GameModeEditorUpdateDto
+        {
+            Areas = [new() { Code = "FLORESTA", Name = "Floresta", UseBase = false, NodeCount = 3,
+                FinalOption = finalOption, Options = [
+                    new() { Type = "COMBATE", EncounterCode = "LOBO" },
+                    new() { Type = "VENDEDOR", Label = "Mercador da Floresta", OfferCount = 3,
+                        Offers = [new() { ItemId = "seringa", Price = 100, Stock = 3 }] }] }],
+            Encounters = new() { ["LOBO"] = new() { MapName = "Lobo", Enemy = new() { Name = "Lobo", MaxVida = 10 },
+                DamageByResult = new() { ["ACERTO"] = 5 } } },
+            FallbackAction = new() { Name = "Ataque", BaseDamage = 5 },
+            PlayerDamageByResult = new() { ["ACERTO"] = new() { Multiplier = 1 } },
+        };
+        var saved = await service.SaveDraftAsync(81, update, default);
+        Assert.True(saved.Sucesso, saved.Mensagem);
+        var published = await service.PublishAsync(81, default);
+        Assert.True(published.Sucesso, published.Mensagem);
+        Assert.Equal(GameModeVersionStatus.Publicado, draft.Status);
+        var maps = Enumerable.Range(1, 20).Select(seed => new GameRunMapGenerator().Create(seed, draft.ConfiguracaoJson)).ToArray();
+        var vendors = maps.SelectMany(map => map.Nodes).Where(node => node.Type == "VENDEDOR").ToArray();
+        Assert.NotEmpty(vendors);
+        Assert.All(vendors, node => {
+            var offer = Assert.Single(node.Payload!.Offers!);
+            Assert.Equal("seringa", offer.ItemId);
+            Assert.Equal("Seringa", offer.Snapshot!["nome"]!.ToString());
+            Assert.Null(node.Payload.EncounterCode);
+        });
+        Assert.Contains(maps.SelectMany(map => map.Nodes), node => node.Type == "COMBATE");
+    }
+
+    [Theory]
+    [InlineData(true, 3)]
+    [InlineData(true, 6)]
+    [InlineData(true, 9)]
+    [InlineData(true, 4)]
+    [InlineData(false, 3)]
+    public async Task VendedorCongelaCatalogoVisivelEIgnoraSnapshotEnviadoPeloCliente(bool visible, int offerCount)
+    {
+        var draft = new GameModeVersion { IdGameModeVersion = 81, IdSistemaVersao = 7,
+            Status = GameModeVersionStatus.Rascunho, ConfiguracaoJson = "{}" };
+        Mock<IGameModeManagementRepository> management = new();
+        management.Setup(repo => repo.GetDraftByIdAsync(81, It.IsAny<CancellationToken>())).ReturnsAsync(draft);
+        management.Setup(repo => repo.GetAttackOutcomeCodesAsync(7, It.IsAny<CancellationToken>())).ReturnsAsync(["ACERTO"]);
+        management.Setup(repo => repo.GetLootItemsAsync(It.IsAny<CancellationToken>())).ReturnsAsync([
+            new Item { Iditem = "item", Nome = "Original visível", Visivel = visible, Tipo = ItemTipo.Consumiveis,
+                Valor = 50, AtributosJson = """{"recuperacaoVida":20}""" }]);
+        Mock<ISistemaRpgRepository> systems = new();
+        systems.Setup(repo => repo.GetVersionAsync(7, true, false)).ReturnsAsync(new SistemaVersao { IdSistemaVersao = 7 });
+        var service = new GameModeManagementService(management.Object, new Mock<IGameRunRepository>().Object,
+            systems.Object, new GameplayActionResolver());
+        var update = new GameModeEditorUpdateDto
+        {
+            StartingCurrency = 100,
+            Areas = [new() { Code = "A", Name = "Mercado", Options = [new() { Type = "VENDEDOR", Label = "Loja",
+                OfferCount = offerCount,
+                Offers = [new() { ItemId = "item", Price = 25, Stock = 3,
+                    Snapshot = System.Text.Json.Nodes.JsonNode.Parse("""{"nome":"Falso","valor":1}""")!.AsObject() }] }] }],
+            Encounters = new() { ["A"] = new() { MapName = "Lobo", Enemy = new() { Name = "Lobo", MaxVida = 10 },
+                DamageByResult = new() { ["ACERTO"] = 5 } } },
+            FallbackAction = new() { Name = "Ataque", BaseDamage = 5 },
+            PlayerDamageByResult = new() { ["ACERTO"] = new() { Multiplier = 1 } },
+        };
+
+        var result = await service.SaveDraftAsync(81, update, default);
+        bool validCount = offerCount is 3 or 6 or 9;
+        Assert.Equal(visible && validCount, result.Sucesso);
+        if (visible && validCount)
+        {
+            Assert.Equal(100, result.Dados!.StartingCurrency);
+            var offer = Assert.Single(result.Dados.Areas[0].Options[0].Offers);
+            Assert.Equal("Original visível", offer.Snapshot!["nome"]!.ToString());
+            Assert.Equal(50, offer.Snapshot["valor"]!.GetValue<decimal>());
+            Assert.Equal(25, offer.Price);
+            Assert.Equal(20, offer.Snapshot["atributos"]!["recuperacaoVida"]!.GetValue<int>());
+        }
+        else
+        {
+            Assert.Equal(validCount ? "OFERTA_INVALIDA" : "CONFIGURACAO_INVALIDA", result.Codigo);
+            Assert.Equal("{}", draft.ConfiguracaoJson);
+        }
+    }
+
     [Theory]
     [InlineData("{}", true)]
     [InlineData("{\"repairProtectionAtBase\":false}", false)]

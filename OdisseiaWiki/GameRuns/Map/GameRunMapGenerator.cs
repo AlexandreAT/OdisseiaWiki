@@ -2,6 +2,7 @@ using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using OdisseiaWiki.Dtos;
 
 namespace OdisseiaWiki.GameRuns.Map;
@@ -255,6 +256,12 @@ public sealed class GameRunMapGenerator
             throw new InvalidOperationException("As áreas do modo não estão configuradas.");
         GameModeAreaDto[] configuredAreas = areasElement.Deserialize<GameModeAreaDto[]>(
             new JsonSerializerOptions(JsonSerializerDefaults.Web)) ?? [];
+        foreach (GameModeAreaDto area in configuredAreas)
+        {
+            string? referenceError = GameModeRouteValidation.ValidateEncounterReferences(area,
+                encounters.EnumerateObject().Select(encounter => encounter.Name));
+            if (referenceError is not null) throw new InvalidOperationException(referenceError);
+        }
         GameModeAreaDto[] areas = secretAreaCode is null
             ? configuredAreas.Where(area => !area.IsSecret).ToArray()
             : configuredAreas.Where(area => area.IsSecret && area.Code == secretAreaCode).ToArray();
@@ -324,25 +331,40 @@ public sealed class GameRunMapGenerator
         var random = new Random(DeriveSeed(runSeed, $"{area.Code}:{area.NodeCount}-nos"));
         var finalPool = new List<GameModeAreaOptionDto>(area.Options);
         if (area.UseBase) finalPool.Add(baseOption);
-        GameModeAreaOptionDto finale = area.FinalOption switch
+        GameModeAreaOptionDto? finale = area.FinalOption switch
         {
             "BASE" => baseOption,
-            "ALEATORIO" => PickWeighted(finalPool, random),
+            "ALEATORIO" => null,
             _ when area.FinalOption.StartsWith("ROTA:", StringComparison.Ordinal) &&
                 int.TryParse(area.FinalOption.AsSpan(5), out int index) &&
                 index >= 0 && index < area.Options.Count => area.Options[index],
             _ => throw new InvalidOperationException($"O fim de {area.Name} não está configurado."),
         };
         var pool = new List<GameModeAreaOptionDto>(finalPool);
-        if (finale.Unique) pool.Remove(finale);
-        var routes = new List<GameModeAreaOptionDto>(area.NodeCount - 1);
-        for (int index = 0; index < area.NodeCount - 1; index++)
+        if (finale?.Unique == true) pool.Remove(finale);
+        int count = area.NodeCount - (finale is null ? 0 : 1);
+        var routes = new List<GameModeAreaOptionDto>(count);
+        for (int index = 0; index < count; index++)
         {
             if (pool.Count == 0)
                 throw new InvalidOperationException($"O pool de {area.Name} não preenche {area.NodeCount} nós sem repetir opções únicas.");
             GameModeAreaOptionDto picked = PickWeighted(pool, random);
             routes.Add(picked);
             if (picked.Unique) pool.Remove(picked);
+        }
+        // Weight decides what is included, not which end of the area it occupies.
+        // An independent stream also keeps placement separate from selection/removal.
+        var placement = new Random(DeriveSeed(runSeed, $"{area.Code}:{area.NodeCount}:posicoes"));
+        for (int index = routes.Count - 1; index > 0; index--)
+        {
+            int other = placement.Next(index + 1);
+            (routes[index], routes[other]) = (routes[other], routes[index]);
+        }
+        // Only an explicitly fixed finale is reserved. A random finale is an ordinary slot.
+        if (finale is null)
+        {
+            finale = routes[^1];
+            routes.RemoveAt(routes.Count - 1);
         }
         return (routes.ToArray(), finale);
     }
@@ -360,7 +382,7 @@ public sealed class GameRunMapGenerator
         GameModeAreaDto area, GameModeAreaOptionDto option, string id, int fase, int layer,
         int position, IReadOnlyList<string> connections, string state)
     {
-        bool nonCombat = option.Type is "BASE" or "EVENTO" or "DESCANSO" or "ATALHO" or "AREA_SECRETA";
+        bool nonCombat = option.Type is "BASE" or "EVENTO" or "DESCANSO" or "ATALHO" or "AREA_SECRETA" or "VENDEDOR";
         string? encounterCode = option.Type == "CACADA"
             ? option.EncounterCodes.Count == 0 ? null : option.EncounterCodes[
                 new Random(DeriveSeed(runSeed, $"{id}:cacada")).Next(option.EncounterCodes.Count)]
@@ -391,11 +413,35 @@ public sealed class GameRunMapGenerator
             } : option.Type == "EVENTO" ? new GameRunMapNodePayloadDto
             {
                 GameMinutes = option.GameMinutes,
+            } : option.Type == "VENDEDOR" ? new GameRunMapNodePayloadDto
+            {
+                Offers = DrawVendorOffers(option, new Random(DeriveSeed(runSeed, $"{id}:vendedor"))),
             } : nonCombat ? null : new GameRunMapNodePayloadDto
             {
                 EncounterCode = encounterCode,
             },
         };
+    }
+
+    private static List<GameModeVendorOfferDto> DrawVendorOffers(GameModeAreaOptionDto option, Random random)
+    {
+        var pool = option.Offers.ToList();
+        var offers = new List<GameModeVendorOfferDto>();
+        int count = Math.Min(option.OfferCount, pool.Count);
+        while (offers.Count < count)
+        {
+            int ticket = random.Next(pool.Sum(offer => offer.Weight));
+            int index = 0;
+            while (ticket >= pool[index].Weight) ticket -= pool[index++].Weight;
+            GameModeVendorOfferDto selected = pool[index];
+            offers.Add(new GameModeVendorOfferDto
+            {
+                ItemId = selected.ItemId, Price = selected.Price, Stock = selected.Stock,
+                Weight = selected.Weight, Snapshot = selected.Snapshot?.DeepClone().AsObject(),
+            });
+            pool.RemoveAt(index);
+        }
+        return offers;
     }
 
     private static GameModeAreaOptionDto[] ChooseOptions(long runSeed, string areaCode,

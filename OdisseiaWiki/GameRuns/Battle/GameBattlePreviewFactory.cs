@@ -29,7 +29,8 @@ public sealed class GameBattlePreviewFactory
         _actionResolver = actionResolver;
     }
 
-    public GameBattlePreviewSetup Build(GameRunDto run, SistemaVersao version, string? encounterCode = null)
+    public GameBattlePreviewSetup Build(GameRunDto run, SistemaVersao version, string? encounterCode = null,
+        GameBattleEncounterConfig? trainingEncounter = null)
     {
         if (run.IdSistemaVersao != version.IdSistemaVersao ||
             run.EstadoAtual.IdSistemaVersao != version.IdSistemaVersao)
@@ -43,7 +44,12 @@ public sealed class GameBattlePreviewFactory
 
         GameBattlePreviewEnemy enemyConfig = config.PreviewEnemy;
         IReadOnlyDictionary<string, int> enemyDamageConfig = config.PreviewDamageByResult;
-        if (encounterCode is not null)
+        if (trainingEncounter is not null)
+        {
+            enemyConfig = trainingEncounter.Enemy ?? throw new InvalidOperationException("O treino não tem oponente.");
+            enemyDamageConfig = trainingEncounter.DamageByResult ?? throw new InvalidOperationException("O treino não tem dano configurado.");
+        }
+        else if (encounterCode is not null)
         {
             if (config.Encounters is null || !config.Encounters.TryGetValue(encounterCode, out GameBattleEncounterConfig? encounter) ||
                 encounter.Enemy is null || encounter.DamageByResult is null)
@@ -248,7 +254,7 @@ public sealed class GameBattlePreviewFactory
                         (int)(rule.ValorPadrao ?? rule.ValorEfeito ?? 0),
                         rule.MomentoEfeito ?? "", rule.Empilhavel,
                         rule.PermiteSobrescrever, rule.RegraRemocao ?? "MANUAL")
-                    { Effects = SistemaCondicaoEfeitos.Read(rule) },
+                    { Effects = SistemaCondicaoEfeitos.Read(rule), Image = SistemaCondicaoEfeitos.Image(rule) },
                     rule.CodigoRecursoGatilho!, rule.OperadorGatilho ?? "==",
                     rule.ValorGatilho!.Value, rule.DuracaoPadrao,
                     rule.UnidadeDuracao.ToString())).ToArray() },
@@ -681,7 +687,8 @@ public sealed class GameBattlePreviewFactory
             result.Add(new GameBattleConditionApplication(
                 new GameBattleConditionRule(rule.Codigo, rule.Nome, rule.OperacaoEfeito ?? "",
                     rule.CodigoRecurso ?? "", configuredValue, rule.MomentoEfeito ?? "", rule.Empilhavel,
-                    rule.PermiteSobrescrever, rule.RegraRemocao ?? "MANUAL") { Effects = effects },
+                    rule.PermiteSobrescrever, rule.RegraRemocao ?? "MANUAL")
+                    { Effects = effects, Image = SistemaCondicaoEfeitos.Image(rule) },
                 origin.Value, origin.Duration ?? rule.DuracaoPadrao, unit,
                 string.IsNullOrWhiteSpace(origin.Trigger) ? "ACERTO" : origin.Trigger,
                 origin.NaturalResults ?? [])
@@ -792,7 +799,8 @@ public sealed class GameBattlePreviewFactory
                 return item with { Rule = new GameBattleConditionRule(rule.Codigo, rule.Nome,
                     rule.OperacaoEfeito ?? "", rule.CodigoRecurso ?? "", item.Rule.Value,
                     rule.MomentoEfeito ?? "", rule.Empilhavel, rule.PermiteSobrescrever,
-                    rule.RegraRemocao ?? "MANUAL") { Effects = SistemaCondicaoEfeitos.Read(rule) } };
+                    rule.RegraRemocao ?? "MANUAL")
+                    { Effects = SistemaCondicaoEfeitos.Read(rule), Image = SistemaCondicaoEfeitos.Image(rule) } };
             }).ToList();
         if (snapshot.CondicoesAtivas is { ValueKind: JsonValueKind.Object } flags)
             foreach (JsonProperty flag in flags.EnumerateObject())
@@ -1013,6 +1021,7 @@ public sealed class GameBattlePreviewConfig
 
 public sealed class GameBattleEncounterConfig
 {
+    public int CurrencyReward { get; set; }
     public int LootCount { get; set; }
     public List<OdisseiaWiki.GameRuns.GameLootEntry> Loot { get; set; } = [];
     public string MapName { get; set; } = string.Empty;

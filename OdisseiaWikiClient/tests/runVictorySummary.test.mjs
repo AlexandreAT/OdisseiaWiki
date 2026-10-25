@@ -62,3 +62,15 @@ test('run antiga usa XP do combate salvo e compara o inventário inicial com o f
   assert.equal(summary.xp, 40);
   assert.equal(summary.items, 2);
 });
+
+test('stash entra no resumo sem contar uma prótese original transferida como recompensa nova', () => {
+  const original = { id: 'protese-original', nome: 'Braço', tipo: 'implante', quantidade: 1 };
+  const run = {
+    fase: 1, mapa: { nodes: [] },
+    snapshotInicial: { inventario: [], implantes: [original] },
+    estadoAtual: { status: {}, inventario: [], implantes: [], economy: { balance: 10, stash: [
+      original, { id: 'compra', nome: 'Poção', tipo: 'consumiveis', quantidade: 2 },
+    ] } },
+  };
+  assert.equal(summarizeRunVictory(run, []).items, 2);
+});

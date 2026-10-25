@@ -1,4 +1,7 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { useStoredPreferences } from '../../../../../hooks/useStoredPreferences';
+import { DEFAULT_WIKI_FILTERS, WIKI_LIST_FILTERS_KEY, normalizeWikiFilters, filterWikiResults,
+  type EntityFilter, type FlagFilter } from '../../../../../utils/listFilters';
 import { globalSearch, SearchResultItem } from '../../../../../services/infoLoreService';
 import { excluirItem } from '../../../../../services/itensService';
 import { deleteCidade } from '../../../../../services/cidadesService';
@@ -29,7 +32,11 @@ export const useFormBuscarConteúdo = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [errors, setErrors] = useState<SearchFormErrors>({});
-  const [selectedFilter, setSelectedFilter] = useState<EntityType | 'Todos'>('Todos');
+  const [filters, setFilters] = useStoredPreferences(WIKI_LIST_FILTERS_KEY, DEFAULT_WIKI_FILTERS, normalizeWikiFilters);
+  const selectedFilter = filters.entity;
+  const setSelectedFilter = useCallback((entity: EntityFilter) => setFilters(previous => ({ ...previous, entity })), [setFilters]);
+  const setVisibilityFilter = useCallback((visibility: FlagFilter) => setFilters(previous => ({ ...previous, visibility })), [setFilters]);
+  const setFeaturedFilter = useCallback((featured: FlagFilter) => setFilters(previous => ({ ...previous, featured })), [setFilters]);
   const [isDeleting, setIsDeleting] = useState(false);
   const [openConfirmDelete, setOpenConfirmDelete] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<SearchResultItem | null>(null);
@@ -129,54 +136,14 @@ export const useFormBuscarConteúdo = () => {
     };
   }, [termo, handleSearch]);
 
-  const getFilteredResults = useCallback((): SearchResultItem[] => {
-    if (selectedFilter === 'Todos') {
-      return [
-        ...results.cidades,
-        ...results.personagens,
-        ...results.itens,
-        ...results.infoLores,
-        ...results.racas,
-        ...results.pages,
-      ];
-    }
-
-    switch (selectedFilter) {
-      case 'Cidade':
-        return results.cidades;
-      case 'Personagem':
-        return results.personagens;
-      case 'Item':
-        return results.itens;
-      case 'InfoLore':
-        return results.infoLores;
-      case 'Raca':
-        return results.racas;
-      case 'Page':
-        return results.pages;
-      default:
-        return [];
-    }
-  }, [results, selectedFilter]);
-
-  const getResultCountByType = useCallback((type: EntityType): number => {
-    switch (type) {
-      case 'Cidade':
-        return results.cidades.length;
-      case 'Personagem':
-        return results.personagens.length;
-      case 'Item':
-        return results.itens.length;
-      case 'InfoLore':
-        return results.infoLores.length;
-      case 'Raca':
-        return results.racas.length;
-      case 'Page':
-        return results.pages.length;
-      default:
-        return 0;
-    }
-  }, [results]);
+  const allResults = useMemo(() => [
+    ...results.cidades, ...results.personagens, ...results.itens,
+    ...results.infoLores, ...results.racas, ...results.pages,
+  ], [results]);
+  const filteredResults = useMemo(() => filterWikiResults(allResults, filters), [allResults, filters]);
+  const getFilteredResults = useCallback(() => filteredResults, [filteredResults]);
+  const getResultCountByType = useCallback((type: EntityType | 'Todos'): number =>
+    filterWikiResults(allResults, { ...filters, entity: type }).length, [allResults, filters]);
 
   const handleEdit = useCallback((item: SearchResultItem) => {
     // TODO: Implementar navegação para edição
@@ -290,8 +257,8 @@ export const useFormBuscarConteúdo = () => {
     setTotalResultados(0);
     setHasSearched(false);
     setErrors({});
-    setSelectedFilter('Todos');
-  }, []);
+    setFilters(DEFAULT_WIKI_FILTERS);
+  }, [setFilters]);
 
   return {
     termo,
@@ -303,6 +270,10 @@ export const useFormBuscarConteúdo = () => {
     errors,
     selectedFilter,
     setSelectedFilter,
+    visibilityFilter: filters.visibility,
+    setVisibilityFilter,
+    featuredFilter: filters.featured,
+    setFeaturedFilter,
     handleSearch,
     getFilteredResults,
     getResultCountByType,

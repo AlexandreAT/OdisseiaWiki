@@ -1,4 +1,5 @@
-import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
+import { forwardRef, useEffect, useMemo, useRef, useState, memo } from "react";
+import { useEventCallback } from '../../../hooks/useEventCallback';
 import CalculateIcon from "@mui/icons-material/Calculate";
 import {
   CalculatorDropdown,
@@ -17,6 +18,8 @@ import {
   StatusValueGroup,
 } from "./StatusInput.style";
 import { selectNumericInputValue } from '../../../utils/numericInput';
+import { FieldHelp } from '../FieldHelp/FieldHelp';
+import type { FieldHelpContent } from '../FieldHelp/FieldHelp.types';
 
 type StatusType = "vida" | "estamina" | "mana";
 
@@ -35,9 +38,11 @@ interface Props {
   enableCalculator?: boolean;
   width?: string;
   height?: string;
+  help?: FieldHelpContent;
+  helpKey?: string;
 }
 
-export const StatusInput = forwardRef<HTMLInputElement, Props>(
+const StatusInputComponent = forwardRef<HTMLInputElement, Props>(
   (
     {
       theme,
@@ -54,6 +59,8 @@ export const StatusInput = forwardRef<HTMLInputElement, Props>(
       enableCalculator = false,
       width,
       height,
+      help,
+      helpKey,
     },
     ref
   ) => {
@@ -132,7 +139,7 @@ export const StatusInput = forwardRef<HTMLInputElement, Props>(
 
     return (
       <ContentController width={width} height={height}>
-        {(label || canUseCalculator) && (
+        {(label || canUseCalculator || help || helpKey) && (
           <StatusHeader ref={calculatorWrapperRef}>
             {label ? <StatusLabel>{label}</StatusLabel> : <span />}
 
@@ -173,6 +180,7 @@ export const StatusInput = forwardRef<HTMLInputElement, Props>(
                 )}
               </>
             )}
+            <FieldHelp label={label ?? type} help={help} helpKey={helpKey} theme={theme} neon={neon} inline />
           </StatusHeader>
         )}
         {hasDualValue ? (
@@ -230,4 +238,15 @@ export const StatusInput = forwardRef<HTMLInputElement, Props>(
   }
 );
 
+StatusInputComponent.displayName = 'StatusInputControl';
+const MemoizedStatusInput = memo(StatusInputComponent);
+export const StatusInput = forwardRef<HTMLInputElement, Props>((props, ref) => {
+  const onChange = useEventCallback(props.onChange);
+  const onMaxChange = useEventCallback(props.onMaxChange);
+  const onFocus = useEventCallback(props.onFocus);
+  const onBlur = useEventCallback(props.onBlur);
+  return <MemoizedStatusInput {...props} ref={ref} onChange={props.onChange ? onChange : undefined}
+    onMaxChange={props.onMaxChange ? onMaxChange : undefined} onFocus={props.onFocus ? onFocus : undefined}
+    onBlur={props.onBlur ? onBlur : undefined} />;
+});
 StatusInput.displayName = 'StatusInput';

@@ -14,6 +14,7 @@ import { normalizeImagePath } from '../../Wiki/utils/imagePathHelper';
 import { useManagementGame } from './useManagementGame';
 import { ManagementGameEncounterCatalog } from './ManagementGameEncounterCatalog';
 import { ManagementGamePowers } from './ManagementGamePowers';
+import { ManagementGameVendorOffers } from './ManagementGameVendorOffers';
 import {
   GameAdminActions, GameAdminCard, GameAdminDraftActions, GameAdminFields, GameAdminFrame,
   GameAdminGrid, GameAdminHeader, GameAdminHint, GameAdminImage, GameAdminRoute, GameAdminRouteImageHeader, GameAdminSection,
@@ -180,7 +181,12 @@ export const ManagementGame = ({ theme, neon, mesaId, onDirtyChange }: Props) =>
       />Consertar proteção ao entrar na Base</label></GameAdminWeightRow>
       <p>Restaura a proteção original dos itens carregados. O escudo não é restaurado pela Base.</p>
       <h2>Economia</h2>
-      <p>Percentual descontado do valor de compra quando um item for vendido. O vendedor será implementado em uma etapa futura.</p>
+      <p>A moeda inicial pertence à run. Configure ofertas nas rotas de Vendedor e moeda ao vencer nos encontros.</p>
+      <GameAdminFields><InputText theme={theme} neon={neon}
+        label="Moeda inicial" width="100%" type="number"
+        value={editor.startingCurrency ?? 0} disabled={!editable}
+        onChange={(event) => state.updateStartingCurrency(Number(event.target.value))} /></GameAdminFields>
+      <p>O desconto de venda será usado quando a venda de itens for implementada.</p>
       <GameAdminFields><InputText theme={theme} neon={neon}
         label="Desconto de venda do item" width="100%" type="number"
         value={editor.saleDiscountPercent ?? 0} disabled={!editable}
@@ -258,7 +264,7 @@ export const ManagementGame = ({ theme, neon, mesaId, onDirtyChange }: Props) =>
               ...(area.useBase === false ? [] : [{ value: 'BASE', label: area.baseName || 'Base' }]),
               ...area.options.map((option, optionIndex) => ({
                 value: `ROTA:${optionIndex}`,
-                label: `${optionIndex + 1}. ${['EVENTO', 'DESCANSO', 'ATALHO', 'CACADA', 'AREA_SECRETA'].includes(option.type)
+                label: `${optionIndex + 1}. ${['EVENTO', 'DESCANSO', 'ATALHO', 'CACADA', 'AREA_SECRETA', 'VENDEDOR'].includes(option.type)
                   ? option.label || option.type : editor.encounters[option.encounterCode]?.mapName || option.type}`,
               }))]}
             onChange={(event) => state.updateArea(index, { finalOption: event.target.value })} />
@@ -274,30 +280,32 @@ export const ManagementGame = ({ theme, neon, mesaId, onDirtyChange }: Props) =>
             onRemove={() => { if (editable) state.updateArea(index, { baseImage: null }); }} /></GameAdminImage>}
         </GameAdminFields>
         <h4>Pool de encontros · {area.nodeCount ?? 18} nós jogáveis nesta área</h4>
-        <GameAdminHint>As opções são sorteadas pelo peso e podem reaparecer, exceto quando marcadas como únicas. O último nó usa a escolha acima{area.useBase === false ? '.' : '; a Base ainda pode aparecer antes dele.'}</GameAdminHint>
+        <GameAdminHint>O peso aumenta a chance de aparecer, não a prioridade no começo: as posições são embaralhadas. Opções únicas aparecem no máximo uma vez por área. O último nó usa a escolha acima{area.useBase === false ? '.' : '; a Base ainda pode aparecer antes dele.'}</GameAdminHint>
         {area.options.map((option, optionIndex) => <GameAdminRoute key={`${area.code}-${optionIndex}`}>
           <Select theme={theme} neon={neon} label="Tipo de rota" width="100%" portal
             value={option.type} disabled={!editable} allowEmptyOption={false}
             options={[{ value: 'COMBATE', label: 'Combate' }, { value: 'ELITE', label: 'Elite' },
               { value: 'BOSS', label: 'Chefe' }, { value: 'DESCANSO', label: 'Descanso' },
               { value: 'EVENTO', label: 'Evento narrativo' },
+              { value: 'VENDEDOR', label: 'Mercador' },
               { value: 'ATALHO', label: 'Atalho' }, { value: 'CACADA', label: 'Caçada' },
               { value: 'AREA_SECRETA', label: 'Área secreta' }]}
             onChange={(event) => {
               const options = [...area.options];
               const type = event.target.value as GameModeAreaOption['type'];
               options[optionIndex] = { ...option, type,
-                encounterCode: ['EVENTO', 'DESCANSO', 'ATALHO', 'CACADA', 'AREA_SECRETA'].includes(type) ? '' :
+                encounterCode: ['EVENTO', 'DESCANSO', 'ATALHO', 'CACADA', 'AREA_SECRETA', 'VENDEDOR'].includes(type) ? '' :
                   (editor.encounters[option.encounterCode] ? option.encounterCode : ''),
                 encounterCodes: type === 'CACADA' ? option.encounterCodes ?? [] : [],
                 secretAreaCode: type === 'AREA_SECRETA' ? option.secretAreaCode ?? '' : null,
                 unique: type === 'AREA_SECRETA' ? true : option.unique,
-                label: ['EVENTO', 'DESCANSO', 'ATALHO', 'CACADA', 'AREA_SECRETA'].includes(type)
-                  ? option.label || (({ EVENTO: 'Evento', DESCANSO: 'Descanso', ATALHO: 'Atalho', CACADA: 'Caçada', AREA_SECRETA: 'Passagem secreta' } as Record<string, string>)[type] ?? type)
+                offers: type === 'VENDEDOR' ? option.offers ?? [] : [],
+                label: ['EVENTO', 'DESCANSO', 'ATALHO', 'CACADA', 'AREA_SECRETA', 'VENDEDOR'].includes(type)
+                  ? option.label || (({ EVENTO: 'Evento', DESCANSO: 'Descanso', ATALHO: 'Atalho', CACADA: 'Caçada', AREA_SECRETA: 'Passagem secreta', VENDEDOR: 'Mercador' } as Record<string, string>)[type] ?? type)
                   : option.label };
               state.updateArea(index, { options });
             }} />
-          {['EVENTO', 'DESCANSO', 'ATALHO', 'CACADA', 'AREA_SECRETA'].includes(option.type) ? <>
+          {['EVENTO', 'DESCANSO', 'ATALHO', 'CACADA', 'AREA_SECRETA', 'VENDEDOR'].includes(option.type) ? <>
             <InputText theme={theme} neon={neon} label="Nome da rota" width="100%"
               value={option.label ?? ''} disabled={!editable}
               onChange={(event) => {
@@ -346,6 +354,20 @@ export const ManagementGame = ({ theme, neon, mesaId, onDirtyChange }: Props) =>
                 options[optionIndex] = { ...option, secretAreaCode: event.target.value };
                 state.updateArea(index, { options });
               }} />}
+            {option.type === 'VENDEDOR' && <ManagementGameVendorOffers
+              theme={theme} neon={neon} editable={!!editable} mesaId={mesaId}
+              systemVersionId={editor.idSistemaVersao} offers={option.offers ?? []}
+              offerCount={option.offerCount ?? 3}
+              onOfferCountChange={(offerCount) => {
+                const options = [...area.options];
+                options[optionIndex] = { ...option, offerCount };
+                state.updateArea(index, { options });
+              }}
+              onChange={(offers) => {
+                const options = [...area.options];
+                options[optionIndex] = { ...option, offers };
+                state.updateArea(index, { options });
+              }} />}
           </> : <Select theme={theme} neon={neon} label="Encontro da rota" width="100%" portal
             value={option.encounterCode ?? ''} disabled={!editable}
             options={Object.entries(editor.encounters).map(([code, encounter]) => ({
@@ -371,10 +393,10 @@ export const ManagementGame = ({ theme, neon, mesaId, onDirtyChange }: Props) =>
                 state.updateArea(index, { options });
               }} />Único</label>
           </GameAdminWeightRow>
-          {(['EVENTO', 'DESCANSO', 'ATALHO', 'CACADA', 'AREA_SECRETA'].includes(option.type)) &&
+          {(['EVENTO', 'DESCANSO', 'ATALHO', 'CACADA', 'AREA_SECRETA', 'VENDEDOR'].includes(option.type)) &&
             <GameAdminImage data-route-image>
               <GameAdminRouteImageHeader $neon={neon === 'on'}>
-                <span>Imagem da opção</span>
+                <span>{option.type === 'VENDEDOR' ? 'Avatar do mercador' : 'Imagem da opção'}</span>
                 <GameAdminDelete type="button" disabled={!editable || area.options.length <= 1}
                   title={area.options.length <= 1 ? 'Cada área precisa de ao menos uma rota' : 'Excluir rota'}
                   aria-label={`Excluir rota ${optionIndex + 1} de ${area.name}`}
@@ -383,14 +405,14 @@ export const ManagementGame = ({ theme, neon, mesaId, onDirtyChange }: Props) =>
               <ImageUploader theme={theme} neon={neon}
               cropPreset={option.type === 'AREA_SECRETA' ? areaCrop : routeCrop}
               initialImage={normalizeImagePath(option.image ?? undefined)}
-              label="Imagem da opção"
+              label={option.type === 'VENDEDOR' ? 'Avatar do mercador' : 'Imagem da opção'}
               onImageCropped={(result) => { if (editable) void state.uploadAreaImage(index, result.file, optionIndex); }}
               onRemove={() => { if (editable) {
                 const options = [...area.options];
                 options[optionIndex] = { ...option, image: null };
                 state.updateArea(index, { options });
               } }} /></GameAdminImage>}
-          {!['EVENTO', 'DESCANSO', 'ATALHO', 'CACADA', 'AREA_SECRETA'].includes(option.type) && <GameAdminDelete type="button" disabled={!editable || area.options.length <= 1}
+          {!['EVENTO', 'DESCANSO', 'ATALHO', 'CACADA', 'AREA_SECRETA', 'VENDEDOR'].includes(option.type) && <GameAdminDelete type="button" disabled={!editable || area.options.length <= 1}
             title={area.options.length <= 1 ? 'Cada área precisa de ao menos uma rota' : 'Excluir rota'}
             aria-label={`Excluir rota ${optionIndex + 1} de ${area.name}`}
             onClick={() => state.removeRoute(index, optionIndex)}>

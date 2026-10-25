@@ -1,4 +1,5 @@
 import { useState, useEffect, memo, useRef } from 'react';
+import { useEventCallback } from '../../../hooks/useEventCallback';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -67,6 +68,7 @@ const RichTextEditorComponent = ({
     value || createEmptyJSONContent(),
   );
   const controllerRef = useRef<HTMLDivElement>(null);
+  const lastEmittedContent = useRef<JSONContent | null>(null);
 
   useEffect(() => {
     if (error) revealFirstValidationError(controllerRef.current);
@@ -90,6 +92,7 @@ const RichTextEditorComponent = ({
     onUpdate: ({ editor }) => {
       if (onChange && isInitialized) {
         const json = editor.getJSON() as JSONContent;
+        lastEmittedContent.current = json;
         onChange(json);
       }
     },
@@ -112,6 +115,9 @@ const RichTextEditorComponent = ({
   // Atualiza o conteúdo quando o value muda (inicialização ou edição externa)
   useEffect(() => {
     if (!editor) return;
+    // The editor already owns this exact transaction. External replacements still
+    // follow the full normalization/comparison path below.
+    if (isInitialized && value === lastEmittedContent.current) return;
 
     const currentContent = editor.getJSON();
     let normalizedValue: JSONContent;
@@ -222,4 +228,11 @@ const RichTextEditorComponent = ({
   );
 };
 
-export const RichTextEditor = memo(RichTextEditorComponent);
+const MemoizedRichTextEditor = memo(RichTextEditorComponent);
+export const RichTextEditor = (props: RichTextEditorProps) => {
+  const onChange = useEventCallback(props.onChange);
+  const onFocus = useEventCallback(props.onFocus);
+  const onBlur = useEventCallback(props.onBlur);
+  return <MemoizedRichTextEditor {...props} onChange={props.onChange ? onChange : undefined}
+    onFocus={props.onFocus ? onFocus : undefined} onBlur={props.onBlur ? onBlur : undefined} />;
+};

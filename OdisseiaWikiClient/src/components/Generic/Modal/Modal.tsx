@@ -6,6 +6,7 @@ import { CyberButton } from '../HighlightButton/HighlightButton';
 
 interface ModalProps {
   title: React.ReactNode;
+  subtitle?: React.ReactNode;
   theme?: 'light' | 'dark';
   neon?: 'on' | 'off';
   children?: React.ReactNode;
@@ -20,6 +21,7 @@ interface ModalProps {
 
 const ModalComponent = ({
     title,
+    subtitle,
     theme = 'light',
     neon = 'off',
     children,
@@ -64,6 +66,7 @@ const ModalComponent = ({
     }, []);
 
     useEffect(() => {
+        if (!modalRoot) return;
         const handleKeyDown = (event: KeyboardEvent) => {
             if (event.key === 'Escape') handleDefaultClose();
         };
@@ -72,18 +75,21 @@ const ModalComponent = ({
         closeButtonRef.current?.focus();
 
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [handleDefaultClose]);
+    }, [handleDefaultClose, modalRoot]);
 
     if (!modalRoot) return null;
 
     const modalContent = (
         <ModalOverlay $mobileInset={mobileInset} onClick={(event) => { if (event.target === event.currentTarget) handleDefaultClose(); }}>
-            <ModalContainer theme={theme} neon={neon} $width={width} $mobileInset={mobileInset} role="dialog" aria-modal="true" aria-label={typeof title === 'string' ? title : undefined}>
+            <ModalContainer neon={neon === 'on'} $width={width} $mobileInset={mobileInset} role="dialog" aria-modal="true" aria-label={typeof title === 'string' ? title : undefined}>
                 <ModalHeaderContainer theme={theme} neon={neon}>
-                    <span>{title}</span>
+                    <div className="modal-heading">
+                        <div className="modal-title" role="heading" aria-level={2}>{title}</div>
+                        {subtitle && <p>{subtitle}</p>}
+                    </div>
                     <div className="modal-header-actions">
                         {headerActions}
-                        <button ref={closeButtonRef} onClick={handleDefaultClose} title="Fechar" aria-label="Fechar modal"><CloseIcon /></button>
+                        <button className="modal-close" type="button" ref={closeButtonRef} onClick={handleDefaultClose} title="Fechar" aria-label="Fechar modal"><CloseIcon /></button>
                     </div>
                 </ModalHeaderContainer>
 

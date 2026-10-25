@@ -75,8 +75,14 @@ export const SectionCard = styled.section<ThemeProps>`
     : 'rgba(255, 255, 255, 0.66)'};
   box-sizing: border-box;
 
+  /* Grid gaps separate columns, not the content that follows the grid.
+     Keep vertical rhythm here instead of changing every input on the site. */
+  > * + * { margin-top: 14px; }
+  > h4:not(:first-child) { margin-top: 22px; }
+  > div + p { margin-top: 12px; }
+
   h4 {
-    margin: 0 0 6px;
+    margin: 0 0 10px;
     color: ${({ theme, neon }) => neon === 'on'
       ? theme === 'dark' ? 'var(--clearneonBlue)' : 'var(--clearneonViolet)'
       : 'var(--whitesmoke)'} !important;

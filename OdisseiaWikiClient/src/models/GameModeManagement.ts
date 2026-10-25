@@ -1,5 +1,8 @@
+export interface GameModeVendorOffer { itemId: string; price: number; stock: number; weight?: number;
+  snapshot?: { nome: string; tipo: string; imagem?: string | null; valor?: number | null } | null }
+
 export interface GameModeAreaOption {
-  type: 'COMBATE' | 'ELITE' | 'BOSS' | 'DESCANSO' | 'EVENTO' | 'ATALHO' | 'CACADA' | 'AREA_SECRETA';
+  type: 'COMBATE' | 'ELITE' | 'BOSS' | 'DESCANSO' | 'EVENTO' | 'ATALHO' | 'CACADA' | 'AREA_SECRETA' | 'VENDEDOR';
   encounterCode: string;
   encounterCodes?: string[];
   secretAreaCode?: string | null;
@@ -9,6 +12,8 @@ export interface GameModeAreaOption {
   description?: string | null;
   image?: string | null;
   gameMinutes?: number;
+  offers?: GameModeVendorOffer[];
+  offerCount?: number;
 }
 
 export interface GameModeArea {
@@ -92,6 +97,7 @@ export interface GameModePowerOption {
 }
 
 export interface GameModeEncounter {
+  currencyReward?: number;
   lootCount?: number;
   loot?: { itemId: string; weight: number; snapshot?: { nome: string; imagem?: string; tipo: string } | null }[];
   mapName: string;
@@ -118,6 +124,7 @@ export interface GameModeEditor {
   attackOutcomeCodes: string[];
   playerDamageByResult: Record<string, { multiplier: number; bonus: number }>;
   saleDiscountPercent: number;
+  startingCurrency: number;
   repairProtectionAtBase: boolean;
   powerCatalog: GameModePowerOption[];
 }
@@ -133,4 +140,4 @@ export interface GameAdventure {
   numeroVersao: string;
 }
 
-export type GameModeEditorUpdate = Pick<GameModeEditor, 'areas' | 'encounters' | 'fallbackAction' | 'playerDamageByResult' | 'saleDiscountPercent' | 'repairProtectionAtBase' | 'powerCatalog'>;
+export type GameModeEditorUpdate = Pick<GameModeEditor, 'areas' | 'encounters' | 'fallbackAction' | 'playerDamageByResult' | 'saleDiscountPercent' | 'startingCurrency' | 'repairProtectionAtBase' | 'powerCatalog'>;

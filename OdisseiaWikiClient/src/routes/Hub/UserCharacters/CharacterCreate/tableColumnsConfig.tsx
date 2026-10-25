@@ -14,7 +14,7 @@ import { ImageUploader } from '../../../../components/Generic/ImageUploader/Imag
 import { CropPreset } from '../../../../components/Generic/ImageUploader/types';
 import { SistemaRuntimeContexto } from '../../../../models/SistemaRpg';
 import { getRuntimeMagicTypeOptions } from '../../../../utils/systemRuntimeCharacter';
-import { buildSistemaItemFormCatalog, SistemaItemFormCatalog } from '../../../../utils/systemItemFormCatalog';
+import { buildCharacterEntryCatalog, SistemaItemFormCatalog } from '../../../../utils/systemItemFormCatalog';
 
 const characterEntryImageCropPreset: CropPreset = {
   mode: 'single',
@@ -169,7 +169,8 @@ const ItemAtributosEditor = memo(({
   onChange,
   onRowChange,
   theme,
-  neon 
+  neon,
+  runtimeContext,
 }: { 
   row: Item; 
   value: any;
@@ -177,9 +178,12 @@ const ItemAtributosEditor = memo(({
   onRowChange: (row: Item) => void;
   theme: 'dark' | 'light';
   neon: 'on' | 'off';
+  runtimeContext?: SistemaRuntimeContexto | null;
 }) => {
   const [open, setOpen] = React.useState(false);
   const FormComponent = atributosFormMap[row.tipo as ItemTipo];
+  const sistemaItemCatalogo = React.useMemo(() => buildCharacterEntryCatalog(row.tipo as ItemTipo, value, runtimeContext),
+    [row.tipo, value, runtimeContext]);
   const attributesWithEffect = {
     ...(value && typeof value === 'object' ? value : {}),
     efeito: value?.efeito ?? row.efeito ?? '',
@@ -223,21 +227,11 @@ const ItemAtributosEditor = memo(({
             />
           </ItemTableGeneralAttributes>
           <CharacterEntryImageUploader row={row} onRowChange={onRowChange} theme={theme} neon={neon} />
-          <FormComponent value={attributesWithEffect} onChange={onChange} theme={theme} neon={neon} />
+          <FormComponent value={attributesWithEffect} onChange={onChange} theme={theme} neon={neon} sistemaItemCatalogo={sistemaItemCatalogo} />
         </Modal>
       )}
     </>
   );
-}, (prevProps, nextProps) => {
-
-  return prevProps.value === nextProps.value && 
-         prevProps.row.tipo === nextProps.row.tipo &&
-         prevProps.row.nome === nextProps.row.nome &&
-         prevProps.row.efeito === nextProps.row.efeito &&
-         prevProps.row.discricao === nextProps.row.discricao &&
-         prevProps.row.valor === nextProps.row.valor &&
-         prevProps.row.imagem === nextProps.row.imagem &&
-         prevProps.row.imagemArquivo === nextProps.row.imagemArquivo;
 });
 
 const SkillAtributosEditor = memo(({ 
@@ -282,13 +276,6 @@ const SkillAtributosEditor = memo(({
       )}
     </>
   );
-}, (prevProps, nextProps) => {
-  return prevProps.value === nextProps.value && 
-         prevProps.row.tipo === nextProps.row.tipo &&
-         prevProps.row.nome === nextProps.row.nome &&
-         prevProps.row.imagem === nextProps.row.imagem &&
-         prevProps.row.imagemArquivo === nextProps.row.imagemArquivo &&
-         prevProps.sistemaItemCatalogo === nextProps.sistemaItemCatalogo;
 });
 
 const MagiaAtributosEditor = memo(({ 
@@ -333,13 +320,6 @@ const MagiaAtributosEditor = memo(({
       )}
     </>
   );
-}, (prevProps, nextProps) => {
-  return prevProps.value === nextProps.value && 
-         prevProps.row.tipo === nextProps.row.tipo &&
-         prevProps.row.nome === nextProps.row.nome &&
-         prevProps.row.imagem === nextProps.row.imagem &&
-         prevProps.row.imagemArquivo === nextProps.row.imagemArquivo &&
-         prevProps.sistemaItemCatalogo === nextProps.sistemaItemCatalogo;
 });
 
 const baseItemColumns = [
@@ -429,7 +409,7 @@ const baseMagiasColumns = [
   },
 ];
 
-export const createItemColumns = (theme: 'dark' | 'light', neon: 'on' | 'off') => [
+export const createItemColumns = (theme: 'dark' | 'light', neon: 'on' | 'off', runtimeContext?: SistemaRuntimeContexto | null) => [
   ...baseItemColumns.slice(0, 1), // nome
   {
     key: "descricao",
@@ -459,6 +439,7 @@ export const createItemColumns = (theme: 'dark' | 'light', neon: 'on' | 'off') =
         onRowChange={onRowChange}
         theme={theme}
         neon={neon}
+        runtimeContext={runtimeContext}
       />
     )
   } as any,
@@ -469,7 +450,7 @@ export const createSkillsColumns = (
   neon: 'on' | 'off',
   runtimeContext?: SistemaRuntimeContexto | null,
 ) => {
-  const conditionCatalog = buildSistemaItemFormCatalog('outro', {}, [], [], runtimeContext?.sobrevivencia?.condicoes ?? [], runtimeContext?.criacao?.atributos ?? []);
+  const conditionCatalog = buildCharacterEntryCatalog('outro', {}, runtimeContext);
   return [
   ...baseSkillsColumns.map((column) => {
     const runtimeColumn = column.key === 'elemento'
@@ -509,7 +490,7 @@ export const createMagiasColumns = (
   neon: 'on' | 'off',
   runtimeContext?: SistemaRuntimeContexto | null,
 ) => {
-  const conditionCatalog = buildSistemaItemFormCatalog('outro', {}, [], [], runtimeContext?.sobrevivencia?.condicoes ?? [], runtimeContext?.criacao?.atributos ?? []);
+  const conditionCatalog = buildCharacterEntryCatalog('outro', {}, runtimeContext);
   return [
   ...baseMagiasColumns.map((column) => {
     const runtimeColumn = column.key === 'elemento'

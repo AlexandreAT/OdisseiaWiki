@@ -3,6 +3,9 @@ using OdisseiaWiki.GameRuns;
 
 namespace OdisseiaWiki.Dtos;
 
+public sealed record GameTrainingEnemyDto(string Key, string Nome, string? Imagem,
+    int Vida, int Mana, int Estamina);
+
 public sealed record GameBattlePreviewActorDto(
     string Id,
     string Nome,
@@ -13,7 +16,10 @@ public sealed record GameBattlePreviewActorDto(
     int Estamina,
     int EstaminaMaxima,
     GameBattleDefenses Defesas,
-    string? Imagem = null);
+    string? Imagem = null)
+{
+    public IReadOnlyList<GameBattleActiveCondition> Condicoes { get; init; } = [];
+}
 
 public sealed record GameRunEncounterSetupDto(
     IReadOnlyList<GameBattlePreviewActorDto> Equipe,
@@ -33,6 +39,7 @@ public sealed record GameBattlePreviewDto(
 {
     public IReadOnlyList<GameBattlePreviewActorDto> Oponentes { get; init; } = [];
     public int XpConcedido { get; init; }
+    public int MoedaConcedida { get; init; }
     public IReadOnlyList<int> NiveisAlcancados { get; init; } = [];
     public GameRunGrantedPoints PontosConcedidos { get; init; } = new();
 }

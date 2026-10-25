@@ -1,5 +1,5 @@
 import styled from 'styled-components';
-import { cyberButtonsFillWidth } from '../../../components/Generic/HighlightButton/HighlightButton.styles';
+import { cyberButtonsFillWidth, cyberButtonActionRow } from '../../../components/Generic/HighlightButton/HighlightButton.styles';
 import HudCornerThin from '../../../assets/svg/HudCornerThin.svg';
 import { GameNotice } from '../GameShared.style';
 
@@ -234,7 +234,15 @@ export const LoadoutCardMedia = styled.span`
   border: 1px solid rgba(77, 238, 234, .2);
   background: rgba(0, 6, 15, .85);
   color: var(--clearneonBlue);
-  img { width: 100%; height: 100%; object-fit: cover; transition: transform 240ms ease; }
+  /* The square reserves the space, not the intrinsic size of a lazy image. */
+  img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 240ms ease;
+  }
   svg { font-size: clamp(2.4rem, 7vw, 3.5rem); }
   ${LoadoutCard}:hover & img, ${LoadoutCard}:focus-visible & img { transform: scale(1.06); }
 `;
@@ -315,7 +323,8 @@ export const ConsumableRestoration = styled.div`
 `;
 
 export const LoadoutActions = styled.div`
-  display: flex; justify-content: flex-end; align-items: center; gap: 10px; flex-wrap: wrap;
+  ${cyberButtonActionRow}
+  justify-content: flex-end; gap: 10px;
   padding-top: 12px; border-top: 1px solid rgba(77, 238, 234, .2);
   @media (max-width: 600px) {
     flex-direction: column;

@@ -35,7 +35,7 @@ export const getGameAdventureSystemVersions = async (mesaId?: number): Promise<G
   (await api.get<GameModeSystemVersion[]>(`${adventurePath}/system-versions`,
     { params: { idMesa: mesaId } })).data;
 
-export interface GameLootOption { id: string; name: string; type: string; image: string | null }
+export interface GameLootOption { id: string; name: string; type: string; image: string | null; value?: number | null }
 export const getGameLootOptions = async (mesaId?: number, versionId?: number): Promise<GameLootOption[]> =>
   (await api.get<GameLootOption[]>(mesaId ? `${adventurePath}/loot-items` : `${path}/loot-items`,
     { params: { idMesa: mesaId, idSistemaVersao: versionId } })).data;

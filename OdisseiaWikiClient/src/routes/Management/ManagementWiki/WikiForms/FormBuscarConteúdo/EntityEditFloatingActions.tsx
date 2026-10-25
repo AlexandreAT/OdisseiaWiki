@@ -14,6 +14,7 @@ interface EntityEditFloatingActionsProps {
   neon: 'on' | 'off';
   synced: boolean;
   saving: boolean;
+  disabled?: boolean;
   onSave: () => void;
 }
 
@@ -22,6 +23,7 @@ export const EntityEditFloatingActions: React.FC<EntityEditFloatingActionsProps>
   neon,
   synced,
   saving,
+  disabled = false,
   onSave,
 }) => (
   <FloatingActions>
@@ -40,7 +42,7 @@ export const EntityEditFloatingActions: React.FC<EntityEditFloatingActionsProps>
       onClick={onSave}
       title="Salvar alterações e continuar editando"
       aria-label="Salvar alterações e continuar editando"
-      disabled={saving}
+      disabled={saving || disabled}
       aria-busy={saving}
     >
       {saving ? <FloatingSaveSpinner role="status" aria-label="Salvando" /> : <SaveIcon className="icon" />}

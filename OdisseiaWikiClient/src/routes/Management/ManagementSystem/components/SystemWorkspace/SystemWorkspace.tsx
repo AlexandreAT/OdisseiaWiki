@@ -10,6 +10,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import SettingsSuggestOutlinedIcon from '@mui/icons-material/SettingsSuggestOutlined';
 import UndoIcon from '@mui/icons-material/Undo';
+import { useState } from 'react';
 import { LoadingIndicator } from '../../../../../components/Generic/LoadingIndicator';
 import {
   getSistemaVersaoStatusLabel,
@@ -49,7 +50,8 @@ import { SistemaValidationErrors } from '../../systemValidation';
 import { ModuleEditor } from '../ModuleEditor/ModuleEditor';
 import { RaceOption } from '../ModuleForms/ModuleForm.types';
 import { SystemVersionOperations } from '../SystemVersionOperations/SystemVersionOperations';
-import { SystemItemCatalog } from '../SystemItemCatalog/SystemItemCatalog';
+import { SystemItemCatalog, SystemItemCatalogQuickSave } from '../SystemItemCatalog/SystemItemCatalog';
+import { EntityEditFloatingActions } from '../../../ManagementWiki/WikiForms/FormBuscarConteúdo/EntityEditFloatingActions';
 
 type AnyModuleConfig = SistemaModuloConfigMap[SistemaModuloKey];
 
@@ -146,7 +148,22 @@ export const SystemWorkspace = ({
   onSave,
   onDiscard,
   onCatalogDirtyChange,
-}: SystemWorkspaceProps) => (
+}: SystemWorkspaceProps) => {
+  const [catalogQuickSave, setCatalogQuickSave] = useState<SystemItemCatalogQuickSave | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const currentCatalog = catalogQuickSave?.versionId === selectedVersion?.idSistemaVersao
+    ? catalogQuickSave : null;
+  const hasUnsavedChanges = dirty || Boolean(currentCatalog?.dirty);
+  const quickSaving = saving || Boolean(currentCatalog?.saving);
+  const canSaveModule = Boolean(moduleConfig) && !moduleLoading && !moduleError;
+
+  const quickSave = () => {
+    if (readOnly || quickSaving || uploadingImage) return;
+    if (dirty && canSaveModule) onSave();
+    if (currentCatalog?.dirty) void currentCatalog.save();
+  };
+
+  return (
   <>
     <WorkspaceHeader theme={theme} neon={neon}>
       <SystemTitle>
@@ -258,7 +275,7 @@ export const SystemWorkspace = ({
                 </ActionButton>
                 {isSistemaVersaoRascunho(selectedVersion.status) && (
                   <>
-                    <ActionButton type="button" theme={theme} neon={neon} $compact onClick={onPublishVersion}>
+                    <ActionButton type="button" theme={theme} neon={neon} $compact onClick={onPublishVersion} disabled={uploadingImage || saving}>
                       <PublishOutlinedIcon /> Publicar
                     </ActionButton>
                     <ActionButton type="button" theme={theme} neon={neon} $compact $danger onClick={onDeleteVersion}>
@@ -292,11 +309,13 @@ export const SystemWorkspace = ({
             )}
 
             <SystemItemCatalog
+              key={selectedVersion.idSistemaVersao}
               idSistemaVersao={selectedVersion.idSistemaVersao}
               readOnly={readOnly}
               theme={theme}
               neon={neon}
               onDirtyChange={onCatalogDirtyChange}
+              onQuickSaveChange={setCatalogQuickSave}
             />
 
             <ModuleNav theme={theme} neon={neon} aria-label="Módulos da versão">
@@ -316,6 +335,7 @@ export const SystemWorkspace = ({
             </ModuleNav>
 
             <ModuleEditor
+              onUploadBusyChange={setUploadingImage}
               idSistemaVersao={selectedVersion.idSistemaVersao}
               lastSavedAt={lastSavedAt}
               moduleKey={activeModule}
@@ -341,14 +361,25 @@ export const SystemWorkspace = ({
                     : lastSavedAt ? `Salvo às ${lastSavedAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : 'Módulo sincronizado'}
                 </DirtyIndicator>
                 {dirty && (
-                  <ActionButton type="button" theme={theme} neon={neon} $compact onClick={onDiscard} disabled={saving}>
+                  <ActionButton type="button" theme={theme} neon={neon} $compact onClick={onDiscard} disabled={saving || uploadingImage}>
                     <UndoIcon /> Descartar
                   </ActionButton>
                 )}
-                <ActionButton type="button" theme={theme} neon={neon} $compact onClick={onSave} disabled={!dirty || saving}>
+                <ActionButton type="button" theme={theme} neon={neon} $compact onClick={onSave} disabled={!dirty || saving || uploadingImage}>
                   <SaveOutlinedIcon /> {saving ? 'Salvando...' : 'Salvar módulo'}
                 </ActionButton>
               </SaveBar>
+            )}
+
+            {!readOnly && (canSaveModule || currentCatalog) && (
+              <EntityEditFloatingActions
+                theme={theme}
+                neon={neon}
+                synced={!hasUnsavedChanges}
+                saving={quickSaving}
+                disabled={uploadingImage || !hasUnsavedChanges || (!canSaveModule && !currentCatalog?.dirty)}
+                onSave={quickSave}
+              />
             )}
 
           </>
@@ -356,4 +387,5 @@ export const SystemWorkspace = ({
       </EditorPanel>
     </WorkspaceLayout>
   </>
-);
+  );
+};

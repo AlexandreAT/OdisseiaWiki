@@ -56,6 +56,10 @@ namespace OdisseiaWiki.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)");
 
+                    b.Property<string>("IdOrigemGlobal")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
                     b.Property<int?>("IdSistemaRpg")
                         .HasColumnType("int")
                         .HasColumnName("IDSistemaRpg");
@@ -63,10 +67,6 @@ namespace OdisseiaWiki.Migrations
                     b.Property<int?>("IdSistemaVersao")
                         .HasColumnType("int")
                         .HasColumnName("IDSistemaVersao");
-
-                    b.Property<string>("IdOrigemGlobal")
-                        .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
 
                     b.Property<int>("IdWikiEscopo")
                         .HasColumnType("int")
@@ -94,9 +94,6 @@ namespace OdisseiaWiki.Migrations
                     b.Property<decimal?>("Peso")
                         .HasColumnType("decimal(65,30)");
 
-                    b.Property<decimal?>("Valor")
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<int>("Quantidade")
                         .HasColumnType("int");
 
@@ -108,6 +105,9 @@ namespace OdisseiaWiki.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("varchar(50)")
                         .HasColumnName("Tipo");
+
+                    b.Property<decimal?>("Valor")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<bool>("Visivel")
                         .HasColumnType("tinyint(1)");
@@ -124,11 +124,11 @@ namespace OdisseiaWiki.Migrations
                     b.HasIndex("IdWikiEscopo")
                         .HasDatabaseName("IX_Item_WikiEscopo");
 
+                    b.HasIndex("PersonagemIdpersonagem");
+
                     b.HasIndex("IdWikiEscopo", "IdOrigemGlobal")
                         .IsUnique()
                         .HasDatabaseName("UX_Item_Escopo_OrigemGlobal");
-
-                    b.HasIndex("PersonagemIdpersonagem");
 
                     b.ToTable("itens", null, t =>
                         {
@@ -195,6 +195,24 @@ namespace OdisseiaWiki.Migrations
                     b.ToTable("cidades", (string)null);
                 });
 
+            modelBuilder.Entity("OdisseiaWiki.Models.GameCharacterMemory", b =>
+                {
+                    b.Property<int>("IdPersonagemJogador")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("IDPersonagemJogador");
+
+                    b.Property<DateTime>("AtualizadaEmUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("EstadoJson")
+                        .IsRequired()
+                        .HasColumnType("json");
+
+                    b.HasKey("IdPersonagemJogador");
+
+                    b.ToTable("gamecharactermemories", (string)null);
+                });
+
             modelBuilder.Entity("OdisseiaWiki.Models.GameModeVersion", b =>
                 {
                     b.Property<int>("IdGameModeVersion")
@@ -203,6 +221,10 @@ namespace OdisseiaWiki.Migrations
                         .HasColumnName("IDGameModeVersion");
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("IdGameModeVersion"));
+
+                    b.Property<string>("Banner")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
 
                     b.Property<string>("Codigo")
                         .IsRequired()
@@ -216,10 +238,6 @@ namespace OdisseiaWiki.Migrations
                     b.Property<DateTime>("CriadaEmUtc")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<string>("Banner")
-                        .HasMaxLength(255)
-                        .HasColumnType("varchar(255)");
-
                     b.Property<string>("Descricao")
                         .HasMaxLength(500)
                         .HasColumnType("varchar(500)");
@@ -228,22 +246,22 @@ namespace OdisseiaWiki.Migrations
                         .HasColumnType("int")
                         .HasColumnName("IDMesa");
 
+                    b.Property<int>("IdSistemaVersao")
+                        .HasColumnType("int")
+                        .HasColumnName("IDSistemaVersao");
+
                     b.Property<int?>("IdUsuarioCriacao")
                         .HasColumnType("int")
                         .HasColumnName("IDUsuarioCriacao");
 
-                    b.Property<int>("IdSistemaVersao")
-                        .HasColumnType("int")
-                        .HasColumnName("IDSistemaVersao");
+                    b.Property<string>("Nome")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
 
                     b.Property<string>("NumeroVersao")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("varchar(20)");
-
-                    b.Property<string>("Nome")
-                        .HasMaxLength(100)
-                        .HasColumnType("varchar(100)");
 
                     b.Property<DateTime?>("PublicadaEmUtc")
                         .HasColumnType("datetime(6)");
@@ -1934,6 +1952,9 @@ namespace OdisseiaWiki.Migrations
                     b.Property<string>("Historia")
                         .HasColumnType("longtext");
 
+                    b.Property<int?>("IdOrigemGlobal")
+                        .HasColumnType("int");
+
                     b.Property<int?>("IdSistemaRpg")
                         .HasColumnType("int")
                         .HasColumnName("IDSistemaRpg");
@@ -1945,9 +1966,6 @@ namespace OdisseiaWiki.Migrations
                     b.Property<int>("IdWikiEscopo")
                         .HasColumnType("int")
                         .HasColumnName("IDWikiEscopo");
-
-                    b.Property<int?>("IdOrigemGlobal")
-                        .HasColumnType("int");
 
                     b.Property<int?>("Idcidade")
                         .HasColumnType("int(11)")
@@ -2019,11 +2037,11 @@ namespace OdisseiaWiki.Migrations
                     b.HasIndex("IdWikiEscopo")
                         .HasDatabaseName("IX_Personagem_WikiEscopo");
 
+                    b.HasIndex("PassivaIdpassiva");
+
                     b.HasIndex("IdWikiEscopo", "IdOrigemGlobal")
                         .IsUnique()
                         .HasDatabaseName("UX_Personagem_Escopo_OrigemGlobal");
-
-                    b.HasIndex("PassivaIdpassiva");
 
                     b.HasIndex(new[] { "Idcidade" }, "ID cidades");
 
@@ -3811,6 +3829,18 @@ namespace OdisseiaWiki.Migrations
                     b.Navigation("SistemaRpg");
 
                     b.Navigation("WikiEscopo");
+                });
+
+            modelBuilder.Entity("OdisseiaWiki.Models.GameCharacterMemory", b =>
+                {
+                    b.HasOne("OdisseiaWiki.Models.PersonagemJogador", "Personagem")
+                        .WithMany()
+                        .HasForeignKey("IdPersonagemJogador")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_GameCharacterMemory_Personagem");
+
+                    b.Navigation("Personagem");
                 });
 
             modelBuilder.Entity("OdisseiaWiki.Models.GameModeVersion", b =>

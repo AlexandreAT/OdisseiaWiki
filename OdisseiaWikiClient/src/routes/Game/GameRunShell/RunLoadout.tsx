@@ -220,7 +220,7 @@ export function RunLoadout({ run, theme, neon, saving, busy, error, onSave, onUs
                   : 'A Base não repara a proteção nesta versão do jogo.'}</LoadoutDefenseNote>}
             </LoadoutDefensePanel>}
             {attackConfiguration && <>
-              {utilityConfiguration && <GameHint>Uma utilização sem teste de acerto quando chegar a vez desta ação. Consumíveis gastam uma unidade da mochila; se estiverem esgotados, o combate tenta a próxima ação.</GameHint>}
+              {utilityConfiguration && <GameHint>Usa uma vez por ciclo, sem teste de acerto, e segue para a próxima ação. Consumíveis gastam uma unidade da mochila e só voltam a ser usados depois de percorrer as outras ações.</GameHint>}
               {powerAction && !utilityConfiguration && <GameHint>Uma execução por ação. O combate exige teste e dano executáveis na versão publicada do Sistema.</GameHint>}
               {!powerAction && !utilityConfiguration && <>
               <label>Alcance

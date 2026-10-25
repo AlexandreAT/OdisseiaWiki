@@ -1,4 +1,5 @@
 import styled from 'styled-components';
+import { cyberButtonActionRow } from '../HighlightButton/HighlightButton.styles';
 import { CropShape } from './types';
 
 interface Props {
@@ -219,7 +220,7 @@ export const ZoomControl = styled.div<Props>`
 `;
 
 export const ButtonsContainer = styled.div`
-  display: flex;
+  ${cyberButtonActionRow}
   gap: 10px;
   justify-content: flex-end;
 `;

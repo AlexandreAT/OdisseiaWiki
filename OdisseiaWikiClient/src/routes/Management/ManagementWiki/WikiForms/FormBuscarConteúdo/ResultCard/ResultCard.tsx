@@ -1,4 +1,5 @@
 import React from 'react';
+import { getItemTagRarity } from '../../../../../../utils/itemTagRarity';
 import { BiEditAlt, BiHide, BiShow, BiStar, BiTrash } from 'react-icons/bi';
 import { normalizeImagePath } from '../../../../../Wiki/utils/imagePathHelper';
 import { CardProps, EntityType } from '../types';
@@ -25,8 +26,8 @@ const ENTITY_LABELS: Record<EntityType, string> = {
   Personagem: 'NPC',
   Item: 'Item',
   InfoLore: 'Lore',
-  Raca: 'RaÃ§a',
-  Page: 'PÃ¡gina',
+  Raca: 'Raça',
+  Page: 'Página',
 };
 
 export const ResultCard: React.FC<CardProps> = ({ theme, neon, item, onEdit, onDelete }) => {
@@ -68,7 +69,7 @@ export const ResultCard: React.FC<CardProps> = ({ theme, neon, item, onEdit, onD
         <ManagementMetadata>
           <MetadataChip $active={item.visivel}>
             {item.visivel ? <BiShow aria-hidden="true" /> : <BiHide aria-hidden="true" />}
-            {item.visivel ? 'VisÃ­vel' : 'Oculto'}
+            {item.visivel ? 'Visível' : 'Oculto'}
           </MetadataChip>
           <MetadataChip $active={Boolean(item.destaque)} $featured>
             <BiStar aria-hidden="true" />
@@ -84,7 +85,7 @@ export const ResultCard: React.FC<CardProps> = ({ theme, neon, item, onEdit, onD
 
         {visibleTags.length > 0 && (
           <TagsContainer>
-            {visibleTags.map((tag) => <Tag key={tag}>{tag}</Tag>)}
+            {visibleTags.map((tag) => <Tag key={tag} $rarity={getItemTagRarity(tag)} $neon={neon === 'on'}>{tag}</Tag>)}
             {hiddenTagCount > 0 && <Tag>+{hiddenTagCount}</Tag>}
           </TagsContainer>
         )}

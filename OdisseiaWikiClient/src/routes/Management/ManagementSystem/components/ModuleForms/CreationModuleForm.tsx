@@ -1,4 +1,6 @@
 import { useMemo } from 'react';
+import { describeSystemOptions } from '../../../../../content/systemOptionHelp';
+import { HelpHeading } from '../../../../../components/Generic/HelpHeading/HelpHeading';
 import { InputText } from '../../../../../components/Generic/InputText/InputText';
 import {
   SistemaAtributoConfig,
@@ -9,12 +11,12 @@ import { ConfigTable, ConfigTableColumn } from '../ConfigTable/ConfigTable';
 import { ModuleFormProps } from './ModuleForm.types';
 import { FieldGrid, ModuleFieldset, ModuleIntro, SectionCard } from './ModuleForms.style';
 
-const attributeGroups = [
+const attributeGroups = describeSystemOptions('attributeGroup', [
   { label: 'Principal', value: 'Principal' },
   { label: 'Secundário', value: 'Secundario' },
   { label: 'Defesa', value: 'Defesa' },
   { label: 'Outro', value: 'Outro' },
-];
+]);
 
 const attributeColumns: ConfigTableColumn<SistemaAtributoConfig>[] = [
   { key: 'codigo', label: 'Código', type: 'text', maxLength: 50 },
@@ -153,7 +155,7 @@ export const CreationModuleForm = ({
     <ModuleFieldset disabled={readOnly}>
       <ModuleIntro theme={theme} neon={neon}>
         <div>
-          <h3>Criação de personagem</h3>
+          <HelpHeading level="h3" label="Criação de personagem" />
           <p>
             Defina os valores iniciais, atributos, recursos e a leitura mecânica das raças da Wiki
             para esta versão. A lore da raça continua na entidade original.
@@ -162,7 +164,7 @@ export const CreationModuleForm = ({
       </ModuleIntro>
 
       <SectionCard theme={theme} neon={neon}>
-        <h4>Valores iniciais</h4>
+        <HelpHeading label="Valores iniciais" />
         <p>Limites e pontos disponíveis no momento em que a ficha é criada.</p>
         <FieldGrid $columns={4}>
           <InputText theme={theme} neon={neon} label="Nível inicial" type="number" value={value.nivelInicial} onChange={setNumber('nivelInicial')} error={Boolean(errors.nivelInicial)} errorMessage={errors.nivelInicial} required />

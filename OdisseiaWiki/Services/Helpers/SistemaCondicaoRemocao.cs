@@ -6,6 +6,15 @@ namespace OdisseiaWiki.Services.Helpers;
 /// <summary>Only explicit published removal rules are executable. Older narrative text stays assisted.</summary>
 public static class SistemaCondicaoRemocao
 {
+    public static string[] Codigos(string? value) => (value ?? string.Empty)
+        .Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+        .Select(part => Code(part) switch
+        {
+            "DESCANSO_NORMAL_OU_LONGO" => "DESCANSO_NORMAL",
+            "APOS_A_DURACAO_CONFIGURADA" => "DURACAO",
+            var code => code,
+        }).Distinct().ToArray();
+
     public static bool AoTerminarDuracao(SistemaCondicao rule) =>
         Has(rule, "DURACAO") || Has(rule, "APOS_A_DURACAO_CONFIGURADA") ||
         string.IsNullOrWhiteSpace(rule.RegraRemocao) && rule.DuracaoPadrao is > 0;

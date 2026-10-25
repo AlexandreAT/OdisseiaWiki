@@ -1,5 +1,5 @@
 import { ItemTipo } from '../models/Itens';
-import { SistemaAtributoConfig, SistemaCondicao, SistemaItemEscopoRuntime, SistemaItemReferenciaRuntime, SistemaResultadoDado } from '../models/SistemaRpg';
+import { SistemaAtributoConfig, SistemaCondicao, SistemaItemEscopoRuntime, SistemaItemReferenciaRuntime, SistemaResultadoDado, SistemaRuntimeContexto } from '../models/SistemaRpg';
 
 export interface ItemFormOption {
   value: string;
@@ -21,6 +21,13 @@ export interface SistemaItemFormCatalog {
   references: SistemaItemReferenciaRuntime[];
   categoryCode?: string;
   archetypeCode?: string;
+}
+
+/** Inventory copies use the character's resolved version, never the item's origin or latest global System. */
+export function buildCharacterEntryCatalog(type: ItemTipo, attributes: unknown, context?: SistemaRuntimeContexto | null) {
+  if (!context) return undefined;
+  return buildSistemaItemFormCatalog(type, attributes, context.itens?.tipos ?? [],
+    context.combate?.resultadosDado ?? [], context.sobrevivencia?.condicoes ?? [], context.criacao?.atributos ?? []);
 }
 
 const TYPE_CODES: Record<ItemTipo, string> = {
