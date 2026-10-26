@@ -96,7 +96,7 @@ export const MapDrawing = styled.svg<{ $neon: boolean }>`
     .npc-lock-frame { filter: drop-shadow(0 0 2px rgba(77, 238, 234, .25)); }
     .npc-lock-icon { animation: ${lockPulse} 2.6s ease-in-out infinite alternate; }
   `}
-  @media (prefers-reduced-motion: reduce) {
+  :root[data-motion='reduced'] & {
     .npc-lock-icon { animation: none; filter: none; }
     .npc-rescue-hint { animation: none; }
   }

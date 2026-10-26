@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { summarizeRunVictory } from '../src/routes/Game/GameRunShell/runVictorySummary.ts';
+import { summarizeDefeatedEnemies, summarizeRunVictory } from '../src/routes/Game/GameRunShell/runVictorySummary.ts';
 
 test('vitória soma inimigos, áreas, itens e XP persistidos sem contar derrotas', () => {
   const actor = { id: 'player' };
@@ -73,4 +73,18 @@ test('stash entra no resumo sem contar uma prótese original transferida como re
     ] } },
   };
   assert.equal(summarizeRunVictory(run, []).items, 2);
+});
+
+test('painel de inimigos agrupa retratos e quantidades sem contar antigas vitórias por impasse', () => {
+  const battle = (endReason, names) => ({ battle: {
+    personagem: { id: 'player' }, resultado: { winnerActorId: 'player', endReason },
+    oponentes: names.map(nome => ({ nome, imagem: nome === 'Lobo' ? '/lobo.png' : null })),
+  } });
+  const records = [battle('ActorDefeated', ['Lobo', 'Lobo', 'Maga']), battle('NoDamage', ['Caçador']),
+    battle('ActorDefeated', ['Lobo'])];
+  assert.deepEqual(summarizeDefeatedEnemies(records), [
+    { name: 'Lobo', image: '/lobo.png', count: 3 }, { name: 'Maga', image: null, count: 1 },
+  ]);
+  const run = { fase: 1, mapa: { nodes: [] }, snapshotInicial: {}, estadoAtual: { status: {} } };
+  assert.equal(summarizeRunVictory(run, records).defeated, 4);
 });

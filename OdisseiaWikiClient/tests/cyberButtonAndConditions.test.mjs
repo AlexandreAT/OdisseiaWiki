@@ -14,6 +14,7 @@ const bundle = await build({
     export * from './src/routes/Hub/UserCharacters/CharacterCreate/tableColumnsConfig';
     export { InputText } from './src/components/Generic/InputText/InputText';
     export { ConditionEffectFieldsForTest, ImplanteAtributosForm, TestSpecificationFields } from './src/routes/Management/ManagementWiki/WikiForms/FormCriarConteúdo/FormCharacter/MapItensForm';
+    export { atributosFormMap, atributosSkillFormMap, atributosMagiaFormMap } from './src/routes/Management/ManagementWiki/WikiForms/FormCriarConteúdo/FormCharacter/MapItensForm';
     export { ServerStyleSheet } from 'styled-components';`, loader: 'ts', resolveDir: process.cwd() },
   plugins: [{ name: 'condition-editor-isolation', setup(builder) {
     builder.onResolve({ filter: /Generic\/Modal\/Modal$/ }, () => ({ path: 'Modal', namespace: 'test-modal' }));
@@ -45,6 +46,34 @@ after(() => { if (previousDocument === undefined) delete globalThis.document; el
 const base = { theme: 'dark', neon: 'off' };
 const text = node => typeof node === 'string' ? node : (node.children ?? []).map(text).join('');
 const button = (renderer, label) => renderer.root.findAllByType('button').find(node => text(node) === label);
+
+test('todas as variações de itens, magias e skills reutilizam a ajuda padrão nos campos técnicos', () => {
+  const helpIds = (Component, props) => {
+    let renderer;
+    act(() => { renderer = create(React.createElement(Component, { ...base, onChange() {}, ...props })); });
+    try {
+      return renderer.root.findAll(node => typeof node.type === 'string' && node.props['data-field-help'])
+        .map(node => node.props['data-field-help']);
+    } finally { act(() => renderer.unmount()); }
+  };
+  for (const forms of [api.atributosFormMap, api.atributosSkillFormMap, api.atributosMagiaFormMap]) {
+    for (const [type, Component] of Object.entries(forms)) {
+      assert.ok(helpIds(Component, { value: {}, managementLayout: true })
+        .some(id => id.startsWith('wiki.content.equipment.')), type);
+    }
+  }
+  const conditions = helpIds(api.ConditionEffectFieldsForTest,
+    { value: [{ codigo: 'REGEN', gatilho: 'AO_USAR', duracao: 4 }],
+      options: [{ value: 'REGEN', label: 'Regeneração' }] });
+  assert.ok(conditions.includes('wiki.content.condition.duration'));
+  assert.ok(!conditions.includes('wiki.content.equipment.narrativeDuration'));
+  const testFields = helpIds(api.TestSpecificationFields, { value: { codigoTeste: 'ATAQUE_COMUM' } });
+  assert.ok(testFields.includes('wiki.content.test.total'));
+  assert.ok(testFields.includes('wiki.content.test.attribute'));
+  const weapon = helpIds(api.atributosFormMap.arma, { value: { controlaMunicao: true }, managementLayout: true });
+  for (const field of ['cadence', 'ammunition', 'magazine', 'currentAmmo', 'ammoPerShot', 'ammoPerBurst',
+    'attackLimit', 'shotLimit', 'burstLimit']) assert.ok(weapon.includes(`wiki.content.equipment.${field}`), field);
+});
 
 test('prótese reutiliza combate das armas sem perder bônus e mostra defesas antes da configuração', () => {
   let renderer, current;

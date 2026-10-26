@@ -11,7 +11,7 @@ export const Offers = styled.div`
   gap: 20px;
   min-width: 0;
   animation: ${catalogReveal} 220ms ease-out both;
-  @media (prefers-reduced-motion: reduce) { animation: none; }
+  :root[data-motion='reduced'] & { animation: none; }
 `;
 
 export const VendorCatalogTrigger = styled.button<{ $neon: boolean }>`
@@ -36,7 +36,7 @@ export const VendorCatalogTrigger = styled.button<{ $neon: boolean }>`
   &:hover { border-color: var(--clearneonBlue);
     box-shadow: ${({ $neon }) => $neon ? '0 0 12px rgba(77, 238, 234, .18)' : 'none'}; }
   &:focus-visible { outline: 2px solid var(--clearneonBlue); outline-offset: 3px; }
-  @media (prefers-reduced-motion: reduce) { transition: none; }
+  :root[data-motion='reduced'] & { transition: none; }
 `;
 
 export const OfferRow = styled.article`
@@ -65,7 +65,7 @@ export const OfferRowHeader = styled.div`
   button:disabled { opacity: .4; cursor: default; }
   button:hover:not(:disabled) { background: rgba(77, 238, 234, .06); }
   button:focus-visible { outline: 2px solid var(--clearneonBlue); }
-  @media (prefers-reduced-motion: reduce) { button, svg { transition: none !important; } }
+  :root[data-motion='reduced'] & { button, svg { transition: none !important; } }
 `;
 
 export const OfferExpansion = styled.div<{ $expanded: boolean }>`
@@ -75,7 +75,7 @@ export const OfferExpansion = styled.div<{ $expanded: boolean }>`
   transition: grid-template-rows 220ms ease, opacity 180ms ease;
   > div { overflow: hidden; min-height: 0; }
   fieldset { min-width: 0; margin: 0; padding: 22px 5px 6px; border: 0; }
-  @media (prefers-reduced-motion: reduce) { transition: none; }
+  :root[data-motion='reduced'] & { transition: none; }
 `;
 
 export const OfferFields = styled(GameAdminFields)`

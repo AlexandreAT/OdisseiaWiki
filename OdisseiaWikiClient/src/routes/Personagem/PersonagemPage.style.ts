@@ -676,7 +676,7 @@ export const HistoryModalSheet = styled.div<{ theme: 'dark' | 'light'; neon: 'on
     border-radius: 8px;
   }
 
-  @media (prefers-reduced-motion: reduce) {
+  :root[data-motion='reduced'] & {
     animation: none;
   }
 `;

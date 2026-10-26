@@ -102,7 +102,7 @@ test('header mantém a barra de ações fora da área recolhível e respeita mov
   assert.ok(shell.indexOf('</RunHudDisclosure>') < shell.indexOf('<RunActionRail '));
   const styles = readFileSync('src/routes/Game/GameRunShell/RunHudDisclosure.style.ts', 'utf8');
   assert.match(styles, /grid-template-rows:/);
-  assert.match(styles, /prefers-reduced-motion/);
+  assert.match(styles, /:root\[data-motion='reduced'\]/);
   assert.match(styles, /:focus-visible/);
   assert.match(shell, /navigation=\{expanded => <RunHudNavigation>/);
   assert.match(shell, /expanded && <RunHudMeta>/);
@@ -126,7 +126,7 @@ test('cadeado do NPC usa emblema sci-fi discreto, neon opcional e some após res
     assert.doesNotMatch(render(true, true), /class="npc-lock"/);
     const css = sheet.getStyleTags();
     assert.match(css, /npc-lock-icon/);
-    assert.match(css, /prefers-reduced-motion/);
+    assert.match(css, /:root\[data-motion='reduced'\]/);
     assert.match(css, /drop-shadow/);
     const source = readFileSync('src/routes/Game/RunMapCanvas/RunMapCanvas.tsx', 'utf8');
     const badge = source.slice(source.indexOf('<g className="npc-lock"'), source.indexOf('</g>}', source.indexOf('<g className="npc-lock"')));

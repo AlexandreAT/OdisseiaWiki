@@ -14,8 +14,10 @@ import { ManagementAccessGuard } from './routes/Management/ManagementAccessGuard
 import { MesaAccessGuard } from './routes/Mesas/MesaAccessGuard.tsx';
 import MesaSearch from './routes/Mesas/MesaSearch/MesaSearch.tsx';
 import { installNumericInputSelection } from './utils/numericInput.ts';
+import { initializeMotionPreference } from './utils/motionPreference.ts';
 
 installNumericInputSelection();
+initializeMotionPreference();
 
 const Home = lazy(() => import('./routes/Home/Home.tsx'));
 const Login = lazy(() => import('./routes/Login/Login.tsx'));

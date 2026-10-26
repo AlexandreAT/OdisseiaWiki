@@ -250,7 +250,7 @@ const EquippedTrace = styled.svg<{ $accent: string; $neon: 'on' | 'off' }>`
     : 'none'};
   }
 
-  @media (prefers-reduced-motion: reduce) {
+  :root[data-motion='reduced'] & {
     rect { animation: none; stroke-dasharray: none; }
   }
 `;

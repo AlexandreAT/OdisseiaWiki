@@ -1,5 +1,7 @@
 import type { GameBattleEvent, GameBattlePreview, GameBattlePreviewActor } from '../../../models/GameBattlePreview';
 import { snapshotConditions, type ActiveConditionDisplay } from '../../../components/Gameplay/ConditionBadges/conditionBadgeState';
+import { battleWinner, endingLabel } from './battleOutcome';
+export { battleWinner, endingLabel } from './battleOutcome';
 
 export const visibleActorConditions = (preview: GameBattlePreview, actor: GameBattlePreviewActor,
   eventCount: number): ActiveConditionDisplay[] => {
@@ -168,13 +170,6 @@ const resultLabel = (code?: string): string => ({
   CRITICO: 'crítico', ACERTO_CRITICO: 'crítico',
 }[code ?? ''] ?? 'resultado');
 
-const endingLabel = (reason: GameBattlePreview['resultado']['endReason']): string => ({
-  ActorDefeated: 'um combatente foi derrotado',
-  RoundLimit: 'encerrado',
-  EventLimit: 'limite de eventos',
-  NoDamage: 'sem progresso no combate',
-}[reason]);
-
 const actionPresentation = (preview: GameBattlePreview, event: GameBattleEvent, following: GameBattleEvent[]): {
   text: string;
   action?: BattleActionDisplay;
@@ -333,13 +328,14 @@ export const buildBattleBeats = (preview: GameBattlePreview): BattleBeat[] => {
     }
     if (event.type === 'CONDITION_EXPIRED') text = `${event.payload.name ?? 'Condição'} terminou em ${actorName(preview, event.actorId)}.`;
     if (event.type === 'BATTLE_ENDED') {
-      text = preview.resultado.winnerActorId
-        ? `${actorName(preview, preview.resultado.winnerActorId)} venceu o combate.`
-        : `Combate encerrado: ${endingLabel(preview.resultado.endReason)}.`;
+      const winner = battleWinner(preview);
+      text = winner
+        ? `${actorName(preview, winner)} venceu o combate.`
+        : `Combate inconclusivo: ${endingLabel(preview.resultado.endReason)}.`;
       phase = 'end';
     }
     if (text) {
-      const eventActorId = event.type === 'BATTLE_ENDED' ? preview.resultado.winnerActorId
+      const eventActorId = event.type === 'BATTLE_ENDED' ? battleWinner(preview)
         : event.type === 'CONDITION_APPLIED' ? event.targetId : event.actorId;
       const name = eventActorId ? actorName(preview, eventActorId) : undefined;
       beats.push({ throughIndex, sequence: event.sequence, round: event.round,

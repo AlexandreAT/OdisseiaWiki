@@ -329,7 +329,7 @@ export const PaginationButton = styled.button<{
     opacity: 0.3;
   }
 
-  @media (prefers-reduced-motion: reduce) {
+  :root[data-motion='reduced'] & {
     transition: none;
   }
 `;

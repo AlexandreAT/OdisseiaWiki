@@ -18,6 +18,7 @@ import {
 } from '../../../services/gameRunService';
 import { getApiErrorMessage } from '../../../utils/apiError';
 import { shouldAutoCloseCombat, type CombatOrigin } from './battleReplayFlow';
+import { battleWinner } from '../BattleReplay/battleOutcome';
 import { canManageRunItem } from './runRewardActions';
 
 interface CombatScene {
@@ -219,8 +220,10 @@ export const useGameRun = () => {
     };
     setCombatScene({ record, origin: 'current' });
     setRun(result.run);
-    setBattles((previous) => previous.some((battle) => battle.noId === record.noId)
-      ? previous : [...previous, record]);
+    if (result.battle.resultado.winnerActorId && result.battle.resultado.endReason === 'ActorDefeated') {
+      setBattles((previous) => previous.some((battle) => battle.noId === record.noId)
+        ? previous : [...previous, record]);
+    }
     pendingEncounter.current = null;
     pendingAction.current = null;
     try { setRun(await upgradeLegacyMap(result.run)); }
@@ -636,6 +639,7 @@ export const useGameRun = () => {
     openBattle: (record: GameRunBattleRecord) => setCombatScene({ record, origin: 'history' }),
     finishCombatReplay: async (speed: 1 | 2) => {
       if (!combatScene) return;
+      if (!battleWinner(combatScene.record.battle)) return;
       markBattleSeen(runId, combatScene.record);
       if (combatScene.origin !== 'history' && currentRun) {
         try {
@@ -676,7 +680,7 @@ export const useGameRun = () => {
         return;
       }
       if (rewardReturnTimer.current) clearTimeout(rewardReturnTimer.current);
-      if (combatScene) markBattleSeen(runId, combatScene.record);
+      if (combatScene && battleWinner(combatScene.record.battle)) markBattleSeen(runId, combatScene.record);
       setCombatScene(null);
     },
     startEncounter,

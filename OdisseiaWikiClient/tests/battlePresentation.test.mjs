@@ -3,8 +3,22 @@ import test from 'node:test';
 import { build } from 'esbuild';
 const bundle = await build({ entryPoints: ['src/routes/Game/BattleReplay/battlePresentation.ts'],
   bundle: true, write: false, format: 'esm', platform: 'node' });
-const { activeBattleActor, buildBattleBeats, latestBattleImpact, visibleActorConditions, visibleActorDefense, visibleActorResource } =
+const { activeBattleActor, battleWinner, buildBattleBeats, latestBattleImpact, visibleActorConditions, visibleActorDefense, visibleActorResource } =
   await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
+
+test('impasse e limite técnico não anunciam vencedor mesmo em um replay antigo com winnerActorId', () => {
+  for (const endReason of ['NoDamage', 'EventLimit']) {
+    const preview = { personagem: { id: 'hero', nome: 'Gunthar' }, oponente: { id: 'enemy', nome: 'Caçador' },
+      resultado: { winnerActorId: 'hero', endReason, events: [
+        { sequence: 1, round: 5, type: 'BATTLE_ENDED', actorId: null, targetId: null, payload: {} },
+      ] } };
+    assert.equal(battleWinner(preview), null);
+    const beats = buildBattleBeats(preview);
+    assert.match(beats[0].text, /Combate inconclusivo/);
+    assert.doesNotMatch(beats[0].text, /venceu/);
+    if (endReason === 'NoDamage') assert.match(beats[0].text, /10 turnos/);
+  }
+});
 
 test('condição informa duração e cada efeito periódico no turno correto sem duplicar deltas', () => {
   const event = (type, payload, actorId = 'hero', targetId = null) => ({ type, payload, actorId, targetId, round: 1 });

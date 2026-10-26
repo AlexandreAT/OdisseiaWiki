@@ -57,13 +57,14 @@ public sealed class GameBattlePreviewFactory
                 "Configure dano, recuperação ou uma condição executável. Para efeitos sem teste, use o gatilho Ao usar.");
     }
 
-    public bool CanExecuteSelectedAction(GameRunDto run, SistemaVersao version, GameRunActionSelectionDto selection)
+    public bool CanExecuteSelectedAction(GameRunDto run, SistemaVersao version, GameRunActionSelectionDto selection,
+        ICollection<string>? validationErrors = null)
     {
         var config = run.ConfiguracaoModo.Deserialize<GameBattlePreviewConfig>(JsonOptions)
             ?? throw new InvalidOperationException("O modo de jogo não possui regras de ataque configuradas.");
         if (config.PreviewPlayerDamageByResult is null)
             throw new InvalidOperationException("O modo de jogo não possui o dano por resultado configurado.");
-        return BuildSelectedActions(run.EstadoAtual, [selection], version, config, []).Any(action =>
+        return BuildSelectedActions(run.EstadoAtual, [selection], version, config, [], validationErrors).Any(action =>
             action.Id == $"{selection.Tipo.ToLowerInvariant()}:{selection.IdInstancia}");
     }
 
@@ -391,6 +392,11 @@ public sealed class GameBattlePreviewFactory
                     // Fichas antigas podem ter carregador, mas deixar o switch
                     // de controle desligado pelo valor padrão do formulário.
                     attributes["controlaMunicao"] = true;
+                    // Cópias antigas só guardavam o tamanho do carregador e o
+                    // acerto D20. Use o mesmo padrão do editor (1 por tiro),
+                    // sem sobrescrever custos explicitamente configurados.
+                    if (Property(element, "custoMunicaoTiro") is null or { ValueKind: JsonValueKind.Null })
+                        attributes["custoMunicaoTiro"] = 1;
                 }
             }
             foreach (KeyValuePair<string, JsonNode?> child in obj.ToArray()) Fill(child.Value);
@@ -529,7 +535,11 @@ public sealed class GameBattlePreviewFactory
             };
             JsonElement? item = SnapshotEntries(snapshotSource).FirstOrDefault(entry =>
                 string.Equals(ReadString(entry, "id"), selection.IdInstancia, StringComparison.Ordinal));
-            if (item is not { ValueKind: JsonValueKind.Object }) continue;
+            if (item is not { ValueKind: JsonValueKind.Object })
+            {
+                validationErrors?.Add("O item ou poder não foi encontrado no inventário desta run.");
+                continue;
+            }
             if (type == "PROTESE" && !GameRunProstheses.HasTest(item.Value))
             {
                 validationErrors?.Add("Próteses sem teste são instaladas como equipamento, não como ações.");
@@ -649,7 +659,10 @@ public sealed class GameBattlePreviewFactory
             GameBattleMagazineSpec? magazine = item is { ValueKind: JsonValueKind.Object }
                 ? ResolveMagazine(item.Value, resolved) : null;
             if (ReadInt(resolved.Snapshot.Valores, "consumoMunicaoProposto") is > 0 && magazine is null)
+            {
+                validationErrors?.Add("O carregador é incompatível com o consumo de munição desta ação. Revise a capacidade e o custo por tiro ou rajada.");
                 continue;
+            }
             if (magazine is not null && (long)magazine.AmmoPerUse * count > magazine.Capacity)
                 throw new InvalidOperationException("A quantidade escolhida exige mais munição que o carregador comporta.");
             actions.Add(new GameBattleActionSpec(

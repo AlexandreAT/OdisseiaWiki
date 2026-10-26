@@ -13,11 +13,28 @@ public sealed partial class GameRunEncounterService
     {
         var run = await _runs.GetByIdAsync(runId, userId, token);
         if (run is null) return null;
+        // The recap is immutable even if a later run retrieves these protected items.
+        if (run.Status != OdisseiaWiki.Enums.GameRunStatus.Ativa)
+        {
+            using var snapshot = System.Text.Json.JsonDocument.Parse(run.EstadoAtualJson);
+            if (snapshot.RootElement.TryGetProperty("protectedDepositAtEnd", out var recap))
+                return System.Text.Json.JsonSerializer.Deserialize<GameRunProtectedDepositDto>(recap, JsonOptions);
+        }
         var version = await _systems.GetVersionAsync(run.IdSistemaVersao, includeConfiguration: true);
         if (version is null) return null;
         var memory = await _runs.GetCharacterMemoryAsync(userId, run.IdPersonagemJogadorOrigem, token);
         return GameProtectedDeposit.View(GameCharacterMilestones.Read(memory?.EstadoJson),
             run.GameModeVersion.Codigo, version.IdSistemaRpg, run.IdSistemaVersao, run.GameModeVersion.ConfiguracaoJson);
+    }
+
+    private async Task CaptureProtectedDepositAtEnd(GameRun run, SistemaVersao version, CancellationToken token)
+    {
+        var memory = await _runs.GetCharacterMemoryAsync(run.IdUsuario, run.IdPersonagemJogadorOrigem, token);
+        var deposit = GameProtectedDeposit.View(GameCharacterMilestones.Read(memory?.EstadoJson),
+            run.GameModeVersion.Codigo, version.IdSistemaRpg, run.IdSistemaVersao, run.GameModeVersion.ConfiguracaoJson);
+        var snapshot = System.Text.Json.Nodes.JsonNode.Parse(run.EstadoAtualJson)!.AsObject();
+        snapshot["protectedDepositAtEnd"] = System.Text.Json.JsonSerializer.SerializeToNode(deposit, JsonOptions);
+        run.EstadoAtualJson = snapshot.ToJsonString(JsonOptions);
     }
 
     public async Task<GameRunOperationResult<GameRunDto>> ChangeProtectedItemAsync(long runId, int userId,

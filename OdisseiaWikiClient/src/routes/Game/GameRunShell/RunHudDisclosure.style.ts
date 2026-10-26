@@ -52,7 +52,7 @@ export const HudDisclosureToggle = styled.button<{ $neon: boolean }>`
     box-shadow: ${({ $neon }) => $neon ? '0 0 8px rgba(77, 238, 234, .14)' : 'none'}; }
   &:focus-visible { outline: 2px solid var(--clearneonBlue); outline-offset: 2px; }
   @media (max-width: 600px) { width: 40px; height: 32px; }
-  @media (prefers-reduced-motion: reduce) { &, svg { transition: none; } }
+  :root[data-motion='reduced'] & { &, svg { transition: none; } }
 `;
 
 export const HudDisclosureBody = styled.div<{ $open: boolean }>`
@@ -62,7 +62,7 @@ export const HudDisclosureBody = styled.div<{ $open: boolean }>`
   visibility: ${({ $open }) => $open ? 'visible' : 'hidden'};
   transition: grid-template-rows 220ms ease, opacity 180ms ease,
     visibility 0s ${({ $open }) => $open ? '0s' : '220ms'};
-  @media (prefers-reduced-motion: reduce) { transition: none; }
+  :root[data-motion='reduced'] & { transition: none; }
 `;
 
 export const HudDisclosureInner = styled.div`

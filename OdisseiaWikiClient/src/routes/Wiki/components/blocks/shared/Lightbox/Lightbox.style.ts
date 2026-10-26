@@ -41,7 +41,7 @@ export const LightboxOverlay = styled.div<{ $backgroundImage?: string; $portrait
     z-index: -1;
   }
 
-  @media (prefers-reduced-motion: reduce) {
+  :root[data-motion='reduced'] & {
     &::before {
       filter: none;
       transform: none;
@@ -147,7 +147,7 @@ export const LightboxCloseButton = styled.button`
     display: block;
   }
 
-  @media (prefers-reduced-motion: reduce) {
+  :root[data-motion='reduced'] & {
     transition: none;
   }
 
@@ -203,7 +203,7 @@ export const LightboxNavButton = styled.button<{ $side: 'left' | 'right'; disabl
     display: block;
   }
 
-  @media (prefers-reduced-motion: reduce) {
+  :root[data-motion='reduced'] & {
     transition: none;
   }
 

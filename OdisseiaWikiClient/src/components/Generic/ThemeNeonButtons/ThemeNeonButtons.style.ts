@@ -22,6 +22,8 @@ export const OptionButton = styled.button<Props>`
     background-color: transparent;
     border: none;
     font-size: 18px;
+    .iconMotion { color: ${({ neon }) => neon === 'on' ? 'var(--clearneonBlue)' : 'var(--grey)'}; transition: transform .2s ease; }
+    &:focus-visible { outline: 1px solid var(--clearneonBlue); outline-offset: 4px; }
 
     &:not(:disabled) {
         .iconOff:hover,
@@ -30,7 +32,9 @@ export const OptionButton = styled.button<Props>`
         .iconLight:hover {
             transform: scale(1.5);
         }
+        .iconMotion:hover { transform: scale(1.15); }
     }
+    :root[data-motion='reduced'] & .icon { transition: none; transform: none; }
     
     ${ props => props.theme === 'dark' ? `
         .iconDark {

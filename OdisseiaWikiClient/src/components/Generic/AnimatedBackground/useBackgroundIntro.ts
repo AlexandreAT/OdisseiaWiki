@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useReducedMotion } from 'framer-motion';
+import { useMotionReduced } from '../../../hooks/useMotionPreference';
 
 const getDailySessionIntroKey = () => `odisseia:background-intro:${new Date().toISOString().slice(0, 10)}`;
 
@@ -12,7 +12,7 @@ const hasSeenIntro = () => {
 };
 
 export const useBackgroundIntro = (skipIntro: boolean, onIntroComplete?: () => void) => {
-  const reducedMotion = useReducedMotion();
+  const reducedMotion = useMotionReduced();
   const [shouldAnimateEntry] = useState(() => !skipIntro && !reducedMotion && !hasSeenIntro());
   const [phase, setPhase] = useState<'initial' | 'typing' | 'complete'>(shouldAnimateEntry ? 'initial' : 'complete');
   const completionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);

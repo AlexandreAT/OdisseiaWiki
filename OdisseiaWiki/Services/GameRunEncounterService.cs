@@ -164,11 +164,14 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
                 try
                 {
                     result = _simulator.Simulate(setup.Input, new SeededGameRunRandomSource(seed));
+                    if (result.EndReason != GameBattleEndReason.ActorDefeated)
+                        result = result with { WinnerActorId = null };
                     player = result.Actors.Single(actor => actor.Id == "player");
-                    string battleState = ApplyResult(before, player);
+                    string battleState = result.WinnerActorId is null ? before : ApplyResult(before, player);
                     foreach (IGrouping<string, GameBattleEvent> consumed in result.Events
                         .Where(gameEvent => gameEvent.Type == GameBattleEventTypes.ItemConsumed &&
-                            gameEvent.ActorId == "player" && gameEvent.Payload is ItemConsumedPayload)
+                            result.WinnerActorId is not null && gameEvent.ActorId == "player" &&
+                            gameEvent.Payload is ItemConsumedPayload)
                         .GroupBy(gameEvent => ((ItemConsumedPayload)gameEvent.Payload).ActionId,
                             StringComparer.Ordinal))
                     {
@@ -176,7 +179,7 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
                         battleState = GameRunConsumable.SpendInBattle(battleState,
                             consumed.Key[5..], consumed.Count());
                     }
-                    after = GameRunCarry.Reconcile(GameRunCarry.PreserveBattleTriggers(
+                    after = result.WinnerActorId is null ? before : GameRunCarry.Reconcile(GameRunCarry.PreserveBattleTriggers(
                         battleState, version, result.Events), version);
                     if (result.WinnerActorId == "player" && node.Payload?.EncounterCode is string encounterCode)
                     {
@@ -223,6 +226,20 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
                 GameRunBattle? previousBattle = await _runs.GetLastBattleAsync(run.IdGameRun, cancellationToken);
                 int battleOrder = (previousBattle?.Ordem ?? 0) + 1;
                 string completedNodeId = run.NoAtualId;
+                if (result.WinnerActorId is null)
+                {
+                    // An unfinished attempt cannot spend resources, grant rewards or block a retry.
+                    node.State = "DISPONIVEL";
+                    run.NoAtualId = null;
+                    run.MapaJson = JsonSerializer.Serialize(map, JsonOptions);
+                    run.EstadoAtualJson = before;
+                    run.Revisao++;
+                    run.AtualizadaEmUtc = now;
+                    var unfinished = new GameRunBattleResolutionDto(
+                        GameRunService.Map(run), battle, completedNodeId, battleOrder, now);
+                    await SaveCommand(run, idUsuario, request, "RESOLVER_COMBATE", hash, unfinished, cancellationToken);
+                    return GameRunOperationResult<GameRunBattleResolutionDto>.Ok(unfinished);
+                }
                 await _runs.AddBattleAsync(new GameRunBattle
                 {
                     IdGameRun = run.IdGameRun,
@@ -609,8 +626,11 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
             string name = entry is { } found ? ReadText(found, "nome") ?? action.IdInstancia : action.IdInstancia;
             try
             {
-                if (!_factory.CanExecuteSelectedAction(run, version, action))
-                    problems.Add($"{name}: sem ataque ou utilitário executável. Revise teste, dano e efeitos nesta versão do Sistema.");
+                var reasons = new List<string>();
+                if (!_factory.CanExecuteSelectedAction(run, version, action, reasons))
+                    problems.Add($"{name}: " + (reasons.Count > 0
+                        ? string.Join(" ", reasons.Distinct(StringComparer.Ordinal))
+                        : "sem ataque ou utilitário executável. Revise teste, dano e efeitos nesta versão do Sistema."));
             }
             catch (Exception error) when (error is JsonException or InvalidOperationException or ArgumentException)
             { problems.Add($"{name}: {error.Message}"); }
@@ -1142,6 +1162,15 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
     private async Task SaveCommand<T>(GameRun run, int userId, GameRunMutationRequestDto request,
         string type, string hash, T response, CancellationToken token)
     {
+        if (run.Status == GameRunStatus.Vitoria)
+        {
+            using var state = JsonDocument.Parse(run.EstadoAtualJson);
+            if (!state.RootElement.TryGetProperty("protectedDepositAtEnd", out _))
+            {
+                var version = await _systems.GetVersionAsync(run.IdSistemaVersao, includeConfiguration: true);
+                if (version is not null) await CaptureProtectedDepositAtEnd(run, version, token);
+            }
+        }
         await _runs.AddCommandAsync(new GameRunCommand
         {
             IdGameRun = run.IdGameRun,

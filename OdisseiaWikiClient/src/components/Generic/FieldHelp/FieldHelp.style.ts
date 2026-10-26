@@ -89,7 +89,7 @@ export const HelpPopover = styled.aside<{
   dl { margin: 10px 0 0; }
   dt { margin-top: 7px; font-weight: 600; color: inherit !important; }
   dd { margin: 2px 0 0; color: inherit !important; }
-  @media (prefers-reduced-motion: reduce) { animation: none; transition: none; }
+  :root[data-motion='reduced'] & { animation: none; transition: none; }
 `;
 
 export const HelpPopoverScroll = styled.div<{ $height: number }>`

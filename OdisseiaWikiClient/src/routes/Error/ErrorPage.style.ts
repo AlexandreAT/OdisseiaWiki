@@ -71,7 +71,7 @@ export const ErrorIcon = styled.div`
     height: 100%;
   }
 
-  @media (prefers-reduced-motion: reduce) {
+  :root[data-motion='reduced'] & {
     animation: none;
   }
 `;

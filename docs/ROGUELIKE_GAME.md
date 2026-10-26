@@ -1293,3 +1293,28 @@ Aceite curto:
 3. Confira F5, retirar/reinstalar, proteção/escudo após combate e guardar/trazer na Base/Mercador. Compare com a ficha original, que não deve mudar. A Base repara proteção quando configurada e não restaura escudo.
 
 Verificação: **699 testes de backend e 203 de client passaram**, além de TypeScript, build de produção e `git diff --check`. Cobertura nova inclui autoria, rascunho conjunto de equipamento/ação, compra no Engenheiro, instalação direta/loot, melee/distância/munição, condições, bônus/limites, retirada/depósito, defesa gasta, rollback, idempotência e NPC/treino. Lint dos componentes de jogo alterados passou; `Itens.ts`/`MapItensForm.tsx` mantêm avisos/erros preexistentes de `any` e Fast Refresh, sem novos problemas na verificação direcionada com essas regras legadas separadas. Sem migration nova, teste visual autenticado, escrita em produção, interrupção da API local, commit ou push.
+
+### 58.8. Armas legadas com D20 e dano por alcance
+
+- Corrigida a preparação central do inventário para o combate: cópias antigas de armas com carregador, mas sem `custoMunicaoTiro`, usam uma munição por tiro, como o editor já faz. Custos explicitamente definidos não são sobrescritos; o ajuste é uma projeção para o combate, sem regravar a ficha original nem o inventário salvo.
+- Aquila com D20, danos curto/médio/longo e sem dano base pode ser equipada e atacar normalmente. A compatibilidade também atende o construtor de ataques sem seleção explícita, sem introduzir regra por nome de item.
+- Erros ao salvar equipamento passam o motivo real do construtor de ações ao alerta, junto do nome da origem. Testes cobrem os três alcances, consumo efetivo, custo explícito, não mutação e salvamento conjunto com traje/rollback em falha.
+
+Verificação: **706 testes de backend passaram**. O problema foi reproduzido antes da correção nos três alcances; a consulta de diagnóstico ao banco local foi somente leitura. Sem migration, escrita em produção, interrupção da API local, commit ou push.
+
+### 58.9. Combates inconclusivos e trava de repetição
+
+- Removido o desempate automático por vida restante. Vencer exige derrotar o lado adversário; as paradas por falta de progresso ou limite técnico retornam sem vencedor.
+- A trava padrão conta **10 turnos individuais consecutivos** sem progresso, incluindo diferentes inimigos; reações e ataques de oportunidade não gastam um turno desse contador. Mudanças reais de recursos (vida, mana, estamina e munição), defesa consumida, consumo de itens, entrada/saída e duração de condições, turnos perdidos restantes e cooldowns reiniciam o contador. Mensagens repetidas de efeitos passivos não reiniciam a trava.
+- Uma tentativa inconclusiva é descartada dos dois lados: preserva o estado anterior da run, consumíveis, loadout e oportunidade pendente; reabre o mesmo nó sem liberar suas conexões. Não concede XP, moeda, loot ou marcos, não encerra a run e não grava um combate concluído que impeça a nova tentativa. A resposta do comando permanece idempotente e a revisão avança normalmente.
+- O replay mostra um aviso amarelo com o motivo, sem anunciar vitória ou derrota nem exibir recompensas. O aviso permanece aberto também em 2×. Uma tentativa inconclusiva não marca a futura vitória do mesmo encontro como já assistida. Replays antigos com motivo técnico também deixam de anunciar um vencedor; recompensas antigas já gravadas não são alteradas retroativamente.
+
+### 58.10. Detalhes da vitória e itens levados para casa
+
+- Os detalhes usam o `HudFrame` central, seus cantos SVG, cores, fontes, neon e animações: inimigos agrupados com retrato/quantidade, economia com ganhos em combates e saldo final, e depósito protegido com imagem, nome e quantidade de cada item. O layout passa para uma coluna no mobile e respeita a preferência central de movimento.
+- A lista vem do depósito protegido do personagem e jogo, não do depósito comum. Um registro somente de leitura (`protectedDepositAtEnd`) é congelado no JSON da run ao concluir uma vitória por qualquer fluxo de encontro. Retirar itens numa jornada posterior não altera esse resumo nem duplica a propriedade dos itens, que continua na memória do personagem.
+- Runs anteriores sem esse registro consultam o depósito protegido atual. Falhas de consulta são informadas com opção de tentar novamente, sem apresentar uma lista vazia como se fosse o resultado real. Nenhuma migration nova é necessária.
+
+Verificação: **713 testes de backend e 225 de frontend passaram**, incluindo a trava por turnos, recarga/recuperação e condições temporárias, consumo descartado no impasse, idempotência/nova tentativa, resumo protegido imutável e carregamento/erro/abortamento da consulta em tela. TypeScript, lint direcionado e build de produção passaram. Sem teste visual autenticado, alteração em produção, interrupção da API local, commit ou push.
+
+Aceite curto: recompile/reinicie a API, provoque 10 turnos sem progresso e confira o aviso inconclusivo, os recursos preservados e o mesmo nó disponível; ajuste as ações e vença normalmente. Proteja um item com múltiplas unidades, conclua a run e confira as imagens/quantidades no resumo; em outra run, retire o item e depois confira que o resumo anterior continua mostrando o que estava protegido ao término.

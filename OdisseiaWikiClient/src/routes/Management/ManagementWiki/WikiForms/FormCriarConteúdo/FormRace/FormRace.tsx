@@ -36,6 +36,9 @@ import {
   VariationImageCell,
 } from './FormRace.style';
 
+import { WikiContentHelpProvider } from '../../../../../../components/Generic/FieldHelp/WikiContentHelpProvider';
+import { FieldHelp } from '../../../../../../components/Generic/FieldHelp/FieldHelp';
+
 interface FormRaceProps {
   theme: 'dark' | 'light';
   neon: 'on' | 'off';
@@ -223,6 +226,7 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
   };
 
   return (
+    <WikiContentHelpProvider scope="race" theme={theme} neon={neon}>
     <FormController onSubmit={(event) => void persist(false, event)}>
       {initialRaca && <UnsavedChangesGuard dirty={!isSynced} />}
       <FormHeader>
@@ -296,7 +300,7 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
       </ContentSection>
 
       <StatusSection theme={theme} neon={neon}>
-        <StatusTitle theme={theme} neon={neon}>Status base</StatusTitle>
+        <StatusTitle theme={theme} neon={neon}>Status base <FieldHelp label="Status base" inline /></StatusTitle>
         {mechanicsManagedBySystem && (
           <SectionHelp>
             A regra mecânica desta raça vem da versão do Sistema e fica somente leitura aqui.{' '}
@@ -326,8 +330,7 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
 
       {!mechanicsManagedBySystem && <ContentSection>
         <SectionHeader>
-          <StatusTitle theme={theme} neon={neon}>Habilidades passivas</StatusTitle>
-          <SectionHelp>Cadastre o nome da habilidade e o efeito concedido por ela.</SectionHelp>
+          <StatusTitle theme={theme} neon={neon}>Habilidades passivas <FieldHelp label="Habilidades passivas" inline /></StatusTitle>
         </SectionHeader>
         <DataTable<RacaPassiva>
           data={passivas}
@@ -343,8 +346,7 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
 
       <ContentSection>
         <SectionHeader>
-          <StatusTitle theme={theme} neon={neon}>Variações</StatusTitle>
-          <SectionHelp>A imagem é opcional e sempre utiliza recorte quadrado, como a imagem principal da raça.</SectionHelp>
+          <StatusTitle theme={theme} neon={neon}>Variações <FieldHelp label="Variações" inline /></StatusTitle>
         </SectionHeader>
         <DataTable<RacaVariacao>
           data={variacoes}
@@ -389,5 +391,6 @@ export const FormRace: React.FC<FormRaceProps> = ({ theme, neon, initialRaca, on
         />
       )}
     </FormController>
+    </WikiContentHelpProvider>
   );
 };

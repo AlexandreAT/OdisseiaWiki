@@ -5,7 +5,10 @@ import { Select } from '../../../../../../components/Generic/Select/Select';
 import { CheckBox } from '../../../../../../components/Generic/CheckBox/CheckBox';
 import { CheckSelect } from '../../../../../../components/Generic/CheckSelect/CheckSelect';
 import { CyberButton } from '../../../../../../components/Generic/HighlightButton/HighlightButton';
-import { AttributeRow, AttributeSubsection, AttributeSubsectionTitle, FormItemAtributos, ProsthesisActions } from './FormCharacter.style';
+import { AttributeRow, AttributeSubsection, AttributeSubsectionTitle, FormItemAtributos as ItemFieldsLayout, ProsthesisActions } from './FormCharacter.style';
+import { WikiContentHelpProvider } from '../../../../../../components/Generic/FieldHelp/WikiContentHelpProvider';
+import { FieldHelp } from '../../../../../../components/Generic/FieldHelp/FieldHelp';
+import { getWikiContentHelp } from '../../../../../../content/wikiContentHelp';
 import { ArmaAtributos, ArmaTipo, ArmaTipoDano, ImplanteAtributos, TrajeAtributos } from '../../../../../../models/Itens';
 import { ACERTO_DADO_OPTIONS, ARMA_TIPO_DANO_OPTIONS, ARMA_TIPO_OPTIONS, getPrimeiroAtaqueComGastoEstamina, normalizeDadoAcerto, TRAJE_TIPO_OPTIONS } from '../../../../../../constants';
 import { DadoAcerto } from '../../../../../../models/Dados';
@@ -16,6 +19,12 @@ import { getWeaponModifierMode } from '../../../../../../utils/weaponModifiers';
 import type { AcessorioAtributos, GameplayConditionEffectConfig } from '../../../../../../models/Itens';
 import type { GameplayTestSpec } from '../../../../../../models/Gameplay';
 import { editableConditionEffects } from '../../../../../../utils/conditionEffectOverrides';
+
+const FormItemAtributos = ({ children, theme, neon }: {
+  children: React.ReactNode; theme: 'dark' | 'light'; neon: 'on' | 'off';
+}) => <WikiContentHelpProvider scope="equipment" theme={theme} neon={neon}>
+  <ItemFieldsLayout>{children}</ItemFieldsLayout>
+</WikiContentHelpProvider>;
 
 interface BaseProps {
   theme: 'dark' | 'light';
@@ -41,7 +50,7 @@ const ManagementAttributeGroup = ({
   children: React.ReactNode;
 }) => enabled ? (
   <AttributeSubsection theme={theme} neon={neon}>
-    <AttributeSubsectionTitle theme={theme} neon={neon}>{title}</AttributeSubsectionTitle>
+    <AttributeSubsectionTitle theme={theme} neon={neon}>{title} <FieldHelp label={title} inline /></AttributeSubsectionTitle>
     {children}
   </AttributeSubsection>
 ) : <>{children}</>;
@@ -128,8 +137,9 @@ export const TestSpecificationFields = ({
   };
 
   return (
+    <WikiContentHelpProvider scope="test" theme={theme} neon={neon}>
     <AttributeSubsection theme={theme} neon={neon}>
-      <AttributeSubsectionTitle theme={theme} neon={neon}>Teste na engine</AttributeSubsectionTitle>
+      <AttributeSubsectionTitle theme={theme} neon={neon}>Teste na engine <FieldHelp label="Teste na engine" inline /></AttributeSubsectionTitle>
       <CheckBox
         neon={neon}
         label={weapon ? 'Usar especificação de teste desta arma' : 'Esta ação exige teste'}
@@ -141,7 +151,6 @@ export const TestSpecificationFields = ({
       />
       {enabled && (
         <>
-          <p>Use o código de teste publicado no Sistema da Mesa. A engine valida o código e as faixas ao rolar.</p>
           <AttributeRow $columns={2}>
             {availableTestOptions.length > 0 ? (
               <Select
@@ -199,6 +208,7 @@ export const TestSpecificationFields = ({
         </>
       )}
     </AttributeSubsection>
+    </WikiContentHelpProvider>
   );
 };
 
@@ -244,6 +254,7 @@ export const ConditionEffectFields = ({
     setExpanded(true);
   };
   return (
+    <WikiContentHelpProvider scope="condition" theme={theme} neon={neon}>
     <AttributeSubsection theme={theme} neon={neon}>
       <CyberButton theme={theme} neon={neon} colorType="secondary" width="fit-content"
         text={expanded ? 'Ocultar condições' : value.length ? `Mostrar condições · ${value.length}` : 'Adicionar condição'}
@@ -252,8 +263,7 @@ export const ConditionEffectFields = ({
           setExpanded(!expanded);
         }} />
       {expanded && <>
-      <AttributeSubsectionTitle theme={theme} neon={neon}>Condições aplicadas</AttributeSubsectionTitle>
-      <p>Escolha uma condição do Sistema. Aqui você pode ajustar o gatilho, a duração e cada efeito desta origem. Valores vazios usam o padrão publicado.</p>
+      <AttributeSubsectionTitle theme={theme} neon={neon}>Condições aplicadas <FieldHelp label="Condições aplicadas" inline /></AttributeSubsectionTitle>
       {!catalogAvailable && <p role="status">As condições do Sistema ainda não foram carregadas.</p>}
       {catalogAvailable && options.length === 0 && <p>Este Sistema não tem condições configuradas.</p>}
       {value.map((condition, index) => (
@@ -286,6 +296,7 @@ export const ConditionEffectFields = ({
         {editableConditionEffects(findCondition(condition.codigo)?.rule)
           .map((effect) => <InputText key={effect.index} type="number" theme={theme} neon={neon}
             label={`${effect.label} (padrão ${effect.value}${effect.percentage ? '%' : ''})`}
+            help={getWikiContentHelp('condition', 'value')}
             min={effect.minimum ?? (effect.signed ? effect.percentage ? -100 : -1000000 : 0)}
             max={effect.maximum ?? (effect.percentage ? effect.signed ? 1000 : 100 : 1000000)}
             value={condition.valoresEfeitos?.[effect.index] ?? ''}
@@ -397,6 +408,7 @@ export const ConditionEffectFields = ({
       )}
       </>}
     </AttributeSubsection>
+    </WikiContentHelpProvider>
   );
 };
 
@@ -450,7 +462,7 @@ export const ArmaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme,
   };
 
   return (
-    <FormItemAtributos>
+    <FormItemAtributos theme={theme} neon={neon}>
       <ManagementAttributeGroup enabled={managementLayout} title="Classificação" theme={theme} neon={neon}>
         <AttributeRow $columns={2}>
           <Select label={weaponFieldsOnly ? 'Tipo de ataque' : 'Tipo de arma'} theme={theme} neon={neon} value={local.tipoArma ?? ''} onChange={e => handleChange('tipoArma', e.target.value as ArmaTipo)} options={sistemaItemCatalogo?.archetypeOptions.length ? sistemaItemCatalogo.archetypeOptions : ARMA_TIPO_OPTIONS} width="100%" />
@@ -560,7 +572,7 @@ export const TrajeAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme
   };
 
   return (
-    <FormItemAtributos>
+    <FormItemAtributos theme={theme} neon={neon}>
       <AttributeRow>
         <Select
           label="Subcategoria de proteção"
@@ -634,7 +646,7 @@ export const ImplanteAtributosForm: React.FC<BaseProps> = ({ value, onChange, th
   </AttributeRow>;
 
   const statusBonusFields = <AttributeRow $columns={3}>
-    {IMPLANTE_STATUS_BONUS_FIELDS.map(([key, label]) => <InputText key={key} label={`Bônus de ${label}`} type="number" theme={theme} neon={neon} value={String(atributos.bonus?.[key] ?? 0)} onChange={(e) => update({ bonus: { ...atributos.bonus, [key]: e.target.value === '' ? 0 : Number(e.target.value) } })} />)}
+    {IMPLANTE_STATUS_BONUS_FIELDS.map(([key, label]) => <InputText key={key} label={`Bônus de ${label}`} help={getWikiContentHelp('equipment', 'vitalBonus')} type="number" theme={theme} neon={neon} value={String(atributos.bonus?.[key] ?? 0)} onChange={(e) => update({ bonus: { ...atributos.bonus, [key]: e.target.value === '' ? 0 : Number(e.target.value) } })} />)}
   </AttributeRow>;
 
   const effectField = <AttributeRow>
@@ -646,6 +658,7 @@ export const ImplanteAtributosForm: React.FC<BaseProps> = ({ value, onChange, th
     : [...IMPLANTE_ATTRIBUTE_BONUS_FIELDS, ['resistencia', 'Resistência'] as const];
   const attributeBonusFields = <AttributeRow $columns={3}>
     {bonusAttributes.map(([key, label]) => <InputText key={key} label={`Bônus de ${label}`} type="number"
+      help={getWikiContentHelp('equipment', 'attributeBonus')}
       theme={theme} neon={neon} value={atributos.bonus?.[key] ?? 0}
       onChange={event => update({ bonus: { ...atributos.bonus, [key]: Number(event.target.value) } })} />)}
   </AttributeRow>;
@@ -676,7 +689,7 @@ export const ImplanteAtributosForm: React.FC<BaseProps> = ({ value, onChange, th
     </ProsthesisActions>
   </>;
 
-  return <FormItemAtributos>
+  return <FormItemAtributos theme={theme} neon={neon}>
     {managementLayout ? <>
       <ManagementAttributeGroup enabled title="Instalação" theme={theme} neon={neon}>
         {placementFields}
@@ -734,7 +747,7 @@ export const ImplanteAtributosForm: React.FC<BaseProps> = ({ value, onChange, th
 };
 
 export const ConsumiveisAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon, sistemaItemCatalogo }) => (
-  <FormItemAtributos>
+    <FormItemAtributos theme={theme} neon={neon}>
     <AttributeRow $columns={3}>
       <InputText label="Restaura Vida" type="number" theme={theme} neon={neon} value={value?.restaura?.vida ?? ''} onChange={e => onChange({ ...value, restaura: { ...value?.restaura, vida: Number(e.target.value) } })} />
       <InputText label="Restaura Estamina" type="number" theme={theme} neon={neon} value={value?.restaura?.estamina ?? ''} onChange={e => onChange({ ...value, restaura: { ...value?.restaura, estamina: Number(e.target.value) } })} />
@@ -755,7 +768,7 @@ export const ConsumiveisAtributosForm: React.FC<BaseProps> = ({ value, onChange,
 );
 
 export const AcessorioAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon, sistemaItemCatalogo }) => (
-  <FormItemAtributos>
+    <FormItemAtributos theme={theme} neon={neon}>
     <Select label="Compatibilidade com armas" theme={theme} neon={neon} width="100%" value={value?.compatibilidade ?? 'todas'}
       allowEmptyOption={false}
       options={[{ value: 'todas', label: 'Todas as armas' }, { value: 'distancia', label: 'Armas à distância' }, { value: 'corpo_a_corpo', label: 'Armas corpo a corpo' }]}
@@ -775,7 +788,7 @@ export const AcessorioAtributosForm: React.FC<BaseProps> = ({ value, onChange, t
 );
 
 export const OutrosAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon, sistemaItemCatalogo }) => (
-  <FormItemAtributos>
+    <FormItemAtributos theme={theme} neon={neon}>
     <AttributeRow>
       {([
         ['dano', 'Dano'], ['protecao', 'Proteção'], ['armadura', 'Armadura'],
@@ -823,7 +836,7 @@ export const AtaqueAtributosForm: React.FC<BaseProps> = ({ value, onChange, them
   };
 
   return(
-    <FormItemAtributos>
+    <FormItemAtributos theme={theme} neon={neon}>
       <InputText
         label="Dano"
         type='number'
@@ -880,7 +893,7 @@ export const SuporteAtributosForm: React.FC<BaseProps> = ({ value, onChange, the
   };
 
   return(
-    <FormItemAtributos>
+    <FormItemAtributos theme={theme} neon={neon}>
       <InputText
         label="Especial"
         theme={theme}
@@ -922,7 +935,7 @@ export const BuffAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme,
   };
 
   return(
-    <FormItemAtributos>
+    <FormItemAtributos theme={theme} neon={neon}>
       <InputText
         label="Especial"
         theme={theme}
@@ -964,7 +977,7 @@ export const DebuffAtributosForm: React.FC<BaseProps> = ({ value, onChange, them
   };
 
   return(
-    <FormItemAtributos>
+    <FormItemAtributos theme={theme} neon={neon}>
       <InputText
         label="Especial"
         theme={theme}
@@ -1014,7 +1027,7 @@ export const AtaqueMagiaAtributosForm: React.FC<BaseProps> = ({ value, onChange,
   };
 
   return(
-    <FormItemAtributos>
+    <FormItemAtributos theme={theme} neon={neon}>
       <InputText
         label="Dano"
         type='number'
@@ -1059,7 +1072,7 @@ export const SuporteMagiaAtributosForm: React.FC<BaseProps> = ({ value, onChange
   };
 
   return(
-    <FormItemAtributos>
+    <FormItemAtributos theme={theme} neon={neon}>
       <InputText
         label="Especial"
         theme={theme}
@@ -1096,7 +1109,7 @@ export const BuffMagiaAtributosForm: React.FC<BaseProps> = ({ value, onChange, t
   };
 
   return(
-    <FormItemAtributos>
+    <FormItemAtributos theme={theme} neon={neon}>
       <InputText
         label="Especial"
         theme={theme}
@@ -1133,7 +1146,7 @@ export const DebuffMagiaAtributosForm: React.FC<BaseProps> = ({ value, onChange,
   };
 
   return(
-    <FormItemAtributos>
+    <FormItemAtributos theme={theme} neon={neon}>
       <InputText
         label="Especial"
         theme={theme}

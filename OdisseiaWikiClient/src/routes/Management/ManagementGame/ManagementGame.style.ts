@@ -317,7 +317,7 @@ export const GameAdminGear = styled.button<{ $pulse: boolean }>`
   animation: ${({ $pulse }) => $pulse ? gearPulse : 'none'} 1.8s ease-in-out infinite;
   svg { width: 21px; height: 21px; }
   &:hover, &:focus-visible { outline: none; color: var(--whitesmoke); box-shadow: 0 0 12px var(--clearneonBlue); }
-  @media (prefers-reduced-motion: reduce) { animation: none; }
+  :root[data-motion='reduced'] & { animation: none; }
 `;
 
 export const GameAdminAddCard = styled.button`

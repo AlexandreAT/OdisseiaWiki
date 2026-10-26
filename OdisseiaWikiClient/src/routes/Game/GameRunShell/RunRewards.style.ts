@@ -14,7 +14,7 @@ export const UpgradeArrow = styled.button`
   animation: ${pulse} 1.35s ease-in-out infinite;
   svg { font-size: 1.55rem; }
   &:focus-visible { outline: 1px solid currentColor; }
-  @media (prefers-reduced-motion: reduce) { animation: none; }
+  :root[data-motion='reduced'] & { animation: none; }
 `;
 export const RewardsBody = styled.div`
   display: grid; gap: 18px; padding: 6px 4px 20px; color: var(--lightGray, #e4edf3);
@@ -45,7 +45,7 @@ export const AttributeGrid = styled.div`
   .attribute-up svg { font-size: 1.35rem; filter: drop-shadow(0 0 3px currentColor); }
   .attribute-up:hover, .attribute-up:focus-visible { filter: drop-shadow(0 0 8px var(--neonYellow)); }
   .attribute-up:disabled { opacity: .4; cursor: wait; }
-  @media (prefers-reduced-motion: reduce) { .attribute-up { animation: none; } }
+  :root[data-motion='reduced'] & { .attribute-up { animation: none; } }
 `;
 export const AttributePopover = styled.div<{ $top: number; $left: number }>`
   position: fixed; z-index: 12000; width: min(310px, calc(100vw - 24px)); max-height: min(290px, 60vh);
@@ -71,5 +71,5 @@ export const LootGrid = styled.div`
     /* A button's intrinsic width must not depend on its image or item name. */
     > button { width: 100%; min-width: 0; box-sizing: border-box; }
   }
-  @media (prefers-reduced-motion: reduce) { > article { animation: none; } }
+  :root[data-motion='reduced'] & { > article { animation: none; } }
 `;

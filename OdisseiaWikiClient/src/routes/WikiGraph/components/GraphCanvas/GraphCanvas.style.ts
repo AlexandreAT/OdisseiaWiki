@@ -70,7 +70,7 @@ export const CanvasShell = styled.section<{ $neon: boolean }>`
     animation: ${({ $neon }) => ($neon ? drawCanvasBorder : 'none')} 720ms ease-out both;
   }
 
-  @media (prefers-reduced-motion: reduce) {
+  :root[data-motion='reduced'] & {
     &::after {
       animation: none;
       -webkit-mask-size: 100% 2px, 100% 2px, 2px 100%, 2px 100%;

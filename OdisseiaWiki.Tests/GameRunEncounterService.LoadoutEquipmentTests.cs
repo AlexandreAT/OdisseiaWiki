@@ -85,6 +85,54 @@ public sealed partial class GameRunEncounterServiceTests
     }
 
     [Fact]
+    public async Task LoadoutAceitaAquilaComD20EDanosPorAlcanceSemCustoDeMunicaoLegado()
+    {
+        var fixture = InventoryFixture();
+        var root = JsonNode.Parse(fixture.Run.EstadoAtualJson)!;
+        root["inventario"]!.AsArray().Add(JsonNode.Parse("""
+          {"id":"aquila","nome":"Aquila","tipo":"arma","atributos":{
+            "tipoArma":"pistola_revolver","acerto":"D20","cadencia":1,
+            "danoPorAlcance":{"curta":100,"media":200,"longa":100},
+            "municao":{"atual":0,"capacidade":10},"capacidadeMunicao":10}}
+          """));
+        fixture.Run.EstadoAtualJson = root.ToJsonString();
+        string original = fixture.Run.SnapshotInicialJson;
+        var result = await fixture.Service.UpdateLoadoutAsync(10, 5, new() { RevisaoEsperada = 0,
+            ChaveIdempotencia = Guid.NewGuid(),
+            Acoes = [new() { Tipo = "ITEM", IdInstancia = "aquila", Alcance = "CURTA" }],
+            DefesasEquipadas = ["colete"] }, default);
+
+        Assert.True(result.Sucesso, result.Mensagem);
+        Assert.Equal("aquila", Assert.Single(result.Dados!.AcoesEquipadas!).IdInstancia);
+        Assert.True(GameRunDefensiveEquipment.IsEquipped(fixture.Run.EstadoAtualJson, "colete"));
+        Assert.Equal(original, fixture.Run.SnapshotInicialJson);
+    }
+
+    [Fact]
+    public async Task LoadoutComCustoInvalidoInformaNomeEMotivoSemPersistirParcialmente()
+    {
+        var fixture = InventoryFixture();
+        var root = JsonNode.Parse(fixture.Run.EstadoAtualJson)!;
+        root["inventario"]!.AsArray().Add(JsonNode.Parse("""
+          {"id":"aquila","nome":"Aquila","tipo":"arma","atributos":{
+            "tipoArma":"pistola_revolver","acerto":"D20","danoPorAlcance":{"curta":100},
+            "capacidadeMunicao":10,"custoMunicaoTiro":0}}
+          """));
+        fixture.Run.EstadoAtualJson = root.ToJsonString();
+        string before = fixture.Run.EstadoAtualJson;
+        var result = await fixture.Service.UpdateLoadoutAsync(10, 5, new() { RevisaoEsperada = 0,
+            ChaveIdempotencia = Guid.NewGuid(),
+            Acoes = [new() { Tipo = "ITEM", IdInstancia = "aquila", Alcance = "CURTA" }],
+            DefesasEquipadas = ["colete"] }, default);
+
+        Assert.False(result.Sucesso);
+        Assert.Contains("Aquila", result.Mensagem);
+        Assert.Contains("consumo de munição", result.Mensagem);
+        Assert.Equal(before, fixture.Run.EstadoAtualJson);
+        Assert.Equal(0, fixture.Run.Revisao);
+    }
+
+    [Fact]
     public async Task LoadoutDistingueErroGeralDoSistemaDeUmaArmaInexecutavel()
     {
         var fixture = InventoryFixture();

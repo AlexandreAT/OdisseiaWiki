@@ -1,4 +1,5 @@
 import { UseScrollRevealOptions } from './useScrollReveal.types';
+import { isMotionReduced, subscribeMotionPreference } from '../../utils/motionPreference';
 
 const normalizeThresholds = (threshold: number | number[]) => {
   const values = Array.isArray(threshold) ? threshold : [threshold];
@@ -14,50 +15,80 @@ export const observeScrollReveal = (
     exitClass = 'sr-exited',
   }: UseScrollRevealOptions = {},
 ) => {
-  // A revelação pertence ao elemento, não ao ciclo de efeitos do React.
-  // Reflows, rolagem e StrictMode não devem apagar conteúdo já apresentado.
-  if (element.classList.contains('sr-visible')) return;
-
-  const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
   const rect = element.getBoundingClientRect();
-  const isInitiallyVisible = rect.bottom > 0 && rect.top < window.innerHeight;
+  const isInitiallyVisible = rect.height > 0 && rect.bottom > 0 && rect.top < window.innerHeight;
   const reveal = (animate: boolean) => {
     element.classList.remove('sr-pending', exitClass);
     element.classList.add('sr-visible');
     if (animate) element.classList.add(enterClass);
+    else element.classList.remove(enterClass);
   };
 
-  if (isInitiallyVisible || motionPreference.matches || typeof IntersectionObserver === 'undefined') {
+  if (typeof IntersectionObserver === 'undefined') {
     reveal(false);
     return;
   }
 
   const thresholds = normalizeThresholds(threshold);
   const requestedThreshold = thresholds.find((value) => value > 0) ?? 0.4;
-  const maximumVisibleRatio = Math.min(1, window.innerHeight / Math.max(rect.height, 1));
-  const enterThreshold = Math.min(requestedThreshold, maximumVisibleRatio * 0.72);
   let disposed = false;
-  const observer = new IntersectionObserver(([entry]) => {
-    if (disposed || !entry?.isIntersecting || entry.intersectionRatio < enterThreshold) return;
-    reveal(true);
-    dispose();
-  }, { rootMargin, threshold: normalizeThresholds([...thresholds, enterThreshold]) });
+  let observer: IntersectionObserver;
+  let entered = element.classList.contains(enterClass);
+  const observe = () => {
+    if (disposed) return;
+    observer?.disconnect();
+    const height = Math.max(element.getBoundingClientRect().height, 1);
+    const maximumVisibleRatio = Math.min(1, window.innerHeight / height);
+    const enterThreshold = Math.min(requestedThreshold, maximumVisibleRatio * 0.72);
+    const currentObserver = new IntersectionObserver(([entry]) => {
+      if (disposed || observer !== currentObserver || !entry || isMotionReduced()) return;
+      if (entry.isIntersecting && entry.intersectionRatio >= enterThreshold) {
+        reveal(true);
+        entered = true;
+      } else if (!entry.isIntersecting && entered) {
+        // Recomeça apenas fora da tela; oscilar no limiar não faz o conteúdo piscar.
+        element.classList.remove('sr-visible', enterClass);
+        element.classList.add('sr-pending', exitClass);
+        entered = false;
+      }
+    }, { rootMargin, threshold: normalizeThresholds([...thresholds, enterThreshold]) });
+    observer = currentObserver;
+    observer.observe(element);
+  };
 
   const onMotionChange = () => {
-    if (!motionPreference.matches) return;
-    reveal(false);
-    dispose();
+    const currentRect = element.getBoundingClientRect();
+    if (isMotionReduced()) {
+      reveal(false);
+      entered = false;
+    } else if (currentRect.height > 0 && currentRect.bottom > 0 && currentRect.top < window.innerHeight) {
+      reveal(true);
+      entered = true;
+    } else {
+      element.classList.remove('sr-visible', enterClass);
+      element.classList.add('sr-pending');
+      entered = false;
+    }
+    observe();
   };
+  const unsubscribe = subscribeMotionPreference(onMotionChange);
+  // Imagens, fontes e mudanças de largura podem alterar a altura depois da montagem.
+  const resizeObserver = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(observe);
+  resizeObserver?.observe(element);
+  window.addEventListener('resize', observe);
   const dispose = () => {
     disposed = true;
     observer.disconnect();
-    motionPreference.removeEventListener('change', onMotionChange);
+    resizeObserver?.disconnect();
+    window.removeEventListener('resize', observe);
+    unsubscribe();
     element.classList.remove('sr-pending');
   };
 
-  // Só o conteúdo ainda fora da tela fica oculto, antes da primeira pintura.
-  element.classList.add('sr-pending');
-  observer.observe(element);
-  motionPreference.addEventListener('change', onMotionChange);
+  // O layout effect arma a entrada antes da pintura, inclusive na primeira tela.
+  if (isMotionReduced()) reveal(false);
+  else if (isInitiallyVisible) { reveal(true); entered = true; }
+  else element.classList.add('sr-pending');
+  observe();
   return dispose;
 };

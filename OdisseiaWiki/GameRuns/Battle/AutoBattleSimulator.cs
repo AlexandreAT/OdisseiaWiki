@@ -37,11 +37,11 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
         var evaluator = new GameplayRollEvaluator(new DiceRoller(random));
         int round = 0;
         int roundsCompleted = 0;
-        int roundsWithoutProgress = 0;
+        int turnsWithoutProgress = 0;
         string? winnerId = null;
         GameBattleEndReason reason = GameBattleEndReason.EventLimit;
         bool evaluatingAutomaticConditions = false;
-        bool roundHadProgress = false;
+        bool turnHadProgress = false;
 
         Emit(GameBattleEventTypes.BattleStarted, null, null,
             new BattleStartedPayload(turnOrder.Select(index => actors[index].Spec.Id).ToArray()));
@@ -55,7 +55,6 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
         bool[] pendingReaction = new bool[actors.Length];
         for (round = 1; !finished; round++)
         {
-            roundHadProgress = false;
             int[] actionsThisRound = round == 1 && input.OpeningOpportunityAttack
                 ? [1, .. turnOrder] : turnOrder;
             for (int turnPosition = 0; turnPosition < actionsThisRound.Length; turnPosition++)
@@ -99,6 +98,9 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                 for (int attempt = 0; attempt < attempts && !finished; attempt++)
                 {
                 bool reaction = attempts == 2 && attempt == 0;
+                turnHadProgress = false;
+                try
+                {
                 if (!openingOpportunity)
                 {
                     actor.TurnCount++;
@@ -113,6 +115,7 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                     }
                     foreach (ActionState action in actor.Actions.Where(action => action.NextAvailableTurn > 0))
                     {
+                        turnHadProgress = true;
                         int remaining = Math.Max(0, action.NextAvailableTurn - actor.TurnCount);
                         Emit(GameBattleEventTypes.CooldownAdvanced, actor.Spec.Id, null,
                             new CooldownAdvancedPayload(action.Spec.Id, remaining));
@@ -122,6 +125,7 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                     if (actor.TurnsToSkip > 0)
                     {
                         actor.TurnsToSkip--;
+                        turnHadProgress = true;
                         Emit(GameBattleEventTypes.TurnPassed, actor.Spec.Id, null,
                             new TurnPassedPayload("CONDITION"));
                         TickConditions(actor, "FIM_TURNO");
@@ -308,7 +312,7 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                             EmitChange("hitPoints", before, target.HitPoints,
                                 action.Spec.Id, actor.Spec.Id, target.Spec.Id);
                         }
-                        roundHadProgress |= target.HitPoints != hitPointsBefore ||
+                        turnHadProgress |= target.HitPoints != hitPointsBefore ||
                             target.Shield != shieldBefore ||
                             target.Protection != protectionBefore;
                     }
@@ -387,6 +391,19 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                     if (actor.HitPoints == 0) FinishIfDefeated(actorIndex);
                 }
                 }
+                finally
+                {
+                    // Reactions do not spend a regular turn. Any real resource change
+                    // still resets the stall counter, including reloads and recovery.
+                    if (turnHadProgress) turnsWithoutProgress = 0;
+                    else if (!openingOpportunity && !reaction) turnsWithoutProgress++;
+                    if (!finished && turnsWithoutProgress >= input.MaxTurnsWithoutProgress)
+                    {
+                        reason = GameBattleEndReason.NoDamage;
+                        finished = true;
+                    }
+                }
+                }
                 if (finished)
                     break;
             }
@@ -395,19 +412,8 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                 break;
 
             roundsCompleted++;
-            roundsWithoutProgress = roundHadProgress ? 0 : roundsWithoutProgress + 1;
-            if (roundsWithoutProgress >= input.MaxRoundsWithoutDamage)
-            {
-                reason = GameBattleEndReason.NoDamage;
-                finished = true;
-            }
         }
 
-        // A technical stop never leaves a persisted combat without a winner.
-        // Compare remaining team health; equality favors the defending side.
-        winnerId ??= actors[0].HitPoints > actors.Skip(1).Sum(actor => actor.HitPoints)
-            ? actors[0].Spec.Id
-            : actors.Skip(1).First(actor => actor.HitPoints > 0).Spec.Id;
         int lastRound = round;
         Emit(GameBattleEventTypes.BattleEnded, null, null,
             new BattleEndedPayload(winnerId, reason), lastRound);
@@ -651,6 +657,7 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
             {
                 GameBattleActiveCondition active = actor.ActiveConditions[index];
                 if (active.RemainingTurns is not > 0) continue;
+                turnHadProgress = true;
                 int remaining = active.RemainingTurns.Value - 1;
                 // A duração explícita da origem é um prazo, independente de
                 // outras formas de recuperação marcadas no Sistema.
@@ -744,7 +751,7 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
         {
             if (before != after)
             {
-                if (resource == "hitPoints") roundHadProgress = true;
+                turnHadProgress = true;
                 Emit(GameBattleEventTypes.ResourceChanged, actorId, targetId,
                     new ResourceChangedPayload(resource, before, after, actionId));
                 if (resource is "hitPoints" or "mana" or "stamina")
@@ -799,6 +806,9 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
 
         void Emit(string type, string? actorId, string? targetId, GameBattleEventPayload payload, int? eventRound = null)
         {
+            if (type is GameBattleEventTypes.ItemConsumed or GameBattleEventTypes.ConditionApplied
+                or GameBattleEventTypes.ConditionExpired)
+                turnHadProgress = true;
             events.Add(new GameBattleEvent(
                 events.Count + 1,
                 EventSchemaVersion,
@@ -949,7 +959,7 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
     private static void Validate(GameBattleInput input)
     {
         if (input.MaxEvents is < 2 or > 10000 ||
-            input.MaxRoundsWithoutDamage is < 1 or > 100)
+            input.MaxTurnsWithoutProgress is < 1 or > 100)
             throw new ArgumentOutOfRangeException(nameof(input), "Os limites da batalha são inválidos.");
         if (input.FirstActor is null || input.SecondActor is null ||
             string.IsNullOrWhiteSpace(input.FirstActor.Id) || string.IsNullOrWhiteSpace(input.SecondActor.Id) ||

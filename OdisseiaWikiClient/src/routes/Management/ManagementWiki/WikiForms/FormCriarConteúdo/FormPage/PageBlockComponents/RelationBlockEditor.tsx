@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { BiTrash, BiChevronUp, BiChevronDown, BiInfoCircle } from 'react-icons/bi';
+import { BiTrash, BiChevronUp, BiChevronDown } from 'react-icons/bi';
+import { FieldHelp } from '../../../../../../../components/Generic/FieldHelp/FieldHelp';
+import { getWikiContentHelp } from '../../../../../../../content/wikiContentHelp';
 import {
   PageBlock,
   RelatedEntityReference,
@@ -32,8 +34,6 @@ import {
   ReferenceOrderButtons,
   OrderButton,
   ReferenceInfo,
-  ReferenceInfoButton,
-  ReferenceInfoPopover,
 } from './RelationBlockEditor.style';
 import { normalizeImagePath } from '../../../../../../../routes/Wiki/utils/imagePathHelper';
 
@@ -138,7 +138,6 @@ export const RelationBlockEditor: React.FC<RelationBlockEditorProps> = ({
   const [selectedEntityId, setSelectedEntityId] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [showReferenceInfo, setShowReferenceInfo] = useState(false);
 
   // IDs já usados neste bloco (para evitar duplicatas)
   const usedIds = useMemo(() => {
@@ -362,20 +361,8 @@ export const RelationBlockEditor: React.FC<RelationBlockEditorProps> = ({
     <RelationContainer>
       <ReferenceInfo>
         <span>Referências da página</span>
-        <ReferenceInfoButton
-          type="button"
-          $neon={neon === 'on'}
-          aria-label="Como funcionam as referências"
-          aria-expanded={showReferenceInfo}
-          onClick={() => setShowReferenceInfo((visible) => !visible)}
-        >
-          <BiInfoCircle aria-hidden="true" />
-        </ReferenceInfoButton>
-        {showReferenceInfo && (
-          <ReferenceInfoPopover $isDark={theme === 'dark'} $neon={neon === 'on'} role="status">
-            Uma referência conecta esta página à entidade escolhida. Você pode referenciar conteúdo oculto que administra; leitores verão apenas um card censurado.
-          </ReferenceInfoPopover>
-        )}
+        <FieldHelp label="Referências da página" help={getWikiContentHelp('page', 'references')}
+          theme={theme} neon={neon} inline />
       </ReferenceInfo>
       <AddReferenceRow>
         <div style={{ flex: 1, minWidth: '180px' }}>

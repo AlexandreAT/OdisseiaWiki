@@ -36,7 +36,7 @@ export const ModalContainer = styled(HudFrame)<{ $width?: string; $mobileInset?:
     margin: 0;
     input, select, textarea { width: 100%; max-width: 100%; box-sizing: border-box; }
   }
-  @media (prefers-reduced-motion: reduce) { animation: none; }
+  :root[data-motion='reduced'] & { animation: none; }
 `;
 
 export const ModalHeaderContainer = styled.div<ThemeProps>`

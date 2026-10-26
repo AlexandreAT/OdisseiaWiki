@@ -69,7 +69,7 @@ export const GameFrame = styled(HudFrame)`
     }
   `}
 
-  @media (prefers-reduced-motion: reduce) {
+  :root[data-motion='reduced'] & {
     animation: none;
     > span { animation: none; }
   }
@@ -127,7 +127,7 @@ export const GameNotice = styled.div<{ $danger?: boolean }>`
     color: var(--clearneonYellow);
     animation: ${gameFrameReveal} 350ms ease-out both;
   }
-  @media (prefers-reduced-motion: reduce) { &[data-npc-rescued='true'] { animation: none; } }
+  :root[data-motion='reduced'] & { &[data-npc-rescued='true'] { animation: none; } }
 `;
 
 export const GameTextLink = styled(Link)`

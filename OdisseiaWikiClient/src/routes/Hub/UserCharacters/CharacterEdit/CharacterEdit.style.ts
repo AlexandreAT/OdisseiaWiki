@@ -170,7 +170,7 @@ export const FloatingSaveSpinner = styled.span`
     height: 17px;
     flex-basis: 17px;
   }
-  @media (prefers-reduced-motion: reduce) { animation-duration: 1.5s; }
+  :root[data-motion='reduced'] & { animation-duration: 1.5s; }
 `;
 
 export const FloatingSaveButton = styled.button<ThemeProps>`

@@ -239,7 +239,7 @@ test('modal padrão reutiliza a mesma superfície, SVG, neon, cabeçalho, X e sc
     assert.match(css, /DO Futuristic/);
     assert.match(css, /width:44px/);
     assert.match(css, /scrollbar-color:var\(--clearneonBlue\)/);
-    assert.match(css, /prefers-reduced-motion/);
+    assert.match(css, /:root\[data-motion='reduced'\]/);
     assert.match(css, /height:100dvh/);
     assert.match(css, /z-index:10/);
   } finally { sheet.seal(); }
@@ -265,7 +265,7 @@ test('loot preenche colunas iguais sem depender da imagem, texto ou etapa da ani
     assert.match(css, />article\s*>button\{width:100%;min-width:0;box-sizing:border-box/);
     assert.match(css, /\.5s ease-out both/);
     assert.match(css, /to\{opacity:1;transform:none;filter:brightness\(1\)/);
-    assert.match(css, /prefers-reduced-motion:\s*reduce/);
+    assert.match(css, /:root\[data-motion='reduced'\]/);
   } finally { sheet.seal(); }
 });
 

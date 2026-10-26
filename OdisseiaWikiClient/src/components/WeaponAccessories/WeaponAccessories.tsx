@@ -4,6 +4,8 @@ import { Search } from '../Generic/Search/Search';
 import { CyberButton } from '../Generic/HighlightButton/HighlightButton';
 import { ModifierEntry, ModifierList, ModifierSection } from '../WeaponModifiers/WeaponModifiers.style';
 import { useWeaponAccessories } from './useWeaponAccessories';
+import { FieldHelp } from '../Generic/FieldHelp/FieldHelp';
+import { getWikiContentHelp } from '../../content/wikiContentHelp';
 
 interface WeaponAccessoriesProps {
   value: ArmaAtributos;
@@ -18,7 +20,8 @@ export const WeaponAccessories = ({ value, onChange, theme, neon }: WeaponAccess
   const totals = describeModifiers(effective.modificadores);
   return (
     <ModifierSection $theme={theme} $neon={neon}>
-      <h4>Acessórios</h4>
+      <h4>Acessórios <FieldHelp label="Acessórios" help={getWikiContentHelp('equipment', 'accessories')}
+        theme={theme} neon={neon} inline /></h4>
       <Search label="Pesquisar acessório pelo nome" theme={theme} neon={neon} value={state.query}
         onChange={(event) => state.setQuery(event.target.value)} onFocus={state.load} suggestions={state.suggestions}
         onSelectSuggestion={state.attach} loading={state.loading} width="100%" portal />

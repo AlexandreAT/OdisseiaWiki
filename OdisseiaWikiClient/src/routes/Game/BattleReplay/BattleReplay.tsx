@@ -8,8 +8,9 @@ import { CyberButton } from '../../../components/Generic/HighlightButton/Highlig
 import { GameNotice } from '../GameShared.style';
 import { normalizeImagePath } from '../../Wiki/utils/imagePathHelper';
 import { Lightbox } from '../../Wiki/components/blocks/shared/Lightbox/Lightbox';
-import { activeBattleActor, latestBattleImpact, visibleActorConditions, visibleActorDefense, visibleActorResource, type BattleBeat, type BattleResource } from './battlePresentation';
+import { activeBattleActor, battleWinner, endingLabel, latestBattleImpact, visibleActorConditions, visibleActorDefense, visibleActorResource, type BattleBeat, type BattleResource } from './battlePresentation';
 import { useBattleReplay } from './useBattleReplay';
+import { useMotionReduced } from '../../../hooks/useMotionPreference';
 import { InlineBattleDie } from './InlineBattleDie/InlineBattleDie';
 import {
   ActionName,
@@ -65,13 +66,6 @@ const actorName = (preview: GameBattlePreview, id: string | null): string => {
   return 'Combate';
 };
 
-const endingLabel = (reason: GameBattlePreview['resultado']['endReason']): string => ({
-  ActorDefeated: 'um combatente foi derrotado',
-  RoundLimit: 'o combate foi encerrado',
-  EventLimit: 'o limite de eventos foi alcançado',
-  NoDamage: 'não houve progresso no combate',
-}[reason]);
-
 const resourceDefinitions: { key: BattleResource; label: string; max: 'vidaMaxima' | 'manaMaxima' | 'estaminaMaxima' }[] = [
   { key: 'hitPoints', label: 'Vida', max: 'vidaMaxima' },
   { key: 'mana', label: 'Mana', max: 'manaMaxima' },
@@ -81,8 +75,9 @@ const resourceDefinitions: { key: BattleResource; label: string; max: 'vidaMaxim
 const ReplayXpGain = ({ amount, levels, points }: { amount: number; levels: number[];
   points?: GameBattlePreview['pontosConcedidos'] }) => {
   const [visible, setVisible] = useState(0);
+  const reducedMotion = useMotionReduced();
   useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (reducedMotion) {
       setVisible(amount);
       return;
     }
@@ -96,7 +91,7 @@ const ReplayXpGain = ({ amount, levels, points }: { amount: number; levels: numb
     };
     frame = requestAnimationFrame(advance);
     return () => cancelAnimationFrame(frame);
-  }, [amount]);
+  }, [amount, reducedMotion]);
 
   const pointLabels = [
     [points?.gerais, 'gerais'], [points?.atributo, 'de atributo'],
@@ -164,6 +159,7 @@ const ResourceMeter = ({ label, actor, value, max, tone, enemy, speed, protected
   const lastChangeAt = useRef(0);
   const fillRef = useRef<HTMLDivElement>(null);
   const [displayValue, setDisplayValue] = useState(value);
+  const reducedMotion = useMotionReduced();
 
   useLayoutEffect(() => {
     if (previousTarget.current.value === value && previousTarget.current.max === max &&
@@ -171,6 +167,13 @@ const ResourceMeter = ({ label, actor, value, max, tone, enemy, speed, protected
     previousTarget.current = { value, max };
     const fill = fillRef.current;
     if (!fill) return;
+    if (reducedMotion) {
+      fill.style.transitionDuration = '0ms';
+      fill.style.width = `${percent}%`;
+      currentValue.current = value;
+      setDisplayValue(value);
+      return;
+    }
     const now = performance.now();
     const rapidSequence = lastChangeAt.current > 0 && now - lastChangeAt.current < 1300;
     const duration = rapidSequence ? (speed === 1 ? 600 : 340) : (speed === 1 ? 1500 : 780);
@@ -188,7 +191,7 @@ const ResourceMeter = ({ label, actor, value, max, tone, enemy, speed, protected
     };
     timer = window.setInterval(() => animate(performance.now()), 16);
     return () => window.clearInterval(timer);
-  }, [percent, value, max, speed]);
+  }, [percent, value, max, speed, reducedMotion]);
 
   return <CombatantResource>
     <div><span>{label}</span><strong>{displayValue} / {max}</strong></div>
@@ -203,9 +206,10 @@ const ResourceMeter = ({ label, actor, value, max, tone, enemy, speed, protected
 
 const AnimatedShield = ({ value, speed }: { value: number; speed: 1 | 2 }) => {
   const [display, setDisplay] = useState(value);
+  const reducedMotion = useMotionReduced();
   const current = useRef(value);
   useEffect(() => {
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+    if (reducedMotion) {
       current.current = value;
       setDisplay(value);
       return;
@@ -222,7 +226,7 @@ const AnimatedShield = ({ value, speed }: { value: number; speed: 1 | 2 }) => {
     };
     frame = requestAnimationFrame(advance);
     return () => cancelAnimationFrame(frame);
-  }, [value, speed]);
+  }, [value, speed, reducedMotion]);
   return <>{display}</>;
 };
 
@@ -241,6 +245,7 @@ const Combatant = ({ preview, actor, eventCount, active, enemy, result, neon, fa
   const imageUrl = normalizeImagePath(actor.imagem ?? fallbackImage ?? undefined);
   const [imageFailed, setImageFailed] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
+  const reducedMotion = useMotionReduced();
   const lastImpact = useRef<number | null>(null);
   const impactSequence = latestBattleImpact(preview, actor.id, eventCount);
   const protection = visibleActorDefense(preview, actor, 'protection', eventCount);
@@ -252,14 +257,14 @@ const Combatant = ({ preview, actor, eventCount, active, enemy, result, neon, fa
     if (visibleImpactSequence === null) { lastImpact.current = null; return; }
     if (visibleImpactSequence === lastImpact.current) return;
     lastImpact.current = visibleImpactSequence;
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    if (reducedMotion) return;
     const animation = cardRef.current?.animate?.([
       { transform: 'translateX(0)' }, { transform: 'translateX(-5px)', offset: .18 },
       { transform: 'translateX(4px)', offset: .42 }, { transform: 'translateX(-2px)', offset: .68 },
       { transform: 'translateX(0)' },
     ], { duration: speed === 2 ? 260 : 390, easing: 'ease-out' });
     return () => animation?.cancel();
-  }, [visibleImpactSequence, speed]);
+  }, [visibleImpactSequence, speed, reducedMotion]);
   return <CombatantCard ref={cardRef} $enemy={enemy} $result={result} $neon={neon} $active={active}>
   <header><button type="button" disabled={!imageUrl || imageFailed} aria-label={`Ampliar imagem de ${actor.nome}`}
     onClick={() => { if (imageUrl && !imageFailed) onInspect(imageUrl, actor.nome); }}><span aria-hidden="true">
@@ -328,11 +333,11 @@ export const BattleReplay = ({ runId, theme, neon, savedBattle, playerImage, onC
   const visibleBeats = state.beats.filter((beat) => beat.throughIndex <= state.eventCount);
   const currentBeat = visibleBeats[visibleBeats.length - 1];
   const recentBeats = visibleBeats.slice(-2);
-  const winner = preview.resultado.winnerActorId;
+  const winner = battleWinner(preview);
   const activeActorId = activeBattleActor(preview, state.eventCount);
   const winnerText = winner
     ? `${actorName(preview, winner)} venceu o combate`
-    : `Combate sem vencedor: ${endingLabel(preview.resultado.endReason)}`;
+    : `Combate inconclusivo: ${endingLabel(preview.resultado.endReason)}`;
 
   return (
     <ReplayContent>
@@ -383,8 +388,11 @@ export const BattleReplay = ({ runId, theme, neon, savedBattle, playerImage, onC
           </div>;
         }) : 'Aguardando o primeiro movimento.'}
       </CurrentEvent>}
-      {complete && <ReplayResult $win={winner === preview.personagem.id} role="status">
+      {complete && <ReplayResult $win={winner === preview.personagem.id} $inconclusive={!winner} role="status">
         <span>{winnerText}</span>
+        {!winner && savedBattle && !isHistoricalReplay && <small>
+          Seus recursos foram preservados. Ajuste suas ações no mapa e tente novamente.
+        </small>}
         {savedBattle && winner === preview.personagem.id && (preview.xpConcedido ?? 0) > 0 &&
           <ReplayXpGain amount={preview.xpConcedido ?? 0} levels={preview.niveisAlcancados ?? []}
             points={preview.pontosConcedidos} />}
