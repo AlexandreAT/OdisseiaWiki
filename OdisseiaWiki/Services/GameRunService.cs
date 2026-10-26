@@ -427,6 +427,11 @@ public sealed class GameRunService : IGameRunService
         {
             run.MapaJson = JsonSerializer.Serialize(
                 new GameRunMapGenerator().Create(run.Seed, mode.ConfiguracaoJson), SnapshotJsonOptions);
+            var memory = await _repository.GetCharacterMemoryAsync(idUsuario, idPersonagemJogador, cancellationToken);
+            var map = GameRunFirstMap.Read(run.MapaJson, SnapshotJsonOptions);
+            GameRunNpcs.ApplyMemory(map, GameCharacterMilestones.Read(memory?.EstadoJson),
+                mode.Codigo, snapshot.Sistema.IdSistemaRpg ?? 0);
+            run.MapaJson = JsonSerializer.Serialize(map, SnapshotJsonOptions);
         }
         catch (Exception error) when (error is JsonException or InvalidOperationException or ArgumentException or KeyNotFoundException)
         {

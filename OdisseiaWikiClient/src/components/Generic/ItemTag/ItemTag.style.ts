@@ -68,7 +68,7 @@ export const ItemTag = styled.span<{
       animation: ${tagCometBottom} 1.75s linear infinite;
     }
   `}
-  @media (prefers-reduced-motion: reduce) {
+  :root[data-motion='reduced'] & {
     &::before, &::after { animation: none; opacity: 0; }
   }
 `;

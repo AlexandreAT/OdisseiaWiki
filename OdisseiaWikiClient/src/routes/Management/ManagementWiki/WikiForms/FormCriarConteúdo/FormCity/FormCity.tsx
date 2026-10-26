@@ -28,10 +28,12 @@ import {
   CheckboxSection,
   PontosInteresseSection,
   PontosInteresseHeader,
-  PontosInteresseHelp,
   PointImageCell,
   SectionTitle,
 } from './FormCity.style';
+
+import { WikiContentHelpProvider } from '../../../../../../components/Generic/FieldHelp/WikiContentHelpProvider';
+import { FieldHelp } from '../../../../../../components/Generic/FieldHelp/FieldHelp';
 
 interface FormCityProps {
   theme: 'dark' | 'light';
@@ -202,6 +204,7 @@ export const FormCity = ({ theme, neon, initialCity, onSaveSuccess, contentType 
   };
 
   return (
+    <WikiContentHelpProvider scope="city" theme={theme} neon={neon}>
     <FormController onSubmit={onSubmit}>
       {initialCity && <UnsavedChangesGuard dirty={!isSynced} />}
       <FormHeader>
@@ -261,10 +264,7 @@ export const FormCity = ({ theme, neon, initialCity, onSaveSuccess, contentType 
 
       <PontosInteresseSection>
         <PontosInteresseHeader>
-          <SectionTitle theme={theme} neon={neon}>Pontos de interesse</SectionTitle>
-          <PontosInteresseHelp>
-            Adicione um nome e uma descrição curta para cada local importante da cidade.
-          </PontosInteresseHelp>
+          <SectionTitle theme={theme} neon={neon}>Pontos de interesse <FieldHelp label="Pontos de interesse" inline /></SectionTitle>
         </PontosInteresseHeader>
         <DataTable<PontoDeInteresse>
           data={pontosDeInteresse}
@@ -343,5 +343,6 @@ export const FormCity = ({ theme, neon, initialCity, onSaveSuccess, contentType 
         />
       )}
     </FormController>
+    </WikiContentHelpProvider>
   );
 };

@@ -4,6 +4,8 @@ import { SystemRuntimeIndicator } from '../SystemRuntimeIndicator';
 import { getSistemaVersaoStatusLabel } from '../../../models/SistemaRpg';
 import { SistemaEntidadeGlobalFormState } from '../../../hooks/useSistemaEntidadeGlobalForm';
 import { BindingGrid, BindingHeader, BindingSection } from './SystemEntityBinding.style';
+import { WikiContentHelpProvider } from '../FieldHelp/WikiContentHelpProvider';
+import { FieldHelp } from '../FieldHelp/FieldHelp';
 
 interface SystemEntityBindingProps {
   theme: 'dark' | 'light';
@@ -13,10 +15,10 @@ interface SystemEntityBindingProps {
 
 export const SystemEntityBinding = ({ theme, neon, state }: SystemEntityBindingProps) => {
   return (
+    <WikiContentHelpProvider scope="binding" theme={theme} neon={neon}>
     <BindingSection>
       <BindingHeader>
-        <h3>Sistema de RPG</h3>
-        <span>O vínculo altera as regras de referência, sem regravar os valores desta entidade.</span>
+        <h3>Sistema de RPG <FieldHelp label="Sistema de RPG" inline /></h3>
       </BindingHeader>
 
       <SystemRuntimeIndicator contexto={state.contexto} loading={state.loading} error={state.error} />
@@ -69,5 +71,6 @@ export const SystemEntityBinding = ({ theme, neon, state }: SystemEntityBindingP
         disabled={state.loading}
       />
     </BindingSection>
+    </WikiContentHelpProvider>
   );
 };

@@ -98,13 +98,21 @@ export const RunMapCanvas = ({ map, config, neon, active, acting, onSelect }: Pr
   };
   const available = (node: GameRunMapNode) => active && visualState(node) === 'DISPONIVEL';
   const selectable = (node: GameRunMapNode) => available(node) && !acting;
+  const needsRescue = (node: GameRunMapNode) => node.type === 'NPC' && node.payload?.npcLocked === true && !node.payload.npcRescued;
   const selectOnKeyboard = (event: KeyboardEvent<SVGGElement>, node: GameRunMapNode) => {
+    if (event.key === 'Escape') { setHoveredNodeId(null); return; }
+    if (needsRescue(node) && !selectable(node) && (event.key === 'Enter' || event.key === ' ')) {
+      event.preventDefault(); setHoveredNodeId(node.id); return;
+    }
     if (!selectable(node) || (event.key !== 'Enter' && event.key !== ' ')) return;
     event.preventDefault();
     onSelect(node.id);
   };
 
-  return <MapWrap>
+  const rescueHint = nodes.find(node => node.id === hoveredNodeId && needsRescue(node));
+  return <MapWrap onPointerDownCapture={event => {
+    if (!(event.target as Element).closest?.('[data-node-id]')) setHoveredNodeId(null);
+  }}>
     <MapDrawing $neon={neon} viewBox={`0 0 420 ${height}`} role="group" aria-label="Mapa vertical da jornada; cada conexão desce para a próxima etapa">
       {areas.map((area) => <g key={`area-${area.fase}`} pointerEvents="none">
         <text className="area-name" x="210" y={area.start + 31} textAnchor="middle">
@@ -135,17 +143,18 @@ export const RunMapCanvas = ({ map, config, neon, active, acting, onSelect }: Pr
         return <g key={node.id} data-node-id={node.id} data-state={visualState(node)} data-type={node.type}
           data-current={node.id === currentNode?.id} data-available={available(node)}
           data-hovered={hoveredNodeId === node.id} data-linked={linkedNodeIds.has(node.id)}
-          tabIndex={available(node) ? 0 : undefined}
-          role={available(node) ? 'button' : undefined}
+          tabIndex={available(node) || needsRescue(node) ? 0 : undefined}
+          role={available(node) || needsRescue(node) ? 'button' : undefined}
           aria-disabled={available(node) ? acting : undefined}
-          aria-label={available(node) ? `Selecionar ${nameOf(node)}` : undefined}
-          onClick={() => { if (selectable(node)) onSelect(node.id); }}
+          aria-label={available(node) ? `Selecionar ${nameOf(node)}` : needsRescue(node) ? `Sobre o resgate de ${nameOf(node)}` : undefined}
+          aria-describedby={rescueHint?.id === node.id ? 'npc-rescue-hint' : undefined}
+          onClick={() => { if (needsRescue(node)) setHoveredNodeId(node.id); if (selectable(node)) onSelect(node.id); }}
           onMouseEnter={() => setHoveredNodeId(node.id)}
           onMouseLeave={() => setHoveredNodeId((id) => id === node.id ? null : id)}
           onFocus={() => setHoveredNodeId(node.id)}
           onBlur={() => setHoveredNodeId((id) => id === node.id ? null : id)}
           onKeyDown={(event) => selectOnKeyboard(event, node)}>
-          <title>{nameOf(node)} — {labels[visualState(node)]}</title>
+          <title>{`${nameOf(node)} — ${labels[visualState(node)]}${node.type === 'NPC' && node.payload?.npcLocked && !node.payload.npcRescued ? ' · Visite para libertar' : ''}`}</title>
           {portrait ? <>
             <defs><clipPath id={`portrait-${node.id}`}><circle cx={x} cy={y - 11} r={radius} /></clipPath></defs>
             <circle className="node-portrait" cx={x} cy={y - 11} r={radius} />
@@ -153,6 +162,12 @@ export const RunMapCanvas = ({ map, config, neon, active, acting, onSelect }: Pr
               width={radius * 2} height={radius * 2} preserveAspectRatio="xMidYMid slice"
               clipPath={`url(#portrait-${node.id})`} pointerEvents="none" />}
             <circle className="node-portrait-border" cx={x} cy={y - 11} r={radius} />
+            {node.type === 'NPC' && node.payload?.npcLocked && !node.payload.npcRescued &&
+              <g className="npc-lock" transform={`translate(${x + radius - 8}, ${y + 5})`} pointerEvents="none" aria-hidden="true">
+                <path className="npc-lock-frame" d="M -7 -11 H 7 L 11 -7 V 7 L 7 11 H -7 L -11 7 V -7 Z" />
+                <path className="npc-lock-trace" d="M -5 -9 H 6 L 9 -6 M -9 5 V 6 L -6 9 H -2" />
+                <path className="npc-lock-icon" d="M -3 -1 V -4 A 3 3 0 0 1 3 -4 V -1 M -4 -1 H 4 Q 5 -1 5 0 V 6 Q 5 7 4 7 H -4 Q -5 7 -5 6 V 0 Q -5 -1 -4 -1 M 0 2 V 4" />
+              </g>}
           </> : <>
             <rect x={x - width / 2} y={y - 34} width={width} height="68" rx="8" />
             {node.image && <image href={normalizeImagePath(node.image)}
@@ -181,6 +196,15 @@ export const RunMapCanvas = ({ map, config, neon, active, acting, onSelect }: Pr
           </g>;
         })}
       </g>}
+      {rescueHint && (() => {
+        const { x, y } = layoutOf(rescueHint);
+        const left = Math.max(8, Math.min(420 - 276, x - 134));
+        return <g id="npc-rescue-hint" role="tooltip" className="npc-rescue-hint" pointerEvents="none" transform={`translate(${left}, ${y + 45})`}>
+          <rect width="268" height="43" rx="6" />
+          <text x="10" y="17">Visite para libertar este NPC.</text>
+          <text x="10" y="32">Serviço nas próximas visitas e runs.</text>
+        </g>;
+      })()}
     </MapDrawing>
   </MapWrap>;
 };

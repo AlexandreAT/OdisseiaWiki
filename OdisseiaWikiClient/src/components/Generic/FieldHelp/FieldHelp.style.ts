@@ -24,10 +24,10 @@ export const HelpAnchor = styled.span<{ $inline?: boolean }>`
 `;
 
 // Help remains usable inside a disabled/read-only fieldset.
-export const HelpButton = styled.span<{ $dark: boolean; $neon: boolean; $inline?: boolean }>`
+export const HelpButton = styled.span<{ $dark: boolean; $neon: boolean; $inline?: boolean; $small?: boolean }>`
   display: inline-flex;
-  width: ${({ $inline }) => $inline ? '25px' : '32px'};
-  height: ${({ $inline }) => $inline ? '25px' : '32px'};
+  width: ${({ $small, $inline }) => $small ? '20px' : $inline ? '25px' : '32px'};
+  height: ${({ $small, $inline }) => $small ? '20px' : $inline ? '25px' : '32px'};
   align-items: center;
   justify-content: center;
   border: 1px solid ${({ $neon }) => $neon ? 'var(--clearneonBlue)' : 'var(--grey)'};
@@ -37,7 +37,7 @@ export const HelpButton = styled.span<{ $dark: boolean; $neon: boolean; $inline?
   color: ${({ $neon }) => $neon ? 'var(--clearneonBlue)' : 'var(--grey)'} !important;
   cursor: pointer;
   transition: color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
-  svg { width: 18px; height: 18px; color: inherit !important; fill: currentColor; }
+  svg { width: ${({ $small }) => $small ? '14px' : '18px'}; height: ${({ $small }) => $small ? '14px' : '18px'}; color: inherit !important; fill: currentColor; }
   &:hover, &:focus-visible, &[aria-expanded='true'] {
     color: var(--clearneonBlue) !important;
     border-color: var(--clearneonBlue);
@@ -89,7 +89,7 @@ export const HelpPopover = styled.aside<{
   dl { margin: 10px 0 0; }
   dt { margin-top: 7px; font-weight: 600; color: inherit !important; }
   dd { margin: 2px 0 0; color: inherit !important; }
-  @media (prefers-reduced-motion: reduce) { animation: none; transition: none; }
+  :root[data-motion='reduced'] & { animation: none; transition: none; }
 `;
 
 export const HelpPopoverScroll = styled.div<{ $height: number }>`

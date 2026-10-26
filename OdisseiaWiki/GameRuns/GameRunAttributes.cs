@@ -50,6 +50,7 @@ public static class GameRunAttributes
             string code = values?.Select(pair => pair.Key).FirstOrDefault(key => Normalize(key) == Normalize(attribute.CodigoAtributo))
                 ?? attribute.CodigoAtributo.ToLowerInvariant();
             int current = values?.ContainsKey(code) == true ? Number(values[code]) : attribute.ValorMinimo;
+            current -= GameRunProstheses.AttributeBonus(snapshot, group, code);
             int limit = Math.Min(attribute.ValorMaximoNatural, attribute.ValorMaximoAbsoluto ?? int.MaxValue);
             var resources = (rules.InfluenciasAtributos ?? []).Where(rule => rule is not null && Normalize(rule.CodigoAtributo) == Normalize(attribute.CodigoAtributo))
                 .Select(rule =>
@@ -92,7 +93,8 @@ public static class GameRunAttributes
         status[pool] = Number(status[pool]) - 1;
         status["atributos"] ??= new JsonObject();
         status["atributos"]![attribute.Grupo] ??= new JsonObject();
-        status["atributos"]![attribute.Grupo]![attribute.Codigo] = attribute.Valor + 1;
+        status["atributos"]![attribute.Grupo]![attribute.Codigo] = attribute.Valor + 1 +
+            GameRunProstheses.AttributeBonus(snapshot, attribute.Grupo, attribute.Codigo);
         foreach (GameAttributeResourcePreview resource in attribute.Recursos)
             status["status"]![resource.Recurso + "Maxima"] = resource.Depois;
         JsonArray audit = root["atributosEvoluidos"] as JsonArray ?? [];

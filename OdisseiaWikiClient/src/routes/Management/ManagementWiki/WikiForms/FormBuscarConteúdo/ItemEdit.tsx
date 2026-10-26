@@ -42,6 +42,8 @@ import { EntityEditFloatingActions } from './EntityEditFloatingActions';
 import { ITEM_TIPO_OPTIONS } from '../formOptions';
 import { handleNumericInputFocus } from '../../../../../utils/numericInput';
 import { SystemEntityBinding } from '../../../../../components/Generic/SystemEntityBinding';
+import { WikiContentHelpProvider } from '../../../../../components/Generic/FieldHelp/WikiContentHelpProvider';
+import { FieldHelp } from '../../../../../components/Generic/FieldHelp/FieldHelp';
 
 interface ItemEditProps {
   theme: 'dark' | 'light';
@@ -290,6 +292,7 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
   const AtributosForm = atributosFormMap[tipo];
 
   return (
+    <WikiContentHelpProvider scope="item" theme={theme} neon={neon}>
     <FormController theme={theme} neon={neon} onSubmit={onSubmit}>
       <UnsavedChangesGuard dirty={!isSynced} />
       <FormHeader theme={theme} neon={neon}>
@@ -329,7 +332,7 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
           </LabelInfoBox>
 
           <LabelInfoBox theme={theme} neon={neon}>
-            <LabelStatus>Espaço ocupado</LabelStatus>
+            <LabelStatus>Espaço ocupado <FieldHelp label="Espaço ocupado" inline size="small" /></LabelStatus>
             <MinimalInput 
               value={peso ?? ""}
               type="number"
@@ -339,14 +342,14 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
           </LabelInfoBox>
 
           <LabelInfoBox theme={theme} neon={neon}>
-            <LabelStatus>Valor de compra (opcional)</LabelStatus>
+            <LabelStatus>Valor de compra (opcional) <FieldHelp label="Valor de compra (opcional)" inline size="small" /></LabelStatus>
             <MinimalInput value={valor ?? ''} type="number" min="0" step="0.01"
               onFocus={handleNumericInputFocus}
               onChange={(e) => setValor(e.target.value === '' ? undefined : Math.max(0, Number(e.target.value)))} />
           </LabelInfoBox>
 
           <LabelInfoBox theme={theme} neon={neon}>
-            <LabelStatus>Discrição (-/+)</LabelStatus>
+            <LabelStatus>Discrição (-/+) <FieldHelp label="Discrição (-/+)" inline size="small" /></LabelStatus>
             <MinimalInput
               value={discricao}
               type="number"
@@ -516,5 +519,6 @@ const ItemEditFormComponent: React.FC<ItemEditFormComponentProps> = ({
         onSave={() => void persist(true)}
       />
     </FormController>
+    </WikiContentHelpProvider>
   );
 };

@@ -10,6 +10,7 @@ export const GameAdminFrame = styled(GameFrame)`
   max-width: 1180px;
   margin: 0 auto;
   color: var(--whitesmoke);
+  [role='alert'] { white-space: pre-line; overflow-wrap: anywhere; }
 `;
 
 export const GameAdminVersion = styled.div`
@@ -134,8 +135,11 @@ export const GameAdminWeightRow = styled.div`
   align-items: center;
   gap: 16px;
   > :first-child { flex: 1 1 auto; min-width: 0; }
-  label { display: inline-flex; align-items: center; gap: 8px; color: var(--clearneonBlue); white-space: nowrap; }
+  > label:first-child { flex: 0 1 auto; }
+  > [data-field-help] { margin-left: 0; }
+  label { display: inline-flex; align-items: center; gap: 8px; min-width: 0; color: var(--clearneonBlue); }
   input[type='checkbox'] {
+    flex: 0 0 auto;
     appearance: none;
     position: relative;
     width: 36px;
@@ -163,6 +167,29 @@ export const GameAdminWeightRow = styled.div`
     &:disabled { opacity: .45; cursor: not-allowed; }
   }
   @media (max-width: 520px) { flex-wrap: wrap; }
+`;
+
+export const GameAdminRouteControls = styled(GameAdminWeightRow)`
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(150px, 230px) max-content 38px;
+  justify-content: start;
+  align-items: center;
+  gap: 12px;
+  > .route-unique { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+  .route-unique label { white-space: nowrap; flex: none; }
+  .route-unique [data-field-help] { margin-left: 0; }
+  @media (max-width: 520px) {
+    grid-template-columns: minmax(0, 1fr) max-content 32px;
+    gap: 8px;
+    input[type='checkbox'] { width: 32px; &:checked::after { transform: translateX(12px); } }
+    > button { width: 32px; }
+  }
+  @media (max-width: 480px) {
+    grid-template-columns: minmax(0, 1fr) auto;
+    > :first-child { grid-column: 1 / -1; }
+    > button { justify-self: end; }
+  }
 `;
 
 export const GameAdminEncounterHeader = styled.div`
@@ -290,7 +317,7 @@ export const GameAdminGear = styled.button<{ $pulse: boolean }>`
   animation: ${({ $pulse }) => $pulse ? gearPulse : 'none'} 1.8s ease-in-out infinite;
   svg { width: 21px; height: 21px; }
   &:hover, &:focus-visible { outline: none; color: var(--whitesmoke); box-shadow: 0 0 12px var(--clearneonBlue); }
-  @media (prefers-reduced-motion: reduce) { animation: none; }
+  :root[data-motion='reduced'] & { animation: none; }
 `;
 
 export const GameAdminAddCard = styled.button`

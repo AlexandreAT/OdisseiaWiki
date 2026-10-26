@@ -7,6 +7,7 @@ import { Footer } from './components/Generic/Footer';
 import toast, { Toaster } from 'react-hot-toast';
 import { ServerStatusNotice } from './components/Generic/ServerStatusNotice/ServerStatusNotice.tsx';
 import { consumeSessionExpiredMessage } from './services/authSession.ts';
+import { isMotionReduced } from './utils/motionPreference';
 
 interface RootState {
   themesReducer: {
@@ -26,7 +27,7 @@ function App() {
   useEffect(() => {
     if (location.hash) {
       const targetId = decodeURIComponent(location.hash.slice(1));
-      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const reduceMotion = isMotionReduced();
       let frameId = 0;
       let remainingAttempts = 60;
 

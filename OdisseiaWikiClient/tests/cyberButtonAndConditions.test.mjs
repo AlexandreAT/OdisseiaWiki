@@ -13,7 +13,8 @@ const bundle = await build({
     export * from './src/utils/systemItemFormCatalog';
     export * from './src/routes/Hub/UserCharacters/CharacterCreate/tableColumnsConfig';
     export { InputText } from './src/components/Generic/InputText/InputText';
-    export { ConditionEffectFieldsForTest } from './src/routes/Management/ManagementWiki/WikiForms/FormCriarConteúdo/FormCharacter/MapItensForm';
+    export { ConditionEffectFieldsForTest, ImplanteAtributosForm, TestSpecificationFields } from './src/routes/Management/ManagementWiki/WikiForms/FormCriarConteúdo/FormCharacter/MapItensForm';
+    export { atributosFormMap, atributosSkillFormMap, atributosMagiaFormMap } from './src/routes/Management/ManagementWiki/WikiForms/FormCriarConteúdo/FormCharacter/MapItensForm';
     export { ServerStyleSheet } from 'styled-components';`, loader: 'ts', resolveDir: process.cwd() },
   plugins: [{ name: 'condition-editor-isolation', setup(builder) {
     builder.onResolve({ filter: /Generic\/Modal\/Modal$/ }, () => ({ path: 'Modal', namespace: 'test-modal' }));
@@ -45,6 +46,65 @@ after(() => { if (previousDocument === undefined) delete globalThis.document; el
 const base = { theme: 'dark', neon: 'off' };
 const text = node => typeof node === 'string' ? node : (node.children ?? []).map(text).join('');
 const button = (renderer, label) => renderer.root.findAllByType('button').find(node => text(node) === label);
+
+test('todas as variações de itens, magias e skills reutilizam a ajuda padrão nos campos técnicos', () => {
+  const helpIds = (Component, props) => {
+    let renderer;
+    act(() => { renderer = create(React.createElement(Component, { ...base, onChange() {}, ...props })); });
+    try {
+      return renderer.root.findAll(node => typeof node.type === 'string' && node.props['data-field-help'])
+        .map(node => node.props['data-field-help']);
+    } finally { act(() => renderer.unmount()); }
+  };
+  for (const forms of [api.atributosFormMap, api.atributosSkillFormMap, api.atributosMagiaFormMap]) {
+    for (const [type, Component] of Object.entries(forms)) {
+      assert.ok(helpIds(Component, { value: {}, managementLayout: true })
+        .some(id => id.startsWith('wiki.content.equipment.')), type);
+    }
+  }
+  const conditions = helpIds(api.ConditionEffectFieldsForTest,
+    { value: [{ codigo: 'REGEN', gatilho: 'AO_USAR', duracao: 4 }],
+      options: [{ value: 'REGEN', label: 'Regeneração' }] });
+  assert.ok(conditions.includes('wiki.content.condition.duration'));
+  assert.ok(!conditions.includes('wiki.content.equipment.narrativeDuration'));
+  const testFields = helpIds(api.TestSpecificationFields, { value: { codigoTeste: 'ATAQUE_COMUM' } });
+  assert.ok(testFields.includes('wiki.content.test.total'));
+  assert.ok(testFields.includes('wiki.content.test.attribute'));
+  const weapon = helpIds(api.atributosFormMap.arma, { value: { controlaMunicao: true }, managementLayout: true });
+  for (const field of ['cadence', 'ammunition', 'magazine', 'currentAmmo', 'ammoPerShot', 'ammoPerBurst',
+    'attackLimit', 'shotLimit', 'burstLimit']) assert.ok(weapon.includes(`wiki.content.equipment.${field}`), field);
+});
+
+test('prótese reutiliza combate das armas sem perder bônus e mostra defesas antes da configuração', () => {
+  let renderer, current;
+  const catalog = api.buildSistemaItemFormCatalog('implante', {}, [], [
+    { codigoTeste: 'ATAQUE_COMUM', nomeTeste: 'Ataque comum', dado: 'D20', quantidadeDados: 1 }], [],
+    [{ codigo: 'PRECISAO', nome: 'Precisão', ativo: true }]);
+  function Form() {
+    const [value, setValue] = useState({ parteCorpo: 'braco', bonus: { vida: 200, precisao: 2 } });
+    current = value;
+    return React.createElement(api.ImplanteAtributosForm, { ...base, value, onChange: setValue,
+      managementLayout: true, sistemaItemCatalogo: catalog });
+  }
+  act(() => { renderer = create(React.createElement(Form)); });
+  const field = label => renderer.root.findAllByType(api.InputText).find(node => node.props.label === label);
+  assert.ok(field('Proteção')); assert.ok(field('Armadura')); assert.ok(field('Escudo'));
+  assert.ok(field('Bônus de Precisão')); assert.equal(field('Dano corpo a corpo'), undefined);
+  act(() => field('Proteção').props.onChange({ target: { value: '300' } }));
+  act(() => renderer.root.findByType(api.TestSpecificationFields).props.onChange({ codigoTeste: 'ATAQUE_COMUM', usaTotalParaFaixas: true }));
+  assert.ok(field('Dano corpo a corpo')); assert.ok(field('Dano Curto')); assert.ok(field('Dano Médio')); assert.ok(field('Dano Longo'));
+  assert.deepEqual(renderer.root.findByType(api.TestSpecificationFields).props.attributeOptions, catalog.attributeOptions);
+  act(() => field('Dano corpo a corpo').props.onChange({ target: { value: '80' } }));
+  assert.equal(current.danoBase, 80); assert.equal(current.protecaoBase, 300);
+  assert.deepEqual(current.bonus, { vida: 200, precisao: 2 });
+  assert.equal(current.parteCorpo, 'braco'); assert.equal(current.aplicaTeste, true);
+  const content = text(renderer.toJSON());
+  assert.ok(content.indexOf('Defesas') < content.indexOf('Configuração'));
+  act(() => renderer.root.findByType(api.TestSpecificationFields).props.onChange(undefined));
+  assert.equal(current.aplicaTeste, false); assert.equal(field('Dano corpo a corpo'), undefined);
+  assert.equal(current.danoBase, 80); assert.deepEqual(current.bonus, { vida: 200, precisao: 2 });
+  act(() => renderer.unmount());
+});
 
 test('CyberButton usa contorno SVG fechado e neon da mesma silhueta, sem diagonal sobreposta', () => {
   const sheet = new api.ServerStyleSheet();

@@ -1,6 +1,7 @@
 import { useLayoutEffect, useState } from 'react';
 import { ScrambledText } from './TextScramble.style';
 import { TextScrambleProps } from './TextScramble.type';
+import { useMotionReduced } from '../../../hooks/useMotionPreference';
 
 const DEFAULT_CHARACTERS = '10#{}?<>/\\';
 
@@ -26,9 +27,10 @@ export const TextScramble = ({
   className,
 }: TextScrambleProps) => {
   const [displayedText, setDisplayedText] = useState(text);
+  const reducedMotion = useMotionReduced();
 
   useLayoutEffect(() => {
-    if (!text || duration <= 0 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (!text || duration <= 0 || reducedMotion) {
       setDisplayedText(text);
       return undefined;
     }
@@ -65,7 +67,7 @@ export const TextScramble = ({
       window.clearTimeout(delayTimeout);
       cancelAnimationFrame(animationFrame);
     };
-  }, [characters, duration, startDelay, text]);
+  }, [characters, duration, startDelay, text, reducedMotion]);
 
   return (
     <ScrambledText className={className} aria-label={text} aria-live="off">

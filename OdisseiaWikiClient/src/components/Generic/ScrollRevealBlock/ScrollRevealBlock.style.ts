@@ -115,7 +115,7 @@ export const ScrollRevealSection = styled.section<ScrollRevealSectionProps>`
     }
   }
 
-  @media (prefers-reduced-motion: reduce) {
+  :root[data-motion='reduced'] & {
     &.sr-pending > *,
     &.sr-entered > *,
     &.sr-entered img,

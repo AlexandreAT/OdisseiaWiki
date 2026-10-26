@@ -5,20 +5,25 @@ import { build } from 'esbuild';
 const bundle = await build({
   stdin: {
     contents: `export * from './src/hooks/useScrollReveal/useScrollReveal.utils';
+      export * from './src/utils/motionPreference';
       export * from './src/hooks/useDecodedImage/imageLoader';`,
     resolveDir: process.cwd(), loader: 'ts',
   },
   bundle: true, write: false, format: 'esm', platform: 'node',
 });
-const { observeScrollReveal, getDecodedImage, loadDecodedImage, watchDecodedImage } =
+const { observeScrollReveal, getDecodedImage, loadDecodedImage, watchDecodedImage, setMotionPreference } =
   await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
 
 // Doubles das APIs usadas pelos helpers; não substituem a validação visual no navegador.
-const originalGlobals = Object.fromEntries(['window', 'IntersectionObserver', 'Image'].map((key) => [key, globalThis[key]]));
+const originalGlobals = Object.fromEntries(['window', 'document', 'IntersectionObserver', 'ResizeObserver', 'Image'].map((key) => [key, globalThis[key]]));
 let observers;
 let images;
 let motion;
+let cleanups;
+let resizes;
 beforeEach(() => {
+  cleanups = [];
+  resizes = [];
   observers = [];
   images = [];
   const listeners = new Set();
@@ -28,7 +33,15 @@ beforeEach(() => {
     removeEventListener: (_, callback) => listeners.delete(callback),
     reduce: () => { motion.matches = true; [...listeners].forEach((callback) => callback()); },
   };
-  globalThis.window = { innerHeight: 800, matchMedia: () => motion };
+  globalThis.window = { innerHeight: 800, matchMedia: () => motion,
+    addEventListener() {}, removeEventListener() {} };
+  globalThis.document = { documentElement: { dataset: {} } };
+  setMotionPreference('full');
+  globalThis.ResizeObserver = class {
+    constructor(callback) { this.callback = callback; resizes.push(this); }
+    observe() {}
+    disconnect() { this.disconnected = true; }
+  };
   globalThis.IntersectionObserver = class {
     constructor(callback, options) {
       this.callback = callback;
@@ -48,6 +61,7 @@ beforeEach(() => {
   };
 });
 afterEach(() => {
+  cleanups.forEach(cleanup => cleanup?.());
   for (const [key, value] of Object.entries(originalGlobals)) {
     if (value === undefined) delete globalThis[key];
     else globalThis[key] = value;
@@ -67,83 +81,128 @@ const elementAt = (top, height = 200) => {
   };
 };
 const flush = () => new Promise((resolve) => setImmediate(resolve));
+const observe = (...args) => {
+  const cleanup = observeScrollReveal(...args);
+  cleanups.push(cleanup);
+  return cleanup;
+};
 
-test('conteúdo inicialmente visível não passa por um quadro oculto', () => {
+test('conteúdo inicialmente visível recebe a entrada sem ficar preso como pendente', () => {
   for (const top of [0, 790, -190]) {
     const element = elementAt(top);
-    observeScrollReveal(element);
-    assert.deepEqual([...element.classes], ['sr-visible']);
+    observe(element);
+    assert.deepEqual([...element.classes], ['sr-visible', 'sr-entered']);
   }
-  assert.equal(observers.length, 0);
+  assert.equal(observers.length, 3);
 });
 
-test('anima uma vez ao entrar, sem apagar ao sair ou oscilar perto do limite', () => {
+test('repete ao sair completamente e voltar, sem piscar ao oscilar no limiar', () => {
   const element = elementAt(900);
-  observeScrollReveal(element);
+  observe(element);
   const observer = observers[0];
   assert.equal(element.classes.has('sr-pending'), true);
   observer.emit(true, 0.1);
   assert.equal(element.classes.has('sr-entered'), false);
   observer.emit(true, 0.6);
   assert.deepEqual([...element.classes], ['sr-visible', 'sr-entered']);
-  assert.equal(observer.disconnected, true);
-  observer.emit(false, 0);
+  assert.equal(observer.disconnected, false);
   observer.emit(true, 0.01);
+  assert.deepEqual([...element.classes], ['sr-visible', 'sr-entered']);
+  observer.emit(false, 0);
+  assert.equal(element.classes.has('sr-entered'), false);
+  assert.equal(element.classes.has('sr-pending'), true);
+  observer.emit(true, 0.01);
+  assert.equal(element.classes.has('sr-entered'), false);
+  observer.emit(true, 0.6);
   assert.deepEqual([...element.classes], ['sr-visible', 'sr-entered']);
 });
 
 test('reexecução do efeito preserva o conteúdo já revelado', () => {
   const element = elementAt(900);
-  const cleanup = observeScrollReveal(element);
+  const cleanup = observe(element);
   observers[0].emit(true, 1);
   cleanup();
-  observeScrollReveal(element, { threshold: 0.8 });
-  assert.equal(observers.length, 1);
+  observe(element, { threshold: 0.8 });
+  assert.equal(observers.length, 2);
+  observers[1].emit(true, 0.9);
   assert.equal(element.classes.has('sr-pending'), false);
   assert.equal(element.classes.has('sr-visible'), true);
 });
 
 test('cleanup antes da entrada ignora callbacks antigos e permite novo efeito', () => {
   const element = elementAt(900);
-  const cleanup = observeScrollReveal(element);
+  const cleanup = observe(element);
   const oldObserver = observers[0];
   cleanup();
   assert.equal(element.classes.has('sr-pending'), false);
   oldObserver.emit(true, 1);
   assert.equal(element.classes.has('sr-entered'), false);
-  observeScrollReveal(element);
+  observe(element);
   observers[1].emit(true, 1);
   assert.equal(element.classes.has('sr-entered'), true);
 });
 
 test('blocos maiores que a viewport continuam alcançando o limite de entrada', () => {
   const element = elementAt(900, 4000);
-  observeScrollReveal(element, { threshold: [0.48, 0.8], rootMargin: '0px 0px 4% 0px' });
+  observe(element, { threshold: [0.48, 0.8], rootMargin: '0px 0px 4% 0px' });
   assert.equal(observers[0].options.rootMargin, '0px 0px 4% 0px');
   observers[0].emit(true, 0.2);
   assert.equal(element.classes.has('sr-visible'), true);
 });
 
-test('preferência de movimento reduzido mostra o conteúdo sem animação', () => {
-  motion.matches = true;
+test('recalcula a entrada se imagens ou conteúdo aumentam a altura do bloco', () => {
   const element = elementAt(900);
-  observeScrollReveal(element);
+  observe(element, { threshold: 0.48 });
+  element.getBoundingClientRect = () => ({ top: 900, bottom: 8900, height: 8000 });
+  resizes[0].callback();
+  assert.equal(observers[0].disconnected, true);
+  observers[0].emit(true, 1);
+  assert.equal(element.classes.has('sr-entered'), false);
+  observers[1].emit(true, 0.08);
+  assert.equal(element.classes.has('sr-entered'), true);
+});
+
+test('um bloco inicialmente sem altura continua aguardando a entrada real', () => {
+  const element = elementAt(100, 0);
+  observe(element);
+  assert.equal(element.classes.has('sr-entered'), false);
+  element.getBoundingClientRect = () => ({ top: 900, bottom: 1100, height: 200 });
+  resizes[0].callback();
+  observers[1].emit(true, 0.6);
+  assert.equal(element.classes.has('sr-entered'), true);
+});
+
+test('preferência de movimento reduzido mostra o conteúdo sem animação', () => {
+  setMotionPreference('reduced');
+  const element = elementAt(900);
+  observe(element);
   assert.deepEqual([...element.classes], ['sr-visible']);
-  assert.equal(observers.length, 0);
+  observers[0].emit(true, 1);
+  assert.deepEqual([...element.classes], ['sr-visible']);
 });
 
 test('ativar movimento reduzido libera um bloco ainda pendente', () => {
   const element = elementAt(900);
-  observeScrollReveal(element);
-  motion.reduce();
+  observe(element);
+  setMotionPreference('reduced');
   assert.deepEqual([...element.classes], ['sr-visible']);
   assert.equal(observers[0].disconnected, true);
+});
+
+test('reativar animações rearma blocos fora da tela sem precisar recarregar', () => {
+  setMotionPreference('reduced');
+  const element = elementAt(900);
+  observe(element);
+  setMotionPreference('full');
+  assert.equal(element.classes.has('sr-pending'), true);
+  observers.at(-1).emit(true, 0.6);
+  assert.equal(element.classes.has('sr-entered'), true);
 });
 
 test('sem IntersectionObserver o conteúdo permanece acessível', () => {
   delete globalThis.IntersectionObserver;
   const element = elementAt(900);
-  observeScrollReveal(element);
+  observe(element);
   assert.deepEqual([...element.classes], ['sr-visible']);
 });
 

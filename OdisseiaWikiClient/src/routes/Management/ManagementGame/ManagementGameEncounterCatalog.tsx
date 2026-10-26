@@ -5,6 +5,7 @@ import RedeemIcon from '@mui/icons-material/Redeem';
 import { ManagementGameLootEditor } from './ManagementGameLootEditor';
 import { Modal } from '../../../components/Generic/Modal/Modal';
 import { Search } from '../../../components/Generic/Search/Search';
+import { gameConfigurationHelp as help } from '../../../content/gameConfigurationHelp';
 import type { GameModeEditor, GameModeEncounter, GameModeNpcOption } from '../../../models/GameModeManagement';
 import { normalizeImagePath } from '../../Wiki/utils/imagePathHelper';
 import {
@@ -14,7 +15,7 @@ import {
 import { ManagementGameEncounterCard } from './ManagementGameEncounterCard';
 import {
   GameAdminAddCard, GameAdminCardStats, GameAdminCatalog,
-  GameAdminEnemyCard, GameAdminGear, GameAdminHint,
+  GameAdminEnemyCard, GameAdminGear,
 } from './ManagementGame.style';
 
 interface Props {
@@ -54,7 +55,7 @@ export function ManagementGameEncounterCatalog({ editor, mesaId, npcs, editable,
   };
 
   return <>
-    <Search theme={theme} neon={neon} label="Buscar personagem da Wiki para o jogo"
+    <Search theme={theme} neon={neon} label="Buscar personagem da Wiki para o jogo" help={help.npcSource}
       width="100%" value={query} disabled={!editable || entries.length >= 80}
       suggestions={npcs.map(npcLabel)} maxSuggestions={20} portal
       onChange={(event) => setQuery(event.target.value)}
@@ -62,7 +63,6 @@ export function ManagementGameEncounterCatalog({ editor, mesaId, npcs, editable,
         const npc = npcs.find((candidate) => npcLabel(candidate) === value);
         if (npc) { addEncounter(npc); setQuery(''); }
       }} />
-    <GameAdminHint>Selecione um NPC para criar seu card com os dados da ficha. O mesmo personagem pode participar de encontros diferentes. Use + para um inimigo exclusivo do jogo.</GameAdminHint>
     <GameAdminCatalog>
       {entries.map(([code, encounter]) => {
         const enemy = encounter.enemy;

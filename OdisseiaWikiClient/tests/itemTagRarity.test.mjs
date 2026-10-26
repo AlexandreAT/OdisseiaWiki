@@ -58,7 +58,7 @@ test('tags da busca herdam a paleta pública com cores mesmo sem neon e animaç�
       assert.match(css, /--tag-accent:var\(--clearneonGreen\)/);
       assert.match(css, /--tag-accent:#ffd52d/);
       assert.match(css, /color:var\(--tag-accent\)!important/);
-      assert.match(css, /prefers-reduced-motion:\s*reduce/);
+      assert.match(css, /:root\[data-motion='reduced'\]/);
       assert.equal(/1\.75s linear infinite/.test(css), neon);
       assert.ok(api.Tag.foldedComponentIds.includes(api.ItemTag.styledComponentId));
     } finally { sheet.seal(); }

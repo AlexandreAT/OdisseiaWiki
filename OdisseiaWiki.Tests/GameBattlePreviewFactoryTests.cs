@@ -691,6 +691,67 @@ public sealed class GameBattlePreviewFactoryTests
             evt.Type == GameBattleEventTypes.ActionSelected && evt.ActorId == "player").Payload).ActionId);
     }
 
+    [Theory]
+    [InlineData("CURTA", 100)]
+    [InlineData("MEDIA", 200)]
+    [InlineData("LONGA", 100)]
+    public void Build_AquilaLegadaComD20EDanoPorAlcanceNaoExigeRegravarOCustoDeMunicao(string range, int damage)
+    {
+        GameRunDto original = Run("""
+            [{"id":"aquila","nome":"Aquila","tipo":"arma","atributos":{
+              "tipoArma":"pistola_revolver","acerto":"D20","cadencia":1,
+              "danoPorAlcance":{"curta":100,"media":200,"longa":100},
+              "municao":{"capacidade":10,"atual":0},"capacidadeMunicao":10,
+              "gastoEstaminaPorAtaque":5}}]
+            """);
+        var selection = new GameRunActionSelectionDto { Tipo = "ITEM", IdInstancia = "aquila", Alcance = range };
+        GameRunDto run = new() { IdSistemaVersao = original.IdSistemaVersao,
+            ConfiguracaoModo = original.ConfiguracaoModo, EstadoAtual = original.EstadoAtual,
+            AcoesEquipadas = [selection] };
+        string before = run.EstadoAtual.Inventario!.Value.GetRawText();
+
+        Assert.True(_factory.CanExecuteSelectedAction(run, Version(), selection));
+        GameBattleActionSpec action = _factory.Build(run, Version()).Input.FirstActor.Actions[0];
+
+        Assert.Equal("item:aquila", action.Id);
+        Assert.Equal(damage, action.DamageByResultCode["ACERTO"]);
+        Assert.Equal(new GameplayDiceGroupSpec(1, 20), Assert.Single(action.Roll.Groups));
+        Assert.Equal(10, action.Magazine?.Loaded);
+        Assert.Equal(1, action.Magazine?.AmmoPerUse);
+        Assert.Equal("item:aquila", _factory.Build(original, Version()).Input.FirstActor.Actions[0].Id);
+        GameBattleResult battle = new AutoBattleSimulator().Simulate(
+            _factory.Build(run, Version()).Input, new SeededGameRunRandomSource(123));
+        Assert.Contains(battle.Events, evt => evt.ActorId == "player" &&
+            evt.Payload is ResourceChangedPayload { Resource: "loadedAmmo", Before: 10, After: 9 });
+        Assert.Equal(before, run.EstadoAtual.Inventario.Value.GetRawText());
+    }
+
+    [Theory]
+    [InlineData(0, false)]
+    [InlineData(2, true)]
+    public void ValidarAcaoPreservaCustoDeMunicaoExplicitoEExplicaAFalha(int shotCost, bool executable)
+    {
+        JsonNode inventory = JsonNode.Parse("""
+            [{"id":"aquila","nome":"Aquila","tipo":"arma","atributos":{
+              "tipoArma":"pistola_revolver","acerto":"D20","danoPorAlcance":{"curta":100},
+              "capacidadeMunicao":10,"custoMunicaoTiro":0}}]
+            """)!;
+        inventory[0]!["atributos"]!["custoMunicaoTiro"] = shotCost;
+        GameRunDto run = Run(inventory.ToJsonString());
+        var selection = new GameRunActionSelectionDto { Tipo = "ITEM", IdInstancia = "aquila", Alcance = "CURTA" };
+        var reasons = new List<string>();
+
+        Assert.Equal(executable, _factory.CanExecuteSelectedAction(run, Version(), selection, reasons));
+        if (executable)
+        {
+            var selectedRun = new GameRunDto { IdSistemaVersao = run.IdSistemaVersao,
+                ConfiguracaoModo = run.ConfiguracaoModo, EstadoAtual = run.EstadoAtual, AcoesEquipadas = [selection] };
+            Assert.Equal(shotCost, _factory.Build(selectedRun, Version()).Input.FirstActor.Actions[0].Magazine?.AmmoPerUse);
+        }
+        else Assert.Contains(reasons, reason => reason.Contains("consumo de munição", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal(shotCost, run.EstadoAtual.Inventario!.Value[0].GetProperty("atributos").GetProperty("custoMunicaoTiro").GetInt32());
+    }
+
     [Fact]
     public void Build_ArmaDeFogoComPenteConsomeMunicaoMesmoSemSwitchLegado()
     {

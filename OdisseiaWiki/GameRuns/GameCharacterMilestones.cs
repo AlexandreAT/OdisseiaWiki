@@ -14,7 +14,7 @@ public sealed class GameCharacterMilestones
     private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);
     public int SchemaVersion { get; set; } = 1;
     public List<GameDefeatedEnemyMemory> DefeatedEnemies { get; set; } = [];
-    // Reserved contracts; these do not grant NPC services or transfer items yet.
+    // Canonical persistent state: protected items must never also live in a run's inventory.
     public List<GameRescuedNpcMemory> RescuedNpcs { get; set; } = [];
     public List<GameProtectedItemMemory> ProtectedItems { get; set; } = [];
 
@@ -59,4 +59,5 @@ public sealed class GameDefeatedEnemyMemory
     public GameBattleEncounterConfig Encounter { get; set; } = new();
 }
 public sealed record GameRescuedNpcMemory(string GameCode, int SystemId, string NpcCode);
-public sealed record GameProtectedItemMemory(string GameCode, int SystemId, string ItemId, JsonObject Snapshot);
+public sealed record GameProtectedItemMemory(string GameCode, int SystemId, string ItemId, JsonObject Snapshot,
+    int SystemVersionId = 0);

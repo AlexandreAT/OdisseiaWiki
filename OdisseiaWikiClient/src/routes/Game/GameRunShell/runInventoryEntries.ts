@@ -39,6 +39,10 @@ export interface RunInventoryEntry extends GameRunActionSelection {
   defense: { escudo: number; protecao: number; armadura: number };
   defenseRemaining: { escudo: number; protecao: number };
   defenseEquipped: boolean;
+  passiveBonuses?: Record<string, number>;
+  engineerUpgrades?: number;
+  manaPerUse?: number;
+  cooldownTurns?: number;
 }
 
 const object = (value: unknown): Record<string, unknown> | null => {
@@ -58,7 +62,7 @@ const entries = (raw: unknown): unknown[] => {
   if (typeof value === 'string') { try { value = JSON.parse(value); } catch { return []; } }
   if (Array.isArray(value)) return value;
   const wrapper = object(value);
-  return (['itens', 'inventario', 'items', 'implantes', 'proteses', 'skills', 'magias']
+  return (['itens', 'inventario', 'items', 'implantes', 'proteses', 'skills', 'magia', 'magias', 'poderes']
     .map((key) => wrapper && field(wrapper, key)).find(Array.isArray) as unknown[] | undefined) ?? [];
 };
 
@@ -78,7 +82,7 @@ export const runWeaponSystemRule = (
 export const runSystemQuantityLimit = (
   entry: RunInventoryEntry, rules: ConfiguracaoCombateSistema | null,
 ): RunActionQuantityLimit | null => {
-  if (entry.tipo === 'MAGIA' || entry.tipo === 'SKILL') return entry.quantityLimits[0] ?? null;
+  if (entry.tipo === 'MAGIA' || entry.tipo === 'SKILL') return null;
   const rule = runWeaponSystemRule(rules?.limitesAcoesPorArma, entry.weaponType);
   const max = entry.ranged
     ? entry.fireMode === 'RAJADA' ? rule?.maximoRajadas : rule?.maximoTiros
@@ -125,7 +129,7 @@ export const parseRunInventoryEntries = (raw: unknown, tipo: RunInventoryKind): 
     const attributes = object(field(item, 'atributos'));
     const declaredTest = object(field(attributes ?? {}, 'teste') ?? field(attributes ?? {}, 'especificacaoTeste') ??
       field(item, 'teste') ?? field(item, 'especificacaoTeste'));
-    const hasDeclaredTest = Boolean(String(field(declaredTest ?? {}, 'codigoTeste') ?? '').trim() ||
+    const hasDeclaredTest = field(attributes ?? {}, 'aplicaTeste') !== false && Boolean(String(field(declaredTest ?? {}, 'codigoTeste') ?? '').trim() ||
       String(field(attributes ?? {}, 'acerto') ?? field(item, 'acerto') ?? '').trim());
     const configuredConditions = field(attributes ?? {}, 'condicoes');
     const conditionEffects = Array.isArray(configuredConditions) ? configuredConditions
@@ -161,7 +165,7 @@ export const parseRunInventoryEntries = (raw: unknown, tipo: RunInventoryKind): 
       .filter((condition) => String(field(condition, 'gatilho') ?? 'ACERTO').toUpperCase() === trigger)
       .map((condition) => String(field(condition, 'nome') ?? field(condition, 'codigo') ?? '').trim())
       .filter(Boolean);
-    const baseItemId = field(item, 'idItemBase');
+    const baseItemId = field(item, 'idItemBase') ?? field(item, 'idMagiaBase') ?? field(item, 'idSkillBase');
     const subtype = String(field(item, 'tipo') ?? '').toLowerCase();
     const restores = attributes && object(field(attributes, 'restaura'));
     const metadata = attributes && object(field(attributes, '__vistaExplodida'));
@@ -210,7 +214,8 @@ export const parseRunInventoryEntries = (raw: unknown, tipo: RunInventoryKind): 
       if (max > 0) quantityLimits.push({ source: 'Item', reason, max });
     };
     if (tipo === 'MAGIA' || tipo === 'SKILL') {
-      quantityLimits.push({ source: 'Sistema', reason: 'Uma execução por ação', max: 1 });
+      quantityLimits.push({ source: 'Item', reason: 'Ataques por turno', max: tipo === 'MAGIA'
+        ? Math.min(100, numeric(attributes && field(attributes, 'limiteAtaquesPorTurno')) || 1) : 1 });
     } else {
       if (ranged && capacity > 0) quantityLimits.push({
         source: 'Item', reason: 'Capacidade do carregador', max: Math.floor(capacity / ammoPerUse),
@@ -226,10 +231,13 @@ export const parseRunInventoryEntries = (raw: unknown, tipo: RunInventoryKind): 
         fireMode === 'RAJADA' ? 'limiteRajadasPorTurno' : 'limiteTirosPorTurno')),
       fireMode === 'RAJADA' ? 'Rajadas por turno' : 'Tiros por turno');
     }
-    const maxAttacks = tipo === 'MAGIA' || tipo === 'SKILL' ? 1
+    const maxAttacks = tipo === 'MAGIA' || tipo === 'SKILL' ? quantityLimits[0].max
       : ranged && controlsAmmo && capacity === 0 ? 0
         : Math.min(100, ...quantityLimits.map((limit) => limit.max));
     return [{ tipo, idInstancia: String(id), name: typeof name === 'string' ? name : 'Sem nome',
+      engineerUpgrades: numeric(field(item, '__runEngineerUpgrades')),
+      manaPerUse: numeric(field(attributes ?? {}, 'custoMana') ?? field(attributes ?? {}, 'gastoMana') ?? field(item, 'custoMana') ?? field(item, 'gastoMana')),
+      cooldownTurns: numeric(field(attributes ?? {}, 'cooldownTurnos')),
       image: typeof image === 'string' ? image : null,
       subtype,
       quantity: Number.isInteger(quantity) && quantity > 0 ? quantity : 0,
@@ -240,7 +248,9 @@ export const parseRunInventoryEntries = (raw: unknown, tipo: RunInventoryKind): 
         usesUntilRest > 0 ? remainingUses : 100)),
       quantityLimits, availableUses: usesUntilRest > 0 ? remainingUses : null,
       ammoPerUse, ammoCapacity: capacity, controlsAmmo,
-      staminaPerUse: Math.max(0, numeric(attributes && field(attributes, 'gastoEstaminaPorAtaque')) + staminaModifiers),
+      staminaPerUse: Math.max(0, numeric(attributes && (tipo === 'MAGIA' || tipo === 'SKILL'
+        ? field(attributes, 'custoEstamina') ?? field(attributes, 'gastoEstamina') ?? field(item, 'custoEstamina') ?? field(item, 'gastoEstamina')
+        : field(attributes, 'gastoEstaminaPorAtaque'))) + staminaModifiers),
       damageByRange: { base: damage('base'), curta: damage('curta'), media: damage('media'), longa: damage('longa') },
       weaponType: String(field(attributes ?? {}, 'tipoArma') ?? ''),
       fireMode,
@@ -254,16 +264,18 @@ export const parseRunInventoryEntries = (raw: unknown, tipo: RunInventoryKind): 
       useConditions: conditionNames('AO_USAR'),
       hitConditions: [...conditionNames('ACERTO'), ...conditionNames('RESULTADO_NATURAL')],
       conditions,
+      passiveBonuses: tipo === 'PROTESE' ? Object.fromEntries(Object.entries(object(field(attributes ?? {}, 'bonus')) ?? {})
+        .map(([key, value]) => [key, Number(value)]).filter(([, value]) => Number.isFinite(value) && value !== 0)) : undefined,
       defense: {
-        escudo: numeric(attributes && field(attributes, subtype === 'traje' ? 'escudoBase' : 'escudo')),
-        protecao: numeric(attributes && field(attributes, subtype === 'traje' ? 'protecaoBase' : 'protecao')),
-        armadura: numeric(attributes && field(attributes, subtype === 'traje' ? 'armaduraBase' : 'armadura')),
+        escudo: numeric(attributes && field(attributes, subtype === 'traje' || tipo === 'PROTESE' ? 'escudoBase' : 'escudo')),
+        protecao: numeric(attributes && field(attributes, subtype === 'traje' || tipo === 'PROTESE' ? 'protecaoBase' : 'protecao')),
+        armadura: numeric(attributes && field(attributes, subtype === 'traje' || tipo === 'PROTESE' ? 'armaduraBase' : 'armadura')),
       },
       defenseRemaining: {
         escudo: remainingDefense && field(remainingDefense, 'escudo') != null
-          ? numeric(field(remainingDefense, 'escudo')) : numeric(attributes && field(attributes, subtype === 'traje' ? 'escudoBase' : 'escudo')),
+          ? numeric(field(remainingDefense, 'escudo')) : numeric(attributes && field(attributes, subtype === 'traje' || tipo === 'PROTESE' ? 'escudoBase' : 'escudo')),
         protecao: remainingDefense && field(remainingDefense, 'protecao') != null
-          ? numeric(field(remainingDefense, 'protecao')) : numeric(attributes && field(attributes, subtype === 'traje' ? 'protecaoBase' : 'protecao')),
+          ? numeric(field(remainingDefense, 'protecao')) : numeric(attributes && field(attributes, subtype === 'traje' || tipo === 'PROTESE' ? 'protecaoBase' : 'protecao')),
       },
       defenseEquipped: Boolean(metadata && field(metadata, 'equippedSlot')),
       value: itemValue == null || !Number.isFinite(Number(itemValue)) ? null : Number(itemValue),

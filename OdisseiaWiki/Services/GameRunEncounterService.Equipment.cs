@@ -62,6 +62,8 @@ public sealed partial class GameRunEncounterService
                 if (run.NoAtualId is not null || run.Status != GameRunStatus.Ativa &&
                     !(run.Status == GameRunStatus.Vitoria && GameRunLoot.IsReceivedItem(run.EstadoAtualJson, itemId)))
                     return GameRunOperationResult<GameRunDto>.Fail("RUN_INDISPONIVEL", "Conclua o combate antes de alterar o equipamento.");
+                string oldState = run.EstadoAtualJson;
+                string? oldLoadout = run.LoadoutJson;
                 try
                 {
                     SistemaVersao? version = await _systems.GetVersionAsync(
@@ -69,17 +71,29 @@ public sealed partial class GameRunEncounterService
                     if (version is null)
                         return GameRunOperationResult<GameRunDto>.Fail(
                             "SISTEMA_INDISPONIVEL", "A versão das regras desta run não está disponível.");
-                    string before = run.EstadoAtualJson;
-                    bool wasEquipped = GameRunDefensiveEquipment.IsEquipped(before, itemId);
-                    string after = GameRunDefensiveEquipment.SetEquipped(before, itemId, request.Equipado);
-                    run.EstadoAtualJson = wasEquipped == request.Equipado ? after :
-                        request.Equipado
-                            ? GameRunCarry.ApplyConsumedItemConditions(
-                                before, after, itemId, version, trigger: "AO_EQUIPAR")
-                            : GameRunCarry.RemoveUnequippedItemConditions(after, itemId, version);
+                    run.EstadoAtualJson = SetDefenseEquipment(run.EstadoAtualJson, itemId, request.Equipado, version);
+                    var prosthesis = FindEntry(GameRunService.Map(run).EstadoAtual.Implantes, itemId);
+                    if (prosthesis is not null && GameRunActionLoadout.Read(run.LoadoutJson) is { } existing)
+                    {
+                        var actions = existing.ToList();
+                        if (!request.Equipado) actions.RemoveAll(action => action.Tipo == "PROTESE" && action.IdInstancia == itemId);
+                        else if (GameRunProstheses.HasTest(prosthesis.Value) && !actions.Any(action => action.Tipo == "PROTESE" && action.IdInstancia == itemId))
+                        {
+                            if (actions.Count(action => action.Tipo != "DESCANSO") >= 5)
+                                throw new InvalidOperationException("Retire uma ação antes de instalar esta prótese de combate; o limite é cinco.");
+                            actions.Add(new() { Tipo = "PROTESE", IdInstancia = itemId });
+                        }
+                        run.LoadoutJson = GameRunActionLoadout.Serialize(actions);
+                        if (request.Equipado && GameRunProstheses.HasTest(prosthesis.Value) &&
+                            !_factory.CanExecuteSelectedAction(GameRunService.Map(run), version,
+                                actions.Single(action => action.Tipo == "PROTESE" && action.IdInstancia == itemId)))
+                            throw new InvalidOperationException("Revise o teste, dano e condições desta prótese antes de equipá-la nas ações.");
+                    }
                 }
                 catch (Exception error) when (error is InvalidOperationException or System.Text.Json.JsonException)
                 {
+                    run.EstadoAtualJson = oldState;
+                    run.LoadoutJson = oldLoadout;
                     return GameRunOperationResult<GameRunDto>.Fail("ITEM_INVALIDO", error.Message);
                 }
                 run.Revisao++;
@@ -91,5 +105,15 @@ public sealed partial class GameRunEncounterService
         }
         catch (DbUpdateConcurrencyException) { return Stale<GameRunDto>(); }
         catch (KeyNotFoundException) { return MissingUser<GameRunDto>(); }
+    }
+
+    private static string SetDefenseEquipment(string snapshot, string itemId, bool equipped, OdisseiaWiki.Models.SistemaVersao version)
+    {
+        bool previous = GameRunDefensiveEquipment.IsEquipped(snapshot, itemId);
+        string updated = GameRunDefensiveEquipment.SetEquipped(snapshot, itemId, equipped);
+        updated = previous == equipped ? updated : equipped
+            ? GameRunCarry.ApplyConsumedItemConditions(snapshot, updated, itemId, version, trigger: "AO_EQUIPAR")
+            : GameRunCarry.RemoveUnequippedItemConditions(updated, itemId, version);
+        return GameRunCarry.Reconcile(updated, version);
     }
 }

@@ -11,6 +11,8 @@ import { RunInventoryCard } from '../RunInventoryCard';
 import { RunInventoryActionDialog } from '../RunInventoryActionDialog';
 import { normalizeImagePath } from '../../../Wiki/utils/imagePathHelper';
 import { useRunEconomyDialog } from './useRunEconomyDialog';
+import { RunProtectedDeposit } from './RunProtectedDeposit';
+import { RunEconomyItemDetails } from './RunEconomyItemDetails';
 import { canAccessRunStash, createRunSaleLines, runSaleUnitPrice, RUN_DEPOSIT_ENABLED, type RunSaleLine } from '../runEconomy';
 import { EconomyActions, EconomyBalance, EconomyBody, EconomyCard, EconomyCards,
   EconomyDetails, EconomySectionTitle, EconomyTabs, EconomyTopline, MerchantIdentity, MerchantAvatar } from './RunEconomyDialog.style';
@@ -21,11 +23,21 @@ interface Props {
   onBuy: (itemId: string, toStash: boolean) => Promise<boolean>;
   onTransfer: (itemId: string, toStash: boolean) => Promise<boolean>;
   onSell: (items: RunSaleLine[], fromStash: boolean) => Promise<boolean>;
+  onProtect: (itemId: string, action: import('../../../../models/GameRun').ProtectedDepositAction) => Promise<boolean>;
   onClose: () => void;
 }
 
-export function RunEconomyDialog({ run, theme, neon, vendor, busy, error, onBuy, onTransfer, onSell, onClose }: Props) {
+export function RunEconomyDialog({ run, theme, neon, vendor, busy, error, onBuy, onTransfer, onSell, onProtect, onClose }: Props) {
   const state = useRunEconomyDialog(run, vendor);
+  const protect = async (itemId: string, action: import('../../../../models/GameRun').ProtectedDepositAction) => {
+    state.setProtectionNotice(null);
+    const done = await onProtect(itemId, action);
+    if (done) state.setProtectionNotice(action === 'PROTECT'
+      ? 'Item protegido. Ele continuará guardado para as próximas runs deste personagem e jogo.'
+      : action === 'TAKE' ? 'Item levado para a mochila. Para preservá-lo ao encerrar a run, guarde e proteja novamente.'
+        : 'Proteção liberada. O item está no depósito comum e será perdido ao encerrar esta run.');
+    return done;
+  };
   const balance = run.estadoAtual.economy?.balance ?? 0;
   const selling = vendor && state.tab === 'sell';
   const entries = selling ? state.saleEntries : state.tab === 'stash' ? state.stash : state.inventory;
@@ -54,6 +66,7 @@ export function RunEconomyDialog({ run, theme, neon, vendor, busy, error, onBuy,
           {busy ? <LoadingIndicator compact label="Atualizando" /> : <small>Itens no depósito não pesam na mochila. Acesso somente na Base ou no Mercador.</small>}
         </EconomyTopline>
         {error && <GameNotice $danger role="alert">{error}</GameNotice>}
+        {state.protectionNotice && <GameNotice role="status">{state.protectionNotice}</GameNotice>}
         <EconomyTabs role="tablist" aria-label="Inventário e vendedor">
           {vendor && <button type="button" role="tab" aria-selected={state.tab === 'offers'}
             onClick={() => state.setTab('offers')}>Ofertas · {state.offers.length}</button>}
@@ -64,8 +77,12 @@ export function RunEconomyDialog({ run, theme, neon, vendor, busy, error, onBuy,
           <button type="button" role="tab" aria-selected={state.tab === 'stash'}
             disabled={!RUN_DEPOSIT_ENABLED}
             onClick={() => state.setTab('stash')}>Depósito · {state.stash.length}</button>
+          <button type="button" role="tab" aria-selected={state.tab === 'protected'}
+            onClick={() => state.setTab('protected')}>Protegidos</button>
         </EconomyTabs>
-        <EconomySectionTitle>{selling ? 'Escolha o que vender' : state.tab === 'offers' ? 'Ofertas desta visita' : state.tab === 'stash' ? 'Itens guardados' : 'Itens carregados'}</EconomySectionTitle>
+        <EconomySectionTitle>{selling ? 'Escolha o que vender' : state.tab === 'protected' ? 'Entre jornadas' : state.tab === 'offers' ? 'Ofertas desta visita' : state.tab === 'stash' ? 'Itens guardados' : 'Itens carregados'}</EconomySectionTitle>
+        {state.tab === 'stash' && (run.configuracaoModo.protectedDepositSlots ?? 0) > 0 &&
+          <small className="economy-sale-hint">Proteger mantém a pilha entre runs e custa {run.configuracaoModo.protectedDepositCost ?? 0} moedas por instância. Apenas guardar não protege.</small>}
         {selling && <>
           <EconomyTabs aria-label="Origem dos itens à venda">
             <button type="button" aria-pressed={!state.saleFromStash} disabled={busy} onClick={() => {
@@ -78,7 +95,7 @@ export function RunEconomyDialog({ run, theme, neon, vendor, busy, error, onBuy,
           </EconomyTabs>
           <small className="economy-sale-hint">Preço já inclui {discount}% de desconto de venda. Itens sem valor rendem 0 moedas.</small>
         </>}
-        {state.tab === 'offers' ? <EconomyCards role="tabpanel" aria-label="Ofertas">
+        {state.tab === 'protected' ? <RunProtectedDeposit run={run} theme={theme} neon={neon} busy={busy} onProtect={protect} /> : state.tab === 'offers' ? <EconomyCards role="tabpanel" aria-label="Ofertas">
           {state.offers.length === 0 && <LoadoutEmpty>Nenhuma oferta disponível.</LoadoutEmpty>}
           {state.offers.map((offer) => <EconomyCard key={offer.itemId}>
             <RunInventoryCard entry={offer.entry} selected={false} neon={neon === 'on'}
@@ -98,7 +115,12 @@ export function RunEconomyDialog({ run, theme, neon, vendor, busy, error, onBuy,
             {selling ? <small>{runSaleUnitPrice(entry.value, discount).toLocaleString('pt-BR')} moedas por unidade</small>
               : <EconomyActions><CyberButton theme={theme} neon={neon} colorType="secondary" width="100%"
               text={state.tab === 'stash' ? 'Levar' : 'Guardar'} disabled={busy || !canAccessRunStash(run)}
-              onClick={() => { if (RUN_DEPOSIT_ENABLED) void onTransfer(entry.idInstancia, state.tab !== 'stash'); }} /></EconomyActions>}
+              onClick={() => { if (RUN_DEPOSIT_ENABLED) void onTransfer(entry.idInstancia, state.tab !== 'stash'); }} />
+              {state.tab === 'stash' && (run.configuracaoModo.protectedDepositSlots ?? 0) > 0 &&
+                <CyberButton theme={theme} neon={neon} text="Proteger" width="100%" disabled={busy || !canAccessRunStash(run)}
+                  title={`Mantém a instância entre runs. Custo: ${run.configuracaoModo.protectedDepositCost ?? 0} moedas.`}
+                  onClick={() => void protect(entry.idInstancia, 'PROTECT')} />}
+              </EconomyActions>}
           </EconomyCard>)}
         </EconomyCards>}
       </EconomyBody>
@@ -110,15 +132,7 @@ export function RunEconomyDialog({ run, theme, neon, vendor, busy, error, onBuy,
         {selectedOffer && <p><strong>{selectedOffer.price.toLocaleString('pt-BR')} moedas</strong>
           {' · '}{selectedOffer.stock === 0 ? 'Esgotado' : `${selectedOffer.stock} em estoque`}
           {balance < selectedOffer.price ? ' · saldo insuficiente' : ''}</p>}
-        {state.selected.damageByRange.base > 0 && <p>Dano base <strong>{state.selected.damageByRange.base}</strong></p>}
-        {state.selected.ranged && <p>Dano por alcance: {state.selected.damageByRange.curta} / {state.selected.damageByRange.media} / {state.selected.damageByRange.longa}</p>}
-        {state.selected.defense.protecao > 0 && <p>Proteção <strong>{state.selected.defenseRemaining.protecao} / {state.selected.defense.protecao}</strong></p>}
-        {state.selected.defense.armadura > 0 && <p>Defesa <strong>{state.selected.defense.armadura}</strong></p>}
-        {state.selected.defense.escudo > 0 && <p>Escudo <strong>{state.selected.defenseRemaining.escudo}</strong></p>}
-        {state.selected.restore.vida > 0 && <p>Recupera <strong>{state.selected.restore.vida}</strong> de vida</p>}
-        {state.selected.restore.mana > 0 && <p>Recupera <strong>{state.selected.restore.mana}</strong> de mana</p>}
-        {state.selected.restore.estamina > 0 && <p>Recupera <strong>{state.selected.restore.estamina}</strong> de estamina</p>}
-        {state.selected.conditions.length > 0 && <p>Condições: {state.selected.conditions.map((condition) => condition.name).join(', ')}</p>}
+        <RunEconomyItemDetails entry={state.selected} />
       </EconomyDetails>
       {selling && <>
         {state.selected.quantity > 1 && <InputText label="Quantidade para vender" type="number" theme={theme} neon={neon}

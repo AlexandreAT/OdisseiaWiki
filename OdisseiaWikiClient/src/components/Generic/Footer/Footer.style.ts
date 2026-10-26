@@ -50,7 +50,7 @@ const interactiveState = css<ThemeProps>`
     }
   }
 
-  @media (prefers-reduced-motion: reduce) {
+  :root[data-motion='reduced'] & {
     transition: none;
 
     svg {
@@ -104,7 +104,7 @@ export const FooterContainer = styled.footer<ThemeProps>`
     pointer-events: none;
   }
 
-  @media (prefers-reduced-motion: reduce) {
+  :root[data-motion='reduced'] & {
     animation: none;
   }
 `;

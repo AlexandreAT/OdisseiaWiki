@@ -33,5 +33,6 @@ export interface FieldHelpProps {
   theme?: 'dark' | 'light';
   neon?: 'on' | 'off';
   inline?: boolean;
+  size?: 'normal' | 'small';
   presentation?: FieldHelpPresentation;
 }

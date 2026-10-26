@@ -29,6 +29,45 @@ public sealed class GameBattlePreviewFactory
         _actionResolver = actionResolver;
     }
 
+    // Catalog validation goes through exactly the action builder used by combat.
+    public void ValidateLearnableSpell(JsonObject spell, SistemaVersao version)
+    {
+        var copy = spell.DeepClone().AsObject();
+        copy["id"] = "catalog-validation";
+        // A catalog has no player sheet. Populate published attributes only to validate
+        // the test contract; the actual character's values are resolved when equipped.
+        var attributes = new JsonObject { ["principais"] = new JsonObject(), ["secundarios"] = new JsonObject() };
+        foreach (var attribute in version.Atributos.Where(attribute => attribute.Ativo))
+        {
+            string group = attribute.Grupo == SistemaAtributoGrupo.Secundario ? "secundarios" : "principais";
+            attributes[group]![attribute.CodigoAtributo] = 0;
+        }
+        var root = new JsonObject { ["idSistemaVersao"] = version.IdSistemaVersao,
+            ["nome"] = "Catálogo", ["status"] = new JsonObject { ["status"] = new JsonObject {
+                ["vida"] = 1000000, ["mana"] = 1000000, ["estamina"] = 1000000 }, ["atributos"] = attributes },
+            ["inventario"] = new JsonArray(), ["magia"] = new JsonArray(copy) };
+        var snapshot = root.Deserialize<GameRunCharacterSnapshotDto>(JsonOptions)!;
+        var config = new GameBattlePreviewConfig { PreviewPlayerDamageByResult = version.ResultadosDado
+            .Where(row => row.CodigoTeste.Equals("ATAQUE_COMUM", StringComparison.OrdinalIgnoreCase))
+            .Select(row => row.CodigoResultado).Distinct().ToDictionary(code => code, _ => new GameBattleDamageModifier()) };
+        var errors = new List<string>();
+        if (BuildSelectedActions(snapshot, [new() { Tipo = "MAGIA", IdInstancia = "catalog-validation" }],
+            version, config, [], errors).Count != 1)
+            throw new InvalidOperationException(errors.FirstOrDefault() ??
+                "Configure dano, recuperação ou uma condição executável. Para efeitos sem teste, use o gatilho Ao usar.");
+    }
+
+    public bool CanExecuteSelectedAction(GameRunDto run, SistemaVersao version, GameRunActionSelectionDto selection,
+        ICollection<string>? validationErrors = null)
+    {
+        var config = run.ConfiguracaoModo.Deserialize<GameBattlePreviewConfig>(JsonOptions)
+            ?? throw new InvalidOperationException("O modo de jogo não possui regras de ataque configuradas.");
+        if (config.PreviewPlayerDamageByResult is null)
+            throw new InvalidOperationException("O modo de jogo não possui o dano por resultado configurado.");
+        return BuildSelectedActions(run.EstadoAtual, [selection], version, config, [], validationErrors).Any(action =>
+            action.Id == $"{selection.Tipo.ToLowerInvariant()}:{selection.IdInstancia}");
+    }
+
     public GameBattlePreviewSetup Build(GameRunDto run, SistemaVersao version, string? encounterCode = null,
         GameBattleEncounterConfig? trainingEncounter = null)
     {
@@ -56,6 +95,25 @@ public sealed class GameBattlePreviewFactory
                 throw new InvalidOperationException("O encontro não está configurado na versão fixada do modo.");
             enemyConfig = encounter.Enemy;
             enemyDamageConfig = encounter.DamageByResult;
+        }
+
+        if (enemyConfig.NpcId is not null && !string.IsNullOrWhiteSpace(enemyConfig.ImplantesJson) &&
+            !string.IsNullOrWhiteSpace(enemyConfig.StatusJson))
+        {
+            enemyConfig = JsonSerializer.SerializeToElement(enemyConfig, JsonOptions).Deserialize<GameBattlePreviewEnemy>(JsonOptions)!;
+            var npcRoot = new JsonObject { ["status"] = JsonNode.Parse(enemyConfig.StatusJson!),
+                ["inventario"] = JsonNode.Parse(enemyConfig.InventarioJson ?? "[]"),
+                ["implantes"] = JsonNode.Parse(enemyConfig.ImplantesJson!) };
+            string prepared = npcRoot.ToJsonString();
+            foreach (var action in enemyConfig.Actions.Where(action => action.Tipo == "PROTESE"))
+                prepared = GameRunDefensiveEquipment.SetEquipped(prepared, action.IdInstancia, true);
+            npcRoot = JsonNode.Parse(GameRunCarry.Reconcile(prepared, version))!.AsObject();
+            enemyConfig.StatusJson = npcRoot["status"]!.ToJsonString();
+            enemyConfig.ImplantesJson = npcRoot["implantes"]!.ToJsonString();
+            enemyConfig.MaxVida = (int?)npcRoot["status"]?["status"]?["vidaMaxima"] ?? enemyConfig.MaxVida;
+            enemyConfig.MaxMana = (int?)npcRoot["status"]?["status"]?["manaMaxima"] ?? enemyConfig.MaxMana;
+            enemyConfig.MaxEstamina = (int?)npcRoot["status"]?["status"]?["estaminaMaxima"] ?? enemyConfig.MaxEstamina;
+            enemyConfig.Attributes = ReadAttributes(ParseSnapshot(enemyConfig.StatusJson), enemyConfig.Attributes).ToDictionary();
         }
 
         SistemaResultadoDado[] rows = version.ResultadosDado
@@ -105,10 +163,11 @@ public sealed class GameBattlePreviewFactory
             : new GameBattleDefenses(Armor: Math.Max(0, enemyConfig.Defesa));
         GameBattleDefenses npcEquipment = GameRunDefensiveEquipment.Bonuses(
             ParseOptionalSnapshot(enemyConfig.InventarioJson));
+        GameBattleDefenses npcProstheses = GameRunDefensiveEquipment.Bonuses(ParseOptionalSnapshot(enemyConfig.ImplantesJson));
         enemyDefenses = new GameBattleDefenses(
-            (int)Math.Min(int.MaxValue, (long)enemyDefenses.Shield + npcEquipment.Shield),
-            (int)Math.Min(int.MaxValue, (long)enemyDefenses.Protection + npcEquipment.Protection),
-            (int)Math.Min(int.MaxValue, (long)enemyDefenses.Armor + npcEquipment.Armor));
+            (int)Math.Min(int.MaxValue, (long)enemyDefenses.Shield + npcEquipment.Shield + npcProstheses.Shield),
+            (int)Math.Min(int.MaxValue, (long)enemyDefenses.Protection + npcEquipment.Protection + npcProstheses.Protection),
+            (int)Math.Min(int.MaxValue, (long)enemyDefenses.Armor + npcEquipment.Armor + npcProstheses.Armor));
         IReadOnlyList<GameBattleDefenseKind> defenseOrder = ResolveDefenseOrder(version, playerDefenses, enemyDefenses);
 
         List<GameBattleActionSpec> playerActions = run.AcoesEquipadas is null
@@ -333,6 +392,11 @@ public sealed class GameBattlePreviewFactory
                     // Fichas antigas podem ter carregador, mas deixar o switch
                     // de controle desligado pelo valor padrão do formulário.
                     attributes["controlaMunicao"] = true;
+                    // Cópias antigas só guardavam o tamanho do carregador e o
+                    // acerto D20. Use o mesmo padrão do editor (1 por tiro),
+                    // sem sobrescrever custos explicitamente configurados.
+                    if (Property(element, "custoMunicaoTiro") is null or { ValueKind: JsonValueKind.Null })
+                        attributes["custoMunicaoTiro"] = 1;
                 }
             }
             foreach (KeyValuePair<string, JsonNode?> child in obj.ToArray()) Fill(child.Value);
@@ -445,7 +509,8 @@ public sealed class GameBattlePreviewFactory
         IReadOnlyList<GameRunActionSelectionDto> selections,
         SistemaVersao version,
         GameBattlePreviewConfig config,
-        IReadOnlyList<GameplayResolvedResultRange> ranges)
+        IReadOnlyList<GameplayResolvedResultRange> ranges,
+        ICollection<string>? validationErrors = null)
     {
         var character = new PersonagemJogador
         {
@@ -470,7 +535,16 @@ public sealed class GameBattlePreviewFactory
             };
             JsonElement? item = SnapshotEntries(snapshotSource).FirstOrDefault(entry =>
                 string.Equals(ReadString(entry, "id"), selection.IdInstancia, StringComparison.Ordinal));
-            if (item is not { ValueKind: JsonValueKind.Object }) continue;
+            if (item is not { ValueKind: JsonValueKind.Object })
+            {
+                validationErrors?.Add("O item ou poder não foi encontrado no inventário desta run.");
+                continue;
+            }
+            if (type == "PROTESE" && !GameRunProstheses.HasTest(item.Value))
+            {
+                validationErrors?.Add("Próteses sem teste são instaladas como equipamento, não como ações.");
+                continue;
+            }
             GameBattleActionSpec? utility = BuildUtilityAction(snapshot, selection, item.Value, version);
             if (utility is not null)
             {
@@ -489,7 +563,7 @@ public sealed class GameBattlePreviewFactory
                 (weaponMode is null && IsRangedWeaponType(weaponType));
             int maximum = type is "ITEM" or "PROTESE"
                 ? 100
-                : 1;
+                : type == "MAGIA" ? Math.Clamp(ReadInt(attributes, "limiteAtaquesPorTurno") ?? 1, 1, 100) : 1;
             int cadence = Math.Clamp(ReadInt(attributes, "cadencia") ?? ReadInt(attributes, "ataquesPorTurno") ?? 1, 1, 100);
             int configuredAmmoCost = ReadInt(attributes,
                 fireMode == "RAJADA" ? "custoMunicaoRajada" : "custoMunicaoTiro") ?? 0;
@@ -564,6 +638,20 @@ public sealed class GameBattlePreviewFactory
                     resolved = candidate;
                     break;
                 }
+                if (validationErrors is not null)
+                {
+                    string reason = !result.Sucesso ? result.Codigo == "PODER_SEM_TESTE"
+                            ? "Ative um teste de acerto em D20 ou, para condições sem teste, use o gatilho Ao usar."
+                            : result.Mensagem ?? "O teste não pôde ser validado."
+                        : result.Dados is not { } action ? "O teste não pôde ser validado."
+                        : action.Groups.Count != 1 || action.Groups[0] != new GameplayDiceGroupSpec(1, 20)
+                            ? "O teste de acerto precisa usar 1D20."
+                        : action.Ranges.Count == 0 ? "O teste não tem faixas de resultado configuradas."
+                        : action.Ranges.Any(range => !config.PreviewPlayerDamageByResult!.ContainsKey(range.Code))
+                            ? "As faixas deste teste não correspondem aos resultados de ataque configurados no jogo."
+                        : "Configure dano maior que zero ou uma condição com efeitos executáveis nesta versão do Sistema.";
+                    validationErrors.Add(reason);
+                }
             }
             if (resolved is null) continue;
             int baseDamage = ReadInt(resolved.Snapshot.Valores,
@@ -571,7 +659,10 @@ public sealed class GameBattlePreviewFactory
             GameBattleMagazineSpec? magazine = item is { ValueKind: JsonValueKind.Object }
                 ? ResolveMagazine(item.Value, resolved) : null;
             if (ReadInt(resolved.Snapshot.Valores, "consumoMunicaoProposto") is > 0 && magazine is null)
+            {
+                validationErrors?.Add("O carregador é incompatível com o consumo de munição desta ação. Revise a capacidade e o custo por tiro ou rajada.");
                 continue;
+            }
             if (magazine is not null && (long)magazine.AmmoPerUse * count > magazine.Capacity)
                 throw new InvalidOperationException("A quantidade escolhida exige mais munição que o carregador comporta.");
             actions.Add(new GameBattleActionSpec(
@@ -713,7 +804,7 @@ public sealed class GameBattlePreviewFactory
             return SnapshotEntries(document.RootElement.Clone());
         }
         if (value.ValueKind == JsonValueKind.Array) return value.EnumerateArray().ToArray();
-        foreach (string key in new[] { "itens", "inventario", "items", "implantes", "proteses", "magias", "skills" })
+        foreach (string key in new[] { "itens", "inventario", "items", "implantes", "proteses", "magia", "magias", "skills", "poderes" })
             if (Property(value, key) is { ValueKind: JsonValueKind.Array } entries)
                 return entries.EnumerateArray().ToArray();
         return [];

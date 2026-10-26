@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using OdisseiaWiki.Dtos;
 using OdisseiaWiki.Enums;
@@ -20,6 +21,8 @@ public sealed class GameplayActionResolver
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         PropertyNameCaseInsensitive = true,
+        // Forms store named roll modes; keep accepting numeric legacy snapshots too.
+        Converters = { new JsonStringEnumConverter<GameplayRollMode>() },
     };
 
     private static readonly HashSet<string> RangedWeaponTypes = new(StringComparer.OrdinalIgnoreCase)
@@ -431,8 +434,11 @@ public sealed class GameplayActionResolver
         string itemType = NormalizeCode(ReadString(item, "tipo"));
         JsonObject? attributes = GetObject(item, "atributos");
         bool isWeapon = itemType == "ARMA" || itemType == "OUTRO" &&
-            (ReadInt(attributes, "dano") ?? 0) > 0;
-        GameplayStoredTestSpec? test = ReadTestSpec(item, attributes);
+            (ReadInt(attributes, "dano") ?? 0) > 0 || prosthesis && attributes is not null &&
+            (ReadInt(attributes, "danoBase") is > 0 || GetObject(attributes, "danoPorAlcance")?.Count > 0);
+        GameplayStoredTestSpec? test = ReadTestSpec(item, attributes, out bool invalidTest);
+        if (invalidTest)
+            return Failure("TESTE_INVALIDO", "A configuração do teste é inválida. Revise o modo fixo e os campos do teste.");
         bool appliesTest = ReadBool(item, "aplicaTeste")
             ?? ReadBool(attributes, "aplicaTeste")
             ?? (isWeapon || test is not null);
@@ -557,7 +563,9 @@ public sealed class GameplayActionResolver
             return Failure("PODER_NAO_ENCONTRADO", "A skill ou magia não foi encontrada nesta ficha.");
 
         JsonObject? attributes = GetObject(power, "atributos");
-        GameplayStoredTestSpec? test = ReadTestSpec(power, attributes);
+        GameplayStoredTestSpec? test = ReadTestSpec(power, attributes, out bool invalidTest);
+        if (invalidTest)
+            return Failure("TESTE_INVALIDO", "A configuração do teste é inválida. Revise o modo fixo e os campos do teste.");
         (IReadOnlyList<ConditionEffectSnapshot> configuredConditions, IReadOnlyList<string> invalidConditions) =
             ReadConditionEffects(attributes, null, version);
         // Fichas antigas registravam o ataque apenas como acerto D20 + dano.
@@ -1277,17 +1285,20 @@ public sealed class GameplayActionResolver
         return new GameplayXpRule(true, quantity, faces, mode, null, transform);
     }
 
-    private static GameplayStoredTestSpec? ReadTestSpec(JsonObject entry, JsonObject? attributes)
+    private static GameplayStoredTestSpec? ReadTestSpec(JsonObject entry, JsonObject? attributes, out bool invalid)
     {
-        JsonObject? raw = GetObject(attributes, "teste") ?? GetObject(entry, "teste") ??
-            GetObject(attributes, "especificacaoTeste") ?? GetObject(entry, "especificacaoTeste");
+        invalid = false;
+        JsonNode? raw = GetProperty(attributes, "teste") ?? GetProperty(entry, "teste") ??
+            GetProperty(attributes, "especificacaoTeste") ?? GetProperty(entry, "especificacaoTeste");
         if (raw is null) return null;
+        if (raw is not JsonObject) { invalid = true; return null; }
         try
         {
             return raw.Deserialize<GameplayStoredTestSpec>(JsonOptions);
         }
         catch (JsonException)
         {
+            invalid = true;
             return null;
         }
     }
@@ -1316,7 +1327,7 @@ public sealed class GameplayActionResolver
         if (root is JsonArray array)
             return array.OfType<JsonObject>();
         if (root is not JsonObject objectRoot) return Enumerable.Empty<JsonObject>();
-        foreach (string property in new[] { "itens", "inventario", "items", "skills", "magias", "poderes" })
+        foreach (string property in new[] { "itens", "inventario", "items", "implantes", "proteses", "skills", "magia", "magias", "poderes" })
         {
             JsonArray? entries = GetArray(objectRoot, property);
             if (entries.Count > 0) return entries.OfType<JsonObject>();

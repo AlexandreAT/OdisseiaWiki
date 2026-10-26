@@ -132,6 +132,12 @@ export const CombatantCard = styled.div<{ $enemy?: boolean; $result?: 'win' | 'l
     gap: 11px;
     margin-bottom: 10px;
   }
+  header > button {
+    display: flex; align-items: center; gap: inherit; width: 100%;
+    padding: 0; border: none; background: none; text-align: left; cursor: zoom-in;
+    &:disabled { cursor: default; }
+    &:focus-visible { outline: 1px solid var(--clearneonBlue); outline-offset: 4px; }
+  }
   header span {
     position: relative;
     flex: 0 0 46px;
@@ -211,12 +217,12 @@ export const CombatantDefenses = styled.div`
   display: flex;
   flex-wrap: wrap;
   gap: 8px 14px;
-  margin: 0 0 8px;
+  margin: 10px 0 4px;
   font-family: 'Orbitron', sans-serif;
-  font-size: .72rem;
+  font-size: .85rem;
   font-variant-numeric: tabular-nums;
-  > span { display: inline-flex; align-items: center; gap: 4px; }
-  svg { font-size: 1rem; }
+  > span { display: inline-flex; align-items: center; gap: 6px; line-height: 1.4; }
+  svg { font-size: 1.2rem; flex: none; }
   .armor { color: var(--clearneonYellow); }
   .shield { color: var(--clearneonPink); }
 `;
@@ -302,12 +308,13 @@ export const CurrentEvent = styled.div<{ $criticalTone?: BattleTone }>`
   strong { color: var(--clearneonBlue); font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; }
 `;
 
-export const ReplayResult = styled.div<{ $win?: boolean }>`
+export const ReplayResult = styled.div<{ $win?: boolean; $inconclusive?: boolean }>`
   padding: 12px 15px;
-  border: 1px solid ${({ $win }) => $win ? '#55eabc' : '#ff7886'};
+  border: 1px solid ${({ $win, $inconclusive }) => $inconclusive ? 'var(--clearneonYellow)' : $win ? '#55eabc' : '#ff7886'};
   border-radius: 6px;
-  background: ${({ $win }) => $win ? 'rgba(10, 80, 59, .3)' : 'rgba(98, 24, 39, .35)'};
-  color: ${({ $win }) => $win ? '#9affc8' : '#ffabb5'};
+  background: ${({ $win, $inconclusive }) => $inconclusive ? 'rgba(90, 70, 10, .2)' : $win ? 'rgba(10, 80, 59, .3)' : 'rgba(98, 24, 39, .35)'};
+  color: ${({ $win, $inconclusive }) => $inconclusive ? 'var(--clearneonYellow)' : $win ? '#9affc8' : '#ffabb5'};
+  small { flex-basis: 100%; font-weight: 400; color: var(--lightGrey); line-height: 1.5; }
   font-weight: 800;
   display: flex;
   align-items: center;
@@ -338,7 +345,7 @@ export const ReplayXp = styled.strong`
   letter-spacing: .04em;
   font-variant-numeric: tabular-nums;
   animation: ${xpRoulette} 1.5s ease-out both;
-  @media (prefers-reduced-motion: reduce) { animation: none; }
+  :root[data-motion='reduced'] & { animation: none; }
 `;
 
 export const ReplayLevel = styled.strong`
@@ -351,7 +358,7 @@ export const ReplayLevel = styled.strong`
   font-size: .88rem;
   letter-spacing: .07em;
   animation: ${xpRoulette} 1.5s ease-out both;
-  @media (prefers-reduced-motion: reduce) { animation: none; }
+  :root[data-motion='reduced'] & { animation: none; }
 `;
 
 export const ReplayPoints = styled.span`

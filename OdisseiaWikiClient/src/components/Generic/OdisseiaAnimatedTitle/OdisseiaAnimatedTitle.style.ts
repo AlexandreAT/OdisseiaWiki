@@ -78,7 +78,7 @@ export const AnimatedTitleSvg = styled.svg<TitleStyleProps>`
     height: ${({ $wide, $compact }) => $compact ? '28px' : $wide ? '46px' : '30px'};
   }
 
-  @media (prefers-reduced-motion: reduce) {
+  :root[data-motion='reduced'] & {
     .title-outline { animation: none; }
     .title-fill { animation: none; opacity: 1; }
   }

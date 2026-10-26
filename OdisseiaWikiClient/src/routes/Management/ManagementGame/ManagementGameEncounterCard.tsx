@@ -5,6 +5,8 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { InputText } from '../../../components/Generic/InputText/InputText';
 import { ImageUploader } from '../../../components/Generic/ImageUploader/ImageUploader';
 import { Search } from '../../../components/Generic/Search/Search';
+import { HelpHeading } from '../../../components/Generic/HelpHeading/HelpHeading';
+import { gameConfigurationHelp as help } from '../../../content/gameConfigurationHelp';
 import { normalizeImagePath } from '../../Wiki/utils/imagePathHelper';
 import { CardImage } from '../ManagementWiki/WikiForms/FormBuscarConteúdo/ResultCard/ResultCard.style';
 import type { GameModeEncounter, GameModeEnemy, GameModeNpcOption } from '../../../models/GameModeManagement';
@@ -77,19 +79,19 @@ export const ManagementGameEncounterCard = ({ code, encounter, npcs, outcomeCode
       <InputText theme={theme} neon={neon} label="Nome no mapa" width="100%"
         value={encounter.mapName} disabled={!editable}
         onChange={(event) => updateEncounter(code, { mapName: event.target.value })} />
-      <InputText theme={theme} neon={neon} label="XP ao vencer" width="100%"
+      <InputText theme={theme} neon={neon} label="XP ao vencer" width="100%" help={help.xpReward}
         type="number" value={encounter.xpReward ?? 0} disabled={!editable}
         error={!Number.isInteger(encounter.xpReward ?? 0) || (encounter.xpReward ?? 0) < 0 || (encounter.xpReward ?? 0) > 1000000}
         errorMessage="Defina de 0 a 1.000.000 XP por vitória."
         onChange={(event) => updateEncounter(code, { xpReward: Number(event.target.value) })} />
-      <InputText theme={theme} neon={neon} label="Moeda ao vencer" width="100%"
+      <InputText theme={theme} neon={neon} label="Moeda ao vencer" width="100%" help={help.currencyReward}
         type="number" value={encounter.currencyReward ?? 0} disabled={!editable}
         onChange={(event) => updateEncounter(code, { currencyReward: Number(event.target.value) })} />
-      <InputText theme={theme} neon={neon} label="Quantidade de inimigos" width="100%"
+      <InputText theme={theme} neon={neon} label="Quantidade de inimigos" width="100%" help={help.enemyCount}
         type="number" value={enemy.quantity ?? 1} disabled={!editable}
         onChange={(event) => updateEnemy(code, { quantity: Number(event.target.value) })} />
     </GameAdminFields>
-    <GameAdminNpcSearch><Search theme={theme} neon={neon} label="Buscar NPC da Wiki" width="100%"
+    <GameAdminNpcSearch><Search theme={theme} neon={neon} label="Buscar NPC da Wiki" width="100%" help={help.npcSource}
       value={npcQuery || (npc ? npcLabel(npc) : '')} disabled={!editable}
       suggestions={npcs.map(npcLabel)} maxSuggestions={20} portal
       onChange={(event) => setNpcQuery(event.target.value)}
@@ -114,7 +116,7 @@ export const ManagementGameEncounterCard = ({ code, encounter, npcs, outcomeCode
           onChange={(event) => updateEnemy(code, { [field]: Number(event.target.value) })} />)}
     </GameAdminFields>
     {enemy.npcId ? <GameAdminNpcActions>
-      <h4>Ações do NPC · ordem de uso</h4>
+      <HelpHeading label="Ações do NPC · ordem de uso" help={help.enemyActions} theme={theme} neon={neon} />
       <GameAdminHint>Selecione até três ações da ficha. Dano, custo, munição e cooldown seguem as regras do Sistema desta versão.</GameAdminHint>
       {npc && availableActions.length > 0 && enemy.actions.length < 3 &&
         <Search theme={theme} neon={neon} label="Buscar item, prótese, skill ou magia"
@@ -168,18 +170,18 @@ export const ManagementGameEncounterCard = ({ code, encounter, npcs, outcomeCode
         <InputText theme={theme} neon={neon} label="Custo de estamina" width="100%" type="number"
           value={enemy.custoEstaminaAtaque} disabled={!editable}
           onChange={(event) => updateEnemy(code, { custoEstaminaAtaque: Number(event.target.value) })} />
-        <InputText theme={theme} neon={neon} label="Atributo do ataque (opcional)" width="100%"
+        <InputText theme={theme} neon={neon} label="Atributo do ataque (opcional)" width="100%" help={help.attackAttribute}
           value={enemy.attackAttributeCode ?? ''} disabled={!editable}
           onChange={(event) => updateEnemy(code, { attackAttributeCode: event.target.value || null })} />
       </GameAdminFields>
-      <h4>Dano por resultado</h4>
+      <HelpHeading label="Dano por resultado" help={help.enemyDamage} theme={theme} neon={neon} />
       <GameAdminFields>{outcomeCodes.map((result) => <InputText key={result}
         theme={theme} neon={neon} label={result} width="100%" type="number"
         value={encounter.damageByResult[result] ?? 0} disabled={!editable}
         onChange={(event) => updateEncounter(code, { damageByResult: {
           ...encounter.damageByResult, [result]: Number(event.target.value),
         } })} />)}</GameAdminFields>
-      <InputText theme={theme} neon={neon} label="Atributos (código=valor, separados por vírgula)"
+      <InputText theme={theme} neon={neon} label="Atributos (código=valor, separados por vírgula)" help={help.manualAttributes}
         width="100%" value={manualAttributes} disabled={!editable}
         onChange={(event) => {
           const text = event.target.value;

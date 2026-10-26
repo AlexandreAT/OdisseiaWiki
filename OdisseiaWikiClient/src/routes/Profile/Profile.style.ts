@@ -69,7 +69,7 @@ export const ProfileFrame = styled(HudFrame)`
     }
   `}
 
-  @media (prefers-reduced-motion: reduce) {
+  :root[data-motion='reduced'] & {
     animation: none;
 
     > span {

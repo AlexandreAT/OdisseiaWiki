@@ -200,7 +200,7 @@ export const CharacterWarningTooltip = styled.div<{ $top: number; $left: number;
   p { margin: 0; color: #d0dae0; font-size: .81rem; line-height: 1.45; }
   p + p { margin-top: 9px; padding-top: 9px; border-top: 1px solid rgba(245, 199, 60, .2); }
 
-  @media (prefers-reduced-motion: reduce) { animation: none; }
+  :root[data-motion='reduced'] & { animation: none; }
 `;
 
 export const CharacterChoice = styled.button<{ $selected: boolean }>`
@@ -234,7 +234,7 @@ export const CharacterChoice = styled.button<{ $selected: boolean }>`
     opacity: .6;
     transform: none;
   }
-  @media (prefers-reduced-motion: reduce) {
+  :root[data-motion='reduced'] & {
     transition: none;
   }
 `;

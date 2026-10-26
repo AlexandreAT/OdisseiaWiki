@@ -2,6 +2,7 @@ import { useLayoutEffect, useMemo, useRef } from 'react';
 import { DiceFace } from '../../../../components/Gameplay/DiceRollOverlay/DiceRollOverlay.style';
 import { getDieFaces, quaternionMatrix, quaternionToFace } from '../../../../components/Gameplay/DiceRollOverlay/dieGeometry';
 import { DieMesh, DieSpinner, DieStage } from './InlineBattleDie.style';
+import { useMotionReduced } from '../../../../hooks/useMotionPreference';
 
 const DIE_SIZE = 35;
 const SPIN = { x: -1125, y: 1465, z: -290 };
@@ -14,11 +15,12 @@ export const InlineBattleDie = ({ value, rolling, speed, selected = true }: {
 }) => {
   const faces = useMemo(() => getDieFaces(20, DIE_SIZE), []);
   const spinnerRef = useRef<HTMLSpanElement>(null);
+  const reducedMotion = useMotionReduced();
   const result = Number(value);
   useLayoutEffect(() => {
     const spinner = spinnerRef.current;
     if (!spinner) return;
-    if (!rolling) {
+    if (!rolling || reducedMotion) {
       spinner.style.transform = 'none';
       return;
     }
@@ -36,7 +38,7 @@ export const InlineBattleDie = ({ value, rolling, speed, selected = true }: {
     spinner.style.transform = `rotateX(${SPIN.x}deg) rotateY(${SPIN.y}deg) rotateZ(${SPIN.z}deg)`;
     timer = window.setInterval(() => rotate(performance.now()), 16);
     return () => window.clearInterval(timer);
-  }, [rolling, speed, value]);
+  }, [rolling, speed, value, reducedMotion]);
 
   if (!Number.isInteger(result) || result < 1 || result > 20) {
     return rolling ? <DieStage aria-hidden="true" /> : <span>{`D20 ${value}`}</span>;

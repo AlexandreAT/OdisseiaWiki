@@ -1,6 +1,6 @@
 import styled from 'styled-components';
 
-export const LightboxOverlay = styled.div<{ $backgroundImage?: string }>`
+export const LightboxOverlay = styled.div<{ $backgroundImage?: string; $portrait?: boolean }>`
   position: fixed;
   inset: 0;
   width: 100vw;
@@ -13,7 +13,7 @@ export const LightboxOverlay = styled.div<{ $backgroundImage?: string }>`
   isolation: isolate;
   overflow: hidden;
   box-sizing: border-box;
-  background-color: #02060b;
+  background-color: ${({ $portrait }) => $portrait ? '#000' : '#02060b'};
 
   @media (max-width: 768px) {
     padding: 12px;
@@ -41,7 +41,7 @@ export const LightboxOverlay = styled.div<{ $backgroundImage?: string }>`
     z-index: -1;
   }
 
-  @media (prefers-reduced-motion: reduce) {
+  :root[data-motion='reduced'] & {
     &::before {
       filter: none;
       transform: none;
@@ -49,7 +49,7 @@ export const LightboxOverlay = styled.div<{ $backgroundImage?: string }>`
   }
 `;
 
-export const LightboxContent = styled.div`
+export const LightboxContent = styled.div<{ $portrait?: boolean }>`
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -64,6 +64,10 @@ export const LightboxContent = styled.div`
   position: relative;
   z-index: 1;
   box-sizing: border-box;
+  ${({ $portrait }) => $portrait && `
+    background: transparent; border: none; align-items: center;
+    > div:first-child { display: none; }
+  `}
 
   @media (max-width: 768px) {
     max-width: calc(100vw - 24px);
@@ -72,7 +76,7 @@ export const LightboxContent = styled.div`
   }
 `;
 
-export const LightboxImage = styled.img`
+export const LightboxImage = styled.img<{ $portrait?: boolean }>`
   display: block;
   max-width: min(82vw, 1100px);
   max-height: 76vh;
@@ -80,6 +84,10 @@ export const LightboxImage = styled.img`
   object-fit: contain;
   border-radius: 8px;
   width: auto;
+  ${({ $portrait }) => $portrait && `
+    width: min(78vw, 65dvh, 680px); height: min(78vw, 65dvh, 680px);
+    object-fit: cover; border-radius: 50%; background: #000;
+  `}
 
   @media (max-width: 768px) {
     max-width: 100%;
@@ -91,12 +99,17 @@ export const LightboxImage = styled.img`
   }
 `;
 
-export const LightboxCaption = styled.p`
+export const LightboxCaption = styled.p<{ $portrait?: boolean }>`
   margin: 0;
   font-size: 13px;
   color: var(--whitesmoke);
   text-align: center;
   padding: 4px 0;
+  ${({ $portrait }) => $portrait && `
+    font-family: 'DO Futuristic', sans-serif;
+    font-size: clamp(1.4rem, 4vw, 2.6rem); font-weight: 100;
+    color: var(--clearneonBlue); overflow-wrap: anywhere;
+  `}
 `;
 
 export const LightboxTopBar = styled.div`
@@ -134,7 +147,7 @@ export const LightboxCloseButton = styled.button`
     display: block;
   }
 
-  @media (prefers-reduced-motion: reduce) {
+  :root[data-motion='reduced'] & {
     transition: none;
   }
 
@@ -190,7 +203,7 @@ export const LightboxNavButton = styled.button<{ $side: 'left' | 'right'; disabl
     display: block;
   }
 
-  @media (prefers-reduced-motion: reduce) {
+  :root[data-motion='reduced'] & {
     transition: none;
   }
 

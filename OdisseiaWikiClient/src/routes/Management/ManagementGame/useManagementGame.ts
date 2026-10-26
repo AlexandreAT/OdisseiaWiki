@@ -14,6 +14,7 @@ const editableSnapshot = (value: GameModeEditor | null) => value && JSON.stringi
   areas: value.areas, encounters: value.encounters, fallbackAction: value.fallbackAction,
   playerDamageByResult: value.playerDamageByResult, saleDiscountPercent: value.saleDiscountPercent,
   startingCurrency: value.startingCurrency, repairProtectionAtBase: value.repairProtectionAtBase,
+  protectedDepositSlots: value.protectedDepositSlots ?? 0, protectedDepositCost: value.protectedDepositCost ?? 0,
   powerCatalog: value.powerCatalog,
 });
 const nextEncounterNumber = (editor: GameModeEditor, after = 0) => {
@@ -301,6 +302,9 @@ export const useManagementGame = (mesaId?: number) => {
       })),
     updateRepairProtectionAtBase: (value: boolean) =>
       setEditor((current) => current && ({ ...current, repairProtectionAtBase: value })),
+    updateProtectedDeposit: (field: 'protectedDepositSlots' | 'protectedDepositCost', value: number) =>
+      setEditor(current => current && ({ ...current, [field]: Math.max(0, Math.min(
+        field === 'protectedDepositSlots' ? 1000 : 1_000_000_000, Math.trunc(value || 0))) })),
     addRoute: (areaIndex: number) => setEditor((current) => {
       if (!current || current.areas[areaIndex]?.options.length >= 20) return current;
       return { ...current,
@@ -362,6 +366,7 @@ export const useManagementGame = (mesaId?: number) => {
         saleDiscountPercent: editor.saleDiscountPercent,
         startingCurrency: editor.startingCurrency,
         repairProtectionAtBase: editor.repairProtectionAtBase,
+        protectedDepositSlots: editor.protectedDepositSlots ?? 0, protectedDepositCost: editor.protectedDepositCost ?? 0,
         powerCatalog: editor.powerCatalog }, mesaId), 'Rascunho salvo.'),
     publish: () => editor && run(async () => {
       if (changed) await saveGameAdventureDraft(editor.idGameModeVersion,
@@ -371,6 +376,7 @@ export const useManagementGame = (mesaId?: number) => {
           saleDiscountPercent: editor.saleDiscountPercent,
           startingCurrency: editor.startingCurrency,
           repairProtectionAtBase: editor.repairProtectionAtBase,
+          protectedDepositSlots: editor.protectedDepositSlots ?? 0, protectedDepositCost: editor.protectedDepositCost ?? 0,
           powerCatalog: editor.powerCatalog }, mesaId);
       return publishGameAdventureDraft(editor.idGameModeVersion, mesaId);
     }, 'Nova versão publicada. Runs existentes continuam com sua versão anterior.'),

@@ -1,4 +1,7 @@
 
+import { WikiContentHelpProvider } from '../../../../../../components/Generic/FieldHelp/WikiContentHelpProvider';
+import { FieldHelp } from '../../../../../../components/Generic/FieldHelp/FieldHelp';
+
 import React, { useState } from 'react';
 import wikiHelp from '../../../../../../content/wikiHelp.pt-BR.json';
 import type { FieldHelpContent } from '../../../../../../components/Generic/FieldHelp/FieldHelp.types';
@@ -264,6 +267,7 @@ export const FormPage: React.FC<FormPageProps> = ({
   };
 
   return (
+    <WikiContentHelpProvider scope="page" theme={theme} neon={neon}>
     <FormPageContainer onSubmit={(e) => void persist(false, e)}>
       {pageId && <UnsavedChangesGuard dirty={!isSynced} />}
       <div>
@@ -335,7 +339,7 @@ export const FormPage: React.FC<FormPageProps> = ({
 
       <div>
         <SectionHeader $isDark={theme === 'dark'}>
-          <SectionTitle>Blocos da Página</SectionTitle>
+          <SectionTitle>Blocos da Página <FieldHelp label="Blocos da Página" inline /></SectionTitle>
           <p style={{ margin: 0, fontSize: '12px', opacity: 0.7 }}>
             {blocks.length} bloco(s) adicionado(s)
           </p>
@@ -484,5 +488,6 @@ export const FormPage: React.FC<FormPageProps> = ({
         />
       )}
     </FormPageContainer>
+    </WikiContentHelpProvider>
   );
 };

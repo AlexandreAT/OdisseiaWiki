@@ -1,5 +1,6 @@
 import type { GameRunBattleRecord, GameRunDto, GameRunMap } from '../../../models/GameRun';
 import { parseRunInventoryEntries, parseRunStoredItems } from './runInventoryEntries.ts';
+import { battleWinner } from '../BattleReplay/battleOutcome.ts';
 
 function completedAreas(map: GameRunMap): number {
   const names = new Set<string>();
@@ -15,7 +16,7 @@ function completedAreas(map: GameRunMap): number {
 }
 
 export function summarizeRunVictory(run: GameRunDto, battles: GameRunBattleRecord[]) {
-  const victories = battles.filter(({ battle }) => battle.resultado.winnerActorId === battle.personagem.id);
+  const victories = battles.filter(({ battle }) => battleWinner(battle) === battle.personagem.id);
   const defeated = victories.reduce((total, { battle }) => total + Math.max(1, battle.oponentes?.length ?? 1), 0);
   const areas = Math.max(completedAreas(run.mapa), run.fase);
   const inventoryCount = (snapshot: GameRunDto['estadoAtual']) => {
@@ -39,4 +40,16 @@ export function summarizeRunVictory(run: GameRunDto, battles: GameRunBattleRecor
   const enemyNames = [...new Set(victories.flatMap(({ battle }) =>
     (battle.oponentes?.length ? battle.oponentes : [battle.oponente]).map((enemy) => enemy.nome)))];
   return { defeated, areas, items, xp, enemyNames };
+}
+
+export function summarizeDefeatedEnemies(battles: GameRunBattleRecord[]) {
+  const enemies = new Map<string, { name: string; image?: string | null; count: number }>();
+  for (const { battle } of battles) {
+    if (battleWinner(battle) !== battle.personagem.id) continue;
+    for (const enemy of battle.oponentes?.length ? battle.oponentes : [battle.oponente]) {
+      const existing = enemies.get(enemy.nome);
+      enemies.set(enemy.nome, { name: enemy.nome, image: existing?.image ?? enemy.imagem, count: (existing?.count ?? 0) + 1 });
+    }
+  }
+  return [...enemies.values()];
 }

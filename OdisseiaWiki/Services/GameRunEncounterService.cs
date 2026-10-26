@@ -164,11 +164,14 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
                 try
                 {
                     result = _simulator.Simulate(setup.Input, new SeededGameRunRandomSource(seed));
+                    if (result.EndReason != GameBattleEndReason.ActorDefeated)
+                        result = result with { WinnerActorId = null };
                     player = result.Actors.Single(actor => actor.Id == "player");
-                    string battleState = ApplyResult(before, player);
+                    string battleState = result.WinnerActorId is null ? before : ApplyResult(before, player);
                     foreach (IGrouping<string, GameBattleEvent> consumed in result.Events
                         .Where(gameEvent => gameEvent.Type == GameBattleEventTypes.ItemConsumed &&
-                            gameEvent.ActorId == "player" && gameEvent.Payload is ItemConsumedPayload)
+                            result.WinnerActorId is not null && gameEvent.ActorId == "player" &&
+                            gameEvent.Payload is ItemConsumedPayload)
                         .GroupBy(gameEvent => ((ItemConsumedPayload)gameEvent.Payload).ActionId,
                             StringComparer.Ordinal))
                     {
@@ -176,7 +179,7 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
                         battleState = GameRunConsumable.SpendInBattle(battleState,
                             consumed.Key[5..], consumed.Count());
                     }
-                    after = GameRunCarry.Reconcile(GameRunCarry.PreserveBattleTriggers(
+                    after = result.WinnerActorId is null ? before : GameRunCarry.Reconcile(GameRunCarry.PreserveBattleTriggers(
                         battleState, version, result.Events), version);
                     if (result.WinnerActorId == "player" && node.Payload?.EncounterCode is string encounterCode)
                     {
@@ -223,6 +226,20 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
                 GameRunBattle? previousBattle = await _runs.GetLastBattleAsync(run.IdGameRun, cancellationToken);
                 int battleOrder = (previousBattle?.Ordem ?? 0) + 1;
                 string completedNodeId = run.NoAtualId;
+                if (result.WinnerActorId is null)
+                {
+                    // An unfinished attempt cannot spend resources, grant rewards or block a retry.
+                    node.State = "DISPONIVEL";
+                    run.NoAtualId = null;
+                    run.MapaJson = JsonSerializer.Serialize(map, JsonOptions);
+                    run.EstadoAtualJson = before;
+                    run.Revisao++;
+                    run.AtualizadaEmUtc = now;
+                    var unfinished = new GameRunBattleResolutionDto(
+                        GameRunService.Map(run), battle, completedNodeId, battleOrder, now);
+                    await SaveCommand(run, idUsuario, request, "RESOLVER_COMBATE", hash, unfinished, cancellationToken);
+                    return GameRunOperationResult<GameRunBattleResolutionDto>.Ok(unfinished);
+                }
                 await _runs.AddBattleAsync(new GameRunBattle
                 {
                     IdGameRun = run.IdGameRun,
@@ -386,11 +403,14 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
         long idGameRun, int idUsuario, GameRunLoadoutRequestDto request,
         CancellationToken cancellationToken)
     {
-        if (!Valid(request) || idGameRun <= 0 || request.Acoes is null or { Count: > 6 })
+        if (!Valid(request) || idGameRun <= 0 || request.Acoes is null or { Count: > 6 } ||
+            request.DefesasEquipadas is { } gear && (gear.Count > 100 || gear.Any(string.IsNullOrWhiteSpace) ||
+                gear.Any(id => id.Length > 100) || gear.Distinct(StringComparer.Ordinal).Count() != gear.Count))
             return GameRunOperationResult<GameRunDto>.Fail(
                 "REQUISICAO_INVALIDA", "Equipe até cinco ações e informe a revisão da run.");
         string hash = Hash($"SALVAR_LOADOUT|{idGameRun}|{request.RevisaoEsperada}|" +
-            JsonSerializer.Serialize(request.Acoes, JsonOptions));
+            JsonSerializer.Serialize(request.Acoes, JsonOptions) + (request.DefesasEquipadas is null ? "" :
+                "|DEFESAS|" + JsonSerializer.Serialize(request.DefesasEquipadas, JsonOptions)));
         try
         {
             return await _runs.ExecuteWithUserLockAsync(idUsuario, async () =>
@@ -446,7 +466,7 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
                     JsonElement? entry = FindEntry(source, selection.IdInstancia);
                     if (entry is null)
                         return GameRunOperationResult<GameRunDto>.Fail(
-                            "LOADOUT_INVALIDO", "Uma ação não pertence ao inventário desta run.");
+                            "LOADOUT_INVALIDO", $"A ação {selection.Tipo} ({selection.IdInstancia}) não pertence ao inventário desta run. Remova-a e escolha novamente.");
                     if (selection.Tipo.ToUpperInvariant() is "ITEM" or "PROTESE")
                     {
                         decimal weight = ReadDecimal(entry.Value, "peso") ?? 0;
@@ -461,7 +481,6 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
                 if (version is null)
                     return GameRunOperationResult<GameRunDto>.Fail(
                         "SISTEMA_INDISPONIVEL", "A versão do Sistema desta run não está disponível.");
-                run.EstadoAtualJson = GameRunCarry.Reconcile(run.EstadoAtualJson, version);
                 int maxSkills = version.SkillConfig?.MaximoSkills ?? 0;
                 SistemaRpgConfiguration.RegrasPoderes powers =
                     SistemaRpgConfiguration.LerRegras<SistemaRpgConfiguration.RegrasPoderes>(
@@ -474,17 +493,41 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
                         "LIMITE_PODERES", "A seleção excede o limite de skills ou magias da versão do Sistema.");
 
                 string old = run.LoadoutJson!;
-                run.LoadoutJson = GameRunActionLoadout.Serialize(requested);
+                string oldState = run.EstadoAtualJson;
                 try
                 {
+                    string updated = oldState;
+                    if (request.DefesasEquipadas is { } defenseIds)
+                    {
+                        var selected = defenseIds.ToHashSet(StringComparer.Ordinal);
+                        foreach (var item in Entries(current.EstadoAtual.Inventario).Concat(Entries(current.EstadoAtual.Implantes)))
+                        {
+                            string? id = ReadText(item, "id");
+                            if (id is null || !GameRunDefensiveEquipment.HasDefenses(item)) continue;
+                            if (GameRunDefensiveEquipment.IsEquipped(updated, id) && !selected.Contains(id))
+                                updated = SetDefenseEquipment(updated, id, false, version);
+                        }
+                        foreach (string id in defenseIds) updated = SetDefenseEquipment(updated, id, true, version);
+                    }
+                    foreach (var selection in requested.Where(action => action.Tipo.Equals("PROTESE", StringComparison.OrdinalIgnoreCase)))
+                    {
+                        var item = FindEntry(current.EstadoAtual.Implantes, selection.IdInstancia);
+                        if (item is null || !GameRunProstheses.HasTest(item.Value))
+                            throw new InvalidOperationException("Próteses sem teste são instaladas como equipamento, não como ações.");
+                        updated = SetDefenseEquipment(updated, selection.IdInstancia, true, version);
+                    }
+                    run.EstadoAtualJson = GameRunCarry.Reconcile(updated, version);
+                    run.LoadoutJson = GameRunActionLoadout.Serialize(requested);
                     GameBattlePreviewSetup setup = _factory.Build(GameRunService.Map(run), version);
                     if (setup.Input.FirstActor.Actions.Count - 1 != requested.Count - restCount)
-                        throw new InvalidOperationException("Uma das ações não possui ataque ou utilitário executável nesta versão.");
+                        throw new InvalidOperationException("Há ações sem ataque ou utilitário executável nesta versão.");
                 }
                 catch (Exception error) when (error is JsonException or InvalidOperationException or ArgumentException)
                 {
+                    string? details = DescribeInvalidActions(GameRunService.Map(run), version, requested);
                     run.LoadoutJson = old;
-                    return GameRunOperationResult<GameRunDto>.Fail("ACAO_INEXECUTAVEL", error.Message);
+                    run.EstadoAtualJson = oldState;
+                    return GameRunOperationResult<GameRunDto>.Fail("ACAO_INEXECUTAVEL", details ?? error.Message);
                 }
 
                 run.Revisao++;
@@ -572,6 +615,29 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
         catch (KeyNotFoundException) { return MissingUser<GameRunConsumeItemResultDto>(); }
     }
 
+    private string? DescribeInvalidActions(GameRunDto run, SistemaVersao version, IReadOnlyList<GameRunActionSelectionDto> selections)
+    {
+        var problems = new List<string>();
+        foreach (var action in selections.Where(item => !item.Tipo.Equals("DESCANSO", StringComparison.OrdinalIgnoreCase)))
+        {
+            JsonElement? source = action.Tipo.ToUpperInvariant() switch { "ITEM" => run.EstadoAtual.Inventario,
+                "PROTESE" => run.EstadoAtual.Implantes, "MAGIA" => run.EstadoAtual.Magia, _ => run.EstadoAtual.Skills };
+            var entry = FindEntry(source, action.IdInstancia);
+            string name = entry is { } found ? ReadText(found, "nome") ?? action.IdInstancia : action.IdInstancia;
+            try
+            {
+                var reasons = new List<string>();
+                if (!_factory.CanExecuteSelectedAction(run, version, action, reasons))
+                    problems.Add($"{name}: " + (reasons.Count > 0
+                        ? string.Join(" ", reasons.Distinct(StringComparer.Ordinal))
+                        : "sem ataque ou utilitário executável. Revise teste, dano e efeitos nesta versão do Sistema."));
+            }
+            catch (Exception error) when (error is JsonException or InvalidOperationException or ArgumentException)
+            { problems.Add($"{name}: {error.Message}"); }
+        }
+        return problems.Count == 0 ? null : "Não foi possível equipar:\n" + string.Join("\n", problems.Select(problem => $"• {problem}"));
+    }
+
     private static JsonElement? FindEntry(JsonElement? source, string id) =>
         Entries(source).FirstOrDefault(entry =>
             entry.ValueKind == JsonValueKind.Object &&
@@ -581,9 +647,14 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
     private static IReadOnlyList<JsonElement> Entries(JsonElement? source)
     {
         if (source is not { } value) return [];
+        if (value.ValueKind == JsonValueKind.String && value.GetString() is { } json)
+        {
+            using var parsed = JsonDocument.Parse(json);
+            return Entries(parsed.RootElement.Clone());
+        }
         if (value.ValueKind == JsonValueKind.Array) return value.EnumerateArray().ToArray();
         if (value.ValueKind != JsonValueKind.Object) return [];
-        foreach (string key in new[] { "itens", "inventario", "items", "implantes", "proteses", "skills", "magias" })
+        foreach (string key in new[] { "itens", "inventario", "items", "implantes", "proteses", "skills", "magia", "magias", "poderes" })
         {
             JsonElement property = value.EnumerateObject().FirstOrDefault(pair =>
                 pair.Name.Equals(key, StringComparison.OrdinalIgnoreCase)).Value;
@@ -802,6 +873,13 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
                             run.Seed, run.GameModeVersion.ConfiguracaoJson,
                             node.Payload.SecretAreaCode, noId);
                         map = GameRunMapGenerator.EnterSecret(map, secret, noId);
+                        var memoryVersion = await _systems.GetVersionAsync(run.IdSistemaVersao, includeConfiguration: true);
+                        if (memoryVersion is not null)
+                        {
+                            var memory = await _runs.GetCharacterMemoryAsync(idUsuario, run.IdPersonagemJogadorOrigem, cancellationToken);
+                            GameRunNpcs.ApplyMemory(map, GameCharacterMilestones.Read(memory?.EstadoJson),
+                                run.GameModeVersion.Codigo, memoryVersion.IdSistemaRpg);
+                        }
                     }
                     else if (node.Type == "ATALHO") GameRunMapGenerator.CompleteShortcut(map, noId);
                     else GameRunMapGenerator.Complete(map, noId);
@@ -1084,6 +1162,15 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
     private async Task SaveCommand<T>(GameRun run, int userId, GameRunMutationRequestDto request,
         string type, string hash, T response, CancellationToken token)
     {
+        if (run.Status == GameRunStatus.Vitoria)
+        {
+            using var state = JsonDocument.Parse(run.EstadoAtualJson);
+            if (!state.RootElement.TryGetProperty("protectedDepositAtEnd", out _))
+            {
+                var version = await _systems.GetVersionAsync(run.IdSistemaVersao, includeConfiguration: true);
+                if (version is not null) await CaptureProtectedDepositAtEnd(run, version, token);
+            }
+        }
         await _runs.AddCommandAsync(new GameRunCommand
         {
             IdGameRun = run.IdGameRun,

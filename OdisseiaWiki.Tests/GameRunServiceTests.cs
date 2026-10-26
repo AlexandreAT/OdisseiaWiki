@@ -12,6 +12,31 @@ namespace OdisseiaWiki.Tests;
 public sealed class GameRunServiceTests
 {
     [Fact]
+    public async Task NovaRunExibeNpcJaResgatadoSemCopiarItensProtegidosOuAlterarFichaOriginal()
+    {
+        Fixture fixture = new();
+        var config = System.Text.Json.Nodes.JsonNode.Parse(fixture.Mode.ConfiguracaoJson)!;
+        config["areas"]![0]!["nodeCount"] = 3;
+        config["areas"]![0]!["useBase"] = false;
+        config["areas"]![0]!["finalOption"] = "ROTA:0";
+        config["areas"]![0]!["options"] = System.Text.Json.Nodes.JsonNode.Parse("""[{"type":"NPC","npcType":"MEDICO","npcCode":"aliado","npcLocked":true,"label":"Médico","weight":1}]""");
+        fixture.Mode.ConfiguracaoJson = config.ToJsonString();
+        var milestones = new OdisseiaWiki.GameRuns.GameCharacterMilestones();
+        milestones.RescuedNpcs.Add(new(fixture.Mode.Codigo, 1, "aliado"));
+        milestones.ProtectedItems.Add(new(fixture.Mode.Codigo, 1, "protegido", new() { ["nome"] = "Guardado" }, 42));
+        var memory = new GameCharacterMemory { IdPersonagemJogador = 8, EstadoJson = milestones.Serialize() };
+        fixture.Repository.Setup(repo => repo.GetCharacterMemoryAsync(fixture.UserId, 8, It.IsAny<CancellationToken>())).ReturnsAsync(memory);
+        string original = fixture.Character.StatusJson;
+        var result = await fixture.Service.CreateAsync(fixture.UserId, new() {
+            IdPersonagemJogador = 8, ChaveIdempotencia = Guid.NewGuid() }, default);
+        Assert.True(result.Sucesso, result.Mensagem);
+        Assert.All(result.Dados!.Mapa.Nodes.Where(node => node.Type == "NPC"), node => Assert.True(node.Payload!.NpcRescued));
+        Assert.Empty(result.Dados.EstadoAtual.Economy!.Stash);
+        Assert.Single(OdisseiaWiki.GameRuns.GameCharacterMilestones.Read(memory.EstadoJson).ProtectedItems);
+        Assert.Equal(original, fixture.Character.StatusJson);
+    }
+
+    [Fact]
     public async Task NovaRunHerdaPrecoAusenteDaFichaELeituraLegadaNaoGravaNemAlteraFicha()
     {
         var catalogue = new Mock<IGameModeManagementRepository>();

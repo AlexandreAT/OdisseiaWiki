@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { GameRunActionSelection, GameRunBaseResolution, GameRunBattleRecord, GameRunConsumeItemResult, GameRunDto, GameRunEncounterSetup, GameRunMediumRestResolution, GameRunConditionOriginRequest, GameRunMutationRequest } from '../../../models/GameRun';
 import {
+  upgradeGameRunWeapon,
   abandonGameRun, enterGameRunBase, getGameRun, getGameRunBattles,
   consumeGameRunItem,
   dropGameRunItem,
@@ -12,9 +13,12 @@ import {
   updateGameRunLoadout, updateGameRunWeaponOrder,
   updateGameRunConditionOrigin,
   enterGameRunVendor, buyGameRunVendorItem, leaveGameRunVendor, transferGameRunStashItem, sellGameRunVendorItems,
+  changeGameRunProtectedItem,
+  visitGameRunNpc,
 } from '../../../services/gameRunService';
 import { getApiErrorMessage } from '../../../utils/apiError';
 import { shouldAutoCloseCombat, type CombatOrigin } from './battleReplayFlow';
+import { battleWinner } from '../BattleReplay/battleOutcome';
 import { canManageRunItem } from './runRewardActions';
 
 interface CombatScene {
@@ -216,8 +220,10 @@ export const useGameRun = () => {
     };
     setCombatScene({ record, origin: 'current' });
     setRun(result.run);
-    setBattles((previous) => previous.some((battle) => battle.noId === record.noId)
-      ? previous : [...previous, record]);
+    if (result.battle.resultado.winnerActorId && result.battle.resultado.endReason === 'ActorDefeated') {
+      setBattles((previous) => previous.some((battle) => battle.noId === record.noId)
+        ? previous : [...previous, record]);
+    }
     pendingEncounter.current = null;
     pendingAction.current = null;
     try { setRun(await upgradeLegacyMap(result.run)); }
@@ -251,7 +257,7 @@ export const useGameRun = () => {
       savingWeapons || savingLoadout) return;
     const node = currentRun.mapa.nodes.find((entry) => entry.id === nodeId);
     if (currentRun.noAtualId !== null || node?.state !== 'DISPONIVEL' ||
-      !['COMBATE', 'ELITE', 'BOSS', 'CACADA', 'BASE', 'DESCANSO', 'EVENTO', 'ATALHO', 'AREA_SECRETA', 'VENDEDOR'].includes(node.type)) return;
+      !['COMBATE', 'ELITE', 'BOSS', 'CACADA', 'BASE', 'DESCANSO', 'EVENTO', 'ATALHO', 'AREA_SECRETA', 'VENDEDOR', 'NPC'].includes(node.type)) return;
     encounterInFlight.current = true;
     setActing(true);
     setActionError(null);
@@ -265,6 +271,16 @@ export const useGameRun = () => {
       };
     pendingEncounter.current = pending;
     try {
+      if (node.type === 'NPC') {
+        const result = await visitGameRunNpc(pending.runId, pending.nodeId, {
+          revisaoEsperada: pending.revision, chaveIdempotencia: pending.selectKey,
+        });
+        setRun(result.run);
+        setBaseResult(['NPC_MERCADOR', 'NPC_SABIO', 'NPC_ENGENHEIRO'].includes(result.tipo ?? '') ? null : result);
+        setMediumRestResult(null);
+        pendingEncounter.current = null;
+        return;
+      }
       if (node.type === 'VENDEDOR') {
         setRun(await enterGameRunVendor(pending.runId, pending.nodeId, {
           revisaoEsperada: pending.revision, chaveIdempotencia: pending.selectKey,
@@ -310,7 +326,8 @@ export const useGameRun = () => {
 
   const resumeEncounter = async () => {
     if (!currentRun || currentRun.status !== 'Ativa' || !currentRun.noAtualId || acting || savingWeapons || savingLoadout ||
-      currentRun.mapa.nodes.some((node) => node.id === currentRun.noAtualId && node.type === 'VENDEDOR')) return;
+      currentRun.mapa.nodes.some((node) => node.id === currentRun.noAtualId &&
+        (node.type === 'VENDEDOR' || node.type === 'NPC'))) return;
     setActing(true);
     setActionError(null);
     const pending = pendingAction.current?.revision === currentRun.revisao
@@ -378,10 +395,10 @@ export const useGameRun = () => {
     }
   };
 
-  const saveLoadout = async (actions: GameRunActionSelection[]): Promise<boolean> => {
+  const saveLoadout = async (actions: GameRunActionSelection[], defenseIds?: string[]): Promise<boolean> => {
     if (!currentRun || currentRun.acoesEquipadas === null || currentRun.status !== 'Ativa' ||
       currentRun.noAtualId || acting || savingLoadout) return false;
-    const signature = JSON.stringify(actions);
+    const signature = JSON.stringify({ actions, defenseIds });
     const pending = pendingLoadout.current?.revision === currentRun.revisao &&
       pendingLoadout.current.signature === signature
       ? pendingLoadout.current
@@ -394,6 +411,7 @@ export const useGameRun = () => {
         revisaoEsperada: pending.revision,
         chaveIdempotencia: pending.key,
         acoes: actions,
+        defesasEquipadas: defenseIds,
       });
       setRun(updated);
       pendingLoadout.current = null;
@@ -592,6 +610,11 @@ export const useGameRun = () => {
   return {
     run: currentRun,
     economyBusy,
+    upgradeWeapon: (itemId: string) => economyAction(`upgrade:${itemId}`, (active, request) =>
+      upgradeGameRunWeapon(active.idGameRun, { ...request, itemId })),
+    changeProtectedItem: (itemId: string, action: import('../../../models/GameRun').ProtectedDepositAction) =>
+      economyAction(`protected:${itemId}:${action}`, (active, request) =>
+        changeGameRunProtectedItem(active.idGameRun, { ...request, itemId, action })),
     buyVendorItem: (itemId: string, toStash: boolean) => economyAction(`buy:${itemId}:${toStash}`, (active, request) =>
       buyGameRunVendorItem(active.idGameRun, { ...request, itemId, toStash })),
     sellVendorItems: (items: import('./runEconomy').RunSaleLine[], fromStash: boolean) =>
@@ -616,6 +639,7 @@ export const useGameRun = () => {
     openBattle: (record: GameRunBattleRecord) => setCombatScene({ record, origin: 'history' }),
     finishCombatReplay: async (speed: 1 | 2) => {
       if (!combatScene) return;
+      if (!battleWinner(combatScene.record.battle)) return;
       markBattleSeen(runId, combatScene.record);
       if (combatScene.origin !== 'history' && currentRun) {
         try {
@@ -656,7 +680,7 @@ export const useGameRun = () => {
         return;
       }
       if (rewardReturnTimer.current) clearTimeout(rewardReturnTimer.current);
-      if (combatScene) markBattleSeen(runId, combatScene.record);
+      if (combatScene && battleWinner(combatScene.record.battle)) markBattleSeen(runId, combatScene.record);
       setCombatScene(null);
     },
     startEncounter,

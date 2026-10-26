@@ -65,7 +65,7 @@ export const EconomyBalance = styled.strong`
   font-variant-numeric: tabular-nums;
   letter-spacing: .04em;
   animation: ${balanceReveal} 900ms ease-out both;
-  @media (prefers-reduced-motion: reduce) { animation: none; }
+  :root[data-motion='reduced'] & { animation: none; }
 `;
 
 export const EconomyTabs = styled(LoadoutTabs)`

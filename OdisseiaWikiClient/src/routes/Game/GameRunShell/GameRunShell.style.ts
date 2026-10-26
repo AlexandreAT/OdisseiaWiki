@@ -1,6 +1,6 @@
 import Dialog from '@mui/material/Dialog';
 import styled, { css, keyframes } from 'styled-components';
-import { GameFrame, GamePage } from '../GameShared.style';
+import { GameFrame, GamePage, GameTextLink } from '../GameShared.style';
 
 const backpackHeartbeat = keyframes`
   0%, 100% {
@@ -129,6 +129,46 @@ export const RunHudTopline = styled.div`
   > button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 `;
 
+export const RunHudNavigation = styled(RunHudTopline)`
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  > button { grid-column: 3; white-space: nowrap; }
+  > span { min-width: 0; }
+  @media (max-width: 600px) {
+    grid-template-columns: minmax(0, 1fr) auto;
+    > button { grid-column: 2; }
+    > span { grid-column: 1 / -1; grid-row: 2; }
+  }
+`;
+
+export const RunBackLink = styled(GameTextLink)<{ $neon: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 7px;
+  min-height: 36px;
+  padding: 5px 11px;
+  border: 1px solid rgba(77, 238, 234, .37);
+  border-radius: 4px;
+  background: rgba(4, 25, 39, .65);
+  font-family: 'Orbitron', sans-serif;
+  font-size: .76rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-decoration: none;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: border-color .2s, background-color .2s, box-shadow .2s;
+  svg { width: 17px; height: 17px; transition: transform .2s; }
+  &:hover {
+    border-color: var(--clearneonBlue);
+    background: rgba(0, 166, 191, .23);
+    box-shadow: ${({ $neon }) => $neon ? '0 0 10px rgba(77, 238, 234, .2), inset 0 0 8px rgba(77, 238, 234, .06)' : 'none'};
+  }
+  &:hover svg { transform: translateX(-2px); }
+  :root[data-motion='reduced'] & { &, svg { transition: none; } &:hover svg { transform: none; } }
+`;
+
 export const RunStickyHeader = styled.div`
   position: sticky;
   top: calc(var(--main-header-height, 85px) + 18px);
@@ -172,7 +212,7 @@ export const RunConclusion = styled.div<{ $won: boolean }>`
     transition: background .2s, box-shadow .2s; }
   button:hover, button:focus-visible { background: rgba(36, 213, 157, .12);
     box-shadow: 0 0 12px rgba(36, 213, 157, .2); }
-  @media (prefers-reduced-motion: reduce) { animation: none; }
+  :root[data-motion='reduced'] & { animation: none; }
 `;
 
 export const RunHudMeta = styled.span`
@@ -183,7 +223,7 @@ export const RunHudMeta = styled.span`
 
 export const RunHudHeader = styled.header`
   display: grid;
-  grid-template-columns: minmax(180px, 270px) minmax(0, 1fr);
+  grid-template-columns: minmax(200px, 300px) minmax(0, 1fr);
   align-items: center;
   gap: clamp(16px, 3vw, 36px);
   padding: 13px 16px;
@@ -202,7 +242,7 @@ export const SnapshotHeader = styled.div`
   gap: 11px;
   min-width: 0;
   > div:last-child { min-width: 0; width: 100%; }
-  h1 { margin: 0; line-height: 1; min-width: 0; }
+  h1 { margin: 0; padding: 4px 2px; line-height: 1.2; min-width: 0; }
   p { margin: 3px 0 0; color: #a9c0cc; font-size: .76rem; }
 `;
 
@@ -215,7 +255,7 @@ const xpHudReveal = keyframes`
 export const RunXpLabel = styled.p<{ $pulse: boolean }>`
   font-variant-numeric: tabular-nums;
   ${({ $pulse }) => $pulse && css`animation: ${xpHudReveal} 1.8s ease-out both;`}
-  @media (prefers-reduced-motion: reduce) { animation: none; }
+  :root[data-motion='reduced'] & { animation: none; }
 `;
 
 const currencyHudReveal = keyframes`
@@ -227,7 +267,7 @@ export const RunCurrency = styled.p`
   margin: 2px 0 0; color: var(--clearneonYellow); font-size: .78rem;
   font-variant-numeric: tabular-nums; letter-spacing: .04em;
   animation: ${currencyHudReveal} 1.1s ease-out both;
-  @media (prefers-reduced-motion: reduce) { animation: none; }
+  :root[data-motion='reduced'] & { animation: none; }
 `;
 
 export const ResourceAndAttributes = styled.div`
@@ -436,7 +476,7 @@ export const ResourceFill = styled.span<{ $percent: number; $tone: 'life' | 'man
     protection: 'linear-gradient(90deg, var(--neonPurple), var(--clearneonPurple))',
   })[$tone]};
   transition: width .3s ease;
-  @media (prefers-reduced-motion: reduce) { transition: none; }
+  :root[data-motion='reduced'] & { transition: none; }
 `;
 
 export const RunRouteBusy = styled.div`
@@ -527,7 +567,7 @@ export const RunActionRail = styled.nav`
     button:active svg { opacity: .8; transform: scale(.9); }
     button > svg { font-size: 1.55rem; }
   }
-  @media (prefers-reduced-motion: reduce) {
+  :root[data-motion='reduced'] & {
     button[data-attention='true'] {
       animation: none;
       box-shadow: 0 0 16px 4px rgba(0, 187, 255, .5);

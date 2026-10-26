@@ -1,6 +1,8 @@
 import { useDispatch, useSelector } from 'react-redux';
 import { ContainerOptions, OptionButton } from './ThemeNeonButtons.style';
-import { BsLightningCharge, BsLightningChargeFill, BsLightbulbOffFill, BsLightbulbFill } from 'react-icons/bs';
+import { BsLightningCharge, BsLightningChargeFill, BsLightbulbOffFill, BsLightbulbFill, BsPlayCircle, BsPauseCircle, BsDisplay } from 'react-icons/bs';
+import { useMotionPreference } from '../../../hooks/useMotionPreference';
+import { setMotionPreference } from '../../../utils/motionPreference';
 
 interface RootState {
     themesReducer: {
@@ -12,6 +14,11 @@ interface RootState {
 export const ThemeNeonButtons = () => {
   const { theme, neon } = useSelector((state: RootState) => state.themesReducer);
   const dispatch = useDispatch();
+  const motion = useMotionPreference();
+  const nextMotion = motion === 'full' ? 'reduced' : motion === 'reduced' ? 'system' : 'full';
+  const motionLabels = { full: 'completas', reduced: 'reduzidas', system: 'seguir o dispositivo' };
+  const motionActions = { full: 'ativar animações completas', reduced: 'reduzir movimentos', system: 'seguir o dispositivo' };
+  const motionLabel = `Animações: ${motionLabels[motion]}. Clique para ${motionActions[nextMotion]}.`;
   
   const handleTheme = () => {
       dispatch({
@@ -29,6 +36,12 @@ export const ThemeNeonButtons = () => {
   
   return (
     <ContainerOptions>
+      <OptionButton type="button" theme={theme} neon={neon} onClick={() => setMotionPreference(nextMotion)}
+        title={motionLabel} aria-label={motionLabel}>
+        {motion === 'full' ? <BsPlayCircle className="icon iconMotion" />
+          : motion === 'reduced' ? <BsPauseCircle className="icon iconMotion" />
+            : <BsDisplay className="icon iconMotion" />}
+      </OptionButton>
       <OptionButton theme={theme} neon={neon} onClick={handleNeon}>
         {neon === "off" && (<BsLightningCharge className="icon iconOff" />)}
         {neon === "on" && (<BsLightningChargeFill className="icon iconOn" />)}

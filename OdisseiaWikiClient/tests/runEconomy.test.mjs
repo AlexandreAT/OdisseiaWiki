@@ -76,6 +76,18 @@ test('Base final mantém depósito ao encerrar a run e ignora o início automát
   assert.equal(canAccessRunStash(run), false);
 });
 
+test('NPC Mercador só libera depósito depois de uma visita de serviço, não no resgate', () => {
+  const run = { status: 'Ativa', noAtualId: null, mapa: { nodes: [
+    { id: 'npc', type: 'NPC', state: 'CONCLUIDO', layer: 1,
+      payload: { npcType: 'MERCADOR', npcRescued: true, npcServiceVisited: false } },
+  ] } };
+  assert.equal(canAccessRunStash(run), false);
+  run.mapa.nodes[0].payload.npcServiceVisited = true;
+  assert.equal(canAccessRunStash(run), true);
+  run.mapa.nodes[0].payload.npcType = 'MEDICO';
+  assert.equal(canAccessRunStash(run), false);
+});
+
 test('loot final permite ação somente no item recebido e revelado, nunca reabre derrota/abandono', () => {
   const run = { status: 'Vitoria', estadoAtual: { loot: { roll: 2, rewards: [{ id: 'cura' }] } } };
   assert.equal(canManageRunItem(run, 'cura'), true);

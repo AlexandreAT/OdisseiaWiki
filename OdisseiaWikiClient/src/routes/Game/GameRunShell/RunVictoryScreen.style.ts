@@ -1,5 +1,7 @@
 import styled, { css, keyframes } from 'styled-components';
 import { cyberButtonsFillWidth, cyberButtonActionRow } from '../../../components/Generic/HighlightButton/HighlightButton.styles';
+import { HudFrame } from '../../../components/Generic/HudFrame/HudFrame';
+import { FallbackImage } from '../../../components/Generic/FallbackImage/FallbackImage';
 
 const reveal = keyframes`
   from { opacity: 0; transform: translateY(22px) scale(.98); }
@@ -35,7 +37,6 @@ export const VictoryPanel = styled.section<{ $neon: boolean }>`
   max-height: calc(100dvh - 32px);
   box-sizing: border-box;
   overscroll-behavior: contain;
-  padding: clamp(24px, 5vw, 52px);
   border: 1px solid var(--neonBlue);
   border-radius: 14px;
   color: #e9faff;
@@ -51,13 +52,19 @@ export const VictoryPanel = styled.section<{ $neon: boolean }>`
     background-size: 100% 220%;
     animation: ${scan} 7s linear infinite;
   }
+  :root[data-motion='reduced'] & {
+    &, &::before, * { animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+  }
+`;
+
+// The decoration follows the complete content, not the scroll viewport height.
+export const VictoryContent = styled.div`
+  position: relative;
+  padding: clamp(24px, 5vw, 52px);
   &::after {
     content: ''; position: absolute; inset: 7px; border: 1px solid rgba(95, 238, 255, .14);
     clip-path: polygon(0 0, 24% 0, 24% 2px, 76% 2px, 76% 0, 100% 0,
       100% 100%, 0 100%); pointer-events: none;
-  }
-  @media (prefers-reduced-motion: reduce) {
-    &, &::before, * { animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
   }
 `;
 
@@ -100,11 +107,58 @@ export const VictoryStat = styled.div<{ $index: number }>`
     color: var(--neonBlue); }
   span { display: block; margin-top: 4px; color: #bbd5dd; font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; }
 `;
-export const VictoryDetail = styled.div`
-  position: relative; z-index: 1; padding: 14px 17px; border-left: 2px solid var(--neonPurple);
-  background: rgba(119, 60, 176, .08); color: #c5dae2;
-  strong { display: block; color: #e7faff; margin-bottom: 5px; }
-  p { margin: 0; line-height: 1.5; }
+export const VictoryDetails = styled.div`
+  position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 16px;
+  @media (max-width: 700px) { grid-template-columns: minmax(0, 1fr); }
+`;
+export const VictoryDetail = styled(HudFrame)`
+  --victory-accent: ${({ color }) => color ?? 'var(--clearneonBlue)'};
+  padding: clamp(16px, 3vw, 22px); min-width: 0; color: #c5dae2;
+  animation: ${reveal} .55s ease-out backwards;
+  &:nth-child(2) { animation-delay: .12s; }
+  &:last-child { grid-column: 1 / -1; }
+  > header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+    color: var(--victory-accent); }
+  > header > svg { flex-shrink: 0; font-size: 1.35rem; }
+  h3 { margin: 0; font: 600 .85rem 'Orbitron', sans-serif; letter-spacing: .06em; line-height: 1.6; }
+  p { margin: 0; line-height: 1.6; font-size: .85rem; color: var(--lightGrey); }
+  .protected-note { margin-top: 14px; }
+`;
+export const VictoryEnemies = styled.ul`
+  list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr)); gap: 10px;
+  li { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 9px;
+    background: rgba(50, 111, 135, .08); border: 1px solid rgba(82, 196, 215, .14); }
+  strong { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: .9rem; font-weight: 600; color: #d9f4ff; }
+  small { flex-shrink: 0; color: var(--clearneonBlue); font: 600 .75rem 'Orbitron', sans-serif; }
+`;
+export const VictoryEnemyPortrait = styled(FallbackImage)`
+  flex: 0 0 38px; width: 38px; height: 38px; min-height: 0; border-radius: 50%;
+  border: 1px solid rgba(77, 238, 234, .45);
+  > svg { min-width: 16px; min-height: 16px; }
+`;
+export const VictoryEconomy = styled.dl`
+  display: grid; gap: 13px; margin: 0;
+  > div { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 14px;
+    padding-bottom: 12px; border-bottom: 1px solid rgba(255, 222, 0, .16); }
+  > div:last-child { border: 0; padding-bottom: 0; }
+  dt { font-size: .85rem; color: var(--lightGrey); }
+  dd { margin: 0; color: var(--clearneonYellow); font: 600 1.15rem 'Orbitron', sans-serif; }
+  dd small { color: var(--lightGrey); font: 400 .75rem 'Lato', sans-serif; margin-left: 4px; }
+`;
+export const VictoryProtectedItems = styled.ul`
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(min(210px, 100%), 1fr)); gap: 12px;
+  list-style: none; margin: 0; padding: 0;
+  li { min-width: 0; display: flex; align-items: center; gap: 12px; padding: 10px;
+    border: 1px solid rgba(214, 107, 255, .24); background: rgba(119, 60, 176, .08); }
+  li > div { min-width: 0; }
+  strong { display: block; overflow-wrap: anywhere; font-size: .92rem; color: #e7faff; line-height: 1.4; }
+  small { display: flex; align-items: center; gap: 4px; margin-top: 5px; color: var(--clearneonPurple); font-size: .75rem; }
+  small svg { font-size: .9rem; }
+`;
+export const VictoryItemPortrait = styled(FallbackImage)`
+  flex: 0 0 52px; width: 52px; height: 52px; min-height: 0;
+  border: 1px solid rgba(214, 107, 255, .35); border-radius: 3px;
 `;
 export const VictoryActions = styled.div`
   ${cyberButtonActionRow}

@@ -663,7 +663,7 @@ export const SpinIcon = styled.span`
     to { transform: rotate(360deg); }
   }
 
-  @media (prefers-reduced-motion: reduce) {
+  :root[data-motion='reduced'] & {
     animation: none;
   }
 `;

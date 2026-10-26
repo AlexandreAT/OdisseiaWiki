@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { BiX, BiChevronLeft, BiChevronRight } from 'react-icons/bi';
 import {
@@ -20,6 +20,7 @@ interface LightboxImageData {
 }
 
 interface LightboxProps {
+  variant?: 'gallery' | 'portrait';
   isOpen: boolean;
   onClose: () => void;
   images: LightboxImageData[];
@@ -29,6 +30,7 @@ interface LightboxProps {
 }
 
 export const Lightbox: React.FC<LightboxProps> = ({
+  variant = 'gallery',
   isOpen,
   onClose,
   images,
@@ -37,32 +39,41 @@ export const Lightbox: React.FC<LightboxProps> = ({
   onNext,
 }) => {
   const currentImage = images[selectedIndex];
+  const closeRef = useRef<HTMLButtonElement>(null);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopImmediatePropagation();
         onClose();
+      } else if (variant === 'portrait' && e.key === 'Tab') {
+        e.preventDefault();
+        closeRef.current?.focus();
       } else if (e.key === 'ArrowLeft' && onPrevious && selectedIndex > 0) {
         onPrevious();
       } else if (e.key === 'ArrowRight' && onNext && selectedIndex < images.length - 1) {
         onNext();
       }
     },
-    [onClose, onPrevious, onNext, selectedIndex, images.length]
+    [onClose, onPrevious, onNext, selectedIndex, images.length, variant]
   );
 
   useEffect(() => {
     if (!isOpen) return;
 
     const previousBodyOverflow = document.body.style.overflow;
-    document.addEventListener('keydown', handleKeyDown);
+    const previousFocus = document.activeElement;
+    if (variant === 'portrait') closeRef.current?.focus({ preventScroll: true });
+    document.addEventListener('keydown', handleKeyDown, true);
     document.body.style.overflow = 'hidden';
 
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keydown', handleKeyDown, true);
       document.body.style.overflow = previousBodyOverflow;
+      if (typeof HTMLElement !== 'undefined' && previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus({ preventScroll: true });
     };
-  }, [isOpen, handleKeyDown]);
+  }, [isOpen, handleKeyDown, variant]);
 
   if (!isOpen || !currentImage) return null;
 
@@ -74,8 +85,9 @@ export const Lightbox: React.FC<LightboxProps> = ({
     : currentImage.backgroundUrl || currentImage.url;
 
   return createPortal(
-    <LightboxOverlay $backgroundImage={backgroundImage} onClick={onClose}>
-      <LightboxCloseButton onClick={onClose} type="button" title="Fechar">
+    <LightboxOverlay $backgroundImage={backgroundImage} $portrait={variant === 'portrait'} onClick={onClose}
+      role="dialog" aria-modal="true" aria-label={currentImage.caption || 'Imagem ampliada'}>
+      <LightboxCloseButton ref={closeRef} onClick={onClose} type="button" title="Fechar" aria-label="Fechar imagem">
         <BiX />
       </LightboxCloseButton>
 
@@ -95,7 +107,7 @@ export const Lightbox: React.FC<LightboxProps> = ({
         </LightboxNavButton>
       )}
 
-      <LightboxContent onClick={e => e.stopPropagation()}>
+      <LightboxContent $portrait={variant === 'portrait'} onClick={e => e.stopPropagation()}>
         <LightboxTopBar>
           {!isSingle && (
             <LightboxCounter>
@@ -106,6 +118,7 @@ export const Lightbox: React.FC<LightboxProps> = ({
 
         {currentImage.url ? (
           <LightboxImage
+            $portrait={variant === 'portrait'}
             src={currentImage.url}
             alt={currentImage.caption || `Imagem ${selectedIndex + 1}`}
           />
@@ -114,7 +127,7 @@ export const Lightbox: React.FC<LightboxProps> = ({
         )}
 
         {currentImage.caption && (
-          <LightboxCaption>{currentImage.caption}</LightboxCaption>
+          <LightboxCaption $portrait={variant === 'portrait'}>{currentImage.caption}</LightboxCaption>
         )}
       </LightboxContent>
 

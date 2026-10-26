@@ -10,7 +10,7 @@ import { trackFieldHelpLabel } from './fieldHelpLabelLayout';
 
 const useBrowserLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
-export const FieldHelp = memo(({ label, help, helpKey, theme, neon, inline, presentation }: FieldHelpProps) => {
+export const FieldHelp = memo(({ label, help, helpKey, theme, neon, inline, presentation, size }: FieldHelpProps) => {
   const context = useFieldHelpContext();
   const content = useMemo(() => help ?? context?.resolve(helpKey ?? label), [help, context, helpKey, label]);
   const hasContent = Boolean(content);
@@ -70,7 +70,7 @@ export const FieldHelp = memo(({ label, help, helpKey, theme, neon, inline, pres
 
   if (!content) return null;
   return <HelpAnchor ref={anchor} $inline={inline} data-field-help={content.id}>
-    <HelpButton ref={button} role="button" tabIndex={0} $dark={dark} $neon={glowing} $inline={inline}
+    <HelpButton ref={button} role="button" tabIndex={0} $dark={dark} $neon={glowing} $inline={inline} $small={size === 'small'}
       aria-label={`Ajuda: ${label}`} aria-expanded={open} aria-haspopup="dialog" aria-controls={mounted ? id : undefined}
       onClick={(event) => { event.preventDefault(); event.stopPropagation(); setOpen((value) => !value); }}
       onKeyDown={(event) => {

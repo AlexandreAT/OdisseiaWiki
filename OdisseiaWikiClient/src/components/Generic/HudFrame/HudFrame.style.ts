@@ -60,7 +60,7 @@ export const Corner = styled.span<{
     return css`bottom: 1px; left: 1px;`;
   }}
 
-  @media (prefers-reduced-motion: reduce) {
+  :root[data-motion='reduced'] & {
     animation: none;
   }
 `;
@@ -100,7 +100,7 @@ export const AnimatedLine = styled.span<{
     `;
   }}
 
-  @media (prefers-reduced-motion: reduce) {
+  :root[data-motion='reduced'] & {
     animation: none;
     transform: none;
   }

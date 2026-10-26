@@ -22,7 +22,7 @@ public static class GameRunEconomy
         GameRunMapNodeDto? current = selectedNodeId is null
             ? map.Nodes.Where(node => node.State == "CONCLUIDO" && node.Type != "INICIO").MaxBy(node => node.Layer)
             : map.Nodes.SingleOrDefault(node => node.Id == selectedNodeId && node.State == "SELECIONADO");
-        return current?.Type is "BASE" or "VENDEDOR";
+        return current?.Type is "BASE" or "VENDEDOR" || current is { Type: "NPC", Payload.NpcType: "MERCADOR", Payload.NpcServiceVisited: true };
     }
 
     public static string Credit(string snapshot, int amount)

@@ -88,7 +88,7 @@ const BannerBackground = styled.div<Props>`
         animation: ${revealBannerImage} 1.5s cubic-bezier(0.22, 1, 0.36, 1) both;
     `}
 
-    @media (prefers-reduced-motion: reduce) {
+    :root[data-motion='reduced'] & {
         animation: none;
     }
 
@@ -138,7 +138,7 @@ const BannerContent = styled.div<Props>`
             : 'linear-gradient(90deg, rgba(238, 246, 244, 0.94) 0%, rgba(238, 246, 244, 0.82) 38%, rgba(238, 246, 244, 0.36) 74%, rgba(238, 246, 244, 0) 100%)'};
         pointer-events: none;
 
-        @media (prefers-reduced-motion: reduce) {
+        :root[data-motion='reduced'] & {
             animation: none;
             transform: scaleX(1);
         }
@@ -212,7 +212,7 @@ const BannerRevealItem = styled.div<{ $delay: number }>`
     animation: ${revealBannerText} 650ms cubic-bezier(0.22, 1, 0.36, 1)
         ${({ $delay }) => $delay}ms forwards;
 
-    @media (prefers-reduced-motion: reduce) {
+    :root[data-motion='reduced'] & {
         opacity: 1;
         animation: none;
     }

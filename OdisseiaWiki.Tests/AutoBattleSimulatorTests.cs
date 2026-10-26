@@ -247,6 +247,7 @@ public sealed class AutoBattleSimulatorTests
         { Effects = [new SistemaCondicaoEfeito("PERDER_TURNOS", "TURNO", 1, "AO_APLICAR")] };
         GameBattleActionSpec grenade = Action("granada", 0) with
         {
+            UsesUntilRest = 1,
             Conditions = [new GameBattleConditionApplication(stun, null, 2, "Turno", "AO_USAR", [])
             {
                 Target = "TODOS_INIMIGOS",
@@ -274,7 +275,7 @@ public sealed class AutoBattleSimulatorTests
             item.ActorId == "enemy" && ((TurnPassedPayload)item.Payload).Reason == "CONDITION");
         Assert.Contains(result.Events, item => item.Type == GameBattleEventTypes.ActionSelected &&
             item.ActorId == "enemy-2");
-        Assert.DoesNotContain(result.Events, item => item.Type == GameBattleEventTypes.ActionSelected &&
+        Assert.DoesNotContain(result.Events, item => item.Round == 1 && item.Type == GameBattleEventTypes.ActionSelected &&
             item.ActorId == "enemy");
     }
 
@@ -288,6 +289,7 @@ public sealed class AutoBattleSimulatorTests
             "", false, true, "DURACAO");
         GameBattleActionSpec grenade = Action("granada", 0) with
         {
+            UsesUntilRest = 1,
             Conditions = [new GameBattleConditionApplication(blindness, null, 2, "Turno", "AO_USAR", [])
             {
                 Target = "TODOS_INIMIGOS",
@@ -1146,8 +1148,12 @@ public sealed class AutoBattleSimulatorTests
 
         GameBattleResult result = _simulator.Simulate(input, new SequenceRandomSource(20));
 
-        Assert.Equal(2, result.Actors[1].Mana);
-        Assert.Equal(17, result.Actors[1].Stamina);
+        Assert.Equal(0, result.Actors[1].Mana);
+        Assert.Equal(14, result.Actors[1].Stamina);
+        Assert.Contains(result.Events, item => item.Payload is ResourceChangedPayload
+            { Resource: "mana", Before: 4, After: 2 } && item.ActorId == "enemy");
+        Assert.Contains(result.Events, item => item.Payload is ResourceChangedPayload
+            { Resource: "stamina", Before: 20, After: 17 } && item.ActorId == "enemy");
         Assert.Contains(result.Events, item => item.Type == GameBattleEventTypes.ResourceChanged &&
             item.ActorId == "enemy" && ((ResourceChangedPayload)item.Payload).Resource == "mana");
         Assert.Contains(result.Events, item => item.Type == GameBattleEventTypes.ResourceChanged &&
@@ -1330,17 +1336,17 @@ public sealed class AutoBattleSimulatorTests
         GameBattleResult eventLimit = _simulator.Simulate(input with { MaxEvents = 2 },
             new SequenceRandomSource(20));
 
-        Assert.Equal("enemy", noDamage.WinnerActorId);
+        Assert.Null(noDamage.WinnerActorId);
         Assert.Equal(GameBattleEndReason.NoDamage, noDamage.EndReason);
-        Assert.Equal(2, noDamage.RoundsCompleted);
+        Assert.Equal(2, noDamage.Events.Count(item => item.Type == GameBattleEventTypes.TurnStarted));
         Assert.Equal(GameBattleEndReason.EventLimit, eventLimit.EndReason);
-        Assert.Equal("enemy", eventLimit.WinnerActorId);
+        Assert.Null(eventLimit.WinnerActorId);
         Assert.Equal(new[] { GameBattleEventTypes.BattleStarted, GameBattleEventTypes.BattleEnded },
             eventLimit.Events.Select(item => item.Type));
     }
 
     [Fact]
-    public void ImpasseUsaVidaRestante()
+    public void ImpasseNaoInventaVencedorMesmoComDiferencaDeVida()
     {
         GameBattleInput input = Battle(
             Actor("hero", 21, Action("idle", 0)),
@@ -1349,7 +1355,7 @@ public sealed class AutoBattleSimulatorTests
 
         GameBattleResult result = _simulator.Simulate(input, new SequenceRandomSource(20));
 
-        Assert.Equal("hero", result.WinnerActorId);
+        Assert.Null(result.WinnerActorId);
         Assert.Equal(GameBattleEndReason.NoDamage, result.EndReason);
     }
 
@@ -1389,7 +1395,8 @@ public sealed class AutoBattleSimulatorTests
         };
         GameBattleResult blocked = _simulator.Simulate(blockedBothWays, new SequenceRandomSource(20));
         Assert.Equal(GameBattleEndReason.NoDamage, blocked.EndReason);
-        Assert.Equal(2, blocked.RoundsCompleted);
+        Assert.Equal(2, blocked.Events.Count(item => item.Type == GameBattleEventTypes.TurnStarted));
+        Assert.Null(blocked.WinnerActorId);
         Assert.Equal(20, blocked.Actors[0].HitPoints);
         Assert.Equal(20, blocked.Actors[1].HitPoints);
     }
@@ -1450,10 +1457,61 @@ public sealed class AutoBattleSimulatorTests
         GameBattleActorSpec first,
         GameBattleActorSpec second,
         int maxRounds = 20,
-        int maxRoundsWithoutDamage = 5,
+        int maxRoundsWithoutDamage = 10,
         IReadOnlyList<GameBattleDefenseKind>? defenseOrder = null) =>
         new(first, second, defenseOrder ?? Array.Empty<GameBattleDefenseKind>(),
-            MaxRounds: maxRounds, MaxRoundsWithoutDamage: Math.Min(maxRounds, maxRoundsWithoutDamage));
+            MaxRounds: maxRounds, MaxTurnsWithoutProgress: maxRoundsWithoutDamage);
+
+    [Fact]
+    public void TravaPadraoContaDezTurnosIndividuaisIncluindoMultiplosInimigos()
+    {
+        var input = new GameBattleInput(Actor("hero", 2750, Action("idle", 0)),
+            Actor("enemy", 220, Action("idle", 0)), [])
+        { AdditionalEnemies = [Actor("enemy2", 220, Action("idle", 0))] };
+        var result = _simulator.Simulate(input, new SequenceRandomSource(2));
+        Assert.Equal(GameBattleEndReason.NoDamage, result.EndReason);
+        Assert.Null(result.WinnerActorId);
+        Assert.Equal(10, result.Events.Count(item => item.Type == GameBattleEventTypes.TurnStarted));
+        Assert.All(result.Actors, actor => Assert.True(actor.HitPoints > 0));
+    }
+
+    [Fact]
+    public void ConsumoDeMunicaoERecargaMantemCombateAteAcertarAposDezTurnos()
+    {
+        var input = Battle(Actor("hero", 100, Action("shot", 100,
+            magazine: new GameBattleMagazineSpec(2, 2, 0) { UnlimitedReserve = true })),
+            Actor("enemy", 100, Action("idle", 0)));
+        var result = _simulator.Simulate(input, new SequenceRandomSource(
+            2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 20));
+        Assert.Equal(GameBattleEndReason.ActorDefeated, result.EndReason);
+        Assert.Equal("hero", result.WinnerActorId);
+        Assert.True(result.Events.Count(item => item.Type == GameBattleEventTypes.TurnStarted) > 10);
+        Assert.Contains(result.Events, item => item.Type == GameBattleEventTypes.ReloadPerformed);
+    }
+
+    [Fact]
+    public void DescansoQueRecuperaManaReiniciaTravaSemPrecisarCausarDano()
+    {
+        var hero = Actor("hero", 100, Action("spell", 100, manaCost: 1),
+            Action("fallback", 0), mana: 3) with { Rest = new GameBattleRestSpec(1, 0, 3, 0, false) };
+        var result = _simulator.Simulate(Battle(hero, Actor("enemy", 100, Action("idle", 0))),
+            new SequenceRandomSource(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 20));
+        Assert.Equal("hero", result.WinnerActorId);
+        Assert.Equal(GameBattleEndReason.ActorDefeated, result.EndReason);
+        Assert.Contains(result.Events, item => item.Payload is ResourceChangedPayload { Resource: "mana" } change && change.After > change.Before);
+        Assert.True(result.Events.Count(item => item.Type == GameBattleEventTypes.TurnStarted) > 10);
+    }
+
+    [Fact]
+    public void TurnosPerdidosTemporariamenteNaoSaoConfundidosComCombateTravado()
+    {
+        var hero = Actor("hero", 100, Action("strike", 100)) with { TurnsToSkip = 15 };
+        var result = _simulator.Simulate(Battle(hero, Actor("enemy", 100, Action("idle", 0))),
+            new SequenceRandomSource(20));
+        Assert.Equal("hero", result.WinnerActorId);
+        Assert.Equal(GameBattleEndReason.ActorDefeated, result.EndReason);
+        Assert.Equal(15, result.Events.Count(item => item.Type == GameBattleEventTypes.TurnPassed && item.ActorId == "hero"));
+    }
 
     private static GameBattleActorSpec Actor(
         string id,

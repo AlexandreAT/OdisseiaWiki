@@ -3,13 +3,15 @@ import { CyberButton } from '../Generic/HighlightButton/HighlightButton';
 import { WEAPON_MODIFIER_FIELDS } from '../../utils/weaponModifiers';
 import type { WeaponModifiersProps } from './WeaponModifiers.types';
 import { ModifierEntry, ModifierGrid, ModifierSection } from './WeaponModifiers.style';
+import { FieldHelp } from '../Generic/FieldHelp/FieldHelp';
+import { getWikiContentHelp } from '../../content/wikiContentHelp';
 
 export const WeaponModifiers = ({ value: source, onChange, mode, theme, neon }: WeaponModifiersProps) => {
   const value = source ?? {};
   return (
   <ModifierSection $theme={theme} $neon={neon}>
-    <h4>Modificadores</h4>
-    <p>Use valores positivos para bônus e negativos para penalidades. No gasto de estamina, um valor negativo reduz o custo.</p>
+    <h4>Modificadores <FieldHelp label="Modificadores" help={getWikiContentHelp('equipment', 'weaponModifiers')}
+      theme={theme} neon={neon} inline /></h4>
     <ModifierGrid>
       {WEAPON_MODIFIER_FIELDS.filter((field) => !mode || mode === 'todas' || field.mode === 'todas' || field.mode === mode).map(({ key, label }) => (
         <InputText key={key} label={`${label} (−/+)`} type="number" theme={theme} neon={neon} width="100%"

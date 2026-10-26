@@ -69,7 +69,7 @@ export const GameFrame = styled(HudFrame)`
     }
   `}
 
-  @media (prefers-reduced-motion: reduce) {
+  :root[data-motion='reduced'] & {
     animation: none;
     > span { animation: none; }
   }
@@ -122,6 +122,12 @@ export const GameNotice = styled.div<{ $danger?: boolean }>`
   background: ${({ $danger }) => $danger ? 'rgba(100, 20, 25, .25)' : 'rgba(0, 140, 160, .12)'};
   color: ${({ $danger }) => $danger ? '#ffd2d2' : '#d7f8f7'};
   line-height: 1.5;
+  &[data-npc-rescued='true'] {
+    border-color: var(--clearneonYellow);
+    color: var(--clearneonYellow);
+    animation: ${gameFrameReveal} 350ms ease-out both;
+  }
+  :root[data-motion='reduced'] & { &[data-npc-rescued='true'] { animation: none; } }
 `;
 
 export const GameTextLink = styled(Link)`

@@ -15,6 +15,35 @@ public sealed class GameRunEncountersController : ControllerBase
 
     public GameRunEncountersController(IGameRunEncounterService service) => _service = service;
 
+    [HttpPost("nodes/{noId}/npc")]
+    [RequestSizeLimit(32 * 1024)]
+    public async Task<IActionResult> VisitNpc(long idGameRun, string noId, GameRunMutationRequestDto request, CancellationToken token)
+    {
+        int? userId = User.GetUserId();
+        if (userId is null) return Unauthorized();
+        var result = await _service.VisitNpcAsync(idGameRun, noId, userId.Value, request, token);
+        return result.Sucesso ? Ok(result.Dados) : Failure(result.Codigo, result.Mensagem);
+    }
+
+    [HttpGet("stash/protected")]
+    public async Task<IActionResult> GetProtectedDeposit(long idGameRun, CancellationToken token)
+    {
+        int? userId = User.GetUserId();
+        if (userId is null) return Unauthorized();
+        var result = await _service.GetProtectedDepositAsync(idGameRun, userId.Value, token);
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    [HttpPost("stash/protected")]
+    [RequestSizeLimit(32 * 1024)]
+    public async Task<IActionResult> ChangeProtectedItem(long idGameRun, GameRunProtectedItemRequestDto request, CancellationToken token)
+    {
+        int? userId = User.GetUserId();
+        if (userId is null) return Unauthorized();
+        var result = await _service.ChangeProtectedItemAsync(idGameRun, userId.Value, request, token);
+        return result.Sucesso ? Ok(result.Dados) : Failure(result.Codigo, result.Mensagem);
+    }
+
     [HttpPost("nodes/{noId}/vendor")]
     public async Task<IActionResult> EnterVendor(long idGameRun, string noId,
         GameRunMutationRequestDto request, CancellationToken token)
@@ -32,6 +61,15 @@ public sealed class GameRunEncountersController : ControllerBase
         int? userId = User.GetUserId();
         if (userId is null) return Unauthorized();
         var result = await _service.BuyVendorItemAsync(idGameRun, userId.Value, request, token);
+        return result.Sucesso ? Ok(result.Dados) : Failure(result.Codigo, result.Mensagem);
+    }
+
+    [HttpPost("npc/upgrade")]
+    public async Task<IActionResult> UpgradeWeapon(long idGameRun, GameRunVendorPurchaseRequestDto request, CancellationToken token)
+    {
+        int? userId = User.GetUserId();
+        if (userId is null) return Unauthorized();
+        var result = await _service.UpgradeWeaponAsync(idGameRun, userId.Value, request, token);
         return result.Sucesso ? Ok(result.Dados) : Failure(result.Codigo, result.Mensagem);
     }
 

@@ -16,7 +16,7 @@ public sealed record GameBattleInput(
     IReadOnlyList<GameBattleDefenseKind> DefenseOrder,
     int MaxRounds = 20, // Retained for older callers; not a gameplay limit.
     int MaxEvents = 10000,
-    int MaxRoundsWithoutDamage = 5)
+    int MaxTurnsWithoutProgress = 10)
 {
     public IReadOnlyList<GameBattleActorSpec> AdditionalEnemies { get; init; } = [];
     public bool UseInitiative { get; init; }

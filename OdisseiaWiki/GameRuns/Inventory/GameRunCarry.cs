@@ -66,7 +66,7 @@ public static class GameRunCarry
             raw = JsonNode.Parse(json);
             root[property] = raw;
         }
-        JsonArray? entries = raw as JsonArray ?? new[] { "itens", "inventario", "items", "implantes", "proteses", "skills", "magias" }
+        JsonArray? entries = raw as JsonArray ?? new[] { "itens", "inventario", "items", "implantes", "proteses", "skills", "magia", "magias", "poderes" }
             .Select(key => (raw as JsonObject)?[key] as JsonArray).FirstOrDefault(array => array is not null);
         JsonObject item = entries?.OfType<JsonObject>().SingleOrDefault(candidate =>
             candidate["id"]?.ToString() == request.IdInstancia)
@@ -139,7 +139,8 @@ public static class GameRunCarry
             ?? throw new InvalidOperationException("O estado da run está inválido.");
         JsonObject resources = root["status"]?["status"]?.AsObject()
             ?? throw new InvalidOperationException("Os recursos da run estão inválidos.");
-        decimal weight = Weight(root["inventario"]);
+        GameRunProstheses.Reconcile(root, version);
+        decimal weight = Weight(root["inventario"]) + Weight(root["implantes"]);
         JsonNode? capacityValue = resources["capacidadeCarga"];
         decimal capacity = Number(capacityValue);
         bool carryLimit = SistemaRpgConfiguration.LerRegras<SistemaRpgConfiguration.RegrasExploracao>(
@@ -308,7 +309,8 @@ public static class GameRunCarry
         JsonArray? items = inventory as JsonArray ?? new[] { "itens", "inventario", "items" }
             .Select(key => (inventory as JsonObject)?[key] as JsonArray).FirstOrDefault(array => array is not null);
         JsonObject? item = items?.OfType<JsonObject>().FirstOrDefault(entry =>
-            entry["id"]?.ToString() == itemId);
+            entry["id"]?.ToString() == itemId) ?? GameRunInventory.ReadOrCreate(before, "implantes")
+            .OfType<JsonObject>().FirstOrDefault(entry => entry["id"]?.ToString() == itemId);
         if (item?["atributos"]?["condicoes"] is not JsonArray configured) return afterSnapshot;
         JsonObject after = JsonNode.Parse(afterSnapshot)?.AsObject()
             ?? throw new InvalidOperationException("O estado da run está inválido.");
@@ -544,7 +546,7 @@ public static class GameRunCarry
     {
         if (raw is JsonValue value && value.TryGetValue<string>(out string? serialized) &&
             !string.IsNullOrWhiteSpace(serialized)) raw = JsonNode.Parse(serialized);
-        JsonArray? items = raw as JsonArray ?? new[] { "itens", "inventario", "items" }
+        JsonArray? items = raw as JsonArray ?? new[] { "itens", "inventario", "items", "implantes", "proteses" }
             .Select(key => (raw as JsonObject)?[key] as JsonArray).FirstOrDefault(array => array is not null);
         return items?.OfType<JsonObject>().Sum(item =>
             Math.Max(0, Number(item["peso"])) * (item["quantidade"] is null

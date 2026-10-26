@@ -47,7 +47,7 @@ export const Title = styled.h1<{
       animation: ${theme === 'dark' ? neonBlinkBlue : neonBlinkPink} 12s infinite linear;
     `}
 
-    @media (prefers-reduced-motion: reduce) {
+    :root[data-motion='reduced'] & {
       animation: none;
     }
 

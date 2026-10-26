@@ -5,6 +5,7 @@ using OdisseiaWiki.Dtos;
 using OdisseiaWiki.Enums;
 using OdisseiaWiki.GameRuns;
 using OdisseiaWiki.GameRuns.Battle;
+using OdisseiaWiki.GameRuns.Inventory;
 using OdisseiaWiki.GameRuns.Map;
 using OdisseiaWiki.Models;
 using OdisseiaWiki.Repositories.Interfaces;
@@ -14,7 +15,7 @@ using Xunit;
 
 namespace OdisseiaWiki.Tests;
 
-public sealed class GameRunEncounterServiceTests
+public sealed partial class GameRunEncounterServiceTests
 {
     [Fact]
     public async Task LootDePublicacaoSemPrecoHerdaValorDoItemEVendeComDescontoSemMudarSnapshotInicial()
@@ -1305,6 +1306,78 @@ public sealed class GameRunEncounterServiceTests
         Assert.Single(repeated.Dados!.EstadoAtual.Loot!.Rewards);
         Assert.Equal("Espada", awarded.Dados.EstadoAtual.Inventario!.Value[0].GetProperty("nome").GetString());
         Assert.False((await fixture.Service.ClaimLootAsync(10, 5, Request(0), CancellationToken.None)).Sucesso);
+    }
+
+    [Theory]
+    [InlineData(GameBattleEndReason.NoDamage)]
+    [InlineData(GameBattleEndReason.EventLimit)]
+    public async Task CombateInconclusivoPreservaRunSemRecompensasEPermiteNovaTentativa(GameBattleEndReason reason)
+    {
+        Fixture fixture = new();
+        fixture.Run.GameModeVersion.ConfiguracaoJson = Fixture.BranchConfiguration.Replace(
+            "\"CACADOR\":{\"mapName\"", "\"CACADOR\":{\"xpReward\":7,\"currencyReward\":100,\"mapName\"", StringComparison.Ordinal);
+        fixture.Run.MapaJson = """{"schemaVersion":5,"nodes":[{"id":"inicio","type":"INICIO","state":"CONCLUIDO","connections":["cacador"]},{"id":"cacador","type":"COMBATE","state":"DISPONIVEL","layer":1,"payload":{"encounterCode":"CACADOR"}}]}""";
+        fixture.Run.EstadoAtualJson = GameRunCarry.Reconcile(fixture.Run.EstadoAtualJson, fixture.Version);
+        string before = fixture.Run.EstadoAtualJson;
+        string original = fixture.Run.SnapshotInicialJson;
+        var attempt = new GameBattleResult("player", reason, 5,
+        [new("player", "Ada", 1, 30, 0, 10, 0, 10, new GameBattleDefenses(), []),
+         new("enemy", "Caçador", 20, 20, 0, 0, 0, 0, new GameBattleDefenses(), [])],
+        [new(1, 1, 1, GameBattleEventTypes.ItemConsumed, "player", null, new ItemConsumedPayload("item:seringa", 0))]);
+        fixture.Simulator.Setup(item => item.Simulate(It.IsAny<GameBattleInput>(), It.IsAny<IDiceRandomSource>())).Returns(attempt);
+        Assert.True((await fixture.Service.SelectAsync(10, "cacador", 5, Request(0), default)).Sucesso);
+        var command = Request(1);
+        var result = await fixture.Service.ResolveAsync(10, 5, command, default);
+        Assert.True(result.Sucesso, result.Mensagem);
+        Assert.Null(result.Dados!.Battle.Resultado.WinnerActorId);
+        Assert.Equal(0, result.Dados.Battle.XpConcedido);
+        Assert.Equal(0, result.Dados.Battle.MoedaConcedida);
+        Assert.Empty(result.Dados.Battle.NiveisAlcancados);
+        Assert.Equal(GameRunStatus.Ativa, fixture.Run.Status);
+        Assert.Null(fixture.Run.EncerradaEmUtc);
+        Assert.Null(fixture.Run.NoAtualId);
+        Assert.Equal(before, fixture.Run.EstadoAtualJson);
+        Assert.Equal(original, fixture.Run.SnapshotInicialJson);
+        Assert.Equal("DISPONIVEL", GameRunFirstMap.Read(fixture.Run.MapaJson, new(JsonSerializerDefaults.Web)).Nodes.Single(node => node.Id == "cacador").State);
+        fixture.Repository.Verify(item => item.AddBattleAsync(It.IsAny<GameRunBattle>(), It.IsAny<CancellationToken>()), Times.Never);
+        fixture.Repository.Verify(item => item.AddCharacterMemoryAsync(It.IsAny<GameCharacterMemory>(), It.IsAny<CancellationToken>()), Times.Never);
+        Assert.True((await fixture.Service.ResolveAsync(10, 5, command, default)).Repetido);
+        Assert.Equal(2, fixture.Run.Revisao);
+        Assert.True((await fixture.Service.SelectAsync(10, "cacador", 5, Request(2), default)).Sucesso);
+        fixture.Simulator.Setup(item => item.Simulate(It.IsAny<GameBattleInput>(), It.IsAny<IDiceRandomSource>()))
+            .Returns(attempt with { EndReason = GameBattleEndReason.ActorDefeated, Events = [],
+                Actors = attempt.Actors.Select(actor => actor.Id == "enemy" ? actor with { HitPoints = 0 } : actor).ToArray() });
+        var victory = await fixture.Service.ResolveAsync(10, 5, Request(3), default);
+        Assert.True(victory.Sucesso, victory.Mensagem);
+        Assert.Equal(7, victory.Dados!.Battle.XpConcedido);
+        Assert.Equal(100, victory.Dados.Battle.MoedaConcedida);
+        fixture.Repository.Verify(item => item.AddBattleAsync(It.IsAny<GameRunBattle>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task VitoriaCongelaSomenteDepositoProtegidoParaResumoDeJornadasEncerradas()
+    {
+        Fixture fixture = new();
+        fixture.Run.IdPersonagemJogadorOrigem = 8;
+        fixture.Run.GameModeVersion.Codigo = "JOGO";
+        fixture.Run.GameModeVersion.ConfiguracaoJson = Fixture.BranchConfiguration;
+        fixture.Run.MapaJson = """{"schemaVersion":5,"nodes":[{"id":"inicio","type":"INICIO","state":"CONCLUIDO","connections":["cacador"]},{"id":"cacador","type":"COMBATE","state":"DISPONIVEL","layer":1,"payload":{"encounterCode":"CACADOR"}}]}""";
+        var state = new GameCharacterMilestones();
+        var item = JsonNode.Parse("""{"id":"seguro","nome":"Seringa","quantidade":3,"tipo":"consumiveis","atributos":{"restaura":{"vida":100}}} """)!.AsObject();
+        state.ProtectedItems.Add(new("JOGO", fixture.Version.IdSistemaRpg, "seguro", item, 7));
+        state.ProtectedItems.Add(new("OUTRO_JOGO", fixture.Version.IdSistemaRpg, "outro", item.DeepClone().AsObject(), 7));
+        var memory = new GameCharacterMemory { EstadoJson = state.Serialize() };
+        fixture.Repository.Setup(repo => repo.GetCharacterMemoryAsync(5, 8, It.IsAny<CancellationToken>())).ReturnsAsync(memory);
+        await fixture.Service.SelectAsync(10, "cacador", 5, Request(0), default);
+        Assert.True((await fixture.Service.ResolveAsync(10, 5, Request(1), default)).Sucesso);
+        Assert.Equal(GameRunStatus.Vitoria, fixture.Run.Status);
+        memory.EstadoJson = new GameCharacterMilestones().Serialize();
+        var recap = await fixture.Service.GetProtectedDepositAsync(10, 5, default);
+        var saved = Assert.Single(recap!.Items);
+        Assert.Equal("seguro", saved.ItemId);
+        Assert.Equal(3, saved.Snapshot["quantidade"]!.GetValue<int>());
+        Assert.Empty(GameCharacterMilestones.Read(memory.EstadoJson).ProtectedItems);
+        Assert.DoesNotContain("protectedDepositAtEnd", fixture.Run.SnapshotInicialJson);
     }
 
     private sealed class Fixture

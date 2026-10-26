@@ -45,6 +45,9 @@ import {
 import { TableHeading } from '../../../../../../components/CharacterExplodedView/CharacterExplodedView.style';
 //import OrcBack from '../../../../../../assets/racas/orc/OrcBackground.jpeg';
 
+import { WikiContentHelpProvider } from '../../../../../../components/Generic/FieldHelp/WikiContentHelpProvider';
+import { FieldHelp } from '../../../../../../components/Generic/FieldHelp/FieldHelp';
+
 interface FormProps {
   theme: 'dark' | 'light';
   neon: 'on' | 'off';
@@ -187,6 +190,7 @@ export const FormCharacter = ({ theme, neon, contentType, onSaveSuccess }: FormP
   
                 console.log("🚀 ~ FormCharacter ~ allPersonagens:", allPersonagens)
   return (
+    <WikiContentHelpProvider scope="character" theme={theme} neon={neon}>
     <FormController onSubmit={handleSubmit}>
       <CharacterStepDots
         theme={theme}
@@ -464,7 +468,7 @@ export const FormCharacter = ({ theme, neon, contentType, onSaveSuccess }: FormP
 
           {!variants.generico && <><SectionTable>
             <TableHeading>
-              <TableTitle>Inventário</TableTitle>
+              <TableTitle>Inventário <FieldHelp label="Inventário" inline /></TableTitle>
               <CharacterExplodedViewLauncher
                 tab="items"
                 label="itens"
@@ -492,7 +496,7 @@ export const FormCharacter = ({ theme, neon, contentType, onSaveSuccess }: FormP
 
           <SectionTable>
             <TableHeading>
-              <TableTitle>Próteses</TableTitle>
+              <TableTitle>Próteses <FieldHelp label="Próteses" inline /></TableTitle>
               <CharacterExplodedViewLauncher
                 tab="prostheses"
                 label="próteses"
@@ -520,7 +524,7 @@ export const FormCharacter = ({ theme, neon, contentType, onSaveSuccess }: FormP
 
           <SectionTable>
             <TableHeading>
-              <TableTitle>Magias</TableTitle>
+              <TableTitle>Magias <FieldHelp label="Magias" inline /></TableTitle>
               <CharacterExplodedViewLauncher
                 tab="spells"
                 label="magias"
@@ -541,7 +545,7 @@ export const FormCharacter = ({ theme, neon, contentType, onSaveSuccess }: FormP
 
           <SectionTable>
             <TableHeading>
-              <TableTitle>Skills</TableTitle>
+              <TableTitle>Skills <FieldHelp label="Skills" inline /></TableTitle>
               <CharacterExplodedViewLauncher
                 tab="skills"
                 label="skills"
@@ -632,7 +636,7 @@ export const FormCharacter = ({ theme, neon, contentType, onSaveSuccess }: FormP
               </LabelInfoBox>
               <LabelInfoBox theme={theme} neon={neon}>
                 <>
-                  <LabelStatus>Carga: </LabelStatus>
+                  <LabelStatus>Carga: <FieldHelp label="Carga" inline size="small" /></LabelStatus>
                   <MinimalInput
                     value={statusBasico.capacidadeCarga}
                     onChange={(e) =>
@@ -725,7 +729,7 @@ export const FormCharacter = ({ theme, neon, contentType, onSaveSuccess }: FormP
 
             <StatusContentCenter>
               <StatusDefesaController theme={theme} neon={neon}>
-                <LabelStatus>Defesas</LabelStatus>
+                <LabelStatus>Defesas <FieldHelp label="Defesas" inline size="small" /></LabelStatus>
                 <StatusDefesaDiv>
                   {Object.entries(defesas).map(([key, value]) => (
                     <AtributoDiv key={key}>
@@ -855,5 +859,6 @@ export const FormCharacter = ({ theme, neon, contentType, onSaveSuccess }: FormP
       />
 
     </FormController>
+    </WikiContentHelpProvider>
   );
 };

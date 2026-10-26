@@ -12,6 +12,7 @@ import type { DiceShakeSample } from './diceShake';
 import { getVisualDiceResults } from './diceResult';
 import { Dice, DiceFace, DiceMesh, DiceStage, DieStatus, MotionHint, Overlay, ResultStrip } from './DiceRollOverlay.style';
 import { useDiceShake } from './useDiceShake';
+import { isMotionReduced } from '../../../utils/motionPreference';
 
 export interface DiceRollOverlayProps {
   open: boolean;
@@ -333,7 +334,7 @@ export const DiceRollOverlay = ({ open, result, error, onClose, title = 'Rolagem
 
   useEffect(() => {
     if (!open || !visualDie || error) return undefined;
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reducedMotion = isMotionReduced();
     const arena = () => ({
       width: stageRef.current?.clientWidth ?? window.innerWidth,
       height: stageRef.current?.clientHeight ?? window.innerHeight,

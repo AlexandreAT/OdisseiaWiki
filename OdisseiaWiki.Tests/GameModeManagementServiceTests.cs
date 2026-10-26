@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Moq;
 using OdisseiaWiki.Dtos;
 using OdisseiaWiki.Enums;
@@ -13,6 +14,98 @@ namespace OdisseiaWiki.Tests;
 
 public sealed class GameModeManagementServiceTests
 {
+    [Theory]
+    [InlineData("Normal")]
+    [InlineData("Vantagem")]
+    [InlineData("Desvantagem")]
+    public async Task SabioSalvaEPublicaMagiasComModoFixoTextualEAtributoComoNoFormulario(string mode)
+    {
+        var draft = new GameModeVersion { IdGameModeVersion = 81, IdSistemaVersao = 7,
+            Status = GameModeVersionStatus.Rascunho, ConfiguracaoJson = "{}" };
+        var management = new Mock<IGameModeManagementRepository>();
+        management.Setup(repo => repo.GetDraftByIdAsync(81, It.IsAny<CancellationToken>())).ReturnsAsync(draft);
+        management.Setup(repo => repo.GetAttackOutcomeCodesAsync(7, It.IsAny<CancellationToken>())).ReturnsAsync(["ACERTO"]);
+        var systems = new Mock<ISistemaRpgRepository>();
+        systems.Setup(repo => repo.GetVersionAsync(7, true, false)).ReturnsAsync(new SistemaVersao { IdSistemaVersao = 7,
+            SistemaRpg = new() { Codigo = "ODISSEIA" },
+            Atributos = [new() { CodigoAtributo = "SABEDORIA", Nome = "Sabedoria", Grupo = SistemaAtributoGrupo.Principal, Ativo = true }],
+            Condicoes = [new() { Codigo = "MARCA", Nome = "Marca", Tipo = "Fisico", OperacaoEfeito = "SUBTRAIR",
+                CodigoRecurso = "VIDA", ValorEfeito = 5, MomentoEfeito = "INICIO_TURNO", RegraRemocao = "DURACAO" }],
+            ResultadosDado = [new() { CodigoTeste = "ATAQUE_COMUM", Dado = "D20", QuantidadeDados = 1,
+                CodigoResultado = "ACERTO", ResultadoMinimo = 1, ResultadoMaximo = 20 }] });
+        var service = new GameModeManagementService(management.Object, new Mock<IGameRunRepository>().Object,
+            systems.Object, new GameplayActionResolver());
+        var spells = new[] { "Rajada de Fogo", "Flecha de Artemis", "Explosão de Raio", "Tiro Arcano", "Marca sem dano" }
+            .Select((name, index) => new GameModeVendorOfferDto { ItemId = $"magia-{index}", Snapshot = new() {
+                ["nome"] = name, ["tipo"] = "ataque", ["atributos"] = new JsonObject {
+                    ["dano"] = index == 4 ? 0 : 100, ["teste"] = new JsonObject { ["codigoTeste"] = "ATAQUE_COMUM",
+                        ["codigoAtributo"] = "SABEDORIA", ["grupoAtributo"] = "Principal", ["modo"] = mode,
+                        ["usaTotalParaFaixas"] = true },
+                    ["condicoes"] = index == 4
+                        ? JsonNode.Parse("""[{"codigo":"MARCA","gatilho":"ACERTO","duracao":3,"unidadeDuracao":"Turno"}]""") : new JsonArray() } } }).ToList();
+        var update = new GameModeEditorUpdateDto {
+            Areas = [new() { Code = "FINAL", Name = "Área final", UseBase = false, FinalOption = "ROTA:0", Options = [
+                new() { Type = "NPC", NpcType = "SABIO", NpcCode = "livinho", Label = "Livinho", Offers = spells }] }],
+            Encounters = new() { ["A"] = new() { MapName = "Lobo", Enemy = new() { Name = "Lobo", MaxVida = 10 },
+                DamageByResult = new() { ["ACERTO"] = 5 } } },
+            FallbackAction = new() { Name = "Reserva", BaseDamage = 1 },
+            PlayerDamageByResult = new() { ["ACERTO"] = new() { Multiplier = 1 } } };
+        var saved = await service.SaveDraftAsync(81, update, default);
+        Assert.True(saved.Sucesso, saved.Mensagem);
+        var published = await service.PublishAsync(81, default);
+        Assert.True(published.Sucesso, published.Mensagem);
+        Assert.Equal(GameModeVersionStatus.Publicado, draft.Status);
+        var stored = published.Dados!.Areas[0].Options[0].Offers;
+        Assert.Equal(5, stored.Count);
+        Assert.All(stored, offer => Assert.Equal(mode, offer.Snapshot!["atributos"]!["teste"]!["modo"]!.ToString()));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CatalogoListaTodasMagiasInvalidasComAreaSabioENomeSemSalvarParcialmente(bool publish)
+    {
+        var draft = new GameModeVersion { IdGameModeVersion = 81, IdSistemaVersao = 7,
+            Status = GameModeVersionStatus.Rascunho, ConfiguracaoJson = "{}" };
+        var management = new Mock<IGameModeManagementRepository>();
+        management.Setup(repo => repo.GetDraftByIdAsync(81, It.IsAny<CancellationToken>())).ReturnsAsync(draft);
+        management.Setup(repo => repo.GetAttackOutcomeCodesAsync(7, It.IsAny<CancellationToken>())).ReturnsAsync(["ACERTO"]);
+        var systems = new Mock<ISistemaRpgRepository>();
+        systems.Setup(repo => repo.GetVersionAsync(7, true, false)).ReturnsAsync(new SistemaVersao { IdSistemaVersao = 7,
+            ResultadosDado = [new() { CodigoTeste = "ATAQUE_COMUM", Dado = "D20", QuantidadeDados = 1,
+                CodigoResultado = "ACERTO", ResultadoMinimo = 1, ResultadoMaximo = 20 }] });
+        var service = new GameModeManagementService(management.Object, new Mock<IGameRunRepository>().Object,
+            systems.Object, new GameplayActionResolver());
+        GameModeVendorOfferDto Spell(string id, string name, string test, int damage) => new() { ItemId = id,
+            Snapshot = new() { ["nome"] = name, ["tipo"] = "ataque", ["atributos"] = new JsonObject {
+                ["dano"] = damage, ["teste"] = new JsonObject { ["codigoTeste"] = test, ["modo"] = "Normal", ["usaTotalParaFaixas"] = true } } } };
+        var update = new GameModeEditorUpdateDto {
+            Areas = [new() { Code = "FINAL", Name = "Área final", UseBase = false, FinalOption = "ROTA:0", Options = [
+                new() { Type = "NPC", NpcType = "SABIO", NpcCode = "livinho", Label = "Livinho", Offers = [
+                    Spell("valida", "Pulso válido", "ATAQUE_COMUM", 10),
+                    Spell("teste-invalido", "Chama quebrada", "INEXISTENTE", 50)] },
+                new() { Type = "NPC", NpcType = "SABIO", NpcCode = "oraculo", Label = "Oráculo", Offers = [
+                    Spell("sem-efeito", "Névoa vazia", "ATAQUE_COMUM", 0)] }] }],
+            Encounters = new() { ["A"] = new() { MapName = "Lobo", Enemy = new() { Name = "Lobo", MaxVida = 10 },
+                DamageByResult = new() { ["ACERTO"] = 5 } } },
+            FallbackAction = new() { Name = "Reserva", BaseDamage = 1 },
+            PlayerDamageByResult = new() { ["ACERTO"] = new() { Multiplier = 1 } } };
+        if (publish) draft.ConfiguracaoJson = JsonSerializer.Serialize(new { areas = update.Areas, encounters = update.Encounters,
+            previewFallbackAction = update.FallbackAction, previewPlayerDamageByResult = update.PlayerDamageByResult },
+            new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        string before = draft.ConfiguracaoJson;
+        var result = publish ? await service.PublishAsync(81, default) : await service.SaveDraftAsync(81, update, default);
+        Assert.False(result.Sucesso);
+        Assert.Equal("OFERTA_INVALIDA", result.Codigo);
+        Assert.Contains("Área final, rota 1 (Livinho), magia 2 (Chama quebrada)", result.Mensagem);
+        Assert.Contains("não existe na versão publicada", result.Mensagem);
+        Assert.Contains("Área final, rota 2 (Oráculo), magia 1 (Névoa vazia)", result.Mensagem);
+        Assert.DoesNotContain("Pulso válido", result.Mensagem);
+        Assert.Equal(before, draft.ConfiguracaoJson);
+        Assert.Equal(GameModeVersionStatus.Rascunho, draft.Status);
+        management.Verify(repo => repo.SaveAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     [Theory]
     [InlineData("ROTA:0")]
     [InlineData("ROTA:1")]
@@ -45,8 +138,18 @@ public sealed class GameModeManagementServiceTests
         };
         var saved = await service.SaveDraftAsync(81, update, default);
         Assert.True(saved.Sucesso, saved.Mensagem);
+        update.ProtectedDepositSlots = 4; update.ProtectedDepositCost = 25;
+        var configured = await service.SaveDraftAsync(81, update, default);
+        Assert.Equal(4, configured.Dados!.ProtectedDepositSlots);
+        Assert.Equal(25, configured.Dados.ProtectedDepositCost);
+        update.ProtectedDepositSlots = null; update.ProtectedDepositCost = null;
+        var olderClient = await service.SaveDraftAsync(81, update, default);
+        Assert.Equal(4, olderClient.Dados!.ProtectedDepositSlots);
+        Assert.Equal(25, olderClient.Dados.ProtectedDepositCost);
         var published = await service.PublishAsync(81, default);
         Assert.True(published.Sucesso, published.Mensagem);
+        Assert.Equal(4, published.Dados!.ProtectedDepositSlots);
+        Assert.Equal(25, published.Dados.ProtectedDepositCost);
         Assert.Equal(GameModeVersionStatus.Publicado, draft.Status);
         var maps = Enumerable.Range(1, 20).Select(seed => new GameRunMapGenerator().Create(seed, draft.ConfiguracaoJson)).ToArray();
         var vendors = maps.SelectMany(map => map.Nodes).Where(node => node.Type == "VENDEDOR").ToArray();
@@ -61,12 +164,15 @@ public sealed class GameModeManagementServiceTests
     }
 
     [Theory]
-    [InlineData(true, 3)]
-    [InlineData(true, 6)]
-    [InlineData(true, 9)]
-    [InlineData(true, 4)]
-    [InlineData(false, 3)]
-    public async Task VendedorCongelaCatalogoVisivelEIgnoraSnapshotEnviadoPeloCliente(bool visible, int offerCount)
+    [InlineData(true, 3, false)]
+    [InlineData(true, 6, false)]
+    [InlineData(true, 9, false)]
+    [InlineData(true, 4, false)]
+    [InlineData(false, 3, false)]
+    [InlineData(true, 3, true)]
+    [InlineData(true, 9, true)]
+    [InlineData(false, 3, true)]
+    public async Task VendedorCongelaCatalogoVisivelEIgnoraSnapshotEnviadoPeloCliente(bool visible, int offerCount, bool npc)
     {
         var draft = new GameModeVersion { IdGameModeVersion = 81, IdSistemaVersao = 7,
             Status = GameModeVersionStatus.Rascunho, ConfiguracaoJson = "{}" };
@@ -93,6 +199,11 @@ public sealed class GameModeManagementServiceTests
             PlayerDamageByResult = new() { ["ACERTO"] = new() { Multiplier = 1 } },
         };
 
+        if (npc)
+        {
+            var route = update.Areas[0].Options[0];
+            route.Type = "NPC"; route.NpcType = "MERCADOR"; route.NpcCode = "mercador"; route.NpcLocked = true;
+        }
         var result = await service.SaveDraftAsync(81, update, default);
         bool validCount = offerCount is 3 or 6 or 9;
         Assert.Equal(visible && validCount, result.Sucesso);
@@ -701,6 +812,40 @@ public sealed class GameModeManagementServiceTests
         Assert.Equal("blade", Assert.Single(enemy.Actions).IdInstancia);
         Assert.Equal("Guardião", enemy.Name);
         management.Verify(item => item.SaveAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Theory]
+    [InlineData(true, ItemTipo.Implante, true)]
+    [InlineData(false, ItemTipo.Implante, false)]
+    [InlineData(true, ItemTipo.Arma, false)]
+    public async Task EngenheiroCongelaSomenteProtesesVisiveisDaMesa(bool visible, ItemTipo itemType, bool accepted)
+    {
+        var draft = new GameModeVersion { IdGameModeVersion = 81, IdSistemaVersao = 7, IdMesa = 15,
+            Status = GameModeVersionStatus.Rascunho, ConfiguracaoJson = "{}" };
+        var management = new Mock<IGameModeManagementRepository>();
+        management.Setup(repo => repo.GetDraftByIdAsync(81, It.IsAny<CancellationToken>())).ReturnsAsync(draft);
+        management.Setup(repo => repo.GetAttackOutcomeCodesAsync(7, It.IsAny<CancellationToken>())).ReturnsAsync(["ACERTO"]);
+        management.Setup(repo => repo.GetLootItemsAsync(15, 7, It.IsAny<CancellationToken>())).ReturnsAsync([
+            new Item { Iditem = "protese", Nome = "Cópia da mesa", Tipo = itemType, Visivel = visible, AtributosJson = "{}", Valor = 75 }]);
+        var systems = new Mock<ISistemaRpgRepository>();
+        systems.Setup(repo => repo.GetVersionAsync(7, true, false)).ReturnsAsync(new SistemaVersao { IdSistemaVersao = 7 });
+        var service = new GameModeManagementService(management.Object, new Mock<IGameRunRepository>().Object, systems.Object, new GameplayActionResolver());
+        var update = new GameModeEditorUpdateDto { Areas = [new() { Code = "AREA", Name = "Oficina", UseBase = false, FinalOption = "ROTA:0",
+            Options = [new() { Type = "NPC", NpcType = "ENGENHEIRO", NpcCode = "engenheiro", Label = "Oficina", OfferCount = 3,
+                Upgrade = new() { Damage = 7, Price = 10, MaxUpgrades = 2 },
+                Offers = [new() { ItemId = "protese", Price = 25, Snapshot = new() { ["nome"] = "Falso", ["tipo"] = "implante" } }] }] }],
+            Encounters = new() { ["A"] = new() { MapName = "Lobo", Enemy = new() { Name = "Lobo", MaxVida = 10 },
+                DamageByResult = new() { ["ACERTO"] = 5 } } },
+            FallbackAction = new() { Name = "Reserva", BaseDamage = 1 }, PlayerDamageByResult = new() { ["ACERTO"] = new() { Multiplier = 1 } } };
+        var result = await service.SaveDraftAsync(81, update, default, 15);
+        Assert.True(result.Sucesso == accepted, result.Mensagem);
+        if (accepted)
+        {
+            var offer = Assert.Single(result.Dados!.Areas[0].Options[0].Offers);
+            Assert.Equal("Cópia da mesa", offer.Snapshot!["nome"]!.ToString());
+            Assert.Equal(25, offer.Price);
+        }
+        else Assert.Equal("{}", draft.ConfiguracaoJson);
     }
 
     private static GameBattleEncounterConfig Encounter(string name) => new()
