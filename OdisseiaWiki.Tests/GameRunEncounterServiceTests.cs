@@ -14,7 +14,7 @@ using Xunit;
 
 namespace OdisseiaWiki.Tests;
 
-public sealed class GameRunEncounterServiceTests
+public sealed partial class GameRunEncounterServiceTests
 {
     [Fact]
     public async Task LootDePublicacaoSemPrecoHerdaValorDoItemEVendeComDescontoSemMudarSnapshotInicial()

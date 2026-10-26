@@ -10,7 +10,15 @@ public sealed class GameModeVendorOfferDto
     public int Price { get; set; }
     public int Stock { get; set; } = 1;
     public int Weight { get; set; } = 1;
+    public int MinLevel { get; set; } = 1;
     public System.Text.Json.Nodes.JsonObject? Snapshot { get; set; }
+}
+
+public sealed class GameModeEngineerUpgradeDto
+{
+    public int Damage { get; set; }
+    public int Price { get; set; }
+    public int MaxUpgrades { get; set; }
 }
 
 public sealed class GameModePowerOptionDto
@@ -42,6 +50,9 @@ public sealed class GameModeAreaDto
 
 public sealed class GameModeAreaOptionDto
 {
+    public string? NpcCode { get; set; }
+    public string? NpcType { get; set; }
+    public bool NpcLocked { get; set; }
     public string Type { get; set; } = "COMBATE";
     public string? EncounterCode { get; set; }
     public List<string> EncounterCodes { get; set; } = [];
@@ -54,6 +65,7 @@ public sealed class GameModeAreaOptionDto
     public int GameMinutes { get; set; }
     public List<GameModeVendorOfferDto> Offers { get; set; } = [];
     public int OfferCount { get; set; } = 3;
+    public GameModeEngineerUpgradeDto? Upgrade { get; set; }
 }
 
 public sealed class GameModeEditorDto
@@ -75,6 +87,8 @@ public sealed class GameModeEditorDto
     public int SaleDiscountPercent { get; init; }
     public int StartingCurrency { get; init; }
     public bool RepairProtectionAtBase { get; init; } = true;
+    public int ProtectedDepositSlots { get; init; }
+    public int ProtectedDepositCost { get; init; }
     public List<GameModePowerOptionDto> PowerCatalog { get; init; } = [];
     public IReadOnlyList<string> AttackOutcomeCodes { get; init; } = [];
 }
@@ -100,6 +114,9 @@ public sealed class GameModeEditorUpdateDto
     public int SaleDiscountPercent { get; set; }
     public int StartingCurrency { get; set; }
     public bool RepairProtectionAtBase { get; set; } = true;
+    // Omitted by an older editor: preserve the draft's existing settings.
+    public int? ProtectedDepositSlots { get; set; }
+    public int? ProtectedDepositCost { get; set; }
     // Null preserves a catalog when an older client saves the rest of a draft.
     public List<GameModePowerOptionDto>? PowerCatalog { get; set; }
 }

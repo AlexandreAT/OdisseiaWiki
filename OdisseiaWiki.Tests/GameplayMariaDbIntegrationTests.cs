@@ -27,7 +27,7 @@ namespace OdisseiaWiki.Tests;
 /// Set RUN_GAMEPLAY_MARIADB_TESTS=1 and ODISSEIA_TEST_MYSQL_CONNECTION to an
 /// administrative connection string for a disposable test server to execute.
 /// </summary>
-public sealed class GameplayMariaDbIntegrationTests
+public sealed partial class GameplayMariaDbIntegrationTests
 {
     [Fact]
     public async Task GameCharacterMemory_PersistsBetweenContextsIsOwnedAndCascadesOnCharacterDeletion()

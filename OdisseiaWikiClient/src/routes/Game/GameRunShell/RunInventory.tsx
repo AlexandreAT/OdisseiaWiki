@@ -211,12 +211,13 @@ export const RunInventory = ({ run, theme, neon, saving, busy, error, onSave, on
             dropButton={selectedEntry.tipo === 'ITEM' && !dropPending ? <CyberButton theme={theme} neon={neon}
               colorType="secondary" width="calc(100% - 15px)" height="40px" text="Deixar item"
               disabled={!canDrop} onClick={() => setDropPending(true)} /> : undefined} />
-          {selectedEntry.tipo === 'ITEM' && (selectedEntry.subtype === 'traje' || selectedEntry.subtype === 'outro') &&
-            Object.values(selectedEntry.defense).some((value) => value > 0) &&
+          {(selectedEntry.tipo === 'PROTESE' || selectedEntry.tipo === 'ITEM' && (selectedEntry.subtype === 'traje' || selectedEntry.subtype === 'outro') &&
+            Object.values(selectedEntry.defense).some((value) => value > 0)) &&
             <LoadoutItemActions><CyberButton theme={theme} neon={neon}
               colorType={selectedEntry.defenseEquipped ? 'secondary' : 'primary'}
               width="calc(100% - 15px)" height="40px"
-              text={selectedEntry.defenseEquipped ? 'Retirar defesa' : 'Equipar defesa'}
+              text={selectedEntry.tipo === 'PROTESE' ? selectedEntry.defenseEquipped ? 'Retirar prótese' : 'Instalar prótese'
+                : selectedEntry.defenseEquipped ? 'Retirar defesa' : 'Equipar defesa'}
               disabled={!canConsume || changed || usingItemId === selectedEntry.idInstancia}
               loading={usingItemId === selectedEntry.idInstancia}
               onClick={() => void onEquipDefense(selectedEntry.idInstancia, !selectedEntry.defenseEquipped)

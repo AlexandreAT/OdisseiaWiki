@@ -39,7 +39,7 @@ public static class GameModeRouteValidation
             if (option.Image?.Length > 500)
                 return $"{route}: envie a imagem novamente; o endereço deve ter no máximo 500 caracteres.";
             if (option.Type is not ("COMBATE" or "ELITE" or "BOSS" or "EVENTO" or "DESCANSO" or
-                "ATALHO" or "CACADA" or "AREA_SECRETA" or "VENDEDOR"))
+                "ATALHO" or "CACADA" or "AREA_SECRETA" or "VENDEDOR" or "NPC"))
                 return $"{route}: selecione um tipo de rota válido.";
             if (option.Type is "COMBATE" or "ELITE" or "BOSS")
                 continue;
@@ -55,7 +55,20 @@ public static class GameModeRouteValidation
                 if (option.EncounterCodes.Distinct(StringComparer.Ordinal).Count() != option.EncounterCodes.Count)
                     return $"{route}: a caçada contém encontros repetidos; selecione-os novamente.";
             }
-            if (option.Type != "VENDEDOR") continue;
+            if (option.Type == "NPC" && (string.IsNullOrWhiteSpace(option.NpcCode) || option.NpcCode.Length > 80 ||
+                option.NpcType is not ("MERCADOR" or "MEDICO" or "SABIO" or "ENGENHEIRO")))
+                return $"{route}: selecione um serviço e mantenha um código de NPC válido.";
+            if (option.Type == "NPC" && option.NpcType == "ENGENHEIRO")
+            {
+                if (option.Offers is null) return $"{route}: configure um catálogo válido de próteses.";
+                var upgrade = option.Upgrade;
+                if (upgrade is not null && (upgrade.Damage is < 0 or > 1000000 ||
+                    upgrade.Price is < 0 or > 1000000000 || upgrade.MaxUpgrades is < 0 or > 100 ||
+                    (upgrade.Damage == 0) != (upgrade.MaxUpgrades == 0)))
+                    return $"{route}: configure dano e limite de melhorias juntos, ou deixe ambos em zero.";
+                if (option.Offers.Count == 0 && upgrade is { Damage: > 0, MaxUpgrades: > 0 }) continue;
+            }
+            if (!GameRunNpcs.HasCatalog(option)) continue;
             if (option.OfferCount is not (3 or 6 or 9))
                 return $"{route}: escolha 3, 6 ou 9 ofertas por visita para o mercador.";
             if (option.Offers is null or { Count: < 1 or > 30 })
@@ -64,7 +77,7 @@ public static class GameModeRouteValidation
             {
                 GameModeVendorOfferDto? offer = option.Offers[offerIndex];
                 string field = $"{route}, oferta {offerIndex + 1}";
-                if (offer is null || string.IsNullOrWhiteSpace(offer.ItemId))
+                if (offer is null || string.IsNullOrWhiteSpace(offer.ItemId) || offer.ItemId.Length > 100)
                     return $"{field}: selecione um item para venda.";
                 if (offer.Price is < 0 or > 1000000000)
                     return $"{field}: o preço deve ficar entre 0 e 1.000.000.000.";
@@ -72,6 +85,10 @@ public static class GameModeRouteValidation
                     return $"{field}: o estoque deve ficar entre 1 e 999.";
                 if (offer.Weight is < 1 or > 1000000)
                     return $"{field}: o peso no sorteio deve ficar entre 1 e 1.000.000.";
+                if (offer.MinLevel is < 1 or > 100000)
+                    return $"{field}: use um nível mínimo de 1 a 100.000.";
+                if (option.Type == "NPC" && option.NpcType == "SABIO" && (offer.Stock != 1 || offer.Snapshot is null))
+                    return $"{field}: crie uma magia com uma vaga de aprendizado por visita.";
             }
             if (option.Offers.Select(offer => offer.ItemId).Distinct().Count() != option.Offers.Count)
                 return $"{route}: não repita o mesmo item no catálogo; ajuste o estoque da oferta existente.";

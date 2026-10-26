@@ -5,6 +5,8 @@ import type { CropPreset } from '../../../components/Generic/ImageUploader/types
 import { InputText } from '../../../components/Generic/InputText/InputText';
 import { Select } from '../../../components/Generic/Select/Select';
 import { TextArea } from '../../../components/Generic/TextArea/TextArea';
+import { HelpHeading } from '../../../components/Generic/HelpHeading/HelpHeading';
+import { gameConfigurationHelp as help } from '../../../content/gameConfigurationHelp';
 import type { GameModePowerOption } from '../../../models/GameModeManagement';
 import { normalizeImagePath } from '../../Wiki/utils/imagePathHelper';
 import {
@@ -29,8 +31,8 @@ interface Props {
 
 export const ManagementGamePowers = ({ theme, neon, editable, powers,
   onAdd, onUpdate, onRemove, onUpload }: Props) => <GameAdminSection>
-  <h2>Skills e ultimates</h2>
-  <GameAdminHint>Cadastre opções pré-feitas para uma futura escolha ao evoluir. Por enquanto elas são apenas conteúdo: não gastam pontos, não aparecem para o jogador e não executam efeitos no combate.</GameAdminHint>
+  <HelpHeading label="Skills e ultimates" level="h3" help={help.futurePowers} theme={theme} neon={neon} />
+  <GameAdminHint>Catálogo futuro: ainda não disponível para aprender ou usar no combate.</GameAdminHint>
   {editable && <GameAdminActions>
     <CyberButton theme={theme} neon={neon} text="Adicionar skill" width="180px"
       disabled={powers.length >= 40} onClick={() => onAdd('SKILL')} />
@@ -50,7 +52,7 @@ export const ManagementGamePowers = ({ theme, neon, editable, powers,
         value={power.type} disabled={!editable}
         options={[{ value: 'SKILL', label: 'Skill' }, { value: 'ULTIMATE', label: 'Ultimate' }]}
         onChange={(event) => onUpdate(power.id, { type: event.target.value as GameModePowerOption['type'] })} />
-      <InputText theme={theme} neon={neon} label="Nível mínimo futuro" width="100%" type="number"
+      <InputText theme={theme} neon={neon} label="Nível mínimo futuro" width="100%" type="number" help={help.powerLevel}
         value={power.minLevel} disabled={!editable}
         onChange={(event) => onUpdate(power.id, { minLevel: Number(event.target.value) })} />
       <InputText theme={theme} neon={neon} label="Nome" width="100%" value={power.name}
@@ -62,7 +64,7 @@ export const ManagementGamePowers = ({ theme, neon, editable, powers,
         : <GameAdminPowerCopy><small>Apresentação</small><p>{power.description || 'Não informada.'}</p></GameAdminPowerCopy>}
     </GameAdminPowerDescription>
     <GameAdminPowerDescription>
-      {editable ? <TextArea theme={theme} neon={neon} label="Requisitos futuros (texto)"
+      {editable ? <TextArea theme={theme} neon={neon} label="Requisitos futuros (texto)" help={help.powerRequirements}
         value={power.requirements ?? ''} fullWidth rows={2}
         onChange={(event) => onUpdate(power.id, { requirements: event.target.value || null })} />
         : <GameAdminPowerCopy><small>Requisitos futuros</small><p>{power.requirements || 'Não informados.'}</p></GameAdminPowerCopy>}

@@ -10,6 +10,16 @@ const routeTravel = keyframes`
   to { stroke-dashoffset: 0; }
 `;
 
+const lockPulse = keyframes`
+  from { opacity: .75; filter: drop-shadow(0 0 1px rgba(255, 220, 70, .2)); }
+  to { opacity: 1; filter: drop-shadow(0 0 3px rgba(255, 220, 70, .45)); }
+`;
+
+const rescueHintReveal = keyframes`
+  from { opacity: 0; }
+  to { opacity: 1; }
+`;
+
 export const MapWrap = styled.div`
   position: relative;
   display: grid;
@@ -76,6 +86,20 @@ export const MapDrawing = styled.svg<{ $neon: boolean }>`
     stroke: var(--deepgray);
   }
   .node-portrait { fill: #071a2c; }
+  .npc-lock-frame { fill: rgba(4, 22, 42, .94); stroke: var(--clearneonBlue); stroke-width: 1; }
+  .npc-lock-trace { fill: none; stroke: var(--clearneonYellow); stroke-width: .8; stroke-linecap: round; opacity: .65; }
+  .npc-lock-icon { fill: none; stroke: var(--clearneonYellow); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+  .npc-rescue-hint rect { fill: rgba(1, 10, 24, .98); stroke: var(--clearneonBlue); stroke-width: .7; }
+  .npc-rescue-hint text { font: 12px 'Lato', sans-serif; fill: var(--whitesmoke); }
+  .npc-rescue-hint { animation: ${rescueHintReveal} 140ms ease-out both; }
+  ${({ $neon }) => $neon && css`
+    .npc-lock-frame { filter: drop-shadow(0 0 2px rgba(77, 238, 234, .25)); }
+    .npc-lock-icon { animation: ${lockPulse} 2.6s ease-in-out infinite alternate; }
+  `}
+  @media (prefers-reduced-motion: reduce) {
+    .npc-lock-icon { animation: none; filter: none; }
+    .npc-rescue-hint { animation: none; }
+  }
   .node-portrait-border { fill: none; stroke: var(--neonBlue); stroke-width: 2; transition: stroke 180ms ease; }
   g[data-state='DISPONIVEL'] .node-portrait-border,
   g[data-state='SELECIONADO'] .node-portrait-border { stroke: var(--clearneonBlue); }

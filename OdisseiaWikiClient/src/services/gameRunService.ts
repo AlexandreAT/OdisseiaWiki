@@ -22,6 +22,19 @@ import type { GameAdventure } from '../models/GameModeManagement';
 
 const basePath = '/game-runs';
 
+export const upgradeGameRunWeapon = async (id: number, payload: GameRunMutationRequest & { itemId: string }): Promise<GameRunDto> =>
+  (await api.post<GameRunDto>(`${basePath}/${id}/npc/upgrade`, payload)).data;
+
+export const visitGameRunNpc = async (id: number, nodeId: string, payload: GameRunMutationRequest) =>
+  (await api.post<GameRunBaseResolution>(`${basePath}/${id}/nodes/${encodeURIComponent(nodeId)}/npc`, payload)).data;
+
+export const getGameRunProtectedDeposit = async (id: number, signal?: AbortSignal) =>
+  (await api.get<import('../models/GameRun').GameRunProtectedDeposit>(`${basePath}/${id}/stash/protected`, { signal })).data;
+
+export const changeGameRunProtectedItem = async (id: number, payload: GameRunMutationRequest & {
+  itemId: string; action: import('../models/GameRun').ProtectedDepositAction;
+}): Promise<GameRunDto> => (await api.post<GameRunDto>(`${basePath}/${id}/stash/protected`, payload)).data;
+
 export const enterGameRunVendor = async (id: number, nodeId: string, payload: GameRunMutationRequest): Promise<GameRunDto> =>
   (await api.post<GameRunDto>(`${basePath}/${id}/nodes/${encodeURIComponent(nodeId)}/vendor`, payload)).data;
 export const buyGameRunVendorItem = async (id: number, payload: GameRunMutationRequest & {

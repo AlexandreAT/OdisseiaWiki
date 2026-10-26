@@ -132,6 +132,12 @@ export const CombatantCard = styled.div<{ $enemy?: boolean; $result?: 'win' | 'l
     gap: 11px;
     margin-bottom: 10px;
   }
+  header > button {
+    display: flex; align-items: center; gap: inherit; width: 100%;
+    padding: 0; border: none; background: none; text-align: left; cursor: zoom-in;
+    &:disabled { cursor: default; }
+    &:focus-visible { outline: 1px solid var(--clearneonBlue); outline-offset: 4px; }
+  }
   header span {
     position: relative;
     flex: 0 0 46px;
@@ -211,12 +217,12 @@ export const CombatantDefenses = styled.div`
   display: flex;
   flex-wrap: wrap;
   gap: 8px 14px;
-  margin: 0 0 8px;
+  margin: 10px 0 4px;
   font-family: 'Orbitron', sans-serif;
-  font-size: .72rem;
+  font-size: .85rem;
   font-variant-numeric: tabular-nums;
-  > span { display: inline-flex; align-items: center; gap: 4px; }
-  svg { font-size: 1rem; }
+  > span { display: inline-flex; align-items: center; gap: 6px; line-height: 1.4; }
+  svg { font-size: 1.2rem; flex: none; }
   .armor { color: var(--clearneonYellow); }
   .shield { color: var(--clearneonPink); }
 `;

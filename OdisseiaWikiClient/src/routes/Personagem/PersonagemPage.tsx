@@ -1696,6 +1696,7 @@ const PersonagemPage: React.FC = () => {
 
         <Lightbox
           isOpen={mainImageOpen}
+          variant="portrait"
           images={!campoEstaOculto('imagem') && imagem ? [{
             url: normalizeImagePath(imagem),
             caption: nome,

@@ -4,9 +4,10 @@ import { parseRunInventoryEntries, parseRunStoredItems, stackRunConsumables, typ
 import { RUN_DEPOSIT_ENABLED } from '../runEconomy';
 
 export function useRunEconomyDialog(run: GameRunDto, vendor: boolean) {
-  const [tab, setCurrentTab] = useState<'offers' | 'stash' | 'inventory' | 'sell'>(vendor ? 'offers' : 'stash');
+  const [tab, setCurrentTab] = useState<'offers' | 'stash' | 'inventory' | 'sell' | 'protected'>(vendor ? 'offers' : 'stash');
   const [selected, setSelected] = useState<RunInventoryEntry | null>(null);
   const [saleQuantity, setSaleQuantity] = useState('1');
+  const [protectionNotice, setProtectionNotice] = useState<string | null>(null);
   const [saleFromStash, setSaleOrigin] = useState(false);
   const setSaleFromStash = (value: boolean) => { if (!value || RUN_DEPOSIT_ENABLED) setSaleOrigin(value); };
   const setTab = (value: typeof tab) => {
@@ -30,5 +31,6 @@ export function useRunEconomyDialog(run: GameRunDto, vendor: boolean) {
   const saleEntries = useMemo(() => stackRunConsumables(saleFromStash ? stash : inventory),
     [inventory, stash, saleFromStash]);
   return { node, tab, setTab, selected, setSelected, inventory, stash, offers,
+    protectionNotice, setProtectionNotice,
     saleEntries, selectSale, saleQuantity, setSaleQuantity, saleFromStash, setSaleFromStash };
 }

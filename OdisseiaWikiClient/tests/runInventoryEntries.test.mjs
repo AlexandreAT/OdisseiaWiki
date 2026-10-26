@@ -2,6 +2,20 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { parseRunInventoryEntries, stackRunConsumables } from '../src/routes/Game/GameRunShell/runInventoryEntries.ts';
 
+test('prótese conserva bônus, alcance, teste e defesa restante sem confundir com consumível', () => {
+  const [entry] = parseRunInventoryEntries({ implantes: [{ id: 'torso', nome: 'Torso', tipo: 'implante', atributos: {
+    bonus: { vida: 200, precisao: 2 }, protecaoBase: 300, escudoBase: 50, armaduraBase: 5,
+    __runDefenseRemaining: { protecao: 10, escudo: 0 }, __vistaExplodida: { equippedSlot: 'run-defense' },
+    tipoArma: 'rifle_assalto', danoPorAlcance: { curta: 80, media: 50, longa: 30 },
+    teste: { codigoTeste: 'ATAQUE_COMUM', modo: 'Normal' }, capacidadeMunicao: 10, controlaMunicao: true,
+  } }] }, 'PROTESE');
+  assert.equal(entry.ranged, true); assert.equal(entry.hasDeclaredTest, true);
+  assert.equal(entry.damageByRange.media, 50); assert.equal(entry.controlsAmmo, true);
+  assert.deepEqual(entry.passiveBonuses, { vida: 200, precisao: 2 });
+  assert.deepEqual(entry.defenseRemaining, { protecao: 10, escudo: 0 });
+  assert.equal(entry.defenseEquipped, true); assert.equal(stackRunConsumables([entry, entry]).length, 2);
+});
+
 test('magia ofensiva conserva dano para prévia do loadout', () => {
   const [magic] = parseRunInventoryEntries([
     { id: 'fogo-1', nome: 'Chama', tipo: 'ataque', custo: '2',
@@ -9,6 +23,15 @@ test('magia ofensiva conserva dano para prévia do loadout', () => {
   ], 'MAGIA');
   assert.equal(magic.damageByRange.base, 150);
   assert.equal(magic.maxAttacks, 1);
+});
+
+test('magia criada no Sábio respeita ataques por turno e custos sem herdar limites de arma', () => {
+  const [magic] = parseRunInventoryEntries([{ id: 'pulso', nome: 'Pulso', tipo: 'ataque', atributos: {
+    dano: 35, limiteAtaquesPorTurno: 3, custoMana: 2, custoEstamina: 4, cooldownTurnos: 2,
+    teste: { codigoTeste: 'ATAQUE_COMUM' } } }], 'MAGIA');
+  assert.equal(magic.maxAttacks, 3); assert.equal(magic.staminaPerUse, 4);
+  assert.equal(magic.manaPerUse, 2); assert.equal(magic.cooldownTurns, 2);
+  assert.equal(magic.quantityLimits[0].source, 'Item');
 });
 
 test('consumíveis iguais formam um card; armas mantêm cards separados', () => {

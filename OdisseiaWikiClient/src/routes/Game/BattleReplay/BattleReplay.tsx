@@ -7,6 +7,7 @@ import type { GameBattlePreview, GameBattlePreviewActor } from '../../../models/
 import { CyberButton } from '../../../components/Generic/HighlightButton/HighlightButton';
 import { GameNotice } from '../GameShared.style';
 import { normalizeImagePath } from '../../Wiki/utils/imagePathHelper';
+import { Lightbox } from '../../Wiki/components/blocks/shared/Lightbox/Lightbox';
 import { activeBattleActor, latestBattleImpact, visibleActorConditions, visibleActorDefense, visibleActorResource, type BattleBeat, type BattleResource } from './battlePresentation';
 import { useBattleReplay } from './useBattleReplay';
 import { InlineBattleDie } from './InlineBattleDie/InlineBattleDie';
@@ -225,7 +226,8 @@ const AnimatedShield = ({ value, speed }: { value: number; speed: 1 | 2 }) => {
   return <>{display}</>;
 };
 
-const Combatant = ({ preview, actor, eventCount, active, enemy, result, neon, fallbackImage, speed }: {
+const Combatant = ({ preview, actor, eventCount, active, enemy, result, neon, fallbackImage, speed, onInspect }: {
+  onInspect: (image: string, name: string) => void;
   preview: GameBattlePreview;
   actor: GameBattlePreviewActor;
   eventCount: number;
@@ -259,10 +261,11 @@ const Combatant = ({ preview, actor, eventCount, active, enemy, result, neon, fa
     return () => animation?.cancel();
   }, [visibleImpactSequence, speed]);
   return <CombatantCard ref={cardRef} $enemy={enemy} $result={result} $neon={neon} $active={active}>
-  <header><span aria-hidden="true">
+  <header><button type="button" disabled={!imageUrl || imageFailed} aria-label={`Ampliar imagem de ${actor.nome}`}
+    onClick={() => { if (imageUrl && !imageFailed) onInspect(imageUrl, actor.nome); }}><span aria-hidden="true">
     {actor.nome.slice(0, 1).toUpperCase()}
     {imageUrl && !imageFailed && <img src={imageUrl} alt="" onError={() => setImageFailed(true)} />}
-  </span><strong>{actor.nome}</strong></header>
+  </span><strong>{actor.nome}</strong></button></header>
   <CombatantResources>
     {actor.defesas.protection > 0 && <ResourceMeter label="Proteção" actor={actor}
       value={protection} max={actor.defesas.protection} tone="protection" enemy={enemy} speed={speed} />}
@@ -288,17 +291,24 @@ export const BattleReplay = ({ runId, theme, neon, savedBattle, playerImage, onC
   const state = useBattleReplay(runId, savedBattle);
   const { preview } = state;
   const completionNotified = useRef(false);
+  const [portrait, setPortrait] = useState<{ image: string; name: string } | null>(null);
+  const resumeAfterPortrait = useRef(false);
+  const inspect = (image: string, name: string) => {
+    resumeAfterPortrait.current = state.playing;
+    state.setPlaying(false);
+    setPortrait({ image, name });
+  };
 
   useEffect(() => { completionNotified.current = false; }, [savedBattle]);
 
   const complete = !!preview && state.eventCount === preview.resultado.events.length &&
     state.rollingSequence === null && state.revealHold === null;
   useEffect(() => {
-    if (savedBattle && complete && !completionNotified.current) {
+    if (savedBattle && complete && !portrait && !completionNotified.current) {
       completionNotified.current = true;
       onComplete?.(state.speed);
     }
-  }, [complete, onComplete, savedBattle, state.speed]);
+  }, [complete, onComplete, savedBattle, state.speed, portrait]);
 
   if (!preview) {
     return (
@@ -350,13 +360,15 @@ export const BattleReplay = ({ runId, theme, neon, savedBattle, playerImage, onC
         <Combatant preview={preview} actor={preview.personagem} eventCount={state.resolvedEventCount}
           active={!complete && activeActorId === preview.personagem.id}
           result={complete && winner ? winner === preview.personagem.id ? 'win' : 'loss' : undefined}
-          neon={neon === 'on'} fallbackImage={playerImage} speed={state.speed} />
+          neon={neon === 'on'} fallbackImage={playerImage} speed={state.speed} onInspect={inspect} />
         <Versus aria-hidden="true">VS</Versus>
         <EnemyGroup>{(preview.oponentes?.length ? preview.oponentes : [preview.oponente]).map((enemy) =>
           <Combatant key={enemy.id} preview={preview} actor={enemy}
             eventCount={state.resolvedEventCount} active={!complete && activeActorId === enemy.id}
-            enemy speed={state.speed} />)}</EnemyGroup>
+            enemy speed={state.speed} onInspect={inspect} />)}</EnemyGroup>
       </Combatants>
+      {portrait && <Lightbox variant="portrait" isOpen images={[{ url: portrait.image, caption: portrait.name, backgroundUrl: portrait.image }]}
+        onClose={() => { setPortrait(null); if (resumeAfterPortrait.current && !complete) state.setPlaying(true); }} />}
       {!complete && <CurrentEvent aria-live="polite"
         $criticalTone={state.rollingSequence === null && currentBeat?.action?.critical ? currentBeat.action.tone : undefined}>
         {recentBeats.length > 0 ? recentBeats.map((beat, index) => {

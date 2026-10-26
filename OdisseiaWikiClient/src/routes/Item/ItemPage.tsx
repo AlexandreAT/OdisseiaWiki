@@ -818,13 +818,13 @@ const ItemPage = () => {
                   ?? IMPLANT_BONUS_COMMON_FALLBACK[label]
                 : IMPLANT_BONUS_COMMON_FALLBACK[label];
               const runtimeReference = resolveMetricReference(
-                [`bonus.${label}`, `bonus${label}`, label],
+                [`bonus.${label}`, `bonus${label}`, String(label)],
                 IMPLANT_BONUS_SCALE[label],
                 fallbackReference,
               );
 
               return {
-                label: humanize(label) ?? label,
+                label: humanize(String(label)) ?? String(label),
                 value,
                 ...runtimeReference,
                 referenceDescription: runtimeReference.referenceDescription

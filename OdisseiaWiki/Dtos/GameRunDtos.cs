@@ -71,6 +71,16 @@ public sealed class GameRunStashTransferRequestDto : GameRunMutationRequestDto
     public bool ToStash { get; set; }
 }
 
+public sealed class GameRunProtectedItemRequestDto : GameRunMutationRequestDto
+{
+    [Required, MaxLength(100)] public string ItemId { get; set; } = string.Empty;
+    [Required, MaxLength(10)] public string Action { get; set; } = string.Empty;
+}
+
+public sealed record GameRunProtectedItemDto(string ItemId, int SystemVersionId, bool Compatible,
+    System.Text.Json.Nodes.JsonObject Snapshot);
+public sealed record GameRunProtectedDepositDto(int Slots, int Cost, IReadOnlyList<GameRunProtectedItemDto> Items);
+
 public sealed class GameRunVendorSaleLineDto
 {
     [Required, MaxLength(100)] public string ItemId { get; set; } = string.Empty;
@@ -109,6 +119,8 @@ public sealed class GameRunActionSelectionDto
 public sealed class GameRunLoadoutRequestDto : GameRunMutationRequestDto
 {
     public IReadOnlyList<GameRunActionSelectionDto>? Acoes { get; set; }
+    // Null keeps compatibility with clients that only edit actions.
+    public IReadOnlyList<string>? DefesasEquipadas { get; set; }
 }
 
 public sealed class GameRunConsumeItemRequestDto : GameRunMutationRequestDto
@@ -131,7 +143,7 @@ public sealed class GameRunConditionOriginRequestDto : GameRunMutationRequestDto
     [Required, MaxLength(80)] public string Codigo { get; set; } = string.Empty;
     [Required, MaxLength(30)] public string Gatilho { get; set; } = string.Empty;
     [MaxLength(80)] public string? CodigoResultado { get; set; }
-    [MaxLength(12)] public string Alvo { get; set; } = "ALVO";
+    [MaxLength(20)] public string Alvo { get; set; } = "ALVO";
     [Range(-1000000, 1000000)] public int? Valor { get; set; }
     public Dictionary<int, int> ValoresEfeitos { get; set; } = [];
     [Range(1, 1000000)] public int? Duracao { get; set; }
@@ -197,6 +209,12 @@ public sealed class GameRunMapNodeDto
 
 public sealed class GameRunMapNodePayloadDto
 {
+    public GameModeEngineerUpgradeDto? Upgrade { get; init; }
+    public string? NpcCode { get; init; }
+    public string? NpcType { get; init; }
+    public bool NpcLocked { get; init; }
+    public bool NpcRescued { get; set; }
+    public bool NpcServiceVisited { get; set; }
     public string? EncounterCode { get; init; }
     public string? SecretAreaCode { get; init; }
     public int GameMinutes { get; init; }

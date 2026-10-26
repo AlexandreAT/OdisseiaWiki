@@ -20,7 +20,7 @@ public static class GameRunInventory
         if (source is JsonObject wrapper)
         {
             string? listKey = wrapper.Select(entry => entry.Key).FirstOrDefault(candidate =>
-                new[] { "itens", "inventario", "items", "implantes", "proteses" }
+                new[] { "itens", "inventario", "items", "implantes", "proteses", "magia", "magias", "skills", "poderes" }
                     .Contains(candidate, StringComparer.OrdinalIgnoreCase));
             if (listKey is not null && wrapper[listKey] is JsonArray listed) return listed;
             wrapper[listKey ?? "itens"] = new JsonArray();

@@ -13,7 +13,7 @@ const bundle = await build({
     export * from './src/utils/systemItemFormCatalog';
     export * from './src/routes/Hub/UserCharacters/CharacterCreate/tableColumnsConfig';
     export { InputText } from './src/components/Generic/InputText/InputText';
-    export { ConditionEffectFieldsForTest } from './src/routes/Management/ManagementWiki/WikiForms/FormCriarConteúdo/FormCharacter/MapItensForm';
+    export { ConditionEffectFieldsForTest, ImplanteAtributosForm, TestSpecificationFields } from './src/routes/Management/ManagementWiki/WikiForms/FormCriarConteúdo/FormCharacter/MapItensForm';
     export { ServerStyleSheet } from 'styled-components';`, loader: 'ts', resolveDir: process.cwd() },
   plugins: [{ name: 'condition-editor-isolation', setup(builder) {
     builder.onResolve({ filter: /Generic\/Modal\/Modal$/ }, () => ({ path: 'Modal', namespace: 'test-modal' }));
@@ -45,6 +45,37 @@ after(() => { if (previousDocument === undefined) delete globalThis.document; el
 const base = { theme: 'dark', neon: 'off' };
 const text = node => typeof node === 'string' ? node : (node.children ?? []).map(text).join('');
 const button = (renderer, label) => renderer.root.findAllByType('button').find(node => text(node) === label);
+
+test('prótese reutiliza combate das armas sem perder bônus e mostra defesas antes da configuração', () => {
+  let renderer, current;
+  const catalog = api.buildSistemaItemFormCatalog('implante', {}, [], [
+    { codigoTeste: 'ATAQUE_COMUM', nomeTeste: 'Ataque comum', dado: 'D20', quantidadeDados: 1 }], [],
+    [{ codigo: 'PRECISAO', nome: 'Precisão', ativo: true }]);
+  function Form() {
+    const [value, setValue] = useState({ parteCorpo: 'braco', bonus: { vida: 200, precisao: 2 } });
+    current = value;
+    return React.createElement(api.ImplanteAtributosForm, { ...base, value, onChange: setValue,
+      managementLayout: true, sistemaItemCatalogo: catalog });
+  }
+  act(() => { renderer = create(React.createElement(Form)); });
+  const field = label => renderer.root.findAllByType(api.InputText).find(node => node.props.label === label);
+  assert.ok(field('Proteção')); assert.ok(field('Armadura')); assert.ok(field('Escudo'));
+  assert.ok(field('Bônus de Precisão')); assert.equal(field('Dano corpo a corpo'), undefined);
+  act(() => field('Proteção').props.onChange({ target: { value: '300' } }));
+  act(() => renderer.root.findByType(api.TestSpecificationFields).props.onChange({ codigoTeste: 'ATAQUE_COMUM', usaTotalParaFaixas: true }));
+  assert.ok(field('Dano corpo a corpo')); assert.ok(field('Dano Curto')); assert.ok(field('Dano Médio')); assert.ok(field('Dano Longo'));
+  assert.deepEqual(renderer.root.findByType(api.TestSpecificationFields).props.attributeOptions, catalog.attributeOptions);
+  act(() => field('Dano corpo a corpo').props.onChange({ target: { value: '80' } }));
+  assert.equal(current.danoBase, 80); assert.equal(current.protecaoBase, 300);
+  assert.deepEqual(current.bonus, { vida: 200, precisao: 2 });
+  assert.equal(current.parteCorpo, 'braco'); assert.equal(current.aplicaTeste, true);
+  const content = text(renderer.toJSON());
+  assert.ok(content.indexOf('Defesas') < content.indexOf('Configuração'));
+  act(() => renderer.root.findByType(api.TestSpecificationFields).props.onChange(undefined));
+  assert.equal(current.aplicaTeste, false); assert.equal(field('Dano corpo a corpo'), undefined);
+  assert.equal(current.danoBase, 80); assert.deepEqual(current.bonus, { vida: 200, precisao: 2 });
+  act(() => renderer.unmount());
+});
 
 test('CyberButton usa contorno SVG fechado e neon da mesma silhueta, sem diagonal sobreposta', () => {
   const sheet = new api.ServerStyleSheet();

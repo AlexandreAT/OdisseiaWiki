@@ -41,7 +41,7 @@ export function RunLootModal({ run, speed, theme, neon, onUpdate, onClose,
   ], [run.estadoAtual.inventario, run.estadoAtual.implantes]);
   const entriesById = useMemo(() => new Map(entries.map(entry => [entry.idInstancia, entry])), [entries]);
   const selectedEntry = selected ? entriesById.get(selected) : undefined;
-  const defensive = selectedEntry?.tipo === 'ITEM' && ['traje', 'outro'].includes(selectedEntry.subtype) &&
+  const defensive = selectedEntry?.tipo === 'PROTESE' || selectedEntry?.tipo === 'ITEM' && ['traje', 'outro'].includes(selectedEntry.subtype) &&
     Object.values(selectedEntry.defense).some(value => value > 0);
   const busy = actionBusy || Boolean(busyItemId);
   const canAct = Boolean(selectedEntry && !run.noAtualId && canManageRunItem(run, selectedEntry.idInstancia));
@@ -140,7 +140,8 @@ export function RunLootModal({ run, speed, theme, neon, onUpdate, onClose,
       {defensive && onEquipDefense && <LoadoutModalActions>
         <CyberButton theme={theme} neon={neon} width="100%" height="40px"
           colorType={selectedEntry.defenseEquipped ? 'secondary' : 'primary'}
-          text={selectedEntry.defenseEquipped ? 'Retirar defesa' : 'Equipar defesa'} loading={busy}
+          text={selectedEntry.tipo === 'PROTESE' ? selectedEntry.defenseEquipped ? 'Retirar prótese' : 'Instalar prótese'
+            : selectedEntry.defenseEquipped ? 'Retirar defesa' : 'Equipar defesa'} loading={busy}
           disabled={busy || !canAct} onClick={() => void actOnItem(async () => {
             const ok = await onEquipDefense(selectedEntry.idInstancia, !selectedEntry.defenseEquipped);
             return ok ? `${selectedEntry.name}: defesa ${selectedEntry.defenseEquipped ? 'retirada' : 'equipada'}.` : null;

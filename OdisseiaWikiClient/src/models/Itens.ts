@@ -247,7 +247,10 @@ export interface OutrosAtributos {
   recuperacaoEstamina?: number;
 }
 
-export interface ImplanteAtributos {
+export interface ImplanteAtributos extends Omit<Partial<ArmaAtributos>, 'bonus'> {
+  protecaoBase?: number;
+  armaduraBase?: number;
+  escudoBase?: number;
   aplicaTeste?: boolean;
   teste?: GameplayTestSpec;
   efeito?: string;
@@ -260,6 +263,7 @@ export interface ImplanteAtributos {
   slotsLacrima?: number;
   necessitaAmputacao?: boolean;
   bonus?: {
+    [codigo: string]: number | undefined;
     vida?: number;
     mana?: number;
     estamina?: number;

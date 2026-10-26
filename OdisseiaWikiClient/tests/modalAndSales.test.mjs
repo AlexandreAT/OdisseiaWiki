@@ -11,7 +11,11 @@ const bundle = await build({
     export * from './src/components/Generic/Modal/Modal.style';
     export * from './src/components/Gameplay/GameplayActionCenter.style';
     export * from './src/routes/Game/GameRunShell/RunEconomyDialog/RunEconomyDialog';
+    export * from './src/routes/Game/GameRunShell/RunNpcServiceDialog';
+    export * from './src/routes/Wiki/components/blocks/shared/Lightbox/Lightbox';
+    export * from './src/routes/Wiki/components/blocks/shared/Lightbox/Lightbox.style';
     export * from './src/routes/Game/GameRunShell/RunEconomyDialog/RunEconomyDialog.style';
+    export * from './src/routes/Game/GameRunShell/RunEconomyDialog/RunProtectedDeposit';
     export * from './src/routes/Game/GameRunShell/RunRewards.style';
     export {RunLootModal} from './src/routes/Game/GameRunShell/RunLootModal';
     export {LoadoutCard, LoadoutCardMedia} from './src/routes/Game/GameRunShell/RunLoadout.style';
@@ -23,7 +27,7 @@ const bundle = await build({
       contents: 'export const DiceRollOverlay=()=>null;' }));
     builder.onResolve({ filter: /\/services\/gameRunService$/ }, () => ({ path: 'service', namespace: 'test-service' }));
     builder.onLoad({ filter: /.*/, namespace: 'test-service' }, () => ({ loader: 'js',
-      contents: 'export const getGameRun=async()=>{throw new Error("Unexpected request")}; export const rollGameRunLoot=getGameRun;' }));
+      contents: 'export const getGameRun=async()=>{throw new Error("Unexpected request")}; export const rollGameRunLoot=getGameRun; export const getGameRunProtectedDeposit=(...args)=>globalThis.__protectedDepositRequest(...args);' }));
     builder.onResolve({ filter: /^@mui\/icons-material\// }, () => ({ path: 'icon', namespace: 'test-icon' }));
     builder.onLoad({ filter: /.*/, namespace: 'test-icon' }, () => ({ loader: 'js',
       contents: `import {createElement} from 'react'; export default function Icon(){return createElement('svg',{'aria-hidden':true});}` }));
@@ -64,6 +68,114 @@ after(() => {
 });
 const text = node => typeof node === 'string' ? node : (node.children ?? []).map(text).join('');
 const button = (renderer, label) => renderer.root.findAllByType('button').find(node => text(node) === label);
+
+test('Sábio apresenta ofertas fixadas, ensina pelo ID e respeita estoque e saldo', async () => {
+  const calls = [];
+  let renderer;
+  const run = { noAtualId: 'sabio', estadoAtual: { economy: { balance: 100 } }, mapa: { nodes: [{ id: 'sabio', name: 'Oráculo',
+    payload: { npcType: 'SABIO', offers: [{ itemId: 'pulso', price: 20, stock: 1, snapshot: {
+      nome: 'Pulso', tipo: 'ataque', atributos: { dano: 50, teste: { codigoTeste: 'ATAQUE_COMUM' } } } }] } }] } };
+  act(() => { renderer = create(React.createElement(api.RunNpcServiceDialog, { run, theme: 'dark', neon: 'on', busy: false, error: null,
+    onBuy: async (...args) => { calls.push(args); return true; }, onUpgrade() { throw new Error('Wrong service'); }, onClose() {} })); });
+  act(() => renderer.root.findByProps({ title: 'Pulso' }).props.onClick());
+  assert.equal(button(renderer, 'Aprender').props.disabled, false);
+  await act(async () => { await button(renderer, 'Aprender').props.onClick(); });
+  assert.deepEqual(calls, [['pulso', false]]);
+  assert.match(text(renderer.toJSON()), /Magia aprendida/);
+  act(() => renderer.unmount());
+});
+
+test('Engenheiro mostra prévia por instância e envia melhoria sem preço no comando', async () => {
+  const calls = [];
+  let renderer;
+  const run = { noAtualId: 'eng', estadoAtual: { economy: { balance: 100 }, inventario: [{ id: 'espada', nome: 'Espada',
+    tipo: 'arma', __runEngineerUpgrades: 1, atributos: { danoBase: 20, modificadores: { dano: 7 } } }] },
+    mapa: { nodes: [{ id: 'eng', name: 'Oficina', payload: { npcType: 'ENGENHEIRO', upgrade: { damage: 7, price: 10, maxUpgrades: 2 }, offers: [] } }] } };
+  const props = { run, theme: 'dark', neon: 'off', busy: false, error: null,
+    onUpgrade: async (...args) => { calls.push(args); return true; }, onBuy() {}, onClose() {} };
+  act(() => { renderer = create(React.createElement(api.RunNpcServiceDialog, props)); });
+  act(() => renderer.root.findByProps({ title: 'Espada' }).props.onClick());
+  assert.match(text(renderer.toJSON()), /27 → 34/);
+  await act(async () => { await button(renderer, 'Melhorar').props.onClick(); });
+  assert.deepEqual(calls, [['espada']]);
+  run.estadoAtual.inventario[0].__runEngineerUpgrades = 2;
+  act(() => renderer.update(React.createElement(api.RunNpcServiceDialog, { ...props, run: { ...run } })));
+  act(() => renderer.root.findByProps({ title: 'Espada' }).props.onClick());
+  assert.equal(button(renderer, 'Melhorar').props.disabled, true);
+  act(() => renderer.unmount());
+});
+
+test('retrato compartilhado mantém círculo, nome, fundo preto e Escape fecha só a imagem', () => {
+  const original = globalThis.document;
+  const handlers = [];
+  globalThis.document = { body: { style: { overflow: 'auto' } },
+    addEventListener: (...args) => handlers.push(args), removeEventListener() {} };
+  let renderer, closed = 0, stopped = 0;
+  const props = { isOpen: true, variant: 'portrait', images: [{ url: '/ada.png', caption: 'Ada', backgroundUrl: '/ada.png' }],
+    onClose: () => { closed++; } };
+  try {
+    act(() => { renderer = create(React.createElement(api.Lightbox, props)); });
+    assert.equal(globalThis.document.body.style.overflow, 'hidden');
+    assert.equal(renderer.root.findByType('img').props.src, '/ada.png');
+    assert.equal(renderer.root.findByProps({ role: 'dialog' }).props['aria-label'], 'Ada');
+    const key = handlers.find(([name]) => name === 'keydown');
+    assert.equal(key[2], true);
+    act(() => key[1]({ key: 'Escape', preventDefault() {}, stopImmediatePropagation() { stopped++; } }));
+    assert.equal(closed, 1); assert.equal(stopped, 1);
+    const sheet = new api.ServerStyleSheet();
+    try {
+      renderToStaticMarkup(sheet.collectStyles(React.createElement(api.LightboxContent, { $portrait: true },
+        React.createElement(api.LightboxImage, { $portrait: true, src: '/ada.png' }),
+        React.createElement(api.LightboxCaption, { $portrait: true }, 'Ada'))));
+      const css = sheet.getStyleTags();
+      assert.match(css, /border-radius:50%/); assert.match(css, /DO Futuristic/); assert.match(css, /background:#000/);
+    } finally { sheet.seal(); }
+    act(() => renderer.unmount());
+    assert.equal(globalThis.document.body.style.overflow, 'auto');
+  } finally { globalThis.document = original; }
+});
+
+test('depósito protegido consulta memória, informa perda da garantia e envia IDs reais', async () => {
+  const run = { idGameRun: 7, revisao: 2, status: 'Ativa', noAtualId: null,
+    mapa: { nodes: [{ id: 'base', type: 'BASE', state: 'CONCLUIDO', layer: 1 }] } };
+  const calls = [];
+  globalThis.__protectedDepositRequest = async (id, signal) => {
+    calls.push([id, signal]);
+    return { slots: 2, cost: 10, items: [{ itemId: 'colete', systemVersionId: 7, compatible: true,
+      snapshot: { id: 'colete', nome: 'Colete', tipo: 'traje', quantidade: 1, atributos: { protecaoBase: 300, __runDefenseRemaining: { protecao: 20, escudo: 0 } } } }] };
+  };
+  let renderer;
+  const changes = [];
+  await act(async () => { renderer = create(React.createElement(api.RunProtectedDeposit, { run, theme: 'dark', neon: 'on', busy: false,
+    onProtect: async (...args) => { changes.push(args); return true; } })); });
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0][0], 7);
+  assert.ok(renderer.root.findAllByType('p').some(node => text(node).includes('Levar devolve à mochila e remove a proteção')));
+  act(() => renderer.root.findAllByType('button').find(node => node.props.title === 'Colete').props.onClick());
+  assert.ok(renderer.root.findAllByType('p').some(node => text(node).includes('Proteção 20 / 300')));
+  assert.equal(button(renderer, 'Levar').props.disabled, false);
+  await act(async () => button(renderer, 'Levar').props.onClick());
+  await act(async () => button(renderer, 'Liberar').props.onClick());
+  assert.deepEqual(changes, [['colete', 'TAKE'], ['colete', 'RELEASE']]);
+  act(() => renderer.unmount());
+  assert.equal(calls[0][1].aborted, true);
+  delete globalThis.__protectedDepositRequest;
+});
+
+test('item protegido incompatível aparece preservado sem permitir retirada nem liberação', async () => {
+  globalThis.__protectedDepositRequest = async () => ({ slots: 0, cost: 0, items: [
+    { itemId: 'a', compatible: false, systemVersionId: 1, snapshot: { id: 'a', nome: 'Espada', tipo: 'arma', quantidade: 1 } }] });
+  let renderer;
+  await act(async () => { renderer = create(React.createElement(api.RunProtectedDeposit, {
+    run: { idGameRun: 1, revisao: 0, status: 'Vitoria', noAtualId: null,
+      mapa: { nodes: [{ id: 'base', type: 'BASE', state: 'CONCLUIDO', layer: 1 }] } },
+    theme: 'dark', neon: 'off', busy: false, onProtect() { throw new Error('Incompatível'); },
+  })); });
+  assert.equal(button(renderer, 'Levar').props.disabled, true);
+  assert.equal(button(renderer, 'Liberar').props.disabled, true);
+  assert.ok(renderer.root.findAllByType('small').some(node => text(node).includes('Preservado em outra versão do Sistema')));
+  act(() => renderer.unmount()); delete globalThis.__protectedDepositRequest;
+});
 
 test('modal mantém conteúdo, footer, ações, portal e fechamento; subtítulo é opcional', () => {
   let close = 0, submit = 0, extra = 0, focused = 0;

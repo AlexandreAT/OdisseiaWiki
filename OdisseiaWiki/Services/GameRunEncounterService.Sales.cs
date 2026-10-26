@@ -33,7 +33,8 @@ public sealed partial class GameRunEncounterService
                     return GameRunOperationResult<GameRunDto>.Fail("STASH_INDISPONIVEL", GameRunEconomy.StashUnavailableMessage);
                 GameRunMapDto map = GameRunFirstMap.Read(run!.MapaJson, JsonOptions);
                 GameRunMapNodeDto? node = map.Nodes.SingleOrDefault(item => item.Id == run.NoAtualId);
-                if (node?.Type != "VENDEDOR" || node.State != "SELECIONADO")
+                if (node is null || !GameRunNpcs.IsMerchant(node) || GameRunNpcs.NeedsRescue(node) ||
+                    node.Type == "NPC" && node.Payload?.NpcServiceVisited != true || node.State != "SELECIONADO")
                     return GameRunOperationResult<GameRunDto>.Fail("VENDEDOR_INDISPONIVEL", "Entre no vendedor antes de vender.");
                 var version = await _systems.GetVersionAsync(run.IdSistemaVersao, includeConfiguration: true);
                 if (version is null) return GameRunOperationResult<GameRunDto>.Fail("SISTEMA_INDISPONIVEL", "Sistema indisponível.");

@@ -382,7 +382,7 @@ public sealed class GameRunMapGenerator
         GameModeAreaDto area, GameModeAreaOptionDto option, string id, int fase, int layer,
         int position, IReadOnlyList<string> connections, string state)
     {
-        bool nonCombat = option.Type is "BASE" or "EVENTO" or "DESCANSO" or "ATALHO" or "AREA_SECRETA" or "VENDEDOR";
+        bool nonCombat = option.Type is "BASE" or "EVENTO" or "DESCANSO" or "ATALHO" or "AREA_SECRETA" or "VENDEDOR" or "NPC";
         string? encounterCode = option.Type == "CACADA"
             ? option.EncounterCodes.Count == 0 ? null : option.EncounterCodes[
                 new Random(DeriveSeed(runSeed, $"{id}:cacada")).Next(option.EncounterCodes.Count)]
@@ -413,9 +413,15 @@ public sealed class GameRunMapGenerator
             } : option.Type == "EVENTO" ? new GameRunMapNodePayloadDto
             {
                 GameMinutes = option.GameMinutes,
-            } : option.Type == "VENDEDOR" ? new GameRunMapNodePayloadDto
+            } : option.Type is "VENDEDOR" or "NPC" ? new GameRunMapNodePayloadDto
             {
-                Offers = DrawVendorOffers(option, new Random(DeriveSeed(runSeed, $"{id}:vendedor"))),
+                NpcCode = option.Type == "NPC" ? option.NpcCode : null,
+                NpcType = option.Type == "NPC" ? option.NpcType : null,
+                NpcLocked = option.NpcLocked,
+                Upgrade = option.Upgrade is null ? null : new() { Damage = option.Upgrade.Damage,
+                    Price = option.Upgrade.Price, MaxUpgrades = option.Upgrade.MaxUpgrades },
+                Offers = GameRunNpcs.HasCatalog(option)
+                    ? DrawVendorOffers(option, new Random(DeriveSeed(runSeed, $"{id}:vendedor"))) : null,
             } : nonCombat ? null : new GameRunMapNodePayloadDto
             {
                 EncounterCode = encounterCode,
@@ -437,6 +443,7 @@ public sealed class GameRunMapGenerator
             offers.Add(new GameModeVendorOfferDto
             {
                 ItemId = selected.ItemId, Price = selected.Price, Stock = selected.Stock,
+                MinLevel = selected.MinLevel,
                 Weight = selected.Weight, Snapshot = selected.Snapshot?.DeepClone().AsObject(),
             });
             pool.RemoveAt(index);

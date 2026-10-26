@@ -23,6 +23,7 @@ interface BaseProps {
   value: any;
   onChange: (v: any) => void;
   managementLayout?: boolean;
+  weaponFieldsOnly?: boolean;
   sistemaItemCatalogo?: SistemaItemFormCatalog;
 }
 
@@ -77,13 +78,14 @@ const withNormalizedAcerto = (value: any, defaults: Record<string, unknown>) => 
  * Declarative rule only: the selected code is resolved against the published
  * System table by the backend when the character uses the item or power.
  */
-const TestSpecificationFields = ({
+export const TestSpecificationFields = ({
   value,
   onChange,
   theme,
   neon,
   weapon = false,
   testOptions = [],
+  attributeOptions = [],
 }: {
   value: GameplayTestSpec | undefined;
   onChange: (value: GameplayTestSpec | undefined) => void;
@@ -91,6 +93,7 @@ const TestSpecificationFields = ({
   neon: 'on' | 'off';
   weapon?: boolean;
   testOptions?: ItemFormOption[];
+  attributeOptions?: ItemFormOption[];
 }) => {
   const enabled = Boolean(value);
   const defaultTestCode = testOptions[0]?.value ?? (weapon ? 'ATAQUE_COMUM' : '');
@@ -153,7 +156,10 @@ const TestSpecificationFields = ({
             ) : (
               <InputText label="Código do teste" theme={theme} neon={neon} value={value?.codigoTeste ?? ''} onChange={(event) => update({ codigoTeste: event.target.value })} />
             )}
-            <InputText label="Atributo (opcional)" theme={theme} neon={neon} value={value?.codigoAtributo ?? ''} onChange={(event) => update({ codigoAtributo: event.target.value || undefined })} />
+            {attributeOptions.length > 0 ? <Select label="Atributo (opcional)" theme={theme} neon={neon}
+              value={value?.codigoAtributo ?? ''} allowEmptyOption width="100%" options={attributeOptions}
+              onChange={event => update({ codigoAtributo: event.target.value || undefined })} />
+              : <InputText label="Atributo (opcional)" theme={theme} neon={neon} value={value?.codigoAtributo ?? ''} onChange={(event) => update({ codigoAtributo: event.target.value || undefined })} />}
           </AttributeRow>
           <AttributeRow $columns={2}>
             <Select label="Modo fixo" theme={theme} neon={neon} value={value?.modo ?? ''} allowEmptyOption options={[
@@ -196,7 +202,7 @@ const TestSpecificationFields = ({
   );
 };
 
-const ConditionEffectFields = ({
+export const ConditionEffectFields = ({
   value = [],
   onChange,
   theme,
@@ -394,7 +400,7 @@ const ConditionEffectFields = ({
   );
 };
 
-export const ArmaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon, managementLayout = false, sistemaItemCatalogo }) => {
+export const ArmaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme, neon, managementLayout = false, sistemaItemCatalogo, weaponFieldsOnly = false }) => {
   const initialValue = (value ?? {}) as ArmaAtributos;
   const local: ArmaAtributos = {
     ...initialValue,
@@ -447,14 +453,14 @@ export const ArmaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme,
     <FormItemAtributos>
       <ManagementAttributeGroup enabled={managementLayout} title="Classificação" theme={theme} neon={neon}>
         <AttributeRow $columns={2}>
-          <Select label="Tipo de arma" theme={theme} neon={neon} value={local.tipoArma ?? ''} onChange={e => handleChange('tipoArma', e.target.value as ArmaTipo)} options={sistemaItemCatalogo?.archetypeOptions.length ? sistemaItemCatalogo.archetypeOptions : ARMA_TIPO_OPTIONS} width="100%" />
+          <Select label={weaponFieldsOnly ? 'Tipo de ataque' : 'Tipo de arma'} theme={theme} neon={neon} value={local.tipoArma ?? ''} onChange={e => handleChange('tipoArma', e.target.value as ArmaTipo)} options={sistemaItemCatalogo?.archetypeOptions.length ? sistemaItemCatalogo.archetypeOptions : ARMA_TIPO_OPTIONS} width="100%" />
           <Select label="Tipo de dano" theme={theme} neon={neon} value={local.tipoDano ?? ''} onChange={e => handleChange('tipoDano', e.target.value as ArmaTipoDano)} options={catalogReferenceOptions(sistemaItemCatalogo, 'TipoDano', ARMA_TIPO_DANO_OPTIONS)} width="100%" />
         </AttributeRow>
       </ManagementAttributeGroup>
 
       <ManagementAttributeGroup enabled={managementLayout} title="Dano" theme={theme} neon={neon}>
         <AttributeRow $columns={4}>
-          <InputText label="Dano Base" type="number" theme={theme} neon={neon} value={local.danoBase ?? ''} onChange={e => handleChange('danoBase', e.target.value === '' ? undefined : Number(e.target.value))} />
+          <InputText label={weaponFieldsOnly ? 'Dano corpo a corpo' : 'Dano Base'} type="number" theme={theme} neon={neon} value={local.danoBase ?? ''} onChange={e => handleChange('danoBase', e.target.value === '' ? undefined : Number(e.target.value))} />
           <InputText label="Dano Curto" type="number" theme={theme} neon={neon} value={local.danoPorAlcance?.curta ?? ''} onChange={e => handleChange('danoPorAlcance', { ...local.danoPorAlcance, curta: Number(e.target.value) })} />
           <InputText label="Dano Médio" type="number" theme={theme} neon={neon} value={local.danoPorAlcance?.media ?? ''} onChange={e => handleChange('danoPorAlcance', { ...local.danoPorAlcance, media: Number(e.target.value) })} />
           <InputText label="Dano Longo" type="number" theme={theme} neon={neon} value={local.danoPorAlcance?.longa ?? ''} onChange={e => handleChange('danoPorAlcance', { ...local.danoPorAlcance, longa: Number(e.target.value) })} />
@@ -478,7 +484,7 @@ export const ArmaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme,
         </AttributeRow>
         <AttributeRow $columns={2}>
           <InputText label={`Estamina por ação${getPrimeiroAtaqueComGastoEstamina(local.tipoArma) === 2 ? ' (2ª+)' : ''}`} type="number" theme={theme} neon={neon} value={local.gastoEstaminaPorAtaque ?? ''} onChange={e => handleChange('gastoEstaminaPorAtaque', e.target.value === '' ? undefined : Number(e.target.value))} />
-          <Select label="Acerto" theme={theme} neon={neon} value={normalizeDadoAcerto(local.acerto)} onChange={e => handleChange('acerto', e.target.value as DadoAcerto)} options={catalogReferenceOptions(sistemaItemCatalogo, 'Outro', ACERTO_DADO_OPTIONS).filter((option) => /^d\d+$/i.test(option.value)).map((option) => ({ ...option, value: option.value.toUpperCase() }))} width="100%" />
+          {!weaponFieldsOnly && <Select label="Acerto" theme={theme} neon={neon} value={normalizeDadoAcerto(local.acerto)} onChange={e => handleChange('acerto', e.target.value as DadoAcerto)} options={catalogReferenceOptions(sistemaItemCatalogo, 'Outro', ACERTO_DADO_OPTIONS).filter((option) => /^d\d+$/i.test(option.value)).map((option) => ({ ...option, value: option.value.toUpperCase() }))} width="100%" />}
         </AttributeRow>
         <CheckBox
           neon={neon}
@@ -502,6 +508,7 @@ export const ArmaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme,
         onChange={(event) => handleChange('modoModificadores', (event.target.value || null) as ArmaAtributos['modoModificadores'])} />
       {!getWeaponModifierMode(local) && <p>Selecione o tipo de arma ou o modo de combate para aplicar os modificadores de distância, ataque e revide.</p>}
       <WeaponModifiers value={local.modificadores} onChange={(modifiers) => handleChange('modificadores', modifiers)} mode={getWeaponModifierMode(local)} theme={theme} neon={neon} />
+      {!weaponFieldsOnly && <>
       <CheckBox
         neon={neon}
         label="Esta arma aplica teste"
@@ -531,6 +538,7 @@ export const ArmaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme,
         </AttributeRow>
       </ManagementAttributeGroup>
       <WeaponAccessories value={local} onChange={onChange} theme={theme} neon={neon} />
+      </>}
     </FormItemAtributos>
   );
 };
@@ -633,14 +641,14 @@ export const ImplanteAtributosForm: React.FC<BaseProps> = ({ value, onChange, th
     <InputText label="Efeito" theme={theme} neon={neon} value={atributos.efeito ?? ''} onChange={(e) => update({ efeito: e.target.value })} />
   </AttributeRow>;
 
-  const attributeBonusFields = <>
-    <AttributeRow $columns={4}>
-      {IMPLANTE_ATTRIBUTE_BONUS_FIELDS.map(([key, label]) => <InputText key={key} label={`Bônus de ${label}`} type="number" theme={theme} neon={neon} value={String(atributos.bonus?.[key] ?? 0)} onChange={(e) => update({ bonus: { ...atributos.bonus, [key]: e.target.value === '' ? 0 : Number(e.target.value) } })} />)}
-    </AttributeRow>
-    <AttributeRow>
-      <InputText label="Bônus de Resistência" type="number" theme={theme} neon={neon} value={String(atributos.bonus?.resistencia ?? 0)} onChange={(e) => update({ bonus: { ...atributos.bonus, resistencia: e.target.value === '' ? 0 : Number(e.target.value) } })} />
-    </AttributeRow>
-  </>;
+  const bonusAttributes = sistemaItemCatalogo?.attributeOptions.length ? sistemaItemCatalogo.attributeOptions
+    .map(option => [option.value.toLowerCase(), option.label] as const)
+    : [...IMPLANTE_ATTRIBUTE_BONUS_FIELDS, ['resistencia', 'Resistência'] as const];
+  const attributeBonusFields = <AttributeRow $columns={3}>
+    {bonusAttributes.map(([key, label]) => <InputText key={key} label={`Bônus de ${label}`} type="number"
+      theme={theme} neon={neon} value={atributos.bonus?.[key] ?? 0}
+      onChange={event => update({ bonus: { ...atributos.bonus, [key]: Number(event.target.value) } })} />)}
+  </AttributeRow>;
 
   const configurationFields = <>
     <AttributeRow $columns={2}>
@@ -651,6 +659,12 @@ export const ImplanteAtributosForm: React.FC<BaseProps> = ({ value, onChange, th
       <CheckBox neon={neon} label="Necessita amputação" checked={atributos.necessitaAmputacao ?? false} onChange={(necessitaAmputacao) => update({ necessitaAmputacao })} />
     </AttributeRow>
   </>;
+
+  const defenseFields = <AttributeRow $columns={3}>
+    {(['protecaoBase', 'armaduraBase', 'escudoBase'] as const).map((key, index) => <InputText key={key}
+      label={['Proteção', 'Armadura', 'Escudo'][index]} type="number" min={0} theme={theme} neon={neon}
+      value={atributos[key] ?? 0} onChange={event => update({ [key]: Number(event.target.value) })} />)}
+  </AttributeRow>;
 
   const enhancementFields = <>
     {(atributos.especiais ?? []).map((item, index) => <AttributeRow $columns={2} key={`especial-${index}`}><InputText label={`Efeito especial ${index + 1}`} theme={theme} neon={neon} value={item} onChange={(e) => updateList('especiais', index, e.target.value)} /><CyberButton type="button" theme={theme} neon={neon} text="Remover efeito" onClick={() => update({ especiais: atributos.especiais?.filter((_, i) => i !== index) })} /></AttributeRow>)}
@@ -677,6 +691,7 @@ export const ImplanteAtributosForm: React.FC<BaseProps> = ({ value, onChange, th
       <ManagementAttributeGroup enabled title="Bônus de atributos" theme={theme} neon={neon}>
         {attributeBonusFields}
       </ManagementAttributeGroup>
+      <ManagementAttributeGroup enabled title="Defesas" theme={theme} neon={neon}>{defenseFields}</ManagementAttributeGroup>
       <ManagementAttributeGroup enabled title="Configuração" theme={theme} neon={neon}>
         {configurationFields}
       </ManagementAttributeGroup>
@@ -688,19 +703,28 @@ export const ImplanteAtributosForm: React.FC<BaseProps> = ({ value, onChange, th
       {materialFields}
       {statusBonusFields}
       {attributeBonusFields}
+      {defenseFields}
       {configurationFields}
       {effectField}
       {enhancementFields}
     </>}
     <TestSpecificationFields
       value={atributos.teste}
-      onChange={(teste) => update({ teste, aplicaTeste: Boolean(teste) })}
+      onChange={(teste) => update({ teste, aplicaTeste: Boolean(teste),
+        ...(teste ? { tipoArma: atributos.tipoArma ?? 'arma_branca_comum' } : {}) })}
       theme={theme}
       neon={neon}
       testOptions={sistemaItemCatalogo?.testOptions}
+      attributeOptions={sistemaItemCatalogo?.attributeOptions}
     />
+    {atributos.teste && <ArmaAtributosForm weaponFieldsOnly managementLayout theme={theme} neon={neon}
+      value={{ ...atributos, bonus: [] }}
+      sistemaItemCatalogo={sistemaItemCatalogo && { ...sistemaItemCatalogo, archetypeOptions: [] }}
+      onChange={(attack: ArmaAtributos) => onChange({ ...atributos, ...attack,
+        bonus: atributos.bonus, codigoArquetipo: (atributos as { codigoArquetipo?: string }).codigoArquetipo })} />}
     <ConditionEffectFields
       value={atributos.condicoes}
+      allowEquipTrigger
       onChange={(condicoes) => update({ condicoes })}
       theme={theme}
       neon={neon}

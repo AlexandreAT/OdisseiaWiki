@@ -51,6 +51,12 @@ export interface GameRunLoot {
   roll: number | null;
   rewards: import('./Itens').Item[];
 }
+export type ProtectedDepositAction = 'PROTECT' | 'RELEASE' | 'TAKE';
+export interface GameRunProtectedDeposit {
+  slots: number;
+  cost: number;
+  items: { itemId: string; systemVersionId: number; compatible: boolean; snapshot: import('./Itens').Item }[];
+}
 export interface GameAttributeOptions {
   pontos: number;
   atributos: { codigo: string; nome: string; grupo: string; valor: number; limite: number;
@@ -135,6 +141,9 @@ export interface GameRunMapNode {
   state: 'DISPONIVEL' | 'SELECIONADO' | 'CONCLUIDO' | 'BLOQUEADO' | 'IGNORADO';
   connections: string[];
   payload: { encounterCode?: string | null; secretAreaCode?: string | null;
+    npcCode?: string | null; npcType?: 'MERCADOR' | 'MEDICO' | 'SABIO' | 'ENGENHEIRO' | null; npcLocked?: boolean;
+    upgrade?: import('./GameModeManagement').GameModeEngineerUpgrade | null;
+    npcRescued?: boolean; npcServiceVisited?: boolean;
     offers?: import('./GameModeManagement').GameModeVendorOffer[] | null } | null;
   revealed: boolean;
 }
@@ -144,6 +153,8 @@ export interface GameRunModeConfig {
   startingCurrency?: number;
   saleDiscountPercent?: number;
   repairProtectionAtBase?: boolean;
+  protectedDepositSlots?: number;
+  protectedDepositCost?: number;
   areas?: { image?: string | null; isSecret?: boolean }[];
   encounters?: Record<string, {
     mapName: string;
@@ -170,7 +181,7 @@ export interface GameRunBaseResolution {
   manaRecuperada: number;
   estaminaRecuperada: number;
   protecaoReparada?: number;
-  tipo?: 'BASE' | 'DESCANSO' | 'EVENTO' | 'ATALHO' | 'AREA_SECRETA';
+  tipo?: 'BASE' | 'DESCANSO' | 'EVENTO' | 'ATALHO' | 'AREA_SECRETA' | 'NPC_RESGATE' | 'NPC_MEDICO' | 'NPC_MERCADOR' | 'NPC_SABIO' | 'NPC_ENGENHEIRO';
 }
 
 export interface GameRunMutationRequest {
@@ -220,6 +231,7 @@ export interface GameRunActionSelection {
 
 export interface GameRunLoadoutRequest extends GameRunMutationRequest {
   acoes: GameRunActionSelection[];
+  defesasEquipadas?: string[];
 }
 
 export interface GameRunConsumeItemRequest extends GameRunMutationRequest {

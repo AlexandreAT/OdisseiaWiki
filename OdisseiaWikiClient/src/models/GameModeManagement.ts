@@ -1,8 +1,15 @@
 export interface GameModeVendorOffer { itemId: string; price: number; stock: number; weight?: number;
-  snapshot?: { nome: string; tipo: string; imagem?: string | null; valor?: number | null } | null }
+  minLevel?: number;
+  snapshot?: { nome: string; tipo: string; imagem?: string | null; valor?: number | null;
+    atributos?: Record<string, unknown> } | null }
+
+export interface GameModeEngineerUpgrade { damage: number; price: number; maxUpgrades: number }
 
 export interface GameModeAreaOption {
-  type: 'COMBATE' | 'ELITE' | 'BOSS' | 'DESCANSO' | 'EVENTO' | 'ATALHO' | 'CACADA' | 'AREA_SECRETA' | 'VENDEDOR';
+  type: 'COMBATE' | 'ELITE' | 'BOSS' | 'DESCANSO' | 'EVENTO' | 'ATALHO' | 'CACADA' | 'AREA_SECRETA' | 'VENDEDOR' | 'NPC';
+  npcCode?: string | null;
+  npcType?: 'MERCADOR' | 'MEDICO' | 'SABIO' | 'ENGENHEIRO' | null;
+  npcLocked?: boolean;
   encounterCode: string;
   encounterCodes?: string[];
   secretAreaCode?: string | null;
@@ -14,6 +21,7 @@ export interface GameModeAreaOption {
   gameMinutes?: number;
   offers?: GameModeVendorOffer[];
   offerCount?: number;
+  upgrade?: GameModeEngineerUpgrade | null;
 }
 
 export interface GameModeArea {
@@ -126,6 +134,8 @@ export interface GameModeEditor {
   saleDiscountPercent: number;
   startingCurrency: number;
   repairProtectionAtBase: boolean;
+  protectedDepositSlots?: number;
+  protectedDepositCost?: number;
   powerCatalog: GameModePowerOption[];
 }
 
@@ -140,4 +150,4 @@ export interface GameAdventure {
   numeroVersao: string;
 }
 
-export type GameModeEditorUpdate = Pick<GameModeEditor, 'areas' | 'encounters' | 'fallbackAction' | 'playerDamageByResult' | 'saleDiscountPercent' | 'startingCurrency' | 'repairProtectionAtBase' | 'powerCatalog'>;
+export type GameModeEditorUpdate = Pick<GameModeEditor, 'areas' | 'encounters' | 'fallbackAction' | 'playerDamageByResult' | 'saleDiscountPercent' | 'startingCurrency' | 'repairProtectionAtBase' | 'protectedDepositSlots' | 'protectedDepositCost' | 'powerCatalog'>;

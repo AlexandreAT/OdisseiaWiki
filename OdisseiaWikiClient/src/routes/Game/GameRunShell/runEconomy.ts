@@ -47,5 +47,6 @@ export const canAccessRunStash = (run: GameRunDto): boolean => {
     ? run.mapa.nodes.find((node) => node.id === run.noAtualId && node.state === 'SELECIONADO')
     : run.mapa.nodes.filter((node) => node.state === 'CONCLUIDO' && node.type !== 'INICIO')
       .sort((a, b) => b.layer - a.layer)[0];
-  return current?.type === 'BASE' || current?.type === 'VENDEDOR';
+  return current?.type === 'BASE' || current?.type === 'VENDEDOR' ||
+    current?.type === 'NPC' && current.payload?.npcType === 'MERCADOR' && current.payload.npcServiceVisited === true;
 };

@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import BackpackOutlinedIcon from '@mui/icons-material/BackpackOutlined';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import CloseIcon from '@mui/icons-material/Close';
 import HistoryIcon from '@mui/icons-material/History';
@@ -35,15 +36,17 @@ import { getVisibleRunMap } from '../RunMapCanvas/visibleRunMap';
 import { RunInventory } from './RunInventory';
 import { RunLoadout } from './RunLoadout';
 import { RunEconomyDialog } from './RunEconomyDialog';
+import { RunNpcServiceDialog } from './RunNpcServiceDialog';
 import { canAccessRunStash, RUN_DEPOSIT_UNAVAILABLE } from './runEconomy';
 import { RunTraining } from './RunTraining/RunTraining';
 import { parseRunInventoryEntries } from './runInventoryEntries';
 import { RunRegionBackdrops } from './RunRegionBackdrops';
+import { RunHudDisclosure } from './RunHudDisclosure';
 import { GameHint, GameNotice, GamePage, GameSectionTitle, GameTextLink } from '../GameShared.style';
 import {
   AttributeList, ResourceAndAttributes, GameRunPage, ReplaySection, ResourceList,
   RunActionRail, RunBattleHistoryNav, RunConclusion, RunFooterActions, RunHudHeader, RunHudMeta, RunHudPanel,
-  RunHudTopline, RunLoadingPage, RunMapArea, RunRouteBusy, RunPanel, RunStickyHeader, RunTrainingBody, RunTrainingDialog,
+  RunHudTopline, RunHudNavigation, RunBackLink, RunLoadingPage, RunMapArea, RunRouteBusy, RunPanel, RunStickyHeader, RunTrainingBody, RunTrainingDialog,
   RunDefenseRow, RunDefenseDetails, RunDefenseValue, RunProtection,
   RunTrainingPanel, RunXpLabel, SnapshotHeader, SnapshotPortrait, TrainingIcon,
   RunCurrency,
@@ -295,7 +298,10 @@ export default function GameRunShell() {
       name: attributeNames[code]?.[1] ?? code }));
   const activeConditions = snapshotConditions((current.status as typeof current.status & { condicoesJogo?: unknown }).condicoesJogo);
   const selectedNode = run.mapa.nodes.find((node) => node.id === run.noAtualId);
-  const vendorOpen = selectedNode?.type === 'VENDEDOR' && selectedNode.state === 'SELECIONADO';
+  const vendorOpen = !!selectedNode && (selectedNode.type === 'VENDEDOR' || selectedNode.type === 'NPC' &&
+    selectedNode.payload?.npcType === 'MERCADOR' && selectedNode.payload.npcServiceVisited === true) && selectedNode.state === 'SELECIONADO';
+  const npcServiceOpen = selectedNode?.type === 'NPC' && selectedNode.state === 'SELECIONADO' &&
+    selectedNode.payload?.npcServiceVisited === true && ['SABIO', 'ENGENHEIRO'].includes(selectedNode.payload.npcType ?? '');
   const stashAvailable = canAccessRunStash(run);
   const dismissEmptyLoadoutNotice = () => {
     setEmptyLoadoutNoticeOpen(false);
@@ -341,8 +347,9 @@ export default function GameRunShell() {
       Esta run preserva o mapa antigo. Para gerar áreas com tamanho configurável, publique o novo modo em Gerenciamento &gt; Jogo
       e reinicie a jornada. Esta run não muda automaticamente.
     </GameNotice>}
-    {state.baseResult && <GameNotice role="status">
-      {state.baseResult.tipo === 'AREA_SECRETA' ? `Entrou em ${state.baseResult.descanso}.` :
+    {state.baseResult && <GameNotice role="status" data-npc-rescued={state.baseResult.tipo === 'NPC_RESGATE'}>
+      {state.baseResult.tipo === 'NPC_RESGATE' ? `${state.baseResult.descanso} foi libertado! Nas próximas visitas e runs deste personagem, o serviço estará disponível.` :
+      state.baseResult.tipo === 'AREA_SECRETA' ? `Entrou em ${state.baseResult.descanso}.` :
       ['EVENTO', 'ATALHO'].includes(state.baseResult.tipo ?? '') ? `${state.baseResult.descanso} concluído.` : <>
         {state.baseResult.descanso}: +{state.baseResult.vidaRecuperada} vida, +{state.baseResult.manaRecuperada} mana,
         {' '}+{state.baseResult.estaminaRecuperada} estamina.
@@ -358,13 +365,14 @@ export default function GameRunShell() {
     <RunHudPanel neon={neonEnabled} aria-label={`Jornada de ${current.nome}`}>
       <RunRegionBackdrops map={run.mapa} config={run.configuracaoModo} mapAreaRef={mapAreaRef} />
       <RunStickyHeader data-run-sticky-header>
-        <RunHudTopline>
-          <GameTextLink to="/jogo">← Jogo</GameTextLink>
-          <RunHudMeta>Fase {run.fase} · {run.status === 'Ativa' ? 'Em andamento' : run.status}
-            {' '}· Modo {run.numeroVersaoModo} · Sistema #{run.idSistemaVersao}</RunHudMeta>
-          {run.status === 'Ativa' && <button type="button" onClick={() => state.setAbandonDialogOpen(true)}
-            disabled={state.abandoning || state.savingWeapons || state.savingLoadout}>Abandonar run</button>}
-        </RunHudTopline>
+        <RunHudDisclosure name={current.nome} image={imageUrl} neon={neonEnabled}
+          navigation={expanded => <RunHudNavigation>
+            <RunBackLink to="/jogo" $neon={neonEnabled} aria-label="Voltar para Jogo"><ArrowBackIcon aria-hidden="true" />Jogo</RunBackLink>
+            {expanded && <RunHudMeta>Fase {run.fase} · {run.status === 'Ativa' ? 'Em andamento' : run.status}
+              {' '}· Modo {run.numeroVersaoModo} · Sistema #{run.idSistemaVersao}</RunHudMeta>}
+            {run.status === 'Ativa' && <button type="button" onClick={() => state.setAbandonDialogOpen(true)}
+              disabled={state.abandoning || state.savingWeapons || state.savingLoadout}>Abandonar run</button>}
+          </RunHudNavigation>}>
         <RunHudHeader>
           <SnapshotHeader>
             <SnapshotPortrait aria-hidden="true">
@@ -413,6 +421,7 @@ export default function GameRunShell() {
             </AttributeList>}
           </ResourceAndAttributes>
         </RunHudHeader>
+        </RunHudDisclosure>
         {run.status !== 'Ativa' && <RunConclusion $won={run.status === 'Vitoria'} role="status">
           <strong>{run.status === 'Vitoria' ? 'Jornada vencida' :
             run.status === 'Derrota' ? 'Jornada encerrada' : 'Run abandonada'}</strong>
@@ -455,7 +464,7 @@ export default function GameRunShell() {
         <CyberButton theme={theme} neon={neon} width="180px" text="Atualizar mapa"
           loading={state.acting} disabled={state.acting || state.savingWeapons} onClick={() => void state.upgradeMap()} />
       </RunFooterActions>}
-      {run.status === 'Ativa' && selectedNode?.state === 'SELECIONADO' && !vendorOpen && <RunFooterActions>
+      {run.status === 'Ativa' && selectedNode?.state === 'SELECIONADO' && !vendorOpen && !npcServiceOpen && <RunFooterActions>
         <CyberButton theme={theme} neon={neon} width="180px" text="Retomar"
           loading={state.acting} disabled={state.acting} onClick={() => void state.resumeEncounter()} />
       </RunFooterActions>}
@@ -463,9 +472,12 @@ export default function GameRunShell() {
         <GameHint>Este trecho terminou. Novas etapas chegam na próxima camada.</GameHint>}
     </RunHudPanel>
 
+    {npcServiceOpen && <RunNpcServiceDialog run={run} theme={theme} neon={neon} busy={state.economyBusy} error={state.actionError}
+      onBuy={state.buyVendorItem} onUpgrade={state.upgradeWeapon} onClose={() => { void state.leaveVendor(); }} />}
     {(vendorOpen || stashOpen) && <RunEconomyDialog run={run} theme={theme} neon={neon}
       vendor={vendorOpen} busy={state.economyBusy} error={state.actionError}
       onBuy={state.buyVendorItem} onTransfer={state.transferStashItem} onSell={state.sellVendorItems}
+      onProtect={state.changeProtectedItem}
       onClose={() => {
         if (vendorOpen) void state.leaveVendor();
         else setStashOpen(false);
@@ -509,7 +521,7 @@ export default function GameRunShell() {
       ? <RunLoadout run={run} theme={theme} neon={neon}
           saving={state.savingLoadout || Boolean(state.consumingItemId)}
           error={state.actionError} busy={state.acting || Boolean(state.consumingItemId)}
-          onSave={state.saveLoadout} onUseItem={state.consumeItem} onDropItem={state.dropItem} onEquipDefense={state.equipDefense}
+          onSave={state.saveLoadout} onUseItem={state.consumeItem} onDropItem={state.dropItem}
           onConfigureCondition={state.configureCondition}
           usingItemId={state.consumingItemId}
           onClose={() => setInventoryOpen(false)} />

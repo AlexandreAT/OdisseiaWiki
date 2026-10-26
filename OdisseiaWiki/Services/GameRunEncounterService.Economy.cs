@@ -72,26 +72,33 @@ public sealed partial class GameRunEncounterService
                     return GameRunOperationResult<GameRunDto>.Fail("STASH_INDISPONIVEL", GameRunEconomy.StashUnavailableMessage);
                 GameRunMapDto map = GameRunFirstMap.Read(run!.MapaJson, JsonOptions);
                 GameRunMapNodeDto? node = map.Nodes.SingleOrDefault(item => item.Id == run.NoAtualId);
-                if (node?.Type != "VENDEDOR" || node.State != "SELECIONADO")
+                if (node is null || !GameRunNpcs.HasCatalog(node) || GameRunNpcs.NeedsRescue(node) ||
+                    node.Type == "NPC" && node.Payload?.NpcServiceVisited != true || node.State != "SELECIONADO")
                     return GameRunOperationResult<GameRunDto>.Fail("VENDEDOR_INDISPONIVEL", "Entre no vendedor antes de comprar.");
                 GameModeVendorOfferDto? offer = node.Payload?.Offers?.SingleOrDefault(item => item.ItemId == request.ItemId);
                 if (offer?.Snapshot is null || offer.Stock < 1)
                     return GameRunOperationResult<GameRunDto>.Fail("ESTOQUE_ESGOTADO", "Esta oferta não está mais disponível.");
                 try
                 {
-                    string updated = GameRunEconomy.Buy(run.EstadoAtualJson, offer.Snapshot, offer.ItemId,
-                        offer.Price, request.ToStash);
+                    bool service = node.Type == "NPC" && node.Payload?.NpcType is "SABIO" or "ENGENHEIRO";
+                    if (service && request.ToStash)
+                        return GameRunOperationResult<GameRunDto>.Fail("DESTINO_INVALIDO", "Este serviço entrega diretamente ao personagem.");
+                    var system = await _systems.GetVersionAsync(run.IdSistemaVersao, includeConfiguration: true);
+                    if (system is null) return GameRunOperationResult<GameRunDto>.Fail("SISTEMA_INDISPONIVEL", "Sistema indisponível.");
+                    if (node.Payload?.NpcType == "ENGENHEIRO" && offer.Snapshot["tipo"]?.ToString() != "implante")
+                        return GameRunOperationResult<GameRunDto>.Fail("OFERTA_INVALIDA", "O Engenheiro vende apenas próteses.");
+                    string updated = node.Payload?.NpcType == "SABIO"
+                        ? GameRunNpcServices.Learn(run.EstadoAtualJson, offer, system)
+                        : GameRunEconomy.Buy(run.EstadoAtualJson, offer.Snapshot, offer.ItemId, offer.Price, request.ToStash);
                     if (_itemValues is not null)
                         updated = await _itemValues.ResolveAsync(updated, run.GameModeVersion, token);
                     if (!request.ToStash)
                     {
-                        var version = await _systems.GetVersionAsync(run.IdSistemaVersao, includeConfiguration: true);
-                        if (version is null) return GameRunOperationResult<GameRunDto>.Fail("SISTEMA_INDISPONIVEL", "Sistema indisponível.");
-                        updated = GameRunCarry.Reconcile(updated, version);
+                        updated = GameRunCarry.Reconcile(updated, system);
                     }
                     run.EstadoAtualJson = updated;
                 }
-                catch (Exception error) when (error is InvalidOperationException or JsonException or OverflowException)
+                catch (Exception error) when (error is InvalidOperationException or JsonException or OverflowException or FormatException)
                 {
                     return GameRunOperationResult<GameRunDto>.Fail("COMPRA_INVALIDA", error.Message);
                 }
@@ -124,22 +131,10 @@ public sealed partial class GameRunEncounterService
                 if (failure is not null) return failure;
                 GameRunMapDto map = GameRunFirstMap.Read(run!.MapaJson, JsonOptions);
                 GameRunMapNodeDto? node = map.Nodes.SingleOrDefault(item => item.Id == run.NoAtualId);
-                if (node?.Type != "VENDEDOR" || node.State != "SELECIONADO")
+                if (node is null || !GameRunNpcs.HasCatalog(node) || GameRunNpcs.NeedsRescue(node) ||
+                    node.Type == "NPC" && node.Payload?.NpcServiceVisited != true || node.State != "SELECIONADO")
                     return GameRunOperationResult<GameRunDto>.Fail("VENDEDOR_INDISPONIVEL", "Não há vendedor aberto.");
-                GameRunMapGenerator.Complete(map, node.Id);
-                GameRunMapNodeDto completed = node;
-                while (completed.Connections.Count == 0 && map.ParentNodes is not null && !map.IsSecretFinal)
-                {
-                    string portalId = map.SecretReturnNodeId!;
-                    map = GameRunMapGenerator.ReturnFromSecret(map);
-                    completed = map.Nodes.Single(parent => parent.Id == portalId);
-                }
-                run.Fase = completed.Fase;
-                if (completed.Connections.Count == 0)
-                {
-                    run.Status = GameRunStatus.Vitoria;
-                    run.EncerradaEmUtc = DateTime.UtcNow;
-                }
+                map = CompleteServiceNode(run, map, node);
                 run.MapaJson = JsonSerializer.Serialize(map, JsonOptions);
                 run.NoAtualId = null;
                 run.Revisao++;

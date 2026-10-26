@@ -5,6 +5,7 @@ using OdisseiaWiki.Data;
 using OdisseiaWiki.Dtos;
 using OdisseiaWiki.Enums;
 using OdisseiaWiki.GameRuns.Battle;
+using OdisseiaWiki.GameRuns;
 using OdisseiaWiki.GameRuns.Map;
 using OdisseiaWiki.Models;
 using OdisseiaWiki.Repositories.Interfaces;
@@ -81,8 +82,32 @@ public sealed partial class GameModeManagementService : IGameModeManagementServi
     private async Task<string?> FreezeVendorOffersAsync(IEnumerable<GameModeAreaDto> areas,
         CancellationToken token, int? idMesa, int idSistemaVersao)
     {
-        GameModeVendorOfferDto[] offers = areas.SelectMany(area => area.Options)
-            .Where(option => option.Type == "VENDEDOR").SelectMany(option => option.Offers).ToArray();
+        var routes = areas.SelectMany(area => area.Options.Select((option, index) =>
+            new { Area = area.Name, Option = option, Index = index + 1 })).ToArray();
+        var options = routes.Select(route => route.Option).ToArray();
+        var sages = routes.Where(route => route.Option.Type == "NPC" && route.Option.NpcType == "SABIO").ToArray();
+        if (sages.Length > 0)
+        {
+            var version = await _systems.GetVersionAsync(idSistemaVersao, includeConfiguration: true);
+            if (version is null) return "Sistema indisponível para validar as magias do Sábio.";
+            var errors = new List<string>();
+            foreach (var route in sages)
+                for (int index = 0; index < route.Option.Offers.Count; index++)
+                {
+                    var offer = route.Option.Offers[index];
+                    try { GameRunNpcServices.ValidateSpell(offer, version); }
+                    catch (Exception error) when (error is InvalidOperationException or JsonException or OverflowException or FormatException)
+                    {
+                        string? name = offer.Snapshot?["nome"]?.ToString();
+                        string label = string.IsNullOrWhiteSpace(name) ? "sem nome" : name;
+                        errors.Add($"• {route.Area}, rota {route.Index} ({route.Option.Label}), magia {index + 1} ({label}): {error.Message}");
+                    }
+                }
+            if (errors.Count > 0) return "Revise as magias dos Sábios:\n" + string.Join("\n", errors);
+        }
+        GameModeVendorOfferDto[] offers = options
+            .Where(option => GameRunNpcs.IsMerchant(option) || option.Type == "NPC" && option.NpcType == "ENGENHEIRO")
+            .SelectMany(option => option.Offers).ToArray();
         if (offers.Length == 0) return null;
         IReadOnlyList<Item> items = (idMesa.HasValue
             ? await _management.GetLootItemsAsync(idMesa, idSistemaVersao, token)
@@ -91,6 +116,9 @@ public sealed partial class GameModeManagementService : IGameModeManagementServi
         {
             Item? item = items.FirstOrDefault(candidate => candidate.Iditem == offer.ItemId);
             if (item is null) return "Uma oferta do vendedor aponta para um item oculto ou indisponível.";
+            if (options.Any(option => option.NpcType == "ENGENHEIRO" && option.Offers.Contains(offer)) &&
+                item.Tipo.ToString().ToLowerInvariant() != "implante")
+                return "O catálogo do Engenheiro aceita apenas próteses visíveis.";
             try
             {
                 offer.Snapshot = FreezeCatalogItem(item);
@@ -417,6 +445,8 @@ public sealed partial class GameModeManagementService : IGameModeManagementServi
         config["saleDiscountPercent"] = update.SaleDiscountPercent;
         config["startingCurrency"] = update.StartingCurrency;
         config["repairProtectionAtBase"] = update.RepairProtectionAtBase;
+        if (update.ProtectedDepositSlots.HasValue) config["protectedDepositSlots"] = update.ProtectedDepositSlots.Value;
+        if (update.ProtectedDepositCost.HasValue) config["protectedDepositCost"] = update.ProtectedDepositCost.Value;
         if (update.PowerCatalog is not null)
             config["powerCatalog"] = JsonSerializer.SerializeToNode(update.PowerCatalog, JsonOptions);
         draft.ConfiguracaoJson = config.ToJsonString(JsonOptions);
@@ -438,6 +468,8 @@ public sealed partial class GameModeManagementService : IGameModeManagementServi
             SaleDiscountPercent = editor.SaleDiscountPercent,
             StartingCurrency = editor.StartingCurrency,
             RepairProtectionAtBase = editor.RepairProtectionAtBase,
+            ProtectedDepositSlots = editor.ProtectedDepositSlots,
+            ProtectedDepositCost = editor.ProtectedDepositCost,
             PowerCatalog = editor.PowerCatalog,
         }, outcomes);
         if (error is not null) return GameRunOperationResult<GameModeEditorDto>.Fail("CONFIGURACAO_INVALIDA", error);
@@ -486,6 +518,8 @@ public sealed partial class GameModeManagementService : IGameModeManagementServi
             SaleDiscountPercent = editor.SaleDiscountPercent,
             StartingCurrency = editor.StartingCurrency,
             RepairProtectionAtBase = editor.RepairProtectionAtBase,
+            ProtectedDepositSlots = editor.ProtectedDepositSlots,
+            ProtectedDepositCost = editor.ProtectedDepositCost,
             PowerCatalog = editor.PowerCatalog,
         }, outcomes);
         if (error is not null) return GameRunOperationResult<GameModeEditorDto>.Fail("CONFIGURACAO_INVALIDA", error);
@@ -701,6 +735,8 @@ public sealed partial class GameModeManagementService : IGameModeManagementServi
                 !update.PlayerDamageByResult.TryGetValue(code, out GameBattleDamageModifier? modifier) ||
                 modifier is null || modifier.Multiplier < 0 || modifier.Bonus < 0))
             return "Configure o dano do personagem para cada resultado de ATAQUE_COMUM do Sistema.";
+        if (update.ProtectedDepositSlots is < 0 or > 1000 || update.ProtectedDepositCost is < 0 or > 1000000000)
+            return "Configure de 0 a 1000 vagas protegidas e um custo entre 0 e 1.000.000.000 moedas.";
         if (update.SaleDiscountPercent is < 0 or > 100)
             return "O desconto de venda deve ser um percentual inteiro entre 0 e 100.";
         if (update.StartingCurrency is < 0 or > 1000000000)
@@ -717,6 +753,9 @@ public sealed partial class GameModeManagementService : IGameModeManagementServi
         if (update.Areas is null || update.Areas.Count is < 1 or > 9 ||
             update.Encounters is null || update.Encounters.Count is < 1 or > 80)
             return "Configure áreas e ao menos um encontro.";
+        if (update.Areas.SelectMany(area => area.Options ?? []).Where(option => option.Type == "NPC")
+            .GroupBy(option => option.NpcCode).Any(group => group.Select(option => (option.NpcType, option.NpcLocked)).Distinct().Count() > 1))
+            return "O mesmo NPC deve manter seu serviço e configuração de bloqueio em todas as áreas.";
         if (update.Areas.Count(area => !area.IsSecret) is < 1 or > GameRunMapGenerator.MaxNormalAreas ||
             update.Areas.Count(area => area.IsSecret) > 4)
             return "Configure de uma a cinco áreas normais e até quatro áreas secretas.";
@@ -839,6 +878,10 @@ public sealed partial class GameModeManagementService : IGameModeManagementServi
                 startingCurrency.TryGetInt32(out int currency) ? currency : 0,
             RepairProtectionAtBase = !root.TryGetProperty("repairProtectionAtBase", out JsonElement repairProtection) ||
                 repairProtection.ValueKind != JsonValueKind.False,
+            ProtectedDepositSlots = root.TryGetProperty("protectedDepositSlots", out var protectedSlots) &&
+                protectedSlots.TryGetInt32(out int slots) ? slots : 0,
+            ProtectedDepositCost = root.TryGetProperty("protectedDepositCost", out var protectedCost) &&
+                protectedCost.TryGetInt32(out int cost) ? cost : 0,
             PowerCatalog = root.TryGetProperty("powerCatalog", out JsonElement catalog) &&
                 catalog.ValueKind == JsonValueKind.Array
                     ? catalog.Deserialize<List<GameModePowerOptionDto>>(JsonOptions) ?? [] : [],

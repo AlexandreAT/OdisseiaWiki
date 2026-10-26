@@ -7,6 +7,17 @@ namespace OdisseiaWiki.GameRuns.Battle;
 /// <summary>Copies only equipped defensive item values into a run, never into the original sheet.</summary>
 public static class GameRunDefensiveEquipment
 {
+    public static bool HasDefenses(JsonElement item)
+    {
+        string? type = ReadText(item, "tipo");
+        bool outfit = UsesBaseFields(type);
+        if (string.Equals(type, "implante", StringComparison.OrdinalIgnoreCase)) return true;
+        if (!outfit && !string.Equals(type, "outro", StringComparison.OrdinalIgnoreCase)) return false;
+        var attributes = Property(item, "atributos");
+        return new[] { outfit ? "escudoBase" : "escudo", outfit ? "protecaoBase" : "protecao",
+            outfit ? "armaduraBase" : "armadura" }.Any(key => ReadPositive(attributes, key) > 0);
+    }
+
     public static GameBattleDefenses Bonuses(JsonElement? inventory)
     {
         if (inventory is { ValueKind: JsonValueKind.String } serialized &&
@@ -21,12 +32,13 @@ public static class GameRunDefensiveEquipment
             if (item.ValueKind != JsonValueKind.Object) continue;
             string? type = ReadText(item, "tipo");
             if (!string.Equals(type, "traje", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(type, "outro", StringComparison.OrdinalIgnoreCase)) continue;
+                !string.Equals(type, "outro", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(type, "implante", StringComparison.OrdinalIgnoreCase)) continue;
             JsonElement? attributes = Property(item, "atributos");
             JsonElement? metadata = Property(attributes, "__vistaExplodida");
             JsonElement? remaining = Property(attributes, "__runDefenseRemaining");
             if (string.IsNullOrWhiteSpace(ReadText(metadata, "equippedSlot"))) continue;
-            if (string.Equals(type, "traje", StringComparison.OrdinalIgnoreCase))
+            if (UsesBaseFields(type))
             {
                 shield += ReadPositive(remaining, "escudo", ReadPositive(attributes, "escudoBase"));
                 protection += ReadPositive(remaining, "protecao", ReadPositive(attributes, "protecaoBase"));
@@ -46,7 +58,7 @@ public static class GameRunDefensiveEquipment
     {
         JsonObject root = JsonNode.Parse(snapshotJson) as JsonObject
             ?? throw new JsonException("O snapshot da run está inválido.");
-        JsonElement? inventory = JsonSerializer.SerializeToElement(root["inventario"]);
+        JsonElement? inventory = JsonSerializer.SerializeToElement(Items(root));
         GameBattleDefenses bonus = Bonuses(inventory);
         if (bonus == new GameBattleDefenses()) return snapshotJson;
         JsonObject status = root["status"] as JsonObject
@@ -63,22 +75,23 @@ public static class GameRunDefensiveEquipment
     {
         JsonObject root = JsonNode.Parse(snapshotJson) as JsonObject
             ?? throw new JsonException("O snapshot da run está inválido.");
-        JsonArray items = Items(root);
+        var items = Items(root).ToArray();
         JsonObject item = items.OfType<JsonObject>().SingleOrDefault(entry =>
             string.Equals(ReadNode(entry, "id")?.ToString(), itemId, StringComparison.Ordinal))
             ?? throw new InvalidOperationException("O item não pertence a esta run.");
         string? type = ReadNode(item, "tipo")?.ToString();
         if (type is null || !type.Equals("traje", StringComparison.OrdinalIgnoreCase) &&
-            !type.Equals("outro", StringComparison.OrdinalIgnoreCase))
+            !type.Equals("outro", StringComparison.OrdinalIgnoreCase) && !type.Equals("implante", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Este item não fornece defesa equipável.");
         JsonObject attributes = ReadNode(item, "atributos") as JsonObject
             ?? throw new InvalidOperationException("Este item não possui atributos de defesa.");
-        bool hasDefense = new[] { type.Equals("traje", StringComparison.OrdinalIgnoreCase)
-            ? "escudoBase" : "escudo", type.Equals("traje", StringComparison.OrdinalIgnoreCase)
-            ? "protecaoBase" : "protecao", type.Equals("traje", StringComparison.OrdinalIgnoreCase)
+        bool hasDefense = new[] { UsesBaseFields(type)
+            ? "escudoBase" : "escudo", UsesBaseFields(type)
+            ? "protecaoBase" : "protecao", UsesBaseFields(type)
             ? "armaduraBase" : "armadura" }
             .Any(key => ReadInt(ReadNode(attributes, key)) > 0);
-        if (!hasDefense) throw new InvalidOperationException("Este item não possui defesa configurada.");
+        if (!hasDefense && !type.Equals("implante", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Este item não possui defesa configurada.");
 
         GameBattleDefenses before = Bonuses(JsonSerializer.SerializeToElement(items));
         JsonObject metadata = ReadNode(attributes, "__vistaExplodida") as JsonObject ?? new JsonObject();
@@ -113,14 +126,14 @@ public static class GameRunDefensiveEquipment
     {
         JsonObject root = JsonNode.Parse(snapshotJson) as JsonObject
             ?? throw new JsonException("O snapshot da run está inválido.");
-        if (ReadNode(root, "inventario") is null) return (snapshotJson, 0);
-        JsonArray items = Items(root);
+        if (ReadNode(root, "inventario") is null && ReadNode(root, "implantes") is null) return (snapshotJson, 0);
+        var items = Items(root).ToArray();
         GameBattleDefenses before = Bonuses(JsonSerializer.SerializeToElement(items));
         long repaired = 0;
         foreach (JsonObject item in items.OfType<JsonObject>())
         {
             string? type = ReadNode(item, "tipo")?.ToString();
-            bool outfit = string.Equals(type, "traje", StringComparison.OrdinalIgnoreCase);
+            bool outfit = UsesBaseFields(type);
             if (!outfit && !string.Equals(type, "outro", StringComparison.OrdinalIgnoreCase)) continue;
             JsonObject? attributes = ReadNode(item, "atributos") as JsonObject;
             if (attributes is null) continue;
@@ -164,8 +177,8 @@ public static class GameRunDefensiveEquipment
             ?? throw new JsonException("O snapshot anterior está inválido.");
         JsonObject after = JsonNode.Parse(afterJson) as JsonObject
             ?? throw new JsonException("O snapshot atualizado está inválido.");
-        GameBattleDefenses previous = Bonuses(JsonSerializer.SerializeToElement(ReadNode(before, "inventario")));
-        GameBattleDefenses current = Bonuses(JsonSerializer.SerializeToElement(ReadNode(after, "inventario")));
+        GameBattleDefenses previous = Bonuses(JsonSerializer.SerializeToElement(Items(before)));
+        GameBattleDefenses current = Bonuses(JsonSerializer.SerializeToElement(Items(after)));
         JsonObject? status = ReadNode(after, "status") as JsonObject;
         JsonObject? defenses = ReadNode(status, "defesas") as JsonObject;
         if (defenses is null) return afterJson;
@@ -178,7 +191,7 @@ public static class GameRunDefensiveEquipment
     public static void RecordSpentDefenses(JsonObject root, int shieldSpent, int protectionSpent)
     {
         if (shieldSpent <= 0 && protectionSpent <= 0) return;
-        if (ReadNode(root, "inventario") is null) return;
+        if (ReadNode(root, "inventario") is null && ReadNode(root, "implantes") is null) return;
         foreach (JsonObject item in Items(root).OfType<JsonObject>())
         {
             JsonObject? attributes = ReadNode(item, "atributos") as JsonObject;
@@ -186,8 +199,9 @@ public static class GameRunDefensiveEquipment
             if (string.IsNullOrWhiteSpace(ReadNode(metadata, "equippedSlot")?.ToString())) continue;
             string? type = ReadNode(item, "tipo")?.ToString();
             if (!string.Equals(type, "traje", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(type, "outro", StringComparison.OrdinalIgnoreCase)) continue;
-            bool outfit = string.Equals(type, "traje", StringComparison.OrdinalIgnoreCase);
+                !string.Equals(type, "outro", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(type, "implante", StringComparison.OrdinalIgnoreCase)) continue;
+            bool outfit = UsesBaseFields(type);
             string shieldField = outfit ? "escudoBase" : "escudo";
             string protectionField = outfit ? "protecaoBase" : "protecao";
             JsonObject remaining = ReadNode(attributes, "__runDefenseRemaining") as JsonObject ?? new JsonObject();
@@ -207,7 +221,19 @@ public static class GameRunDefensiveEquipment
         }
     }
 
-    private static JsonArray Items(JsonObject root) => GameRunInventory.ReadOrCreate(root, "inventario");
+    private static IEnumerable<JsonObject> Items(JsonObject root)
+    {
+        foreach (var item in GameRunInventory.ReadOrCreate(root, "inventario")
+                     .Concat(GameRunInventory.ReadOrCreate(root, "implantes")).OfType<JsonObject>())
+        {
+            if (item["atributos"] is JsonValue stored && stored.TryGetValue<string>(out var serialized))
+                item["atributos"] = JsonNode.Parse(serialized!);
+            yield return item;
+        }
+    }
+
+    private static bool UsesBaseFields(string? type) => string.Equals(type, "traje", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(type, "implante", StringComparison.OrdinalIgnoreCase);
 
     private static JsonNode? ReadNode(JsonObject? source, string name) => source?.FirstOrDefault(entry =>
         string.Equals(entry.Key, name, StringComparison.OrdinalIgnoreCase)).Value;
