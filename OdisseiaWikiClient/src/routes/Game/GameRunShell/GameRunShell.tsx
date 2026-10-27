@@ -7,7 +7,6 @@ import CloseIcon from '@mui/icons-material/Close';
 import HistoryIcon from '@mui/icons-material/History';
 import HotelOutlinedIcon from '@mui/icons-material/HotelOutlined';
 import NorthEastIcon from '@mui/icons-material/NorthEast';
-import UpgradeIcon from '@mui/icons-material/Upgrade';
 import SecurityOutlinedIcon from '@mui/icons-material/SecurityOutlined';
 import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
 import { RunAttributeModal } from './RunAttributeModal';
@@ -16,7 +15,6 @@ import { RunVictoryScreen } from './RunVictoryScreen';
 import { RunResourceBar } from './RunResourceBar/RunResourceBar';
 import { ConditionBadges } from '../../../components/Gameplay/ConditionBadges/ConditionBadges';
 import { snapshotConditions } from '../../../components/Gameplay/ConditionBadges/conditionBadgeState';
-import { UpgradeArrow } from './RunRewards.style';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import TrackChangesOutlinedIcon from '@mui/icons-material/TrackChangesOutlined';
@@ -42,13 +40,14 @@ import { RunTraining } from './RunTraining/RunTraining';
 import { parseRunInventoryEntries } from './runInventoryEntries';
 import { RunRegionBackdrops } from './RunRegionBackdrops';
 import { RunHudDisclosure } from './RunHudDisclosure';
+import { RunProgressSummary } from './RunProgressSummary';
 import { GameHint, GameNotice, GamePage, GameSectionTitle, GameTextLink } from '../GameShared.style';
 import {
   AttributeList, ResourceAndAttributes, GameRunPage, ReplaySection, ResourceList,
   RunActionRail, RunBattleHistoryNav, RunConclusion, RunFooterActions, RunHudHeader, RunHudMeta, RunHudPanel,
   RunHudTopline, RunHudNavigation, RunBackLink, RunLoadingPage, RunMapArea, RunRouteBusy, RunPanel, RunStickyHeader, RunTrainingBody, RunTrainingDialog,
   RunDefenseRow, RunDefenseDetails, RunDefenseValue, RunProtection,
-  RunTrainingPanel, RunXpLabel, SnapshotHeader, SnapshotPortrait, TrainingIcon,
+  RunTrainingPanel, RunCombatTrainingDialog, SnapshotHeader, SnapshotPortrait, TrainingIcon,
   RunCurrency,
 } from './GameRunShell.style';
 import { canUpgradeGameRunMap, useGameRun } from './useGameRun';
@@ -380,13 +379,10 @@ export default function GameRunShell() {
             </SnapshotPortrait>
             <div><h1><OdisseiaAnimatedTitle key={current.nome} theme={theme} neon={neon}
               text={current.nome} compact /></h1>
-              <RunXpLabel key={xpPulse?.runId === run.idGameRun ? xpPulse.sequence : 0}
-                $pulse={xpPulse?.runId === run.idGameRun}>
-                Nível {current.status?.nivel ?? 1} · {current.status?.xp ?? 0} XP
-                {(Number(current.status?.pontos ?? 0) + Number(current.status?.pontosAtributo ?? 0)) > 0 &&
-                <UpgradeArrow type="button" aria-label="Distribuir pontos de atributos" title="Evoluir atributos"
-                  onClick={() => setAttributesOpen(true)}><UpgradeIcon fontSize="small" /></UpgradeArrow>}
-              </RunXpLabel>
+              <RunProgressSummary level={current.status?.nivel ?? 1} xp={current.status?.xp ?? 0}
+                pendingPoints={Number(current.status?.pontos ?? 0) + Number(current.status?.pontosAtributo ?? 0)}
+                pulseSequence={xpPulse?.runId === run.idGameRun ? xpPulse.sequence : 0}
+                onUpgrade={() => setAttributesOpen(true)} />
               <RunCurrency key={current.economy?.balance ?? 0}>
                 {current.economy?.balance ?? 0} moedas
               </RunCurrency>
@@ -473,7 +469,8 @@ export default function GameRunShell() {
     </RunHudPanel>
 
     {npcServiceOpen && <RunNpcServiceDialog run={run} theme={theme} neon={neon} busy={state.economyBusy} error={state.actionError}
-      onBuy={state.buyVendorItem} onUpgrade={state.upgradeWeapon} onClose={() => { void state.leaveVendor(); }} />}
+      onBuy={state.buyVendorItem} onUpgrade={state.upgradeWeapon} onSell={state.sellVendorItems} onRepair={state.repairDefense}
+      onClose={() => { void state.leaveVendor(); }} />}
     {(vendorOpen || stashOpen) && <RunEconomyDialog run={run} theme={theme} neon={neon}
       vendor={vendorOpen} busy={state.economyBusy} error={state.actionError}
       onBuy={state.buyVendorItem} onTransfer={state.transferStashItem} onSell={state.sellVendorItems}
@@ -532,18 +529,18 @@ export default function GameRunShell() {
           onConfigureCondition={state.configureCondition}
           usingItemId={state.consumingItemId}
           onClose={() => setInventoryOpen(false)} />)}
-    <RunTrainingDialog open={trainingOpen} onClose={() => setTrainingOpen(false)}
-      aria-labelledby="training-title" maxWidth="md" fullWidth>
-      <RunTrainingPanel neon={neonEnabled}>
+    <RunCombatTrainingDialog open={trainingOpen} onClose={() => setTrainingOpen(false)}
+      aria-labelledby="training-title" maxWidth={false} fullWidth>
+      <RunTrainingPanel neon={neonEnabled} data-combat-training-panel>
         <RunHudTopline><GameSectionTitle id="training-title">Treino livre</GameSectionTitle>
           <button type="button" aria-label="Fechar treino" onClick={() => setTrainingOpen(false)}><CloseIcon /></button>
         </RunHudTopline>
-        <RunTrainingBody>
+        <RunTrainingBody data-combat-training-body>
           {trainingOpen && <RunTraining key={run.idGameRun} runId={run.idGameRun} theme={theme} neon={neon}
             playerImage={run.estadoAtual.imagem} />}
         </RunTrainingBody>
       </RunTrainingPanel>
-    </RunTrainingDialog>
+    </RunCombatTrainingDialog>
     <ConfirmDialog open={state.targetPromptOpen} title="Definir alvos?"
       compactActions
       message="Escolha quem atacar antes de começar."

@@ -3,6 +3,7 @@ import {
   AnimatedDots,
   LoadingIcon,
   LoadingLabel,
+  LoadingLabelClip,
   LoadingText,
   LoadingWrapper,
 } from './LoadingIndicator.style';
@@ -23,7 +24,7 @@ export const LoadingIndicator = ({
       </LoadingIcon>
     )}
     <LoadingText $compact={compact}>
-      <LoadingLabel title={label}>{label}</LoadingLabel>
+      <LoadingLabel title={label}><LoadingLabelClip>{label}</LoadingLabelClip></LoadingLabel>
       <AnimatedDots aria-hidden="true">
         <i />
         <i />

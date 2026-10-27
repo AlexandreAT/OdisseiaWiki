@@ -4,6 +4,7 @@ using OdisseiaWiki.Models;
 using OdisseiaWiki.Repositories.Interfaces;
 using OdisseiaWiki.Services.Helpers;
 using OdisseiaWiki.Services.Interfaces;
+using System.Text.Json;
 
 namespace OdisseiaWiki.Services;
 
@@ -85,7 +86,32 @@ public sealed class SistemaRpgItemCatalogService : ISistemaRpgItemCatalogService
                 erros);
         }
 
+        ValidarCompatibilidade(dto, erros);
         return erros;
+    }
+
+    private static void ValidarCompatibilidade(SistemaItensConfigDto catalogo, ICollection<string> erros)
+    {
+        var todos = new List<(SistemaItemEscopoDto Escopo, string Caminho, bool Traje)>();
+        void Visitar(SistemaItemEscopoDto escopo, string pai, bool traje)
+        {
+            string codigo = SistemaRpgConfiguration.NormalizarCodigo(escopo.Codigo, escopo.Nome);
+            string caminho = pai.Length == 0 ? codigo : $"{pai}/{codigo}";
+            bool tipoTraje = pai.Length == 0 ? codigo == "TRAJE" : traje;
+            todos.Add((escopo, caminho, tipoTraje && escopo.Nivel == SistemaItemEscopoNivel.Arquetipo));
+            foreach (var filho in escopo.Filhos) Visitar(filho, caminho, tipoTraje);
+        }
+        foreach (var tipo in catalogo.Tipos) Visitar(tipo, "", false);
+        var caminhos = todos.Where(item => item.Traje).Select(item => item.Caminho).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var (escopo, _, traje) in todos)
+        {
+            if (escopo.ArquetiposCompativeis is not { } lista) continue;
+            if (!traje) { erros.Add($"{escopo.Nome}: compatibilidade só pode ser configurada em arquétipos de traje."); continue; }
+            if (lista.Count > 500) { erros.Add($"{escopo.Nome}: selecione até 500 arquétipos compatíveis."); continue; }
+            foreach (string? alvo in lista)
+                if (string.IsNullOrWhiteSpace(alvo) || alvo.Length > 200 || !caminhos.Contains(alvo.Trim()))
+                    erros.Add($"{escopo.Nome}: o traje compatível “{alvo}” não existe neste catálogo.");
+        }
     }
 
     internal static List<SistemaItemEscopo> ClonarCatalogo(IEnumerable<SistemaItemEscopo> origem)
@@ -102,6 +128,7 @@ public sealed class SistemaRpgItemCatalogService : ISistemaRpgItemCatalogService
                 Descricao = item.Descricao,
                 Ordem = item.Ordem,
                 Ativo = item.Ativo,
+                CompatibilidadeTrajeJson = item.CompatibilidadeTrajeJson,
                 Campos = item.Campos.Select(campo => new SistemaItemCampo
                 {
                     Codigo = campo.Codigo,
@@ -178,6 +205,8 @@ public sealed class SistemaRpgItemCatalogService : ISistemaRpgItemCatalogService
             Descricao = Limpar(dto.Descricao),
             Ordem = dto.Ordem,
             Ativo = dto.Ativo,
+            CompatibilidadeTrajeJson = dto.ArquetiposCompativeis is null ? null : JsonSerializer.Serialize(
+                dto.ArquetiposCompativeis.Select(valor => valor.Trim().ToUpperInvariant()).Distinct(StringComparer.OrdinalIgnoreCase).ToArray()),
             Campos = dto.Campos.Select(campo => new SistemaItemCampo
             {
                 Codigo = SistemaRpgConfiguration.NormalizarCodigo(campo.Codigo, campo.Nome),

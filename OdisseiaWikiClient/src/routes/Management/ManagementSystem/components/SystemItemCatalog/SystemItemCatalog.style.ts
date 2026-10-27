@@ -40,6 +40,8 @@ export const CatalogHeader = styled.header`
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-wrap: wrap;
+    line-height: 1.4;
     margin: 0;
     color: var(--clearneonBlue) !important;
     font-family: 'Cyberpunk Is Not Dead', sans-serif;
@@ -111,7 +113,7 @@ export const CatalogTree = styled.div`
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 20px;
 `;
 
 export const ScopeCard = styled.details<ThemeProps & { $depth: number }>`
@@ -179,6 +181,7 @@ export const ScopeSummary = styled.summary`
 `;
 
 export const ScopeBadge = styled.span<{ $inactive?: boolean }>`
+  display: inline-flex; align-items: center; gap: 5px;
   padding: 3px 6px;
   border: 1px solid ${({ $inactive }) => $inactive ? 'var(--grey)' : 'var(--clearneonBlue)'};
   border-radius: 999px;
@@ -194,12 +197,12 @@ export const ScopeBody = styled.fieldset`
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 22px;
   margin: 0;
   padding: 13px;
   border: 0;
 
-  &:disabled { opacity: 0.82; }
+  &[aria-readonly='true'] { opacity: 0.82; }
 
   @media (max-width: 680px) {
     padding: 9px 6px;
@@ -234,33 +237,47 @@ export const ToggleField = styled.label`
   font-size: 11px;
   box-sizing: border-box;
 
-  input {
-    width: 18px;
-    height: 18px;
-    accent-color: var(--clearneonBlue);
-  }
+  input { margin: 0; }
 `;
 
 export const ScopeTools = styled.div`
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 7px;
+  align-items: center;
+  gap: 12px;
+  .scope-compatibility { flex: 1 1 260px; margin-right: auto; min-width: 0; }
+  @media (max-width: 620px) {
+    .scope-compatibility { flex-basis: 100%; width: 100%; }
+  }
 `;
 
 export const ScopeTables = styled.div`
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 16px;
+`;
+
+export const ScopeTableGroup = styled.details`
+  min-width: 0;
+  border: 1px solid var(--grey);
+  border-radius: 5px;
+  background: var(--blackTransp);
+  > summary { display: flex; flex-wrap: wrap; align-items: center; gap: 9px;
+    padding: 12px; cursor: pointer; color: var(--clearneonBlue); font-size: 12px; }
+  &[open] > summary { border-bottom: 1px solid var(--grey); margin-bottom: 12px; }
+  > :not(summary) { margin: 0 10px 12px; }
+  @media (max-width: 620px) { > :not(summary) { margin-inline: 4px; } }
 `;
 
 export const ChildrenGroup = styled.div`
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 9px;
-  padding-top: 3px;
+  gap: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--grey);
 
   > h5 {
     margin: 0;

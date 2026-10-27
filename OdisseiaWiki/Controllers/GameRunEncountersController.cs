@@ -73,6 +73,15 @@ public sealed class GameRunEncountersController : ControllerBase
         return result.Sucesso ? Ok(result.Dados) : Failure(result.Codigo, result.Mensagem);
     }
 
+    [HttpPost("npc/repair")]
+    public async Task<IActionResult> RepairDefense(long idGameRun, GameRunVendorPurchaseRequestDto request, CancellationToken token)
+    {
+        int? userId = User.GetUserId();
+        if (userId is null) return Unauthorized();
+        var result = await _service.RepairDefenseAsync(idGameRun, userId.Value, request, token);
+        return result.Sucesso ? Ok(result.Dados) : Failure(result.Codigo, result.Mensagem);
+    }
+
     [HttpPost("vendor/leave")]
     public async Task<IActionResult> LeaveVendor(long idGameRun,
         GameRunMutationRequestDto request, CancellationToken token)

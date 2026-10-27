@@ -316,8 +316,11 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
         if (run is null) return null;
         GameRunBattle? battle = await _runs.GetBattleAsync(
             idGameRun, GameRunFirstMap.EncounterId, cancellationToken);
-        return battle is null ? null : JsonSerializer.Deserialize<GameBattlePreviewDto>(
-            battle.ResultadoJson, JsonOptions);
+        if (battle is null) return null;
+        var preview = JsonSerializer.Deserialize<GameBattlePreviewDto>(battle.ResultadoJson, JsonOptions);
+        if (preview is null) return null;
+        var version = await _systems.GetVersionAsync(run.IdSistemaVersao, includeConfiguration: true);
+        return GameBattleMedia.Restore(preview, battle, run, version);
     }
 
     public async Task<GameRunEncounterSetupDto?> GetCurrentSetupAsync(
@@ -347,10 +350,12 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
         GameRun? run = await _runs.GetByIdAsync(idGameRun, idUsuario, cancellationToken);
         if (run is null) return null;
         IReadOnlyList<GameRunBattle> battles = await _runs.GetBattlesAsync(idGameRun, cancellationToken);
+        if (battles.Count == 0) return [];
+        var version = await _systems.GetVersionAsync(run.IdSistemaVersao, includeConfiguration: true);
         return battles.Select(item => new GameRunBattleRecordDto(
             item.NoId, item.Ordem, item.CriadaEmUtc,
-            JsonSerializer.Deserialize<GameBattlePreviewDto>(item.ResultadoJson, JsonOptions)
-                ?? throw new JsonException("O histórico do combate está vazio."))).ToArray();
+            GameBattleMedia.Restore(JsonSerializer.Deserialize<GameBattlePreviewDto>(item.ResultadoJson, JsonOptions)
+                ?? throw new JsonException("O histórico do combate está vazio."), item, run, version))).ToArray();
     }
 
     public async Task<GameRunOperationResult<GameRunDto>> UpdateWeaponOrderAsync(
@@ -524,7 +529,8 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
                 }
                 catch (Exception error) when (error is JsonException or InvalidOperationException or ArgumentException)
                 {
-                    string? details = DescribeInvalidActions(GameRunService.Map(run), version, requested);
+                    string? details = error is OutfitCompatibilityException ? error.Message
+                        : DescribeInvalidActions(GameRunService.Map(run), version, requested);
                     run.LoadoutJson = old;
                     run.EstadoAtualJson = oldState;
                     return GameRunOperationResult<GameRunDto>.Fail("ACAO_INEXECUTAVEL", details ?? error.Message);

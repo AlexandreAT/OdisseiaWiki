@@ -14,6 +14,8 @@ public static class GameRunNpcs
         node.Type == "NPC" && node.Payload?.NpcType == "MERCADOR";
     public static bool NeedsRescue(GameRunMapNodeDto node) => node.Type == "NPC" &&
         node.Payload is { NpcLocked: true, NpcRescued: false };
+    public static bool BuysItems(GameRunMapNodeDto node) => IsMerchant(node) ||
+        node.Type == "NPC" && node.Payload?.NpcType == "ENGENHEIRO";
     public static bool IsRescued(GameCharacterMilestones memory, string gameCode, int systemId, string npcCode) =>
         memory.RescuedNpcs.Any(item => item.GameCode == gameCode && item.SystemId == systemId && item.NpcCode == npcCode);
 

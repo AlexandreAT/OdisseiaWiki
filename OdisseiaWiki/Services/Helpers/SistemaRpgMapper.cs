@@ -413,6 +413,8 @@ internal static class SistemaRpgMapper
 
     public static SistemaItensConfigDto ToItens(SistemaVersao entity, bool incluirInativos = false)
     {
+        var trajes = entity.ItemEscopos.Where(item => item.Nivel == SistemaItemEscopoNivel.Arquetipo &&
+            item.CodigoCaminho?.StartsWith("TRAJE/", StringComparison.OrdinalIgnoreCase) == true).ToArray();
         List<SistemaItemEscopo> escopos = entity.ItemEscopos
             .Where(item => incluirInativos || item.Ativo)
             .OrderBy(item => item.Ordem)
@@ -425,6 +427,8 @@ internal static class SistemaRpgMapper
 
         return new SistemaItensConfigDto
         {
+            RegrasTrajeConfiguradas = trajes.Any(item => item.CompatibilidadeTrajeJson is not null),
+            ArquetiposTrajeConhecidos = trajes.Select(item => item.CodigoCaminho).ToList(),
             Tipos = escopos
                 .Where(item => item.Nivel == SistemaItemEscopoNivel.Tipo && item.IdEscopoPai is null)
                 .Select(item => ToItemEscopo(item, porPai, new HashSet<int>()))
@@ -455,6 +459,8 @@ internal static class SistemaRpgMapper
 
     private static SistemaItemEscopoDto ToItemEscopoSemFilhos(SistemaItemEscopo item) => new()
     {
+        ArquetiposCompativeis = item.CompatibilidadeTrajeJson is null ? null
+            : JsonSerializer.Deserialize<List<string>>(item.CompatibilidadeTrajeJson),
         IdSistemaItemEscopo = item.IdSistemaItemEscopo,
         IdEscopoPai = item.IdEscopoPai,
         Nivel = item.Nivel,

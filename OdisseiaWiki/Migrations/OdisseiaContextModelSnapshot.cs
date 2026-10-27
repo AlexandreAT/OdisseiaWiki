@@ -2575,6 +2575,9 @@ namespace OdisseiaWiki.Migrations
 
             modelBuilder.Entity("OdisseiaWiki.Models.SistemaItemEscopo", b =>
                 {
+                    b.Property<string>("CompatibilidadeTrajeJson")
+                        .HasColumnType("json");
+
                     b.Property<int>("IdSistemaItemEscopo")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");

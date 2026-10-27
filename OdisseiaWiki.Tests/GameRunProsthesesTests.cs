@@ -40,7 +40,8 @@ public sealed partial class GameRunEncounterServiceTests
             attributes["municaoAtual"] = 10; attributes["custoMunicaoTiro"] = 1;
         }
         root["implantes"] = new JsonObject { ["implantes"] = new JsonArray(new JsonObject {
-            ["id"] = "braco", ["nome"] = "Braço integrado", ["tipo"] = "implante", ["atributos"] = attributes }) };
+            ["id"] = "braco", ["nome"] = "Braço integrado", ["tipo"] = "implante",
+            ["imagem"] = "/assets/braco.png", ["atributos"] = attributes }) };
         fixture.Run.EstadoAtualJson = root.ToJsonString();
         return fixture;
     }
@@ -66,6 +67,8 @@ public sealed partial class GameRunEncounterServiceTests
         var action = Assert.Single(setup.Input.FirstActor.Actions, action => !action.IsFallback);
         Assert.Equal(3, action.Roll.Modifier); Assert.Equal(2, action.AttacksPerTurn);
         Assert.Equal(ranged ? 40 : 30, action.DamageByResultCode["ACERTO"]);
+        Assert.Equal("/assets/braco.png", action.Image);
+        Assert.Equal("PROTESE", action.SourceType);
         Assert.Equal(5, setup.Input.FirstActor.Attributes["PRECISAO"]);
         if (ranged) Assert.Equal(10, action.Magazine!.Capacity); else Assert.Null(action.Magazine);
         Assert.True((await fixture.Service.UpdateLoadoutAsync(10, 5, request, default)).Repetido);

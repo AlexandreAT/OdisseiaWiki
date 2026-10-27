@@ -11,6 +11,7 @@ public interface IGameRunEncounterService
     Task<GameRunOperationResult<GameRunDto>> EnterVendorAsync(long runId, string nodeId, int userId, GameRunMutationRequestDto request, CancellationToken token);
     Task<GameRunOperationResult<GameRunDto>> BuyVendorItemAsync(long runId, int userId, GameRunVendorPurchaseRequestDto request, CancellationToken token);
     Task<GameRunOperationResult<GameRunDto>> SellVendorItemsAsync(long runId, int userId, GameRunVendorSaleRequestDto request, CancellationToken token);
+    Task<GameRunOperationResult<GameRunDto>> RepairDefenseAsync(long runId, int userId, GameRunVendorPurchaseRequestDto request, CancellationToken token);
     Task<GameRunOperationResult<GameRunDto>> LeaveVendorAsync(long runId, int userId, GameRunMutationRequestDto request, CancellationToken token);
     Task<GameRunOperationResult<GameRunDto>> TransferStashItemAsync(long runId, int userId, GameRunStashTransferRequestDto request, CancellationToken token);
     Task<OdisseiaWiki.GameRuns.GameAttributeOptions?> GetAttributesAsync(long runId, int userId, CancellationToken token);

@@ -7,6 +7,7 @@ $ErrorActionPreference = 'Stop'
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $testProject = Join-Path $repositoryRoot 'OdisseiaWiki.Tests/OdisseiaWiki.Tests.csproj'
 $containerName = 'odisseia-rogue-check-' + [guid]::NewGuid().ToString('N').Substring(0, 10)
+$artifactsPath = Join-Path ([System.IO.Path]::GetTempPath()) $containerName
 $temporaryPassword = 'rogue_test_' + [guid]::NewGuid().ToString('N')
 $previousFlag = [Environment]::GetEnvironmentVariable('RUN_GAMEPLAY_MARIADB_TESTS')
 $previousConnection = [Environment]::GetEnvironmentVariable('ODISSEIA_TEST_MYSQL_CONNECTION')
@@ -37,7 +38,8 @@ try {
     dotnet test $testProject `
         --filter $Filter `
         --verbosity minimal `
-        '-p:OutputPath=artifacts/rogue_release_test/bin/'
+        --artifacts-path $artifactsPath `
+        '-p:UseAppHost=false'
     if ($LASTEXITCODE -ne 0) { throw 'Os testes de integração com MySQL falharam.' }
 }
 finally {

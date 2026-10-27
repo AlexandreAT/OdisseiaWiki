@@ -24,6 +24,8 @@ const basePath = '/game-runs';
 
 export const upgradeGameRunWeapon = async (id: number, payload: GameRunMutationRequest & { itemId: string }): Promise<GameRunDto> =>
   (await api.post<GameRunDto>(`${basePath}/${id}/npc/upgrade`, payload)).data;
+export const repairGameRunDefense = async (id: number, payload: GameRunMutationRequest & { itemId: string }): Promise<GameRunDto> =>
+  (await api.post<GameRunDto>(`${basePath}/${id}/npc/repair`, payload)).data;
 
 export const visitGameRunNpc = async (id: number, nodeId: string, payload: GameRunMutationRequest) =>
   (await api.post<GameRunBaseResolution>(`${basePath}/${id}/nodes/${encodeURIComponent(nodeId)}/npc`, payload)).data;

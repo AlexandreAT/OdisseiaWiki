@@ -5,7 +5,8 @@ interface Props {
   fontSize?: string;
   width?: string;
   height?: string;
-  neon?: 'on' | 'off'
+  neon?: 'on' | 'off';
+  $neon?: 'on' | 'off';
 }
 
 const getNeon = (typeStyle?: 'primary' | 'secondary') => typeStyle === 'secondary' ? 'var(--neonPink)' : 'var(--neonBlue)';
@@ -37,31 +38,44 @@ export const CheckboxLabel = styled.label<Props>`
 
 export const InputCheckbox = styled.input.attrs({ type: 'checkbox' })<Props>`
     appearance: none;
+    -webkit-appearance: none;
+    box-sizing: border-box;
+    flex: 0 0 20px;
     width: 20px;
     height: 20px;
-    background-color: var(--mediumgrey);
+    background-color: var(--deepgrey);
     margin-right: 8px;
+    padding: 0;
+    border: 1px solid var(--mediumgrey);
     border-radius: 4px;
     position: relative;
     outline: none;
-    transition: background 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+    box-shadow: none;
+    transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
 
     &:checked {
-        background-color: var(--deepgrey);
-        box-shadow: inset 0px 0px 5px ${({ typeStyle }) => getNeon(typeStyle)};
+        background-color: var(--black);
+        border-color: ${({ $neon }) => $neon === 'on' ? 'var(--whitesmoke)' : 'var(--neonBlue)'};
+        box-shadow: ${({ $neon }) => $neon === 'on'
+            ? '0 0 4px var(--neonBlue), inset 0 0 3px var(--neonBlue)' : 'none'};
     }
 
     &:checked::after {
         content: "";
         display: block;
+        box-sizing: content-box;
         width: 5px;
         height: 10px;
-        border: 3px solid ${({ typeStyle }) => getNeon(typeStyle)};
+        border: solid var(--neonBlue);
         border-width: 0 3px 3px 0;
-        transform: rotate(45deg);
-        margin: 2px 6px;
+        transform: translate(-50%, -65%) rotate(45deg);
         position: absolute;
-        left: 0;
-        top: 0;
+        left: 50%;
+        top: 50%;
     }
+
+    &:focus-visible { outline: 2px solid var(--whitesmoke); outline-offset: 3px; }
+    &:disabled { opacity: .45; cursor: not-allowed; }
+    :root[data-motion='reduced'] & { transition: none; }
 `;

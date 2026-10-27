@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import CloseIcon from '@mui/icons-material/Close';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import type { GameRunDto } from '../../../models/GameRun';
 import { CyberButton } from '../../../components/Generic/HighlightButton/HighlightButton';
@@ -13,18 +12,27 @@ import { normalizeImagePath } from '../../Wiki/utils/imagePathHelper';
 import { EconomyActions, EconomyBalance, EconomyBody, EconomyCard, EconomyCards, EconomyDetails,
   EconomySectionTitle, EconomyTabs, EconomyTopline, MerchantIdentity, MerchantAvatar } from './RunEconomyDialog/RunEconomyDialog.style';
 import { RunEconomyItemDetails } from './RunEconomyDialog/RunEconomyItemDetails';
+import { RunSalePanel } from './RunEconomyDialog/RunSalePanel';
+import { RunSaleHeader } from './RunEconomyDialog/RunSaleHeader';
+import { useRunEconomyDialog } from './RunEconomyDialog/useRunEconomyDialog';
+import { RunDefenseRepairPanel } from './RunDefenseRepairPanel';
+import type { RunSaleLine } from './runEconomy';
 
 interface Props {
   run: GameRunDto; theme: 'dark' | 'light'; neon: 'on' | 'off'; busy: boolean; error: string | null;
   onBuy: (id: string, toStash: boolean) => Promise<boolean>; onUpgrade: (id: string) => Promise<boolean>; onClose: () => void;
+  onSell: (items: RunSaleLine[], fromStash: boolean) => Promise<boolean>;
+  onRepair: (id: string) => Promise<boolean>;
 }
 
-export function RunNpcServiceDialog({ run, theme, neon, busy, error, onBuy, onUpgrade, onClose }: Props) {
+export function RunNpcServiceDialog({ run, theme, neon, busy, error, onBuy, onUpgrade, onSell, onRepair, onClose }: Props) {
   const node = run.mapa.nodes.find(item => item.id === run.noAtualId);
   const sage = node?.payload?.npcType === 'SABIO';
-  const [tab, setTab] = useState<'offers' | 'upgrade'>(sage ? 'offers' : 'upgrade');
+  const [tab, setTab] = useState<'offers' | 'upgrade' | 'repair' | 'sell'>(sage ? 'offers' : 'upgrade');
+  const saleState = useRunEconomyDialog(run, false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const changeTab = (value: typeof tab) => { setTab(value); setSelectedId(null); saleState.setSelected(null); saleState.clearSaleSelection(); };
   const upgrade = node?.payload?.upgrade;
   const balance = run.estadoAtual.economy?.balance ?? 0;
   const level = run.estadoAtual.status?.nivel ?? 1;
@@ -38,7 +46,7 @@ export function RunNpcServiceDialog({ run, theme, neon, busy, error, onBuy, onUp
   const weapons = parseRunInventoryEntries(run.estadoAtual.inventario, 'ITEM').filter(entry =>
     ['arma', 'outro'].includes(entry.subtype) && Math.max(...Object.values(entry.damageByRange)) > 0);
   const offer = tab === 'offers' ? offers.find(item => item.itemId === selectedId) : undefined;
-  const selected = tab === 'offers' ? offer?.entry : weapons.find(entry => entry.idInstancia === selectedId);
+  const selected = tab === 'offers' ? offer?.entry : tab === 'upgrade' ? weapons.find(entry => entry.idInstancia === selectedId) : undefined;
   const capped = (selected?.engineerUpgrades ?? 0) >= (upgrade?.maxUpgrades ?? 0);
   const finish = async () => {
     if (!selected) return;
@@ -52,18 +60,23 @@ export function RunNpcServiceDialog({ run, theme, neon, busy, error, onBuy, onUp
     <RunTrainingPanel neon={neon === 'on'}><RunHudTopline>
       <MerchantIdentity><MerchantAvatar $neon={neon === 'on'}>{image ? <img src={image} alt="" /> : <AutoFixHighIcon aria-hidden />}</MerchantAvatar>
         <span><GameSectionTitle id="npc-service-title">{node?.name ?? (sage ? 'Sábio' : 'Engenheiro')}</GameSectionTitle><small>{sage ? 'Conhecimento para esta jornada' : 'Arsenal e próteses'}</small></span></MerchantIdentity>
-      <button type="button" aria-label="Voltar ao mapa" disabled={busy} onClick={onClose}><CloseIcon /></button>
+      <RunSaleHeader state={saleState} active={tab === 'sell'} busy={busy} theme={theme} neon={neon} canSell={run.status === 'Ativa'}
+        onSell={onSell} onClose={onClose} closeLabel="Voltar ao mapa" />
     </RunHudTopline><EconomyBody>
       <EconomyTopline><EconomyBalance key={balance}>{balance.toLocaleString('pt-BR')} moedas</EconomyBalance>
         {busy && <LoadingIndicator compact label="Aplicando serviço" />}</EconomyTopline>
       {error && <GameNotice $danger role="alert">{error}</GameNotice>}
       {notice && <GameNotice role="status">{notice}</GameNotice>}
-      {!sage && <EconomyTabs aria-label="Serviços do Engenheiro">
-        <button type="button" aria-pressed={tab === 'upgrade'} disabled={busy} onClick={() => { setTab('upgrade'); setSelectedId(null); }}>Melhorar arma</button>
-        <button type="button" aria-pressed={tab === 'offers'} disabled={busy} onClick={() => { setTab('offers'); setSelectedId(null); }}>Próteses</button>
+      {!sage && <EconomyTabs $neon={neon === 'on'} aria-label="Serviços do Engenheiro">
+        <button type="button" aria-pressed={tab === 'upgrade'} disabled={busy} onClick={() => changeTab('upgrade')}>Melhorar arma</button>
+        <button type="button" aria-pressed={tab === 'offers'} disabled={busy} onClick={() => changeTab('offers')}>Próteses</button>
+        <button type="button" aria-pressed={tab === 'repair'} disabled={busy} onClick={() => changeTab('repair')}>Conserto</button>
+        <button type="button" aria-pressed={tab === 'sell'} disabled={busy} onClick={() => changeTab('sell')}>Vender</button>
       </EconomyTabs>}
-      <EconomySectionTitle>{tab === 'upgrade' ? 'Escolha sua arma' : sage ? 'Magias desta visita' : 'Próteses desta visita'}</EconomySectionTitle>
-      {tab === 'upgrade' ? <>
+      <EconomySectionTitle>{tab === 'sell' ? 'Escolha o que vender' : tab === 'repair' ? 'Equipamentos danificados' : tab === 'upgrade' ? 'Escolha sua arma' : sage ? 'Magias desta visita' : 'Próteses desta visita'}</EconomySectionTitle>
+      {tab === 'sell' ? <RunSalePanel run={run} state={saleState} theme={theme} neon={neon} busy={busy} error={error} onSell={onSell} />
+        : tab === 'repair' ? <RunDefenseRepairPanel run={run} theme={theme} neon={neon} busy={busy} error={error} onRepair={onRepair} />
+        : tab === 'upgrade' ? <>
         <GameNotice>{upgrade?.damage ? `+${upgrade.damage} dano por melhoria · ${upgrade.price} moedas · até ${upgrade.maxUpgrades} melhorias por arma.` : 'Este Engenheiro não oferece melhorias de arma.'}</GameNotice>
         <EconomyCards>{weapons.map(entry => <EconomyCard key={entry.idInstancia}>
           <RunInventoryCard entry={entry} selected={false} neon={neon === 'on'} onSelect={() => setSelectedId(entry.idInstancia)} />

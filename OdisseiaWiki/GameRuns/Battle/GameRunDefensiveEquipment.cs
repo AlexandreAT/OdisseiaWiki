@@ -11,7 +11,7 @@ public static class GameRunDefensiveEquipment
     {
         string? type = ReadText(item, "tipo");
         bool outfit = UsesBaseFields(type);
-        if (string.Equals(type, "implante", StringComparison.OrdinalIgnoreCase)) return true;
+        if (string.Equals(type, "implante", StringComparison.OrdinalIgnoreCase) || outfit) return true;
         if (!outfit && !string.Equals(type, "outro", StringComparison.OrdinalIgnoreCase)) return false;
         var attributes = Property(item, "atributos");
         return new[] { outfit ? "escudoBase" : "escudo", outfit ? "protecaoBase" : "protecao",
@@ -90,7 +90,7 @@ public static class GameRunDefensiveEquipment
             ? "protecaoBase" : "protecao", UsesBaseFields(type)
             ? "armaduraBase" : "armadura" }
             .Any(key => ReadInt(ReadNode(attributes, key)) > 0);
-        if (!hasDefense && !type.Equals("implante", StringComparison.OrdinalIgnoreCase))
+        if (!hasDefense && !type.Equals("implante", StringComparison.OrdinalIgnoreCase) && !type.Equals("traje", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Este item não possui defesa configurada.");
 
         GameBattleDefenses before = Bonuses(JsonSerializer.SerializeToElement(items));
@@ -157,6 +157,45 @@ public static class GameRunDefensiveEquipment
         if (ReadNode(status, "defesas") is null) status["defesas"] = defenses;
         Add(defenses, "protecao", after.Protection - before.Protection);
         return (root.ToJsonString(), Clamp(repaired));
+    }
+
+    public static (string Snapshot, long Maximum, long Missing) RepairItem(string snapshotJson, string itemId)
+    {
+        JsonObject root = JsonNode.Parse(snapshotJson) as JsonObject ?? throw new JsonException("O snapshot está inválido.");
+        var items = Items(root).ToArray();
+        JsonObject item = items.SingleOrDefault(entry => ReadNode(entry, "id")?.ToString() == itemId)
+            ?? throw new InvalidOperationException("O item não pertence à mochila desta run.");
+        string? type = ReadNode(item, "tipo")?.ToString();
+        if (!UsesBaseFields(type) && !string.Equals(type, "outro", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Este item não possui defesas para consertar.");
+        JsonObject attributes = ReadNode(item, "atributos") as JsonObject
+            ?? throw new InvalidOperationException("Este item não possui defesas para consertar.");
+        JsonObject? remaining = ReadNode(attributes, "__runDefenseRemaining") as JsonObject;
+        GameBattleDefenses before = Bonuses(JsonSerializer.SerializeToElement(items));
+        long maximum = 0, missing = 0;
+        foreach (string key in new[] { "escudo", "protecao" })
+        {
+            int cap = ReadInt(ReadNode(attributes, UsesBaseFields(type) ? key + "Base" : key));
+            int current = ReadNode(remaining, key) is { } value ? Math.Min(cap, ReadInt(value)) : cap;
+            maximum += cap;
+            missing += cap - current;
+            if (current == cap) continue;
+            if (remaining is null)
+            {
+                remaining = new JsonObject();
+                attributes["__runDefenseRemaining"] = remaining;
+            }
+            string actualKey = remaining.Select(pair => pair.Key).FirstOrDefault(name => name.Equals(key, StringComparison.OrdinalIgnoreCase)) ?? key;
+            remaining[actualKey] = cap;
+        }
+        if (missing == 0) throw new InvalidOperationException("As defesas deste item já estão no máximo.");
+        GameBattleDefenses after = Bonuses(JsonSerializer.SerializeToElement(items));
+        JsonObject status = ReadNode(root, "status") as JsonObject ?? throw new JsonException("O status está inválido.");
+        JsonObject defenses = ReadNode(status, "defesas") as JsonObject ?? new JsonObject();
+        if (ReadNode(status, "defesas") is null) status["defesas"] = defenses;
+        Add(defenses, "escudo", after.Shield - before.Shield);
+        Add(defenses, "protecao", after.Protection - before.Protection);
+        return (root.ToJsonString(), maximum, missing);
     }
 
     public static string UnequipIfNeeded(string snapshotJson, string itemId)

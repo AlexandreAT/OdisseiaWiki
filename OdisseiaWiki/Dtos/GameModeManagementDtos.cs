@@ -66,6 +66,7 @@ public sealed class GameModeAreaOptionDto
     public List<GameModeVendorOfferDto> Offers { get; set; } = [];
     public int OfferCount { get; set; } = 3;
     public GameModeEngineerUpgradeDto? Upgrade { get; set; }
+    public int? RepairPricePer10Percent { get; set; }
 }
 
 public sealed class GameModeEditorDto

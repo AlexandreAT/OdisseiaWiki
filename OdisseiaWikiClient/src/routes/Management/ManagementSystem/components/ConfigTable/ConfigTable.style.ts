@@ -219,7 +219,6 @@ export const TableCellControl = styled.div<{ $error?: boolean }>`
     width: 20px;
     height: 20px;
     margin: 7px auto;
-    accent-color: var(--clearneonBlue);
   }
 
   ${({ $error }) => $error && css`

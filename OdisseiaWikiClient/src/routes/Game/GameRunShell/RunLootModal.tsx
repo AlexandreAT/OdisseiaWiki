@@ -7,7 +7,7 @@ import type { GameRunConsumeItemResult, GameRunDto } from '../../../models/GameR
 import { getGameRun, rollGameRunLoot } from '../../../services/gameRunService';
 import { getApiErrorMessage } from '../../../utils/apiError';
 import { normalizeImagePath } from '../../Wiki/utils/imagePathHelper';
-import { LoadoutCard, LoadoutCardCaption, LoadoutCardCorner, LoadoutCardMedia,
+import { LoadoutCard, LoadoutCardCaption, LoadoutCardContent, LoadoutCardCorner, LoadoutCardMedia,
   LoadoutDefensePanel, LoadoutDefenseStats, LoadoutModalActions } from './RunLoadout.style';
 import { LootGrid, RewardsBody } from './RunRewards.style';
 import { RunInventoryActionDialog } from './RunInventoryActionDialog';
@@ -41,8 +41,8 @@ export function RunLootModal({ run, speed, theme, neon, onUpdate, onClose,
   ], [run.estadoAtual.inventario, run.estadoAtual.implantes]);
   const entriesById = useMemo(() => new Map(entries.map(entry => [entry.idInstancia, entry])), [entries]);
   const selectedEntry = selected ? entriesById.get(selected) : undefined;
-  const defensive = selectedEntry?.tipo === 'PROTESE' || selectedEntry?.tipo === 'ITEM' && ['traje', 'outro'].includes(selectedEntry.subtype) &&
-    Object.values(selectedEntry.defense).some(value => value > 0);
+  const defensive = selectedEntry?.tipo === 'PROTESE' || selectedEntry?.tipo === 'ITEM' && (selectedEntry.subtype === 'traje' ||
+    selectedEntry.subtype === 'outro' && Object.values(selectedEntry.defense).some(value => value > 0));
   const busy = actionBusy || Boolean(busyItemId);
   const canAct = Boolean(selectedEntry && !run.noAtualId && canManageRunItem(run, selectedEntry.idInstancia));
   const actOnItem = async (action: () => Promise<string | null>) => {
@@ -106,12 +106,14 @@ export function RunLootModal({ run, speed, theme, neon, onUpdate, onClose,
               disabled={busy} onClick={() => { setError(null); setSelected(selected === item.id ? null : item.id ?? null); }}>
               <LoadoutCardCorner $position="top-right" $neon={neon === 'on'} aria-hidden="true" />
               <LoadoutCardCorner $position="bottom-left" $neon={neon === 'on'} aria-hidden="true" />
-              <LoadoutCardMedia>{item.imagem ? <img src={normalizeImagePath(item.imagem)} alt="" /> : <span>+1</span>}</LoadoutCardMedia>
-              <LoadoutCardCaption><strong>{item.nome}</strong><small>
-                {item.id && entriesById.get(item.id)?.defenseEquipped ? 'Equipado' :
-                  (onUseItem || onEquipDefense) && item.id && !entriesById.has(item.id) ? 'Usado ou movido' :
-                    `+1 · ${item.tipo === 'implante' ? 'Prótese' : 'Item'}`}
-              </small></LoadoutCardCaption>
+              <LoadoutCardContent>
+                <LoadoutCardMedia>{item.imagem ? <img src={normalizeImagePath(item.imagem)} alt="" /> : <span>+1</span>}</LoadoutCardMedia>
+                <LoadoutCardCaption><strong>{item.nome}</strong><small>
+                  {item.id && entriesById.get(item.id)?.defenseEquipped ? 'Equipado' :
+                    (onUseItem || onEquipDefense) && item.id && !entriesById.has(item.id) ? 'Usado ou movido' :
+                      `+1 · ${item.tipo === 'implante' ? 'Prótese' : 'Item'}`}
+                </small></LoadoutCardCaption>
+              </LoadoutCardContent>
             </LoadoutCard>
             {selected === item.id && <p>{item.peso ?? 0} kg · Adicionado ao inventário da run</p>}
           </article>)}</LootGrid>

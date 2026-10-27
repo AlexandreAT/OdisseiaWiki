@@ -134,11 +134,44 @@ export interface BattleBeat {
   actorName?: string;
   playerActor?: boolean;
   action?: BattleActionDisplay;
+  sources?: BattleSource[];
+}
+
+export type BattleSourceKind = 'ITEM' | 'ARMA' | 'MAGIA' | 'SKILL' | 'PROTESE' | 'CONDICAO' | 'DESCANSO' | 'ATAQUE';
+export interface BattleSource {
+  name: string;
+  image?: string | null;
+  kind: BattleSourceKind;
+}
+
+export function splitBattleSources(text: string, sources: BattleSource[] = []): { text: string; source?: BattleSource }[] {
+  const parts: { text: string; source?: BattleSource }[] = [];
+  let offset = 0;
+  while (offset < text.length) {
+    let next: { index: number; source: BattleSource } | undefined;
+    for (const source of sources) {
+      if (!source.name) continue;
+      let index = text.indexOf(source.name, offset);
+      const isWord = (character: string) => /[\p{L}\p{N}_]/u.test(character);
+      while (index >= 0 && (
+        isWord(source.name[0]) && isWord(text[index - 1] ?? '') ||
+        isWord(source.name[source.name.length - 1]) && isWord(text[index + source.name.length] ?? '')
+      )) index = text.indexOf(source.name, index + 1);
+      if (index >= 0 && (!next || index < next.index || index === next.index && source.name.length > next.source.name.length))
+        next = { index, source };
+    }
+    if (!next) { parts.push({ text: text.slice(offset) }); break; }
+    if (next.index > offset) parts.push({ text: text.slice(offset, next.index) });
+    parts.push({ text: next.source.name, source: next.source });
+    offset = next.index + next.source.name.length;
+  }
+  return parts;
 }
 
 export type BattleTone = 'positive' | 'negative' | 'warning' | 'neutral';
 
 export interface BattleActionDisplay {
+  source?: BattleSource;
   actor: string;
   playerActor: boolean;
   failed: boolean;
@@ -170,13 +203,20 @@ const resultLabel = (code?: string): string => ({
   CRITICO: 'crítico', ACERTO_CRITICO: 'crítico',
 }[code ?? ''] ?? 'resultado');
 
-const actionPresentation = (preview: GameBattlePreview, event: GameBattleEvent, following: GameBattleEvent[]): {
+const actionPresentation = (preview: GameBattlePreview, event: GameBattleEvent, following: GameBattleEvent[],
+  conditionSource: (event: GameBattleEvent) => BattleSource): {
   text: string;
   action?: BattleActionDisplay;
+  sources?: BattleSource[];
 } => {
   const name = actorName(preview, event.actorId);
   const quantity = event.payload.quantity ?? 1;
   const action = `${event.payload.actionName ?? 'ação'}${quantity > 1 ? ` ×${quantity}` : ''}`;
+  const inferredType = event.payload.sourceType?.toUpperCase() ?? event.payload.actionId?.split(':')[0].toUpperCase();
+  const kind = ['ITEM', 'ARMA', 'MAGIA', 'SKILL', 'PROTESE', 'DESCANSO'].includes(inferredType ?? '')
+    ? inferredType as BattleSourceKind : 'ATAQUE';
+  const source: BattleSource = { name: action, image: event.payload.image, kind };
+  const sources = [source, ...following.filter(item => item.type.startsWith('CONDITION_')).map(conditionSource)];
   const resourceEffects = ([['mana', 'mana'], ['stamina', 'estamina']] as const)
     .map(([resource, label]) => {
       const delta = following.filter((item) => item.type === 'RESOURCE_CHANGED' &&
@@ -195,9 +235,9 @@ const actionPresentation = (preview: GameBattlePreview, event: GameBattleEvent, 
     .map(conditionLabel);
   const conditionText = appliedConditions.length ? ` · aplicou ${appliedConditions.join(', ')}` : '';
   if (following.some((item) => item.type === 'REST_PERFORMED'))
-    return { text: `${name} — descanso curto${resourceText}.` };
+    return { text: `${name} — descanso curto${resourceText}.`, sources: [{ name: 'descanso curto', kind: 'DESCANSO' }, ...sources.slice(1)] };
   if (following.some((item) => item.type === 'RELOAD_PERFORMED'))
-    return { text: `${name} — ${action}: recarregou${resourceText}.` };
+    return { text: `${name} — ${action}: recarregou${resourceText}.`, sources };
 
   if (event.payload.directUse) {
     const lifeRestored = following.filter((item) => item.type === 'RESOURCE_CHANGED' &&
@@ -207,11 +247,11 @@ const actionPresentation = (preview: GameBattlePreview, event: GameBattleEvent, 
     const lifeText = lifeRestored > 0 ? ` · +${lifeRestored} vida` : '';
     const remaining = following.find((item) => item.type === 'ITEM_CONSUMED')?.payload.remainingQuantity;
     return { text: `${name} — usou ${action}${lifeText}${resourceText}${conditionText}` +
-      `${remaining === undefined ? '' : ` · restam ${remaining}`}.` };
+      `${remaining === undefined ? '' : ` · restam ${remaining}`}.`, sources };
   }
 
   const roll = following.find((item) => item.type === 'DICE_ROLLED');
-  if (!roll) return { text: `${name} — ${action}${resourceText}.` };
+  if (!roll) return { text: `${name} — ${action}${resourceText}.`, sources };
   const ammoRemaining = following.find((item) => item.type === 'RESOURCE_CHANGED' &&
     item.payload.resource === 'loadedAmmo' && typeof item.payload.after === 'number')
     ?.payload.after ?? null;
@@ -240,8 +280,10 @@ const actionPresentation = (preview: GameBattlePreview, event: GameBattleEvent, 
     : failure ? 'warning'
       : success ? (playerAttacked ? 'positive' : 'negative') : 'neutral';
   return {
+    sources,
     text: `${name} — ${action}: ${classification} (D20 ${die})${effect}${conditionText}${resourceText}${ammoRemaining === null ? '' : ` · ${ammoRemaining} munições restantes`}.`,
     action: {
+      source,
       actor: name,
       playerActor: playerAttacked,
       failed: failure,
@@ -265,12 +307,26 @@ const actionPresentation = (preview: GameBattlePreview, event: GameBattleEvent, 
 export const buildBattleBeats = (preview: GameBattlePreview): BattleBeat[] => {
   const events = preview.resultado.events;
   const beats: BattleBeat[] = [];
+  const knownConditions = new Map<string, BattleSource>();
+  for (const actor of [preview.personagem, ...(preview.oponentes?.length ? preview.oponentes : [preview.oponente])]) {
+    for (const condition of actor.condicoes ?? []) knownConditions.set(condition.rule.code.toUpperCase(),
+      { name: condition.rule.name, image: condition.rule.image, kind: 'CONDICAO' });
+  }
+  const conditionSource = (event: GameBattleEvent): BattleSource => {
+    const code = event.payload.code?.toUpperCase() ?? '';
+    const previous = knownConditions.get(code);
+    const source: BattleSource = { name: event.payload.name ?? previous?.name ?? event.payload.code ?? 'Condição',
+      image: event.payload.image ?? previous?.image, kind: 'CONDICAO' };
+    if (code) knownConditions.set(code, source);
+    return source;
+  };
   let turn = 0;
   for (let index = 0; index < events.length; index++) {
     const event = events[index];
     if (event.type === 'TURN_STARTED') turn++;
     let text: string | null = null;
     let action: BattleActionDisplay | undefined;
+    let sources: BattleSource[] | undefined;
     let phase: BattleBeat['phase'] = 'action';
     let throughIndex = index + 1;
     if (event.type === 'BATTLE_STARTED') {
@@ -295,14 +351,16 @@ export const buildBattleBeats = (preview: GameBattlePreview): BattleBeat[] => {
       while (end < actionEnd && !(end > resolution &&
         (['CONDITION_EFFECT', 'CONDITION_EXPIRED'].includes(events[end].type) ||
         events[end].type === 'RESOURCE_CHANGED' && events[end].payload.actionId?.startsWith('condicao:')))) end++;
-      const presentation = actionPresentation(preview, event, events.slice(index + 1, end));
+      const presentation = actionPresentation(preview, event, events.slice(index + 1, end), conditionSource);
       text = presentation.text;
       action = presentation.action;
+      sources = presentation.sources;
       throughIndex = end;
       index = end - 1;
     }
     if (event.type === 'TURN_PASSED') text = `${actorName(preview, event.actorId)} passou o turno.`;
     if (event.type === 'RESISTANCE_ROLLED') {
+      sources = [{ ...conditionSource(event), name: 'reação' }];
       const dice = event.payload.dice?.join(' + ') ?? '?';
       const alternative = event.payload.alternativeDice?.join(' + ');
       const rolls = alternative ? `${dice} / ${alternative} (${event.payload.mode === 'Vantagem' ? 'vantagem' : 'desvantagem'})` : dice;
@@ -327,6 +385,12 @@ export const buildBattleBeats = (preview: GameBattlePreview): BattleBeat[] => {
       }
     }
     if (event.type === 'CONDITION_EXPIRED') text = `${event.payload.name ?? 'Condição'} terminou em ${actorName(preview, event.actorId)}.`;
+    if (event.type.startsWith('CONDITION_')) sources = [conditionSource(event)];
+    if (event.type === 'RESOURCE_CHANGED' && event.payload.actionId?.startsWith('condicao:')) {
+      const code = event.payload.actionId.slice('condicao:'.length).toUpperCase();
+      const source = knownConditions.get(code);
+      if (source) sources = [source];
+    }
     if (event.type === 'BATTLE_ENDED') {
       const winner = battleWinner(preview);
       text = winner
@@ -339,7 +403,7 @@ export const buildBattleBeats = (preview: GameBattlePreview): BattleBeat[] => {
         : event.type === 'CONDITION_APPLIED' ? event.targetId : event.actorId;
       const name = eventActorId ? actorName(preview, eventActorId) : undefined;
       beats.push({ throughIndex, sequence: event.sequence, round: event.round,
-        turn: phase === 'action' ? turn : null, phase, text, action,
+        turn: phase === 'action' ? turn : null, phase, text, action, sources,
         actorName: name && text.startsWith(name) ? name : undefined,
         playerActor: eventActorId === preview.personagem.id });
     }

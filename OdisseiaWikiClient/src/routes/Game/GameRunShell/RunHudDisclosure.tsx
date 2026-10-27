@@ -1,13 +1,16 @@
-import { useId, useState, type ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { HudDisclosure, HudDisclosureBody, HudDisclosureInner, HudDisclosureToolbar, HudDisclosureToggle } from './RunHudDisclosure.style';
+import { useStoredPreferences } from '../../../hooks/useStoredPreferences';
+
+const normalizeExpanded = (value: unknown) => typeof value === 'boolean' ? value : true;
 
 /** Keeps the live resource components mounted; folding must not reset their animations or state. */
 export function RunHudDisclosure({ name, image, neon, navigation, children }: {
   name: string; image?: string | null; neon: boolean; children: ReactNode;
   navigation?: (expanded: boolean) => ReactNode;
 }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useStoredPreferences('game-run:header-expanded', true, normalizeExpanded);
   const regionId = useId();
   const label = open ? 'Recolher dados do personagem' : 'Expandir dados do personagem';
   return <HudDisclosure>

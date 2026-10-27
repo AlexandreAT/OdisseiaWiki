@@ -145,6 +145,11 @@ export function ManagementGameNpcServices({ option, onChange, theme, neon, edita
           <InputText label="Melhorias por arma" width="100%" type="number" theme={theme} neon={neon}
             value={upgrade.maxUpgrades} disabled={!editable} help={help.weaponUpgrades}
             onChange={event => onChange({ ...option, upgrade: { ...upgrade, maxUpgrades: Number(event.target.value) } })} />
+          <InputText label="Preço do conserto por 10%" type="number" width="100%" theme={theme} neon={neon}
+            help={help.engineerRepair} value={option.repairPricePer10Percent ?? ''} disabled={!editable} min={0} max={1_000_000_000}
+            error={option.repairPricePer10Percent != null && (!Number.isInteger(option.repairPricePer10Percent) || option.repairPricePer10Percent < 0 || option.repairPricePer10Percent > 1_000_000_000)}
+            errorMessage="Use um inteiro entre 0 e 1.000.000.000, ou deixe vazio para desativar."
+            onChange={event => onChange({ ...option, repairPricePer10Percent: event.target.value === '' ? null : Number(event.target.value) })} />
         </GameAdminFields>
         <ManagementGameVendorOffers offers={offers} onChange={value => onChange({ ...option, offers: value })}
           offerCount={option.offerCount ?? 3} onOfferCountChange={value => onChange({ ...option, offerCount: value })}

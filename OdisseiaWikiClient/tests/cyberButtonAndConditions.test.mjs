@@ -19,7 +19,7 @@ const bundle = await build({
   plugins: [{ name: 'condition-editor-isolation', setup(builder) {
     builder.onResolve({ filter: /Generic\/Modal\/Modal$/ }, () => ({ path: 'Modal', namespace: 'test-modal' }));
     builder.onLoad({ filter: /.*/, namespace: 'test-modal' }, () => ({ loader: 'js',
-      contents: `import {createElement} from 'react'; export function Modal({children}){return createElement('section',{'data-editor-modal':true},children);}` }));
+      contents: `import {createElement} from 'react'; export function Modal({children,width,mobileInset}){return createElement('section',{'data-editor-modal':true,'data-editor-width':width,'data-mobile-inset':mobileInset},children);}` }));
     builder.onResolve({ filter: /Generic\/(RichTextModal|ImageUploader\/ImageUploader)$/ }, () => ({ path: 'image', namespace: 'test-image' }));
     builder.onLoad({ filter: /.*/, namespace: 'test-image' }, () => ({ loader: 'js',
       contents: 'export function ImageUploader(){return null;} export default function RichTextModal(){return null;}' }));
@@ -361,6 +361,8 @@ test('todos os tipos de itens, incluindo próteses, recebem condições e result
     act(() => { renderer = create(editorNode('createItemColumns', row, characterContext)); });
     act(() => button(renderer, 'Editar').props.onClick());
     assert.ok(optionLabels(renderer).includes('Sangramento'), tipo);
+    assert.equal(renderer.root.findByProps({ 'data-editor-modal': true }).props['data-editor-width'], '1320px');
+    assert.equal(renderer.root.findByProps({ 'data-editor-modal': true }).props['data-mobile-inset'], true);
     assert.ok(optionLabels(renderer).includes('Crítico'), tipo);
     assert.doesNotMatch(errorText(renderer), /não existe/, tipo);
     assert.equal(button(renderer, 'Adicionar outra condição'), undefined, 'código legado não vira condição duplicada');
@@ -393,6 +395,7 @@ test('magias e skills recebem faixas classificadas e condições, e usam callbac
     act(() => { renderer = create(editorNode(factory, row, characterContext, value => changes.push({ version: 1, value }))); });
     act(() => button(renderer, 'Editar').props.onClick());
     assert.ok(optionLabels(renderer).includes('Crítico'), factory);
+    assert.equal(renderer.root.findByProps({ 'data-editor-modal': true }).props['data-editor-width'], '1320px', factory);
     assert.ok(optionLabels(renderer).includes('Sangramento'), factory);
     act(() => renderer.update(editorNode(factory, row, characterContext, value => changes.push({ version: 2, value }), () => {}, 'light')));
     const effectInput = renderer.root.findAllByType(api.InputText).find(node => node.props.label.startsWith('VIDA · subtrair'));

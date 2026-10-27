@@ -11,6 +11,26 @@ namespace OdisseiaWiki.Tests;
 
 public sealed class GameRunServiceTests
 {
+    [Theory]
+    [InlineData("TRAJE", false)] [InlineData("OUTROS", true)]
+    public async Task NovaRunRespeitaCompatibilidadeDaVersaoResolvidaSemAlterarFicha(string second, bool allowed)
+    {
+        Fixture fixture = new();
+        fixture.SystemResolver.Setup(item => item.ResolverContextoAsync(It.IsAny<SistemaRuntimeConsultaDto>()))
+            .ReturnsAsync(new SistemaRuntimeContextoDto { IdSistemaRpg = 1, IdSistemaVersao = 42,
+                StatusVersao = SistemaVersaoStatus.Publicado, CodigoSistema = "ODISSEIA", NumeroVersao = "1.0",
+                Itens = GameRunOutfitCompatibilityTests.Catalog() });
+        fixture.Character.InventarioJson = new System.Text.Json.Nodes.JsonArray(
+            GameRunOutfitCompatibilityTests.Item("Colete", "COLETE"), GameRunOutfitCompatibilityTests.Item("Segundo", second)).ToJsonString();
+        string before = fixture.Character.InventarioJson;
+        var result = await fixture.Service.CreateAsync(fixture.UserId, new() {
+            IdPersonagemJogador = fixture.Character.IdpersonagemJogador, ChaveIdempotencia = Guid.NewGuid() }, default);
+        Assert.Equal(allowed, result.Sucesso);
+        Assert.Equal(before, fixture.Character.InventarioJson);
+        if (!allowed) { Assert.Contains("Colete e Segundo", result.Mensagem); Assert.Null(fixture.Run); }
+        else Assert.Equal(42, fixture.Run!.IdSistemaVersao);
+    }
+
     [Fact]
     public async Task NovaRunExibeNpcJaResgatadoSemCopiarItensProtegidosOuAlterarFichaOriginal()
     {

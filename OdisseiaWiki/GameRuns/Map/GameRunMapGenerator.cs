@@ -418,6 +418,7 @@ public sealed class GameRunMapGenerator
                 NpcCode = option.Type == "NPC" ? option.NpcCode : null,
                 NpcType = option.Type == "NPC" ? option.NpcType : null,
                 NpcLocked = option.NpcLocked,
+                RepairPricePer10Percent = option.RepairPricePer10Percent,
                 Upgrade = option.Upgrade is null ? null : new() { Damage = option.Upgrade.Damage,
                     Price = option.Upgrade.Price, MaxUpgrades = option.Upgrade.MaxUpgrades },
                 Offers = GameRunNpcs.HasCatalog(option)

@@ -50,6 +50,7 @@ import { FreeInventoryCanvas, FreeInventoryEntry } from './FreeInventoryCanvas';
 import { OrganizedInventoryEntry, OrganizedInventoryGrid } from './OrganizedInventoryGrid';
 import { EquipmentMannequin } from './EquipmentMannequin';
 import { getEquipmentSlotLabel } from './equipmentSlots';
+import { INVENTORY_CATEGORY_THEME } from '../../utils/inventoryTheme';
 
 type ExplodedDomainEntry = Item | Skills | Magia;
 type ExplodedViewEntry = FreeInventoryEntry & OrganizedInventoryEntry & {
@@ -70,12 +71,7 @@ const TAB_ICONS: Record<ExplodedViewTab, React.ReactNode> = {
   spells: <GiMagicSwirl />,
 };
 
-const TAB_THEME: Record<ExplodedViewTab, { color: string; clearColor: string }> = {
-  items: { color: 'var(--neonBlue)', clearColor: 'var(--clearneonBlue)' },
-  prostheses: { color: 'var(--neonPurple)', clearColor: 'var(--clearneonPurple)' },
-  skills: { color: 'var(--neonCyan)', clearColor: 'var(--clearneonCyan)' },
-  spells: { color: 'var(--neonPurple)', clearColor: 'var(--clearneonPurple)' },
-};
+const TAB_THEME = INVENTORY_CATEGORY_THEME;
 
 export const CharacterExplodedView = ({
   open,

@@ -111,6 +111,7 @@ public sealed partial class GameRunEncounterService
     {
         bool previous = GameRunDefensiveEquipment.IsEquipped(snapshot, itemId);
         string updated = GameRunDefensiveEquipment.SetEquipped(snapshot, itemId, equipped);
+        if (equipped) GameRunOutfitCompatibility.Validate(updated, OdisseiaWiki.Services.Helpers.SistemaRpgMapper.ToItens(version), itemId);
         updated = previous == equipped ? updated : equipped
             ? GameRunCarry.ApplyConsumedItemConditions(snapshot, updated, itemId, version, trigger: "AO_EQUIPAR")
             : GameRunCarry.RemoveUnequippedItemConditions(updated, itemId, version);

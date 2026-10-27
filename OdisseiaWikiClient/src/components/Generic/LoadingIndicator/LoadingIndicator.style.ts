@@ -82,7 +82,7 @@ export const LoadingText = styled.span<{ $compact: boolean }>`
   font-size: ${({ $compact }) => ($compact ? '0.82rem' : 'clamp(19px, 1.8vw, 26px)')};
   font-weight: 100;
   letter-spacing: ${({ $compact }) => ($compact ? '0.7px' : '1.2px')};
-  text-shadow: 0 0 8px currentColor;
+  text-shadow: none;
 
   @media (max-width: 768px) {
     font-size: ${({ $compact }) => ($compact ? '0.82rem' : '0.95rem')};
@@ -94,11 +94,19 @@ export const LoadingLabel = styled.span`
   display: block;
   flex: 0 1 auto;
   min-width: 3.5em;
-  overflow: hidden;
   color: inherit !important;
   -webkit-text-fill-color: currentColor !important;
   opacity: 1;
   visibility: visible;
+  /* Apply glow after the child clips long labels, not inside its rectangular clip. */
+  overflow: visible;
+  filter: drop-shadow(0 0 8px currentColor);
+`;
+
+export const LoadingLabelClip = styled.span`
+  display: block;
+  font: inherit;
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 `;

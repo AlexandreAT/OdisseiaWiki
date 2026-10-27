@@ -4,6 +4,7 @@ import { useUnsavedChangesGuard } from '../../../hooks/useUnsavedChangesGuard';
 import { useSelector } from 'react-redux';
 import { AnimatedBackground } from '../../../components/Generic/AnimatedBackground/AnimatedBackground';
 import { CyberButton } from '../../../components/Generic/HighlightButton/HighlightButton';
+import { InputCheckbox } from '../../../components/Generic/CheckBox/CheckBox.style';
 import { ImageUploader } from '../../../components/Generic/ImageUploader/ImageUploader';
 import { InputText } from '../../../components/Generic/InputText/InputText';
 import { Select } from '../../../components/Generic/Select/Select';
@@ -53,7 +54,7 @@ const MesaCreate = () => {
               <Select theme={theme} neon={neon} label="Sistema" value={state.form.idSistemaRpg ?? ''} onChange={(event) => state.update('idSistemaRpg', Number(event.target.value))} options={state.systems.map((system) => ({ value: system.idSistemaRpg, label: system.nome }))} required width="100%" height="52px" portal />
               <Select theme={theme} neon={neon} label="Versão do Sistema" value={state.form.idSistemaVersao ?? ''} onChange={(event) => state.update('idSistemaVersao', Number(event.target.value))} options={state.versions.map((version) => ({ value: version.idSistemaVersao, label: version.numeroVersao }))} required width="100%" height="52px" portal />
               <ActionButton type="button" onClick={state.useLatest}><AutorenewOutlinedIcon /> Usar versão mais recente</ActionButton>
-              <CheckFilter><input type="checkbox" checked={state.form.acompanharVersaoAtual} onChange={(event) => state.update('acompanharVersaoAtual', event.target.checked)} /> Acompanhar publicação atual do Sistema</CheckFilter>
+              <CheckFilter><InputCheckbox $neon={neon} checked={state.form.acompanharVersaoAtual} onChange={(event) => state.update('acompanharVersaoAtual', event.target.checked)} /> Acompanhar publicação atual do Sistema</CheckFilter>
               <InputText theme={theme} neon={neon} type="number" label="Limite de jogadores" value={state.form.limiteJogadores} onChange={(event) => state.update('limiteJogadores', Number(event.target.value))} required width="100%" height="52px" />
               <InputText theme={theme} neon={neon} label="Tags (separadas por vírgula)" value={state.form.tags} onChange={(event) => state.update('tags', event.target.value)} width="100%" height="52px" />
             </FormColumn>

@@ -60,7 +60,13 @@ export interface GameRunProtectedDeposit {
 export interface GameAttributeOptions {
   pontos: number;
   atributos: { codigo: string; nome: string; grupo: string; valor: number; limite: number;
-    descricao?: string | null; recursos: { recurso: string; antes: number; depois: number; percentual: number }[] }[];
+    descricao?: string | null; modificador?: number; influencias?: GameAttributeInfluence[];
+    recursos: { recurso: string; antes: number; depois: number; percentual: number }[] }[];
+}
+
+export interface GameAttributeInfluence {
+  id: string; nome: string; imagem?: string | null; tipo: string; condicao?: string | null;
+  efeitos: { codigo: string; nome: string; grupo: string; valor: number }[];
 }
 
 export interface GameRunSystemSnapshot {
@@ -143,6 +149,7 @@ export interface GameRunMapNode {
   payload: { encounterCode?: string | null; secretAreaCode?: string | null;
     npcCode?: string | null; npcType?: 'MERCADOR' | 'MEDICO' | 'SABIO' | 'ENGENHEIRO' | null; npcLocked?: boolean;
     upgrade?: import('./GameModeManagement').GameModeEngineerUpgrade | null;
+    repairPricePer10Percent?: number | null;
     npcRescued?: boolean; npcServiceVisited?: boolean;
     offers?: import('./GameModeManagement').GameModeVendorOffer[] | null } | null;
   revealed: boolean;

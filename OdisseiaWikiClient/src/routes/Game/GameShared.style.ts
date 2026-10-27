@@ -22,8 +22,13 @@ const gameCornerReveal = keyframes`
   to { opacity: 1; }
 `;
 
-export const GamePage = styled.main`
+export const gameContentSizing = css`
   width: min(1240px, calc(100% - 40px));
+  @media (max-width: 600px) { width: calc(100% - 24px); }
+`;
+
+export const GamePage = styled.main`
+  ${gameContentSizing}
   margin: 0 auto;
   padding: clamp(24px, 4vw, 48px) 0 30px;
   display: grid;
@@ -31,7 +36,6 @@ export const GamePage = styled.main`
   color: var(--whitesmoke);
 
   @media (max-width: 600px) {
-    width: calc(100% - 24px);
     gap: 16px;
     padding-top: 20px;
   }

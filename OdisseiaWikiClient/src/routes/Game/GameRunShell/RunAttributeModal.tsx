@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import UpgradeIcon from '@mui/icons-material/Upgrade';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
@@ -9,8 +9,10 @@ import { getGameRun, getGameRunAttributes, upgradeGameRunAttribute } from '../..
 import { getApiErrorMessage } from '../../../utils/apiError';
 import { AttributeGrid, AttributePopover, RewardsBody } from './RunRewards.style';
 import { GameHint } from '../GameShared.style';
+import { HolographicPreviewProvider, HolographicPreviewTrigger } from '../../../components/Generic/HolographicPreview';
+import { RunAttributeInfluences } from './RunAttributeInfluences';
+import { attributeAbbreviation, signedAttributeValue } from './runAttributePresentation';
 
-const abbreviation = (name: string) => name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').slice(0, 3).toUpperCase();
 const resourceName: Record<string, string> = { vida: 'Vida', mana: 'Mana', estamina: 'Estamina' };
 
 export function RunAttributeModal({ run, theme, neon, onUpdate, onClose }: {
@@ -61,7 +63,7 @@ export function RunAttributeModal({ run, theme, neon, onUpdate, onClose }: {
   };
   return <Modal title="Evoluir atributos" theme={theme} neon={neon} width="720px" showFooter={false}
     onClose={() => { if (!busy) onClose(); }}>
-    <RewardsBody>
+    <HolographicPreviewProvider key={run.revisao} neon={neon === 'on'}><RewardsBody>
       {error && <p role="alert">{error}</p>}
       {!options ? <LoadingIndicator label="Consultando atributos" /> : <>
         <p className="points" aria-live="polite">{options.pontos} {options.pontos === 1 ? 'ponto disponível' : 'pontos disponíveis'} · +1 por escolha</p>
@@ -73,8 +75,17 @@ export function RunAttributeModal({ run, theme, neon, onUpdate, onClose }: {
           <AttributeGrid>{options.atributos.filter((attribute) => attribute.grupo === group).map((attribute) =>
             <div className="attribute-tile" key={attribute.codigo}>
               <div className="attribute-hex" aria-label={`${attribute.nome}: ${attribute.valor}`}>
-                <span className="attribute-code">{abbreviation(attribute.nome)}</span>
-                <span className="attribute-value">{attribute.valor}
+                <span className="attribute-code">{attributeAbbreviation(attribute.nome)}</span>
+                <span className="attribute-value" style={{ '--attribute-number-units': String(attribute.valor).length * .5 +
+                  Math.max(1.6, signedAttributeValue(attribute.modificador ?? 0).length * .5 + .4) } as CSSProperties}>
+                  <span className="attribute-natural">{attribute.valor}</span>
+                  {(attribute.influencias?.length ?? 0) > 0 && <HolographicPreviewTrigger className="attribute-modifier"
+                    data-negative={(attribute.modificador ?? 0) < 0}
+                    aria-label={`Modificadores de ${attribute.nome}: ${signedAttributeValue(attribute.modificador ?? 0)}`}
+                    media={{ name: attribute.nome, content: <RunAttributeInfluences sources={attribute.influencias ?? []} code={attribute.codigo} group={attribute.grupo} /> }}
+                    appearance={{ size: 420 }}>
+                    {signedAttributeValue(attribute.modificador ?? 0)}
+                  </HolographicPreviewTrigger>}
                   {options.pontos > 0 && attribute.valor < attribute.limite &&
                     <button className="attribute-up" type="button" disabled={busy}
                       aria-label={`Aumentar ${attribute.nome}`} onClick={() => void upgrade(attribute.codigo)}>
@@ -108,6 +119,6 @@ export function RunAttributeModal({ run, theme, neon, onUpdate, onClose }: {
           </AttributePopover>;
         })(), document.body)}
       </>}
-    </RewardsBody>
+    </RewardsBody></HolographicPreviewProvider>
   </Modal>;
 }

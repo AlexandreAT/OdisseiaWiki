@@ -14,6 +14,81 @@ namespace OdisseiaWiki.Tests;
 
 public sealed partial class GameplayMariaDbIntegrationTests
 {
+    [Fact]
+    public async Task Engineer_RepairAndBulkSaleAreAtomicIdempotentAndDoNotChangeTheSourceSheet()
+    {
+        if (!TestDatabase.Enabled) return;
+        await using var database = await TestDatabase.CreateAsync();
+        var seed = await database.SeedAsync(includeCharacter: true);
+        long runId = await AddPersistentRun(database, seed, false);
+        int versionId = seed.Mesa.IdSistemaVersao!.Value;
+        await using (var context = database.CreateContext())
+        {
+            var run = await context.GameRuns.FindAsync(runId);
+            var root = JsonNode.Parse(run!.EstadoAtualJson)!;
+            var repair = JsonNode.Parse(GameRunEngineerRepairTests.Snapshot())!;
+            root["inventario"] = repair["inventario"]!.DeepClone();
+            root["inventario"]![0]!["valor"] = 100;
+            root["inventario"]!.AsArray().Add(JsonNode.Parse("""{"id":"seringa","tipo":"consumiveis","valor":25,"quantidade":2}"""));
+            root["status"]!["defesas"] = repair["status"]!["defesas"]!.DeepClone();
+            root["economy"] = repair["economy"]!.DeepClone();
+            run.EstadoAtualJson = root.ToJsonString();
+            run.NoAtualId = "npc";
+            run.MapaJson = JsonSerializer.Serialize(new GameRunMapDto { SchemaVersion = 5, Nodes = [new() {
+                Id = "npc", Type = "NPC", State = "SELECIONADO", Payload = new() {
+                    NpcCode = "oficina", NpcType = "ENGENHEIRO", NpcServiceVisited = true, RepairPricePer10Percent = 7 } }] }, PersistentJson);
+            await context.SaveChangesAsync();
+        }
+        async Task<GameRunOperationResult<GameRunDto>> Repair(Guid key)
+        {
+            await using var context = database.CreateContext();
+            return await PersistentService(context, versionId).RepairDefenseAsync(runId, seed.Player.Idusuario,
+                new() { ItemId = "equip", RevisaoEsperada = 0, ChaveIdempotencia = key }, default);
+        }
+        async Task<GameRunOperationResult<GameRunDto>> Sell(Guid key, int userId, params GameRunVendorSaleLineDto[] lines)
+        {
+            await using var context = database.CreateContext();
+            return await PersistentService(context, versionId).SellVendorItemsAsync(runId, userId,
+                new() { Items = lines.ToList(), RevisaoEsperada = 1, ChaveIdempotencia = key }, default);
+        }
+        Guid repairKey = Guid.NewGuid();
+        var repairs = await Task.WhenAll(Repair(repairKey), Repair(repairKey));
+        Assert.All(repairs, result => Assert.True(result.Sucesso, result.Mensagem));
+        Assert.Single(repairs, result => result.Repetido);
+        var invalid = await Sell(Guid.NewGuid(), seed.Player.Idusuario,
+            new() { ItemId = "equip" }, new() { ItemId = "inexistente" });
+        Assert.Equal("VENDA_INVALIDA", invalid.Codigo);
+        Assert.Equal("RUN_NAO_ENCONTRADA", (await Sell(Guid.NewGuid(), seed.Owner.Idusuario, new GameRunVendorSaleLineDto { ItemId = "equip" })).Codigo);
+        await using (var check = database.CreateContext())
+        {
+            var run = await check.GameRuns.FindAsync(runId);
+            var state = JsonNode.Parse(run!.EstadoAtualJson)!;
+            Assert.Equal(1, run.Revisao);
+            Assert.Equal(979, state["economy"]!["balance"]!.GetValue<int>());
+            Assert.Equal(2, state["inventario"]!.AsArray().Count);
+            Assert.Equal(410, state["status"]!["defesas"]!["protecao"]!.GetValue<int>());
+        }
+        Guid saleKey = Guid.NewGuid();
+        Task<GameRunOperationResult<GameRunDto>> Sale() => Sell(saleKey, seed.Player.Idusuario,
+            new() { ItemId = "equip" }, new() { ItemId = "seringa", Quantity = 2 });
+        var sales = await Task.WhenAll(Sale(), Sale());
+        Assert.All(sales, result => Assert.True(result.Sucesso, result.Mensagem));
+        Assert.Single(sales, result => result.Repetido);
+        await using var verify = database.CreateContext();
+        var final = await verify.GameRuns.SingleAsync(item => item.IdGameRun == runId);
+        var saved = JsonNode.Parse(final.EstadoAtualJson)!;
+        Assert.Equal(2, final.Revisao);
+        Assert.Equal(1129, saved["economy"]!["balance"]!.GetValue<int>());
+        Assert.Empty(saved["inventario"]!.AsArray());
+        Assert.Equal(10, saved["status"]!["defesas"]!["protecao"]!.GetValue<int>());
+        Assert.Equal(2, await verify.GameRunCommands.CountAsync(item => item.IdGameRun == runId));
+        Assert.True(JsonNode.DeepEquals(JsonNode.Parse(PersistentSnapshot), JsonNode.Parse(final.SnapshotInicialJson)));
+        var sheet = await verify.PersonagemJogadores.SingleAsync(item => item.IdpersonagemJogador == seed.Character!.IdpersonagemJogador);
+        Assert.True(JsonNode.DeepEquals(JsonNode.Parse(seed.Character!.StatusJson!), JsonNode.Parse(sheet.StatusJson!)));
+        Assert.Equal(seed.Character.InventarioJson, sheet.InventarioJson);
+        Assert.Equal(0, sheet.RevisaoRuntime);
+    }
+
     [Theory]
     [InlineData("SABIO")]
     [InlineData("ENGENHEIRO")]

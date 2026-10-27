@@ -23,11 +23,11 @@ interface ColorConfig {
 
 const colorConfigs: Record<'primary' | 'secondary', ColorConfig> = {
   primary: {
-    neon: 'var(--neonBlue)',
-    clearNeon: 'var(--clearneonBlue)',
+    neon: 'var(--control-primary-neon, var(--neonBlue))',
+    clearNeon: 'var(--control-primary-clear, var(--clearneonBlue))',
     text: 'var(--whitesmoke)',
-    textNeon: 'var(--clearneonBlue)',
-    hover: 'var(--clearneonBlue)',
+    textNeon: 'var(--control-primary-clear, var(--clearneonBlue))',
+    hover: 'var(--control-primary-clear, var(--clearneonBlue))',
   },
   secondary: {
     neon: 'var(--neonPink)',

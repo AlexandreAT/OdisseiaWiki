@@ -68,7 +68,8 @@ export const EconomyBalance = styled.strong`
   :root[data-motion='reduced'] & { animation: none; }
 `;
 
-export const EconomyTabs = styled(LoadoutTabs)`
+export const EconomyTabs = styled(LoadoutTabs)<{ $neon?: boolean }>`
+  --inventory-glow: ${({ $neon }) => $neon ? 'var(--clearneonBlue)' : 'transparent'};
   grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
   button:disabled { opacity: .45; cursor: not-allowed; }
   button[aria-pressed='true'] { color: var(--clearneonBlue); border-color: var(--clearneonBlue); background: rgba(0, 183, 213, .12); }

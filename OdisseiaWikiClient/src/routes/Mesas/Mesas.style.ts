@@ -343,7 +343,7 @@ export const CheckFilter = styled.label`
   border-radius: 4px;
   background: rgba(1,9,20,.9);
   cursor: pointer;
-  input { accent-color: var(--clearneonBlue); width: 17px; height: 17px; }
+  input { margin: 0; }
 `;
 
 export const CardGrid = styled.div`

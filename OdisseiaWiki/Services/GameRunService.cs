@@ -381,6 +381,11 @@ public sealed class GameRunService : IGameRunService
 
         DateTime now = DateTime.UtcNow;
         string snapshotJson = GameRunAttributes.Prepare(JsonSerializer.Serialize(snapshot, SnapshotJsonOptions));
+        try { GameRunOutfitCompatibility.Validate(snapshotJson, system.Itens); }
+        catch (OutfitCompatibilityException error)
+        {
+            return (null, GameRunOperationResult<GameRunDto>.Fail("TRAJES_INCOMPATIVEIS", error.Message));
+        }
         if (_systemRepository is not null)
         {
             SistemaVersao? pinnedSystem = await _systemRepository.GetVersionAsync(

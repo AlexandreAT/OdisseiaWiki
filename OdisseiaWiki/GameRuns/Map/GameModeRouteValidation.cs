@@ -61,12 +61,15 @@ public static class GameModeRouteValidation
             if (option.Type == "NPC" && option.NpcType == "ENGENHEIRO")
             {
                 if (option.Offers is null) return $"{route}: configure um catálogo válido de próteses.";
+                if (option.RepairPricePer10Percent is < 0 or > 1000000000)
+                    return $"{route}: o preço de conserto por 10% deve ficar entre 0 e 1.000.000.000.";
                 var upgrade = option.Upgrade;
                 if (upgrade is not null && (upgrade.Damage is < 0 or > 1000000 ||
                     upgrade.Price is < 0 or > 1000000000 || upgrade.MaxUpgrades is < 0 or > 100 ||
                     (upgrade.Damage == 0) != (upgrade.MaxUpgrades == 0)))
                     return $"{route}: configure dano e limite de melhorias juntos, ou deixe ambos em zero.";
-                if (option.Offers.Count == 0 && upgrade is { Damage: > 0, MaxUpgrades: > 0 }) continue;
+                if (option.Offers.Count == 0 && (upgrade is { Damage: > 0, MaxUpgrades: > 0 } ||
+                    option.RepairPricePer10Percent.HasValue)) continue;
             }
             if (!GameRunNpcs.HasCatalog(option)) continue;
             if (option.OfferCount is not (3 or 6 or 9))

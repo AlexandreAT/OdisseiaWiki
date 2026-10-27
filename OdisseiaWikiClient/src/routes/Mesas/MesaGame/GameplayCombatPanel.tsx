@@ -9,6 +9,7 @@ import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, us
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { InputCheckbox } from '../../../components/Generic/CheckBox/CheckBox.style';
 import type { GameplayCombatParticipant, GameplayCombatSnapshot, GameplayRestCatalogItem } from '../../../models/GameplayCombat';
 import type { MesaNpcCatalogo, MesaPersonagemResumo } from '../../../models/Mesa';
 import type { AdicionarNpcCombatePayload } from '../../../services/gameplayCombatService';
@@ -181,7 +182,7 @@ export const GameplayCombatPanel = ({
               >Aplicar</CombatButton>
             </CombatForm>
             {selectedRest?.exigeGuarda && (
-              <SelectionRow><input type="checkbox" checked={guardConfirmed} onChange={(event) => setGuardConfirmed(event.target.checked)} />Guarda confirmada pelo grupo</SelectionRow>
+              <SelectionRow><InputCheckbox $neon={neon ? 'on' : 'off'} checked={guardConfirmed} onChange={(event) => setGuardConfirmed(event.target.checked)} />Guarda confirmada pelo grupo</SelectionRow>
             )}
           </RestSection>
         )}
@@ -191,7 +192,7 @@ export const GameplayCombatPanel = ({
               <CombatMessage>Escolha quem participará. Cada jogador receberá sua solicitação de iniciativa.</CombatMessage>
               {characters.map((entry) => {
                 const id = entry.personagem.idpersonagemJogador;
-                return <SelectionRow key={id}><input type="checkbox" checked={selected.includes(id)} onChange={() => setSelected((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id])} />{entry.personagem.nome}</SelectionRow>;
+                return <SelectionRow key={id}><InputCheckbox $neon={neon ? 'on' : 'off'} checked={selected.includes(id)} onChange={() => setSelected((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id])} />{entry.personagem.nome}</SelectionRow>;
               })}
               <CombatActions><CombatButton disabled={submitting || selected.length === 0} onClick={() => void onStart(selected)}>Preparar combate</CombatButton></CombatActions>
             </>

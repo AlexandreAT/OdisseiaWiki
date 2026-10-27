@@ -18,6 +18,37 @@ namespace OdisseiaWiki.Tests;
 public sealed partial class GameRunEncounterServiceTests
 {
     [Fact]
+    public async Task VendaInvalidaNaoAlteraEstadoNemQuandoResolvePrecosLegados()
+    {
+        var catalogue = new Mock<IGameModeManagementRepository>();
+        catalogue.Setup(repo => repo.GetLootItemsAsync(It.IsAny<int?>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new Item { Iditem = "a", Valor = 200, Visivel = true }]);
+        Fixture fixture = new(new GameRunItemValueResolver(catalogue.Object));
+        UseVendorMap(fixture);
+        await fixture.Service.EnterVendorAsync(10, "vendedor", 5, Request(0), default);
+        var root = JsonNode.Parse(fixture.Run.EstadoAtualJson)!.AsObject();
+        root["inventario"] = JsonNode.Parse("""[{"id":"a","tipo":"consumiveis","quantidade":2}]""");
+        fixture.Run.EstadoAtualJson = root.ToJsonString();
+        string before = fixture.Run.EstadoAtualJson;
+        string initial = fixture.Run.SnapshotInicialJson;
+        string? loadout = fixture.Run.LoadoutJson;
+        fixture.Repository.Invocations.Clear();
+
+        var result = await fixture.Service.SellVendorItemsAsync(10, 5, new() {
+            RevisaoEsperada = 1, ChaveIdempotencia = Guid.NewGuid(),
+            Items = [new() { ItemId = "a" }, new() { ItemId = "inexistente" }] }, default);
+
+        Assert.Equal("VENDA_INVALIDA", result.Codigo);
+        Assert.Equal(before, fixture.Run.EstadoAtualJson);
+        Assert.Equal(initial, fixture.Run.SnapshotInicialJson);
+        Assert.Equal(loadout, fixture.Run.LoadoutJson);
+        Assert.Equal(1, fixture.Run.Revisao);
+        catalogue.Verify(repo => repo.GetLootItemsAsync(It.IsAny<int?>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Once);
+        fixture.Repository.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        fixture.Repository.Verify(repo => repo.AddCommandAsync(It.IsAny<GameRunCommand>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task LootDePublicacaoSemPrecoHerdaValorDoItemEVendeComDescontoSemMudarSnapshotInicial()
     {
         var catalogue = new Mock<IGameModeManagementRepository>();

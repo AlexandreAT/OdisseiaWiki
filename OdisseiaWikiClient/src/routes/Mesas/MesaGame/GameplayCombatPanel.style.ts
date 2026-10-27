@@ -131,7 +131,7 @@ export const SelectionRow = styled.label`
   color: var(--whitesmoke);
   font-size: .75rem;
   cursor: pointer;
-  input { accent-color: var(--clearneonBlue); }
+  input { margin: 0; }
 `;
 
 export const RestSection = styled.section`

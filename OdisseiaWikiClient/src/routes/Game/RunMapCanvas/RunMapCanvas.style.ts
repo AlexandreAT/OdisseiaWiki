@@ -6,8 +6,11 @@ const hoverGlow = keyframes`
 `;
 
 const routeTravel = keyframes`
-  from { stroke-dashoffset: 100; }
-  to { stroke-dashoffset: 0; }
+  0% { stroke-dashoffset: 100; }
+  25% { stroke-dashoffset: var(--route-source-end); }
+  45% { stroke-dashoffset: var(--route-target-start); }
+  75% { stroke-dashoffset: var(--route-target-end); }
+  100% { stroke-dashoffset: 0; }
 `;
 
 const lockPulse = keyframes`
@@ -126,23 +129,25 @@ export const MapDrawing = styled.svg<{ $neon: boolean }>`
   g[data-state='IGNORADO'] text { fill: #72808b; }
 
   .route-effects :is(.route-light, .route-light-blur) { pointer-events: none; }
+  :root[data-motion='reduced'] & .route-effects { display: none; }
+  /* Blur after masking the beam, so the halo can extend beyond the rail's narrow stencil. */
+  .route-effects .route-light-halo { filter: blur(5px); }
   .route-effects .route-light-blur {
     fill: none;
-    stroke: rgba(77, 238, 234, .55);
-    stroke-width: 9;
+    stroke: rgba(77, 238, 234, .6);
+    stroke-width: 10;
     stroke-linecap: round;
-    stroke-dasharray: 3 97;
-    filter: blur(4px);
-    animation: ${routeTravel} 4.8s linear infinite;
+    stroke-dasharray: var(--route-dash);
+    animation: ${routeTravel} 6.4s linear infinite;
   }
   .route-effects .route-light {
     fill: none;
     stroke: #c5ffff;
     stroke-width: 3;
     stroke-linecap: round;
-    stroke-dasharray: 3 97;
+    stroke-dasharray: var(--route-dash);
     filter: drop-shadow(0 0 4px rgba(77, 238, 234, .75));
-    animation: ${routeTravel} 4.8s linear infinite;
+    animation: ${routeTravel} 6.4s linear infinite;
   }
 `;
 

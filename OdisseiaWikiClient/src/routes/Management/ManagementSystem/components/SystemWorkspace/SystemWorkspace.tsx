@@ -150,6 +150,8 @@ export const SystemWorkspace = ({
   onCatalogDirtyChange,
 }: SystemWorkspaceProps) => {
   const [catalogQuickSave, setCatalogQuickSave] = useState<SystemItemCatalogQuickSave | null>(null);
+  const [catalogTabVersion, setCatalogTabVersion] = useState<number | null>(null);
+  const showCatalog = catalogTabVersion !== null && catalogTabVersion === selectedVersion?.idSistemaVersao;
   const [uploadingImage, setUploadingImage] = useState(false);
   const currentCatalog = catalogQuickSave?.versionId === selectedVersion?.idSistemaVersao
     ? catalogQuickSave : null;
@@ -308,16 +310,6 @@ export const SystemWorkspace = ({
               />
             )}
 
-            <SystemItemCatalog
-              key={selectedVersion.idSistemaVersao}
-              idSistemaVersao={selectedVersion.idSistemaVersao}
-              readOnly={readOnly}
-              theme={theme}
-              neon={neon}
-              onDirtyChange={onCatalogDirtyChange}
-              onQuickSaveChange={setCatalogQuickSave}
-            />
-
             <ModuleNav theme={theme} neon={neon} aria-label="Módulos da versão">
               {MODULE_KEYS.map((moduleKey) => (
                 <ModuleNavButton
@@ -325,15 +317,29 @@ export const SystemWorkspace = ({
                   key={moduleKey}
                   theme={theme}
                   neon={neon}
-                  $selected={activeModule === moduleKey}
+                  $selected={!showCatalog && activeModule === moduleKey}
                   $hasError={activeModule === moduleKey && Object.keys(validationErrors).length > 0}
-                  onClick={() => onSelectModule(moduleKey)}
+                  onClick={() => { setCatalogTabVersion(null); if (activeModule !== moduleKey) onSelectModule(moduleKey); }}
                 >
                   {SISTEMA_MODULO_LABELS[moduleKey]}
                 </ModuleNavButton>
               ))}
+              <ModuleNavButton type="button" theme={theme} neon={neon} $selected={showCatalog}
+                aria-pressed={showCatalog} onClick={() => setCatalogTabVersion(selectedVersion.idSistemaVersao)}>
+                Catálogo de itens
+              </ModuleNavButton>
             </ModuleNav>
 
+            <div hidden={!showCatalog} aria-label="Catálogo de itens da versão">
+              <SystemItemCatalog
+                key={selectedVersion.idSistemaVersao}
+                idSistemaVersao={selectedVersion.idSistemaVersao}
+                readOnly={readOnly} theme={theme} neon={neon}
+                onDirtyChange={onCatalogDirtyChange} onQuickSaveChange={setCatalogQuickSave}
+              />
+            </div>
+
+            <div hidden={showCatalog} aria-label="Configuração do módulo">
             <ModuleEditor
               onUploadBusyChange={setUploadingImage}
               idSistemaVersao={selectedVersion.idSistemaVersao}
@@ -370,6 +376,7 @@ export const SystemWorkspace = ({
                 </ActionButton>
               </SaveBar>
             )}
+            </div>
 
             {!readOnly && (canSaveModule || currentCatalog) && (
               <EntityEditFloatingActions

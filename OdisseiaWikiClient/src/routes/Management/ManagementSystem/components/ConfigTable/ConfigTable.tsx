@@ -1,5 +1,6 @@
 import { ReactNode, memo, useCallback } from 'react';
 import { useEventCallback } from '../../../../../hooks/useEventCallback';
+import { InputCheckbox } from '../../../../../components/Generic/CheckBox/CheckBox.style';
 import { FieldHelp } from '../../../../../components/Generic/FieldHelp/FieldHelp';
 import AddIcon from '@mui/icons-material/Add';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
@@ -74,6 +75,7 @@ const normalizeOrder = <T extends object>(rows: T[]): T[] => rows.map((row, inde
 });
 
 interface ConfigTableRowProps<T extends object> {
+  neon: 'on' | 'off';
   row: T;
   rowIndex: number;
   isLast: boolean;
@@ -88,7 +90,7 @@ interface ConfigTableRowProps<T extends object> {
 }
 
 const ConfigTableRow = <T extends object>({ row, rowIndex, isLast, columns, readOnly, errors,
-  errorPath, updateCell, moveRow, duplicateRow, removeRow }: ConfigTableRowProps<T>) => {
+  errorPath, updateCell, moveRow, duplicateRow, removeRow, neon }: ConfigTableRowProps<T>) => {
   const renderControl = (row: T, rowIndex: number, column: ConfigTableColumn<T>) => {
     const value = row[column.key];
     const errorKey = `${errorPath}.${rowIndex}.${String(column.key)}`;
@@ -107,8 +109,8 @@ const ConfigTableRow = <T extends object>({ row, rowIndex, isLast, columns, read
     if (column.type === 'checkbox') {
       return (
         <TableCellControl $error={Boolean(error)} data-validation-error={error || undefined}>
-          <input
-            type="checkbox"
+          <InputCheckbox
+            $neon={neon}
             checked={Boolean(value)}
             disabled={readOnly}
             aria-label={column.label}
@@ -244,6 +246,7 @@ const ConfigTableRow = <T extends object>({ row, rowIndex, isLast, columns, read
 };
 
 const sameRow = <T extends object>(previous: ConfigTableRowProps<T>, next: ConfigTableRowProps<T>) =>
+  previous.neon === next.neon &&
   previous.row === next.row && previous.rowIndex === next.rowIndex && previous.isLast === next.isLast &&
   previous.columns === next.columns && previous.readOnly === next.readOnly && previous.errorPath === next.errorPath &&
   previous.updateCell === next.updateCell && previous.moveRow === next.moveRow &&
@@ -336,7 +339,7 @@ export const ConfigTable = <T extends object>({
             <tbody>
               {rows.map((row, rowIndex) => (
                 <MemoizedConfigTableRow key={`${errorPath}-${rowIndex}`} row={row} rowIndex={rowIndex}
-                  isLast={rowIndex === rows.length - 1} columns={columns} readOnly={readOnly}
+                  isLast={rowIndex === rows.length - 1} columns={columns} readOnly={readOnly} neon={neon}
                   errors={errors} errorPath={errorPath} updateCell={updateCell} moveRow={moveRow}
                   duplicateRow={duplicateRow} removeRow={removeRow} />
               ))}

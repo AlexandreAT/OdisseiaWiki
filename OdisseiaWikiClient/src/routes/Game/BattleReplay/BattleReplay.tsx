@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import CloseIcon from '@mui/icons-material/Close';
 import SecurityOutlinedIcon from '@mui/icons-material/SecurityOutlined';
 import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
@@ -6,27 +6,22 @@ import { ConditionBadges } from '../../../components/Gameplay/ConditionBadges/Co
 import type { GameBattlePreview, GameBattlePreviewActor } from '../../../models/GameBattlePreview';
 import { CyberButton } from '../../../components/Generic/HighlightButton/HighlightButton';
 import { GameNotice } from '../GameShared.style';
+import { HolographicPreviewProvider } from '../../../components/Generic/HolographicPreview';
 import { normalizeImagePath } from '../../Wiki/utils/imagePathHelper';
 import { Lightbox } from '../../Wiki/components/blocks/shared/Lightbox/Lightbox';
-import { activeBattleActor, battleWinner, endingLabel, latestBattleImpact, visibleActorConditions, visibleActorDefense, visibleActorResource, type BattleBeat, type BattleResource } from './battlePresentation';
+import { activeBattleActor, battleWinner, endingLabel, latestBattleImpact, visibleActorConditions, visibleActorDefense, visibleActorResource, type BattleResource } from './battlePresentation';
 import { useBattleReplay } from './useBattleReplay';
 import { useMotionReduced } from '../../../hooks/useMotionPreference';
-import { InlineBattleDie } from './InlineBattleDie/InlineBattleDie';
+import { BattleBeatText as BeatText } from './BattleBeatText';
 import {
-  ActionName,
-  AmmoRemaining,
-  ActorName,
   CombatantCard,
   CombatantDefenses,
   Combatants,
   CombatantResource,
   CombatantResources,
   CurrentEvent,
-  DamageText,
   EventList,
   EnemyGroup,
-  OutcomeNumber,
-  OutcomeText,
   ResourceFill,
   ResourceTrack,
   ReplayActionRow,
@@ -108,38 +103,6 @@ const ReplayXpGain = ({ amount, levels, points }: { amount: number; levels: numb
     </ReplayLevel>}
     {pointLabels.length > 0 && <ReplayPoints>{pointLabels.join(' · ')}</ReplayPoints>}
   </ReplayRewards>;
-};
-
-const BeatText = ({ beat, rolling = false, speed = 1 }: {
-  beat: BattleBeat;
-  rolling?: boolean;
-  speed?: 1 | 2;
-}) => {
-  const action = beat.action;
-  if (!action) return beat.actorName
-    ? <><ActorName $enemy={!beat.playerActor}>{beat.actorName}</ActorName>{beat.text.slice(beat.actorName.length)}</>
-    : <>{beat.text}</>;
-  return <>
-    <ActorName $enemy={!action.playerActor}>{action.actor}</ActorName> {'— '}<ActionName>{action.name}</ActionName>{': '}
-    {action.advantageDice?.length ? <span aria-label="Rolagem com vantagem: dois dados, maior resultado">
-      {action.advantageDice.map((die, index) => <InlineBattleDie key={index}
-        value={die.value} rolling={rolling} speed={speed} selected={die.selected} />)}
-    </span> : <InlineBattleDie value={action.die} rolling={rolling} speed={speed} />}
-    {!rolling && <>
-    <OutcomeText $tone={action.tone} $critical={action.critical}>{action.result}</OutcomeText>
-    {' (D20 '}<OutcomeNumber $tone={action.tone} $critical={action.critical}>{action.die}</OutcomeNumber>
-    {action.advantageDice?.length ? ', vantagem' : ''}{')'}
-    {action.damage > 0 && <>
-      {', '}<DamageText $tone={action.tone}>{action.damage} de dano</DamageText>
-      {action.absorbed > 0 && ` (${action.absorbed} absorvido)`}
-    </>}
-    {action.blocked && `, dano bloqueado (${action.absorbed} absorvido)`}
-    {action.resourceEffects.length > 0 && ` · ${action.resourceEffects.join(', ')}`}
-    {action.conditions.length > 0 && ` · aplicou ${action.conditions.join(', ')}`}
-    {action.ammoRemaining !== null && <AmmoRemaining> · Munição {action.ammoRemaining}</AmmoRemaining>}
-    {'.'}
-    </>}
-  </>;
 };
 
 const ResourceMeter = ({ label, actor, value, max, tone, enemy, speed, protectedLife }: {
@@ -297,7 +260,19 @@ export const BattleReplay = ({ runId, theme, neon, savedBattle, playerImage, onC
   const { preview } = state;
   const completionNotified = useRef(false);
   const [portrait, setPortrait] = useState<{ image: string; name: string } | null>(null);
+  const [mediaOpen, setMediaOpen] = useState(false);
+  const resumeAfterMedia = useRef(false);
   const resumeAfterPortrait = useRef(false);
+  const { playing, setPlaying } = state;
+  const onMediaOpenChange = useCallback((open: boolean) => {
+    setMediaOpen(open);
+    if (open) { resumeAfterMedia.current = playing; setPlaying(false); }
+    else if (resumeAfterMedia.current) {
+      resumeAfterMedia.current = false;
+      if (portrait) resumeAfterPortrait.current = true;
+      else setPlaying(true);
+    }
+  }, [playing, setPlaying, portrait]);
   const inspect = (image: string, name: string) => {
     resumeAfterPortrait.current = state.playing;
     state.setPlaying(false);
@@ -309,11 +284,11 @@ export const BattleReplay = ({ runId, theme, neon, savedBattle, playerImage, onC
   const complete = !!preview && state.eventCount === preview.resultado.events.length &&
     state.rollingSequence === null && state.revealHold === null;
   useEffect(() => {
-    if (savedBattle && complete && !portrait && !completionNotified.current) {
+    if (savedBattle && complete && !portrait && !mediaOpen && !completionNotified.current) {
       completionNotified.current = true;
       onComplete?.(state.speed);
     }
-  }, [complete, onComplete, savedBattle, state.speed, portrait]);
+  }, [complete, onComplete, savedBattle, state.speed, portrait, mediaOpen]);
 
   if (!preview) {
     return (
@@ -340,6 +315,7 @@ export const BattleReplay = ({ runId, theme, neon, savedBattle, playerImage, onC
     : `Combate inconclusivo: ${endingLabel(preview.resultado.endReason)}`;
 
   return (
+    <HolographicPreviewProvider neon={neon === 'on'} onOpenChange={onMediaOpenChange}>
     <ReplayContent>
       <ReplayToolbar>
         <ReplayControls aria-label="Controles da batalha">
@@ -412,5 +388,6 @@ export const BattleReplay = ({ runId, theme, neon, savedBattle, playerImage, onC
         <ReplayNote>O resultado é reproduzível pela seed desta run e não altera o personagem original.</ReplayNote>
       </ReplayActionRow>}
     </ReplayContent>
+    </HolographicPreviewProvider>
   );
 };

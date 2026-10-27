@@ -1,6 +1,6 @@
 import Dialog from '@mui/material/Dialog';
 import styled, { css, keyframes } from 'styled-components';
-import { GameFrame, GamePage, GameTextLink } from '../GameShared.style';
+import { gameContentSizing, GameFrame, GamePage, GameTextLink } from '../GameShared.style';
 
 const backpackHeartbeat = keyframes`
   0%, 100% {
@@ -244,18 +244,6 @@ export const SnapshotHeader = styled.div`
   > div:last-child { min-width: 0; width: 100%; }
   h1 { margin: 0; padding: 4px 2px; line-height: 1.2; min-width: 0; }
   p { margin: 3px 0 0; color: #a9c0cc; font-size: .76rem; }
-`;
-
-const xpHudReveal = keyframes`
-  0% { color: var(--clearneonYellow); text-shadow: 0 0 12px var(--clearneonYellow); }
-  55% { color: var(--clearneonYellow); text-shadow: 0 0 8px var(--clearneonYellow); }
-  100% { color: #a9c0cc; text-shadow: none; }
-`;
-
-export const RunXpLabel = styled.p<{ $pulse: boolean }>`
-  font-variant-numeric: tabular-nums;
-  ${({ $pulse }) => $pulse && css`animation: ${xpHudReveal} 1.8s ease-out both;`}
-  :root[data-motion='reduced'] & { animation: none; }
 `;
 
 const currencyHudReveal = keyframes`
@@ -669,6 +657,18 @@ export const RunOverlayDialog = styled(Dialog)`
 
 export const RunTrainingDialog = styled(RunOverlayDialog)`
   .MuiDialog-paper { overflow: hidden; }
+`;
+
+/** Training uses the same width/gutters as the actual combat page, not the small service dialogs. */
+export const RunCombatTrainingDialog = styled(RunTrainingDialog)`
+  .MuiDialog-paper {
+    ${gameContentSizing}
+    max-width: none; margin: 0;
+    height: calc(100dvh - 40px); max-height: calc(100dvh - 40px);
+    @media (max-width: 600px) { height: calc(100dvh - 24px); max-height: calc(100dvh - 24px); }
+  }
+  [data-combat-training-panel] { height: 100%; max-height: none; align-self: stretch; }
+  [data-combat-training-body] { max-height: none; }
 `;
 
 export const RunTrainingPanel = styled(ReplaySection)`

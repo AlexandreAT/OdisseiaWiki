@@ -511,6 +511,7 @@ public partial class OdisseiaContext
         modelBuilder.Entity<SistemaItemEscopo>(entity =>
         {
             entity.ToTable("sistemaitensescopos");
+            entity.Property(item => item.CompatibilidadeTrajeJson).HasColumnType("json");
             entity.HasKey(item => item.IdSistemaItemEscopo);
             entity.Property(item => item.Nivel).HasConversion<string>().HasMaxLength(30);
             entity.Property(item => item.Codigo).HasMaxLength(50);

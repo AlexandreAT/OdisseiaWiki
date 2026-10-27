@@ -7,7 +7,11 @@ namespace OdisseiaWiki.GameRuns;
 
 public sealed record GameAttributeResourcePreview(string Recurso, int Antes, int Depois, decimal Percentual);
 public sealed record GameAttributeOption(string Codigo, string Nome, string Grupo, int Valor,
-    int Limite, string? Descricao, IReadOnlyList<GameAttributeResourcePreview> Recursos);
+    int Limite, string? Descricao, IReadOnlyList<GameAttributeResourcePreview> Recursos)
+{
+    public int Modificador { get; init; }
+    public IReadOnlyList<GameAttributeInfluence> Influencias { get; init; } = [];
+}
 public sealed record GameAttributeOptions(int Pontos, IReadOnlyList<GameAttributeOption> Atributos);
 
 public static class GameRunAttributes
@@ -39,7 +43,9 @@ public static class GameRunAttributes
     {
         if (!version.Modulos.Any(module => module.TipoModulo == SistemaModuloTipo.Progressao && module.Habilitado))
             return new(0, []);
-        JsonNode status = JsonNode.Parse(snapshot)?["status"] ?? throw new InvalidOperationException("Ficha indisponível.");
+        JsonObject root = JsonNode.Parse(snapshot)?.AsObject() ?? throw new InvalidOperationException("Ficha indisponível.");
+        JsonNode status = root["status"] ?? throw new InvalidOperationException("Ficha indisponível.");
+        var influences = GameRunAttributeInfluences.Read(root, version);
         var rules = SistemaRpgConfiguration.LerRegras<SistemaRpgConfiguration.RegrasProgressao>(version, SistemaModuloTipo.Progressao);
         var options = new List<GameAttributeOption>();
         foreach (SistemaAtributoConfig attribute in version.Atributos.Where(item => item.Ativo &&
@@ -60,7 +66,10 @@ public static class GameRunAttributes
                     int after = checked(before + (int)decimal.Floor(before * percentage / 100m));
                     return new GameAttributeResourcePreview(rule.Recurso, before, after, percentage);
                 }).ToArray();
-            options.Add(new(code, attribute.Nome, group, current, limit, attribute.Descricao, resources));
+            var relevant = influences.Where(source => source.Efeitos.Any(effect => effect.Grupo == group && Normalize(effect.Codigo) == Normalize(code))).ToArray();
+            options.Add(new(code, attribute.Nome, group, current, limit, attribute.Descricao, resources) {
+                Influencias = relevant, Modificador = checked(relevant.SelectMany(source => source.Efeitos)
+                    .Where(effect => effect.Grupo == group && Normalize(effect.Codigo) == Normalize(code)).Sum(effect => effect.Valor)) });
         }
         int available = checked(Math.Max(0, Number(status["pontos"])) + Math.Max(0, Number(status["pontosAtributo"])));
         // Runs created before the initial-points marker must not expose the character's

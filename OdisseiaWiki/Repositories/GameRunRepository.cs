@@ -67,12 +67,33 @@ public sealed class GameRunRepository : IGameRunRepository
     public Task AddCharacterMemoryAsync(GameCharacterMemory memory, CancellationToken token) =>
         _context.GameCharacterMemories.AddAsync(memory, token).AsTask();
     public async Task<IReadOnlyList<GameRunBattle>> GetCharacterVictoriesAsync(
-        int userId, int characterId, int systemId, CancellationToken token) =>
-        await _context.GameRunBattles.AsNoTracking().Where(battle => battle.VencedorId == "player" &&
+        int userId, int characterId, int systemId, CancellationToken token)
+    {
+        // Milestone backfill needs identities and encounter configuration, not replay/resource JSON.
+        // Sorting a joined row containing those large JSON columns can exhaust MySQL's sort buffer.
+        var victories = await _context.GameRunBattles.AsNoTracking().Where(battle => battle.VencedorId == "player" &&
             battle.Run.IdUsuario == userId && battle.Run.IdPersonagemJogadorOrigem == characterId &&
             battle.Run.SistemaVersao.IdSistemaRpg == systemId)
-            .Include(battle => battle.Run).ThenInclude(run => run.GameModeVersion)
-            .OrderBy(battle => battle.CriadaEmUtc).ThenBy(battle => battle.IdGameRunBattle).ToListAsync(token);
+            .Select(battle => new GameRunBattle { IdGameRunBattle = battle.IdGameRunBattle,
+                IdGameRun = battle.IdGameRun, NoId = battle.NoId, VencedorId = battle.VencedorId,
+                CriadaEmUtc = battle.CriadaEmUtc }).ToListAsync(token);
+        if (victories.Count == 0) return [];
+
+        // Load the map/configuration once per run, without ordering JSON values in the database.
+        var runIds = victories.Select(battle => battle.IdGameRun).Distinct().ToArray();
+        var runs = await _context.GameRuns.AsNoTracking().Where(run => runIds.Contains(run.IdGameRun) &&
+                run.IdUsuario == userId && run.IdPersonagemJogadorOrigem == characterId &&
+                run.SistemaVersao.IdSistemaRpg == systemId)
+            .Select(run => new GameRun { IdGameRun = run.IdGameRun, MapaJson = run.MapaJson,
+                GameModeVersion = new GameModeVersion { Codigo = run.GameModeVersion.Codigo,
+                    ConfiguracaoJson = run.GameModeVersion.ConfiguracaoJson } })
+            .ToDictionaryAsync(run => run.IdGameRun, token);
+        foreach (var battle in victories)
+            if (runs.TryGetValue(battle.IdGameRun, out var run)) battle.Run = run;
+        // Preserve chronological replacement of enemy snapshots, including deterministic timestamp ties.
+        return victories.Where(battle => battle.Run is not null)
+            .OrderBy(battle => battle.CriadaEmUtc).ThenBy(battle => battle.IdGameRunBattle).ToArray();
+    }
 
     public async Task<IReadOnlyList<PersonagemJogador>> GetCharactersAsync(
         int idUsuario, CancellationToken cancellationToken) =>
@@ -242,8 +263,8 @@ public sealed class GameRunRepository : IGameRunRepository
             .OrderByDescending(item => item.Ordem).FirstOrDefaultAsync(cancellationToken);
 
     public async Task<IReadOnlyList<GameRunBattle>> GetBattlesAsync(long idGameRun, CancellationToken cancellationToken) =>
-        await _context.GameRunBattles.AsNoTracking().Where(item => item.IdGameRun == idGameRun)
-            .OrderBy(item => item.Ordem).ToListAsync(cancellationToken);
+        (await _context.GameRunBattles.AsNoTracking().Where(item => item.IdGameRun == idGameRun)
+            .ToListAsync(cancellationToken)).OrderBy(item => item.Ordem).ThenBy(item => item.IdGameRunBattle).ToArray();
 
     public Task SaveChangesAsync(CancellationToken cancellationToken) =>
         _context.SaveChangesAsync(cancellationToken);

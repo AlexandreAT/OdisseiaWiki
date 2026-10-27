@@ -16,7 +16,7 @@ public sealed class AutoBattleSimulatorTests
     public void CondicoesPeriodicasEmitemEfeitoComValorRealParaAmbosOsCombatentes(string moment)
     {
         var rule = new GameBattleConditionRule("REGEN", "Regeneração", "SOMAR", "VIDA", 100,
-            moment, false, true, "DURACAO");
+            moment, false, true, "DURACAO") { Image = "/assets/regeneracao.png" };
         var hero = Actor("hero", 1000, Action("idle", 0)) with { HitPoints = 200,
             ActiveConditions = [new(rule, 100, 4)] };
         var enemy = Actor("enemy", 1000, Action("idle", 0)) with { HitPoints = 200,
@@ -28,7 +28,8 @@ public sealed class AutoBattleSimulatorTests
                 .Select(item => Assert.IsType<ConditionEffectPayload>(item.Payload)).ToArray();
             Assert.Equal(4, effects.Length);
             Assert.All(effects, effect => { Assert.Equal(moment, effect.Moment);
-                Assert.Equal(100, effect.After - effect.Before); Assert.Equal("Regeneração", effect.Name); });
+                Assert.Equal(100, effect.After - effect.Before); Assert.Equal("Regeneração", effect.Name);
+                Assert.Equal("/assets/regeneracao.png", effect.Image); });
         }
     }
 
@@ -38,7 +39,7 @@ public sealed class AutoBattleSimulatorTests
         var rule = new GameBattleConditionRule("CEGUEIRA", "Cegueira", "", "", 0, "", false, true, "DURACAO")
         { Image = "/assets/cegueira.png", Effects = [new("MODIFICAR_ATRIBUTO", "PRECISAO", -5, "ENQUANTO_ATIVA"),
             new("DESVANTAGEM", "TODOS", 0, "ENQUANTO_ATIVA")] };
-        var utility = UtilityAction("granada", new(1)) with { Conditions =
+        var utility = UtilityAction("granada", new(1)) with { Image = "/assets/granada.png", SourceType = "ITEM", Conditions =
             [new(rule, null, 3, "Turno", "AO_USAR", []) { Target = "ALVO" }] };
         var result = _simulator.Simulate(Battle(Actor("hero", 100, utility), Actor("enemy", 100, Action("idle", 0)), maxRounds: 1), new SequenceRandomSource(10));
         var applied = Assert.IsType<ConditionAppliedPayload>(Assert.Single(result.Events, item => item.Type == GameBattleEventTypes.ConditionApplied).Payload);
@@ -48,12 +49,37 @@ public sealed class AutoBattleSimulatorTests
             .Select(item => Assert.IsType<ConditionEffectPayload>(item.Payload)).ToArray();
         Assert.Contains(effects, effect => effect.Operation == "MODIFICAR_ATRIBUTO" && effect.Value == -5);
         Assert.Contains(effects, effect => effect.Operation == "DESVANTAGEM");
+        Assert.All(effects, effect => Assert.Equal(rule.Image, effect.Image));
         string json = JsonSerializer.Serialize(result);
         var restored = JsonSerializer.Deserialize<GameBattleResult>(json)!;
         Assert.Equal(effects.Length, restored.Events.Count(item => item.Type == GameBattleEventTypes.ConditionEffect));
+        var selected = restored.Events.Where(item => item.Type == GameBattleEventTypes.ActionSelected)
+            .Select(item => Assert.IsType<ActionSelectedPayload>(item.Payload))
+            .First(item => item.ActionId == "granada");
+        Assert.Equal("/assets/granada.png", selected.Image);
+        Assert.Equal("ITEM", selected.SourceType);
     }
 
     private readonly AutoBattleSimulator _simulator = new();
+
+    [Theory]
+    [InlineData("ARMA")]
+    [InlineData("ITEM")]
+    [InlineData("MAGIA")]
+    [InlineData("SKILL")]
+    [InlineData("PROTESE")]
+    public void ImagemDaAcaoPermaneceNoHistoricoInclusiveNaRecarga(string sourceType)
+    {
+        var action = Action("origem", 1) with { Image = "/assets/acao.png", SourceType = sourceType,
+            Magazine = new GameBattleMagazineSpec(1, 1, 1, 1) };
+        var result = _simulator.Simulate(Battle(Actor("hero", 100, action),
+            Actor("enemy", 100, Action("idle", 0)), maxRounds: 3), new SequenceRandomSource(11));
+        var restored = JsonSerializer.Deserialize<GameBattleResult>(JsonSerializer.Serialize(result))!;
+        var selected = restored.Events.Where(item => item.Type == GameBattleEventTypes.ActionSelected)
+            .Select(item => Assert.IsType<ActionSelectedPayload>(item.Payload)).Where(item => item.ActionId == "origem").ToArray();
+        Assert.Contains(selected, item => item.Reload);
+        Assert.All(selected, item => { Assert.Equal(action.Image, item.Image); Assert.Equal(sourceType, item.SourceType); });
+    }
 
     [Fact]
     public void ConsumivelEquipadoUsaUmaUnidadeSemDadoESegueParaProximaAcao()

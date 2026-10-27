@@ -39,6 +39,7 @@ interface CheckSelectProps {
   height?: string;
   options: Option[];
   compactPreview?: boolean;
+  disabled?: boolean;
   help?: FieldHelpContent;
   helpKey?: string;
 }
@@ -59,6 +60,7 @@ const CheckSelectComponent = ({
   height,
   options,
   compactPreview = false,
+  disabled = false,
   help,
   helpKey,
 }: CheckSelectProps) => {
@@ -84,6 +86,8 @@ const CheckSelectComponent = ({
     if ((value || []).length > 0) setFocus(true);
   }, [value]);
 
+  useEffect(() => { if (disabled) setOpen(false); }, [disabled]);
+
   useEffect(() => {
     if (error) revealFirstValidationError(containerRef.current);
   }, [error]);
@@ -101,6 +105,7 @@ const CheckSelectComponent = ({
 
   const toggleOpen = useCallback((e?: React.MouseEvent) => {
     e?.stopPropagation();
+    if (disabled) return;
     if (!open) {
       computeRect();
       setOpen(true);
@@ -110,16 +115,17 @@ const CheckSelectComponent = ({
       if (selectedValues.length === 0) setFocus(false);
     }
     setFocus(true);
-  }, [open, selectedValues.length, computeRect]);
+  }, [open, selectedValues.length, computeRect, disabled]);
 
 
   const toggleCheck = useCallback((val: string) => {
+    if (disabled) return;
     const updated = selectedValues.includes(val)
       ? selectedValues.filter(v => v !== val)
       : [...selectedValues, val];
     setSelectedValues(updated);
     onChange?.(updated);
-  }, [selectedValues, onChange]);
+  }, [selectedValues, onChange, disabled]);
 
 
   useEffect(() => {
@@ -183,7 +189,7 @@ const CheckSelectComponent = ({
 
 
   const dropdownPortal = (() => {
-    if (!open || !rect || typeof document === "undefined") return null;
+    if (disabled || !open || !rect || typeof document === "undefined") return null;
 
     const safeMargin = 12;
     const dropdownWidth = Math.min(rect.width, window.innerWidth - safeMargin * 2);
@@ -213,6 +219,7 @@ const CheckSelectComponent = ({
           <CheckListContainer key={opt.value} title={opt.description}>
             <CheckBox
               neon={neon}
+              disabled={disabled}
               label={opt.label}
               checked={selectedValues.includes(opt.value)}
               onChange={() => toggleCheck(opt.value)}
@@ -234,7 +241,15 @@ const CheckSelectComponent = ({
       <Label width={width} height={height} onClick={toggleOpen}>
         <CheckDisplay
           data-field-value="true"
-          data-field-active={open ? 'true' : undefined}
+          data-field-active={!disabled && open ? 'true' : undefined}
+          aria-disabled={disabled}
+          role="combobox" aria-expanded={!disabled && open} aria-label={label}
+          tabIndex={disabled ? -1 : 0}
+          onKeyDown={event => {
+            if (disabled || event.key !== 'Enter' && event.key !== ' ') return;
+            event.preventDefault(); event.stopPropagation(); toggleOpen();
+          }}
+          style={disabled ? { cursor: 'not-allowed', opacity: .55 } : undefined}
           theme={theme}
           neon={neon}
           focus={focus}

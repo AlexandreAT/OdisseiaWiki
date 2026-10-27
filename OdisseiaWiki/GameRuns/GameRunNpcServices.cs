@@ -111,6 +111,19 @@ public static class GameRunNpcServices
         return root.ToJsonString();
     }
 
+    public static string RepairDefense(string snapshot, string itemId, int? pricePer10Percent)
+    {
+        if (pricePer10Percent is null or < 0 or > 1000000000)
+            throw new InvalidOperationException("Este Engenheiro não oferece consertos nesta versão.");
+        var repair = Battle.GameRunDefensiveEquipment.RepairItem(snapshot, itemId);
+        long blocks = (repair.Missing * 10 + repair.Maximum - 1) / repair.Maximum;
+        long cost = blocks * pricePer10Percent.Value;
+        if (cost > 1000000000) throw new InvalidOperationException("Moeda insuficiente para este conserto.");
+        var root = JsonNode.Parse(repair.Snapshot)!.AsObject();
+        Charge(root, (int)cost);
+        return root.ToJsonString();
+    }
+
     private static JsonObject? ReadObject(JsonNode? value) => value is JsonObject direct ? direct :
         value is JsonValue stored && stored.TryGetValue<string>(out string? text) ? JsonNode.Parse(text!) as JsonObject : null;
 

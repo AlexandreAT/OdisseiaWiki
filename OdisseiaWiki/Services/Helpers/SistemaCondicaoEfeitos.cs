@@ -16,6 +16,9 @@ public static class SistemaCondicaoEfeitos
             if (!document.RootElement.TryGetProperty("imagem", out JsonElement image) ||
                 image.ValueKind != JsonValueKind.String) return null;
             string? path = image.GetString()?.Trim();
+            path = path?.Replace('\\', '/');
+            if (path?.StartsWith("assets_dynamic/", StringComparison.OrdinalIgnoreCase) == true ||
+                path?.StartsWith("assets/", StringComparison.OrdinalIgnoreCase) == true) path = "/" + path;
             return path?.Length is > 0 and <= 2048 &&
                 (path.StartsWith('/') && !path.StartsWith("//") ||
                  Uri.TryCreate(path, UriKind.Absolute, out Uri? uri) && uri.Scheme is "https" or "http") ? path : null;

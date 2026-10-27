@@ -565,6 +565,8 @@ export interface SistemaItemReferenciaRuntime {
 }
 
 export interface SistemaItemEscopoRuntime {
+  /** Null/absent keeps legacy pairing; [] explicitly disallows any other outfit. */
+  arquetiposCompativeis?: string[] | null;
   idSistemaItemEscopo: number;
   idEscopoPai?: number | null;
   nivel: 'Tipo' | 'Categoria' | 'Arquetipo' | string;
@@ -582,6 +584,8 @@ export interface SistemaItemEscopoRuntime {
 
 /** Catálogo mecânico versionado de itens usado tanto no runtime quanto no editor administrativo. */
 export interface SistemaItensConfig {
+  regrasTrajeConfiguradas?: boolean;
+  arquetiposTrajeConhecidos?: string[];
   tipos: SistemaItemEscopoRuntime[];
 }
 

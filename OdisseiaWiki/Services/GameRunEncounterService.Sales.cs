@@ -33,22 +33,25 @@ public sealed partial class GameRunEncounterService
                     return GameRunOperationResult<GameRunDto>.Fail("STASH_INDISPONIVEL", GameRunEconomy.StashUnavailableMessage);
                 GameRunMapDto map = GameRunFirstMap.Read(run!.MapaJson, JsonOptions);
                 GameRunMapNodeDto? node = map.Nodes.SingleOrDefault(item => item.Id == run.NoAtualId);
-                if (node is null || !GameRunNpcs.IsMerchant(node) || GameRunNpcs.NeedsRescue(node) ||
+                if (node is null || !GameRunNpcs.BuysItems(node) || GameRunNpcs.NeedsRescue(node) ||
                     node.Type == "NPC" && node.Payload?.NpcServiceVisited != true || node.State != "SELECIONADO")
                     return GameRunOperationResult<GameRunDto>.Fail("VENDEDOR_INDISPONIVEL", "Entre no vendedor antes de vender.");
+                if (request.FromStash && !GameRunEconomy.CanAccessStash(map, run.NoAtualId))
+                    return GameRunOperationResult<GameRunDto>.Fail("STASH_INDISPONIVEL", "O depósito só pode ser acessado na Base ou no Mercador.");
                 var version = await _systems.GetVersionAsync(run.IdSistemaVersao, includeConfiguration: true);
                 if (version is null) return GameRunOperationResult<GameRunDto>.Fail("SISTEMA_INDISPONIVEL", "Sistema indisponível.");
                 try
                 {
-                    if (_itemValues is not null)
-                        run.EstadoAtualJson = await _itemValues.ResolveAsync(run.EstadoAtualJson, run.GameModeVersion, token);
+                    // Keep all preparation local: a rejected batch must not change the tracked run.
+                    string snapshot = _itemValues is null ? run.EstadoAtualJson
+                        : await _itemValues.ResolveAsync(run.EstadoAtualJson, run.GameModeVersion, token);
                     int discount = JsonSerializer.Deserialize<GameBattlePreviewConfig>(run.GameModeVersion.ConfiguracaoJson, JsonOptions)
                         ?.SaleDiscountPercent ?? 0;
-                    GameRunSale sale = GameRunEconomy.Sell(run.EstadoAtualJson, request.Items, discount, request.FromStash);
+                    GameRunSale sale = GameRunEconomy.Sell(snapshot, request.Items, discount, request.FromStash);
                     if (!request.FromStash && sale.RemovedItemIds.Count > 0)
                     {
                         // Validate the whole sale first, then remove equipment effects while their sources still exist.
-                        string prepared = run.EstadoAtualJson;
+                        string prepared = snapshot;
                         foreach (string itemId in sale.RemovedItemIds)
                         {
                             prepared = GameRunDefensiveEquipment.UnequipIfNeeded(prepared, itemId);

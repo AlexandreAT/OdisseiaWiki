@@ -1,8 +1,9 @@
-import { useState, type KeyboardEvent } from 'react';
+import { useId, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import type { GameRunMap, GameRunMapNode, GameRunModeConfig } from '../../../models/GameRun';
 import { normalizeImagePath } from '../../Wiki/utils/imagePathHelper';
 import { MapDrawing, MapWrap } from './RunMapCanvas.style';
 import { getVisibleRunMap } from './visibleRunMap';
+import { mapConnectionRoute, mapLaserBranch, mapRoundedBorderLength } from './runMapGeometry';
 
 interface Props {
   map: GameRunMap;
@@ -32,6 +33,7 @@ const shortNameOf = (node: GameRunMapNode, config: GameRunModeConfig): string =>
       ? config.encounters[node.payload.encounterCode].enemy.name : nameOf(node);
 
 export const RunMapCanvas = ({ map, config, neon, active, acting, onSelect }: Props) => {
+  const routeMaskId = useId();
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const { nodes, height, areas } = getVisibleRunMap(map, config);
   const byId = new Map(nodes.map((node) => [node.id, node]));
@@ -69,7 +71,7 @@ export const RunMapCanvas = ({ map, config, neon, active, acting, onSelect }: Pr
       const centerY = y - 11;
       const anchorY = start === 'top' ? centerY - radius : centerY + radius;
       const oppositeY = start === 'top' ? centerY + radius : centerY - radius;
-      return { x, anchorY,
+      return { x, anchorY, length: 2 * Math.PI * radius,
         outline: `A ${radius} ${radius} 0 1 1 ${x} ${oppositeY} A ${radius} ${radius} 0 1 1 ${x} ${anchorY}` };
     }
     const left = x - width / 2;
@@ -77,25 +79,19 @@ export const RunMapCanvas = ({ map, config, neon, active, acting, onSelect }: Pr
     const top = y - 34;
     const bottom = y + 34;
     const radius = 8;
+    const length = mapRoundedBorderLength(width, 68, radius);
     return start === 'top'
-      ? { x, anchorY: top, outline: `H ${right - radius} Q ${right} ${top} ${right} ${top + radius}` +
+      ? { x, anchorY: top, length, outline: `H ${right - radius} Q ${right} ${top} ${right} ${top + radius}` +
           ` V ${bottom - radius} Q ${right} ${bottom} ${right - radius} ${bottom}` +
           ` H ${left + radius} Q ${left} ${bottom} ${left} ${bottom - radius}` +
           ` V ${top + radius} Q ${left} ${top} ${left + radius} ${top} H ${x}` }
-      : { x, anchorY: bottom, outline: `H ${left + radius} Q ${left} ${bottom} ${left} ${bottom - radius}` +
+      : { x, anchorY: bottom, length, outline: `H ${left + radius} Q ${left} ${bottom} ${left} ${bottom - radius}` +
           ` V ${top + radius} Q ${left} ${top} ${left + radius} ${top}` +
           ` H ${right - radius} Q ${right} ${top} ${right} ${top + radius}` +
           ` V ${bottom - radius} Q ${right} ${bottom} ${right - radius} ${bottom} H ${x}` };
   };
-  const connectionPath = (source: GameRunMapNode, target: GameRunMapNode) => {
-    const from = layoutOf(source);
-    const to = layoutOf(target);
-    const startY = from.y + 35;
-    const endY = to.y - 35;
-    const controlY = (endY - startY) * .42;
-    return `M ${from.x} ${startY} C ${from.x} ${startY + controlY}` +
-      ` ${to.x} ${endY - controlY} ${to.x} ${endY}`;
-  };
+  const connectionRoute = (source: GameRunMapNode, target: GameRunMapNode) =>
+    mapConnectionRoute(layoutOf(source), layoutOf(target));
   const available = (node: GameRunMapNode) => active && visualState(node) === 'DISPONIVEL';
   const selectable = (node: GameRunMapNode) => available(node) && !acting;
   const needsRescue = (node: GameRunMapNode) => node.type === 'NPC' && node.payload?.npcLocked === true && !node.payload.npcRescued;
@@ -132,7 +128,7 @@ export const RunMapCanvas = ({ map, config, neon, active, acting, onSelect }: Pr
         const highlighted = (hoveredNodeId === source.id || hoveredNodeId === target.id) && possible;
         return <path key={`${source.id}-${target.id}`} className="map-edge"
           data-route-state={routeState} data-highlighted={highlighted}
-          d={connectionPath(source, target)} />;
+          d={connectionRoute(source, target).forward} />;
       }))}
       {nodes.map((node) => {
         const { x, y, width, siblings } = layoutOf(node);
@@ -140,6 +136,7 @@ export const RunMapCanvas = ({ map, config, neon, active, acting, onSelect }: Pr
         const maxLength = siblings >= 4 ? 10 : siblings === 3 ? 14 : 20;
         const portrait = isPortrait(node);
         const radius = Math.min(28, width / 2 - 5);
+        const imageClipId = `${routeMaskId}-image-${node.id}`;
         return <g key={node.id} data-node-id={node.id} data-state={visualState(node)} data-type={node.type}
           data-current={node.id === currentNode?.id} data-available={available(node)}
           data-hovered={hoveredNodeId === node.id} data-linked={linkedNodeIds.has(node.id)}
@@ -156,11 +153,11 @@ export const RunMapCanvas = ({ map, config, neon, active, acting, onSelect }: Pr
           onKeyDown={(event) => selectOnKeyboard(event, node)}>
           <title>{`${nameOf(node)} — ${labels[visualState(node)]}${node.type === 'NPC' && node.payload?.npcLocked && !node.payload.npcRescued ? ' · Visite para libertar' : ''}`}</title>
           {portrait ? <>
-            <defs><clipPath id={`portrait-${node.id}`}><circle cx={x} cy={y - 11} r={radius} /></clipPath></defs>
+            <defs><clipPath id={imageClipId}><circle cx={x} cy={y - 11} r={radius} /></clipPath></defs>
             <circle className="node-portrait" cx={x} cy={y - 11} r={radius} />
             {node.image && <image href={normalizeImagePath(node.image)} x={x - radius} y={y - 11 - radius}
               width={radius * 2} height={radius * 2} preserveAspectRatio="xMidYMid slice"
-              clipPath={`url(#portrait-${node.id})`} pointerEvents="none" />}
+              clipPath={`url(#${imageClipId})`} pointerEvents="none" />}
             <circle className="node-portrait-border" cx={x} cy={y - 11} r={radius} />
             {node.type === 'NPC' && node.payload?.npcLocked && !node.payload.npcRescued &&
               <g className="npc-lock" transform={`translate(${x + radius - 8}, ${y + 5})`} pointerEvents="none" aria-hidden="true">
@@ -170,32 +167,48 @@ export const RunMapCanvas = ({ map, config, neon, active, acting, onSelect }: Pr
               </g>}
           </> : <>
             <rect x={x - width / 2} y={y - 34} width={width} height="68" rx="8" />
-            {node.image && <image href={normalizeImagePath(node.image)}
-              x={x - width / 2 + 2} y={y - 32} width={width - 4} height="64"
-              preserveAspectRatio="xMidYMid slice" opacity="0.45" pointerEvents="none" />}
+            {node.image && <>
+              <defs><clipPath id={imageClipId}>
+                <rect x={x - width / 2 + 2} y={y - 32} width={width - 4} height="64" rx="6" />
+              </clipPath></defs>
+              <image href={normalizeImagePath(node.image)}
+                x={x - width / 2 + 2} y={y - 32} width={width - 4} height="64"
+                clipPath={`url(#${imageClipId})`} preserveAspectRatio="xMidYMid slice" opacity="0.45" pointerEvents="none" />
+            </>}
           </>}
           <text x={x} y={portrait ? y + 35 : y - 4} textAnchor="middle" fontSize={siblings >= 4 ? 11 : 13}>
             {label.length > maxLength ? `${label.slice(0, maxLength - 1)}…` : label}
           </text>
         </g>;
       })}
-      {neon && currentNode && <g className="route-effects" pointerEvents="none" aria-hidden="true">
-        {nextNodes.map((node) => {
-          const from = borderRoute(currentNode, 'bottom');
-          const to = borderRoute(node, 'top');
-          const connectionHeight = to.anchorY - from.anchorY;
-          const route = `M ${from.x} ${from.anchorY} ${from.outline}` +
-            ` C ${from.x} ${from.anchorY + connectionHeight * .42}` +
-            ` ${to.x} ${to.anchorY - connectionHeight * .42} ${to.x} ${to.anchorY}` +
-            ` ${to.outline}` +
-            ` C ${to.x} ${to.anchorY - connectionHeight * .42}` +
-            ` ${from.x} ${from.anchorY + connectionHeight * .42} ${from.x} ${from.anchorY}`;
-          return <g key={`${currentNode.id}-${node.id}`} className="route-branch">
-            <path className="route-light-blur" d={route} pathLength={100} />
-            <path className="route-light" d={route} pathLength={100} />
-          </g>;
-        })}
-      </g>}
+      {neon && currentNode && nextNodes.length > 0 && (() => {
+        const from = borderRoute(currentNode, 'bottom');
+        const branches = nextNodes.map(node => ({ id: node.id, border: borderRoute(node, 'top'), connection: connectionRoute(currentNode, node) }));
+        // A mask hides the label gaps without splitting/restarting the animated path.
+        const tracks = `M ${from.x} ${from.anchorY} ${from.outline}` + branches.map(({ border, connection }) =>
+          ` ${connection.forward} M ${border.x} ${border.anchorY} ${border.outline}`).join('');
+        return <g className="route-effects" pointerEvents="none" aria-hidden="true">
+          <defs><mask id={routeMaskId} maskUnits="userSpaceOnUse" x="-20" y="-20" width="460" height={height + 40}>
+            <path d={tracks} fill="none" stroke="white" strokeWidth="14" />
+          </mask></defs>
+          <g>
+            {branches.map(branch => {
+              const light = mapLaserBranch(from, branch);
+              return <g key={branch.id} className="route-branch" style={{
+                '--route-dash': `${light.dash} ${100 - light.dash}`,
+                '--route-source-end': light.sourceEnd,
+                '--route-target-start': light.targetStart,
+                '--route-target-end': light.targetEnd,
+              } as CSSProperties}>
+                <g className="route-light-halo">
+                  <path className="route-light-blur" mask={`url(#${routeMaskId})`} d={light.route} pathLength={100} />
+                </g>
+                <path className="route-light" mask={`url(#${routeMaskId})`} d={light.route} pathLength={100} />
+              </g>;
+            })}
+          </g>
+        </g>;
+      })()}
       {rescueHint && (() => {
         const { x, y } = layoutOf(rescueHint);
         const left = Math.max(8, Math.min(420 - 276, x - 134));

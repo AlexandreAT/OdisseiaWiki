@@ -22,6 +22,7 @@ interface Props {
   error?: boolean;
   errorMessage?: string;
   required?: boolean;
+  disabled?: boolean;
   typeStyle?: 'primary' | 'secondary';
   width?: string;
   height?: string;
@@ -42,6 +43,7 @@ const TextAreaComponent = ({
   error,
   errorMessage,
   required,
+  disabled = false,
   typeStyle = 'primary',
   width,
   height,
@@ -109,6 +111,7 @@ const TextAreaComponent = ({
           error={hasError}
           aria-invalid={hasError}
           required={required}
+          disabled={disabled}
           typeStyle={typeStyle}
           width={width}
           height={height}

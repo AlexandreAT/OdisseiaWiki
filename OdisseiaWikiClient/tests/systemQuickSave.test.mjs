@@ -8,6 +8,10 @@ const bundle = await build({
   stdin: { contents: `export * from './src/routes/Management/ManagementSystem/components/SystemWorkspace/SystemWorkspace';
     export * from './src/routes/Management/ManagementWiki/WikiForms/FormBuscarConteúdo/EntityEditFloatingActions';
     export * from './src/routes/Hub/UserCharacters/CharacterEdit/CharacterEdit.style';
+    export * from './src/components/Generic/CheckSelect/CheckSelect';
+    export * from './src/components/Generic/InputText/InputText';
+    export * from './src/routes/Management/ManagementSystem/components/SystemItemCatalog/SystemItemCatalog.style';
+    export * from './src/content/itemCatalogHelp';
     export * from './src/services/sistemasRpgService';`, loader: 'ts', resolveDir: process.cwd() },
   plugins: [{ name: 'system-save-dependencies', setup(builder) {
     builder.onResolve({ filter: /^@mui\/icons-material\// }, ({ path }) => ({ path, namespace: 'test-icon' }));
@@ -23,7 +27,8 @@ const bundle = await build({
       export const savedCatalogs = [];
       let resolveSave;
       export const finishSave = () => resolveSave();
-      export const obterCatalogoItensSistemaRpg = async () => ({tipos: []});
+      let fixture = {tipos: []}; export const setCatalogFixture = value => {fixture = value;};
+      export const obterCatalogoItensSistemaRpg = async () => structuredClone(fixture);
       export const atualizarCatalogoItensSistemaRpg = (id, config) => {
         savedCatalogs.push({id, config});
         return new Promise(resolve => {resolveSave = () => resolve(config);});
@@ -74,6 +79,76 @@ const quick = renderer => renderer.root.findByProps({ 'aria-label': 'Salvar alte
 const text = node => typeof node === 'string' ? node : (node.children ?? []).map(text).join('');
 const addType = renderer => act(() => renderer.root.findAllByType('button').find(button => text(button).includes('Novo tipo')).props.onClick());
 
+const archetype = (code, allowed) => ({ idSistemaItemEscopo: 0, codigo: code, nome: code, codigoCaminho: `TRAJE/PROTECOES/${code}`,
+  nivel: 'Arquetipo', ativo: true, ordem: 1, filhos: [], campos: [], faixas: [], referencias: [], arquetiposCompativeis: allowed });
+const catalogFixture = () => ({ tipos: [{ ...archetype('TRAJE'), nivel: 'Tipo', codigoCaminho: 'TRAJE', filhos: [
+  {...archetype('PROTECOES'), nivel:'Categoria', filhos:[archetype('COLETE',['TRAJE/PROTECOES/OUTROS']),archetype('OUTROS',['TRAJE/PROTECOES/COLETE'])]},
+] }] });
+
+test('catálogo tem aba própria e alternar preserva o rascunho e o salvamento centralizado', async () => {
+  api.setCatalogFixture(catalogFixture());
+  const renderer = await mount();
+  try {
+    const tab = () => renderer.root.findAllByType('button').find(node => text(node) === 'Catálogo de itens');
+    assert.equal(renderer.root.findByProps({'aria-label':'Catálogo de itens da versão'}).props.hidden,true);
+    act(() => tab().props.onClick());
+    assert.equal(tab().props['aria-pressed'],true);
+    assert.equal(renderer.root.findByProps({'aria-label':'Configuração do módulo'}).props.hidden,true);
+    act(() => renderer.root.findAllByType(api.InputText).find(node => node.props.label === 'Nome').props.onChange({target:{value:'Trajes alterados'}}));
+    act(() => renderer.root.findAllByType('button').find(node => text(node) === 'Sobrevivência').props.onClick());
+    assert.equal(renderer.root.findByProps({'aria-label':'Catálogo de itens da versão'}).props.hidden,true);
+    act(() => tab().props.onClick());
+    assert.equal(renderer.root.findAllByType(api.InputText).find(node => node.props.label === 'Nome').props.value,'Trajes alterados');
+    assert.equal(quick(renderer).props.disabled,false);
+  } finally { act(()=>renderer.unmount()); api.setCatalogFixture({tipos:[]}); }
+});
+
+test('compatibilidade usa CheckSelect padrão ao lado da exclusão e atualiza opções novas e pares', async () => {
+  api.setCatalogFixture(catalogFixture());
+  const renderer = await mount();
+  try {
+    const selects = () => renderer.root.findAllByType(api.CheckSelect);
+    assert.equal(selects().length,2);
+    assert.deepEqual(selects()[0].props.value,['TRAJE/PROTECOES/OUTROS']);
+    act(()=>selects()[0].props.onChange([]));
+    assert.deepEqual(selects()[1].props.value,[]);
+    act(()=>renderer.root.findAllByType('button').find(node=>text(node).includes('Adicionar arquétipo')).props.onClick());
+    const codes = () => renderer.root.findAllByType(api.InputText).filter(node=>node.props.label==='Código');
+    act(()=>codes().at(-1).props.onChange({target:{value:'OCULOS'}}));
+    const names = () => renderer.root.findAllByType(api.InputText).filter(node=>node.props.label==='Nome');
+    act(()=>names().at(-1).props.onChange({target:{value:'Óculos'}}));
+    assert.equal(selects().length,3);
+    assert.equal(selects()[0].props.options.at(-1).label,'Óculos');
+    act(()=>selects()[0].props.onChange(['TRAJE/PROTECOES/OCULOS']));
+    assert.deepEqual(selects()[2].props.value,['TRAJE/PROTECOES/COLETE']);
+    const tools = renderer.root.findAllByType(api.ScopeTools).filter(node=>node.findAllByType(api.CheckSelect).length);
+    assert.equal(tools.length,3);
+    assert.ok(text(tools[0]).includes('Excluir arquétipo'));
+    const categories = renderer.root.findAllByType(api.ScopeCard).filter(node=>node.props.$depth===1);
+    assert.equal(categories[0].props.open,true,'categoria única abre automaticamente');
+    assert.ok(renderer.root.findAllByType(api.ScopeTableGroup).every(node=>!node.props.open),'tabelas começam recolhidas');
+  } finally { act(()=>renderer.unmount()); api.setCatalogFixture({tipos:[]}); }
+});
+
+test('versão publicada permite consultar ajudas sem permitir editar a compatibilidade', async () => {
+  api.setCatalogFixture(catalogFixture());
+  const renderer = await mount({readOnly:true});
+  try {
+    assert.ok(renderer.root.findAllByType(api.CheckSelect).every(node=>node.props.disabled));
+    assert.ok(renderer.root.findAllByType(api.InputText).every(node=>node.props.disabled));
+    assert.ok(renderer.root.findAllByType(api.ScopeBody).every(node=>!node.props.disabled));
+    assert.equal(api.resolveItemCatalogHelp('itens.0.0.faixas.valorMinimo').title,'Mínimo');
+    assert.equal(api.resolveItemCatalogHelp('itens.0.nome'),undefined);
+    assert.equal(api.resolveItemCatalogHelp('itens.0.campos.ordem').id,api.itemCatalogHelp.ordem.id);
+    const help = renderer.root.findAllByProps({role:'button'}).find(node=>String(node.props['aria-label']).includes('Pode usar junto com'));
+    assert.ok(help && !help.props.disabled);
+    const combobox = renderer.root.findAllByProps({role:'combobox'})[0];
+    assert.equal(combobox.props['aria-disabled'],true); assert.equal(combobox.props.tabIndex,-1);
+    act(()=>combobox.props.onKeyDown({key:'Enter',preventDefault(){},stopPropagation(){}}));
+    assert.equal(renderer.root.findAllByProps({role:'combobox'})[0].props['aria-expanded'],false);
+  } finally { act(()=>renderer.unmount()); api.setCatalogFixture({tipos:[]}); }
+});
+
 test('sistema reutiliza exatamente os controles e as posições responsivas da ficha', async () => {
   const renderer = await mount();
   assert.equal(renderer.root.findAllByType(api.EntityEditFloatingActions).length, 1);
@@ -123,9 +198,12 @@ test('catálogo também participa do salvar rápido, com validação e confirma�
   assert.equal(api.savedCatalogs[0].config.tipos[0].nome, 'Arma');
   assert.equal(moduleSaves, 0, 'módulo sem alterações não é reenviado');
   assert.equal(quick(renderer).props['aria-busy'], true);
+  assert.ok(renderer.root.findAllByType(api.InputText).every(node => node.props.disabled), 'impede perder edições durante o salvamento');
+  assert.equal(renderer.root.findAllByType('button').find(button => text(button).includes('Novo tipo')).props.disabled, true);
   act(() => quick(renderer).props.onClick());
   assert.equal(api.savedCatalogs.length, 1, 'bloqueia duplo clique');
   await act(async () => api.finishSave());
+  assert.ok(renderer.root.findAllByType(api.InputText).every(node => !node.props.disabled), 'libera edição após confirmação');
   assert.equal(renderer.root.findByType(api.SyncIconBadge).props.synced, true);
   act(() => renderer.unmount());
 });

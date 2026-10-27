@@ -19,7 +19,7 @@ const bundle = await build({
     builder.onResolve({ filter: /^@mui\/icons-material\// }, () => ({ path: 'icon', namespace: 'icon' }));
     builder.onLoad({ filter: /.*/, namespace: 'icon' }, () => ({ contents: `import {createElement} from 'react'; export default p=>createElement('svg',p);` }));
     builder.onResolve({ filter: /\/services\/sistemasRpgService$/ }, () => ({ path: 'rules', namespace: 'rules' }));
-    builder.onLoad({ filter: /.*/, namespace: 'rules' }, () => ({ contents: 'export const obterConfiguracaoCombateSistemaRpg=async()=>({resultadosDado:[],estaminaPorAtaqueAdicional:0});' }));
+    builder.onLoad({ filter: /.*/, namespace: 'rules' }, () => ({ contents: 'export const obterConfiguracaoCombateSistemaRpg=async()=>({resultadosDado:[],estaminaPorAtaqueAdicional:0}); export const obterCatalogoItensSistemaRpg=async(...args)=>globalThis.__outfitCatalogRequest ? globalThis.__outfitCatalogRequest(...args) : ({tipos:[]});' }));
     builder.onResolve({ filter: /\/(RunConditionOriginEditor|RunConsumableAction)$/ }, args => ({ path: args.path.split('/').at(-1), namespace: 'noop' }));
     builder.onLoad({ filter: /.*/, namespace: 'noop' }, args => ({ contents: `export const ${args.path}=()=>null;` }));
     builder.onResolve({ filter: /\/RunResourceBar\/RunResourceBar$/ }, () => ({ path: 'bar', namespace: 'bar' }));
@@ -45,6 +45,59 @@ const api = await import(`data:text/javascript;base64,${Buffer.from(source + '\n
   .catch(error => { throw new Error(error.message.replace(/data:text\/javascript;base64,[A-Za-z0-9+/=]+/g, '[test bundle]')); });
 const text = node => typeof node === 'string' ? node : (node?.children ?? []).map(text).join('');
 const button = (renderer, label) => renderer.root.findAllByType('button').find(node => text(node) === label);
+
+const outfitCatalog = () => ({ tipos: [{ codigo:'TRAJE', ativo:true, filhos:[{codigo:'PROTECOES',ativo:true,filhos:[
+  {codigo:'COLETE',ativo:true,arquetiposCompativeis:['TRAJE/PROTECOES/OUTROS']},
+  {codigo:'TRAJE',ativo:true,arquetiposCompativeis:[]},
+  {codigo:'OUTROS',ativo:true,arquetiposCompativeis:['TRAJE/PROTECOES/COLETE']},
+]}] }] });
+
+test('clique recusa traje incompatível sem alterar rascunho, mas aceita óculos sem defesa e prótese', async () => {
+  const requests=[],calls=[]; let renderer;
+  globalThis.__outfitCatalogRequest = async id => {requests.push(id);return outfitCatalog();};
+  const run = {status:'Ativa',noAtualId:null,idSistemaVersao:42,acoesEquipadas:[],configuracaoModo:{},
+    estadoAtual:{status:{status:{estamina:100,mana:100}},inventario:[
+      {id:'colete',nome:'Colete',tipo:'traje',atributos:{tipoTraje:'colete',protecaoBase:100,__vistaExplodida:{equippedSlot:'run-defense'}}},
+      {id:'traje',nome:'Traje completo',tipo:'traje',atributos:{tipoTraje:'traje',protecaoBase:200}},
+      {id:'oculos',nome:'Óculos',tipo:'traje',atributos:{tipoTraje:'outros'}},
+    ],implantes:[{id:'pulmao',nome:'Pulmão',tipo:'implante',atributos:{bonus:{resistencia:3}}}]}};
+  try {
+    await act(async()=>{renderer=create(React.createElement(api.RunLoadout,{run,theme:'dark',neon:'on',saving:false,busy:false,
+      onSave:async(...args)=>{calls.push(args);return false;},onClose(){},onUseItem(){},onDropItem(){},onConfigureCondition(){},usingItemId:null}));});
+    assert.deepEqual(requests,[42]);
+    act(()=>renderer.root.findByProps({title:'Traje completo'}).props.onClick());
+    act(()=>button(renderer,'Equipar defesa').props.onClick());
+    assert.match(text(renderer.toJSON()),/Traje completo e Colete não podem ser usados juntos/);
+    assert.equal(button(renderer,'Salvar equipamento'),undefined,'recusa não cria alteração pendente');
+    act(()=>renderer.root.findByProps({title:'Óculos'}).props.onClick());
+    assert.equal(button(renderer,'Equipar defesa').props.disabled,false);
+    act(()=>button(renderer,'Equipar defesa').props.onClick());
+    act(()=>renderer.root.findAllByProps({role:'tab'}).find(node=>text(node)==='Próteses').props.onClick());
+    act(()=>renderer.root.findByProps({title:'Pulmão'}).props.onClick());
+    act(()=>button(renderer,'Instalar prótese').props.onClick());
+    await act(async()=>button(renderer,'Salvar equipamento').props.onClick());
+    assert.deepEqual(calls[0][1],['colete','oculos','pulmao']);
+  } finally {if(renderer)act(()=>renderer.unmount());delete globalThis.__outfitCatalogRequest;}
+});
+
+test('falha ao carregar regras não libera traje e recarregar consulta novamente a mesma versão', async () => {
+  let calls=0,renderer;
+  globalThis.__outfitCatalogRequest = async id => {assert.equal(id,42);if(++calls===1)throw Error('offline');return outfitCatalog();};
+  const run={status:'Ativa',noAtualId:null,idSistemaVersao:42,acoesEquipadas:[],configuracaoModo:{},
+    estadoAtual:{status:{status:{estamina:100,mana:100}},inventario:[{id:'colete',nome:'Colete',tipo:'traje',atributos:{tipoTraje:'colete',protecaoBase:100}}]}};
+  try {
+    await act(async()=>{renderer=create(React.createElement(api.RunLoadout,{run,theme:'dark',neon:'off',saving:false,busy:false,
+      onSave:async()=>false,onClose(){},onUseItem(){},onDropItem(){},onConfigureCondition(){},usingItemId:null}));});
+    act(()=>renderer.root.findByProps({title:'Colete'}).props.onClick());
+    act(()=>button(renderer,'Equipar defesa').props.onClick());
+    assert.match(text(renderer.toJSON()),/Não foi possível carregar as regras/);
+    assert.equal(button(renderer,'Salvar equipamento'),undefined);
+    await act(async()=>renderer.root.findAllByType('button').find(node=>text(node).includes('Recarregar regras')).props.onClick());
+    assert.equal(calls,2);
+    act(()=>button(renderer,'Equipar defesa').props.onClick());
+    assert.ok(button(renderer,'Salvar equipamento'));
+  } finally {if(renderer)act(()=>renderer.unmount());delete globalThis.__outfitCatalogRequest;}
+});
 
 test('inventário prepara arma e traje juntos, salva de uma vez e desfaz os dois rascunhos', async () => {
   const calls = [];

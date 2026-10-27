@@ -7,9 +7,15 @@ import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { InputText } from '../../../../../components/Generic/InputText/InputText';
+import { InputCheckbox } from '../../../../../components/Generic/CheckBox/CheckBox.style';
 import { LoadingIndicator } from '../../../../../components/Generic/LoadingIndicator';
 import { TextArea } from '../../../../../components/Generic/TextArea/TextArea';
 import { useEventCallback } from '../../../../../hooks/useEventCallback';
+import { CheckSelect } from '../../../../../components/Generic/CheckSelect/CheckSelect';
+import { FieldHelp } from '../../../../../components/Generic/FieldHelp/FieldHelp';
+import { FieldHelpProvider } from '../../../../../components/Generic/FieldHelp/FieldHelpProvider';
+import { itemCatalogHelp, resolveItemCatalogHelp } from '../../../../../content/itemCatalogHelp';
+import { outfitArchetypes, outfitCompatibilitySelection, reconcileOutfitLinks, setOutfitCompatibility, type OutfitArchetype } from '../../../../../utils/outfitCompatibility';
 import {
   SistemaItemCampoRuntime,
   SistemaItemEscopoRuntime,
@@ -38,11 +44,13 @@ import {
   ScopeMetaGrid,
   ScopeSummary,
   ScopeTables,
+  ScopeTableGroup,
   ScopeTools,
   ToggleField,
 } from './SystemItemCatalog.style';
 
 type ScopeLevel = 'Tipo' | 'Categoria' | 'Arquetipo';
+const scopeLabels: Record<ScopeLevel, string> = { Tipo: 'Tipo', Categoria: 'Categoria', Arquetipo: 'Arquétipo' };
 
 export interface SystemItemCatalogQuickSave {
   versionId: number;
@@ -61,6 +69,9 @@ interface SystemItemCatalogProps {
 }
 
 interface ScopeEditorProps {
+  outfits: OutfitArchetype[];
+  onCompatibility: (path: number[], selected: string[]) => void;
+  autoOpen?: boolean;
   scope: SistemaItemEscopoRuntime;
   path: number[];
   depth: number;
@@ -263,6 +274,9 @@ const validateCatalog = (catalog: SistemaItensConfig): string | null => {
 };
 
 const ScopeEditor = ({
+  outfits,
+  onCompatibility,
+  autoOpen,
   scope,
   path,
   depth,
@@ -274,6 +288,7 @@ const ScopeEditor = ({
   onAddChild,
 }: ScopeEditorProps) => {
   const childLevel = nextLevel(scope.nivel);
+  const outfit = outfits.find(entry => entry.location.join('.') === path.join('.'));
   const pathKey = `itens.${path.join('.')}`;
   const patch = (next: Partial<SistemaItemEscopoRuntime>) => onPatch(
     path,
@@ -281,20 +296,23 @@ const ScopeEditor = ({
   );
 
   return (
-    <ScopeCard theme={theme} neon={neon} $depth={depth}>
+    <ScopeCard theme={theme} neon={neon} $depth={depth} open={autoOpen || undefined}>
       <ScopeSummary>
-        <ScopeBadge $inactive={!scope.ativo}>{scope.nivel}</ScopeBadge>
+        <ScopeBadge $inactive={!scope.ativo}>{scopeLabels[scope.nivel as ScopeLevel] ?? scope.nivel}<FieldHelp label={scopeLabels[scope.nivel as ScopeLevel] ?? scope.nivel} inline size="small"
+          help={itemCatalogHelp[scope.nivel.toLowerCase()]} /></ScopeBadge>
         <span className="scope-name">{scope.nome || `Novo ${scope.nivel.toLocaleLowerCase('pt-BR')}`}</span>
         <code>{scope.codigoCaminho || scope.codigo || 'SEM_CODIGO'}</code>
         <small>{scope.filhos.length} {scope.filhos.length === 1 ? 'filho' : 'filhos'}</small>
       </ScopeSummary>
 
-      <ScopeBody disabled={readOnly}>
+      <ScopeBody aria-readonly={readOnly}>
         <ScopeMetaGrid>
           <InputText
             theme={theme}
             neon={neon}
             label="Código"
+            disabled={readOnly}
+            help={itemCatalogHelp.codigo}
             value={scope.codigo}
             onChange={(event) => patch({ codigo: event.target.value.toUpperCase() })}
             required
@@ -303,6 +321,7 @@ const ScopeEditor = ({
             theme={theme}
             neon={neon}
             label="Nome"
+            disabled={readOnly}
             value={scope.nome}
             onChange={(event) => patch({ nome: event.target.value })}
             required
@@ -311,17 +330,20 @@ const ScopeEditor = ({
             theme={theme}
             neon={neon}
             label="Ordem"
+            disabled={readOnly}
+            help={itemCatalogHelp.ordem}
             type="number"
             value={scope.ordem}
             onChange={(event) => patch({ ordem: Number(event.target.value) })}
           />
           <ToggleField>
-            <input
-              type="checkbox"
+            <InputCheckbox
+              $neon={neon}
               checked={scope.ativo}
+              disabled={readOnly}
               onChange={(event) => patch({ ativo: event.target.checked })}
             />
-            Ativo no runtime
+            Disponível<FieldHelp label="Disponível" help={itemCatalogHelp.ativo} inline size="small" />
           </ToggleField>
         </ScopeMetaGrid>
 
@@ -329,29 +351,36 @@ const ScopeEditor = ({
           theme={theme}
           neon={neon}
           label="Descrição do escopo"
+          disabled={readOnly}
+          help={itemCatalogHelp.descricao}
           value={scope.descricao ?? ''}
           onChange={(event) => patch({ descricao: event.target.value })}
           rows={2}
           fullWidth
         />
 
-        {!readOnly && (
+        {(outfit || !readOnly) && (
           <ScopeTools>
-            {childLevel && (
+            {outfit && <div className="scope-compatibility"><CheckSelect theme={theme} neon={neon}
+              label="Pode usar junto com" compactPreview width="100%" help={itemCatalogHelp.compatibilidade}
+              disabled={readOnly} value={outfitCompatibilitySelection(outfit, outfits)}
+              options={outfits.map(entry => ({ value: entry.path, label: `${entry.scope.nome || entry.scope.codigo}${entry.scope.ativo ? '' : ' (inativo)'}` }))}
+              onChange={selected => onCompatibility(path, selected)} /></div>}
+            {!readOnly && childLevel && (
               <ActionButton type="button" theme={theme} neon={neon} $compact onClick={() => onAddChild(path)}>
-                <AddIcon /> Adicionar {childLevel.toLocaleLowerCase('pt-BR')}
+                <AddIcon /> Adicionar {scopeLabels[childLevel].toLocaleLowerCase('pt-BR')}
               </ActionButton>
             )}
-            <ActionButton type="button" theme={theme} neon={neon} $compact $danger onClick={() => onRemove(path)}>
-              <DeleteOutlineIcon /> Excluir {scope.nivel.toLocaleLowerCase('pt-BR')}
-            </ActionButton>
+            {!readOnly && <ActionButton type="button" theme={theme} neon={neon} $compact $danger onClick={() => onRemove(path)}>
+              <DeleteOutlineIcon /> Excluir {(scopeLabels[scope.nivel as ScopeLevel] ?? scope.nivel).toLocaleLowerCase('pt-BR')}
+            </ActionButton>}
           </ScopeTools>
         )}
 
         <ScopeTables>
+          <ScopeTableGroup><summary>Campos · {scope.campos.length}<FieldHelp label="Campos" help={itemCatalogHelp.campos} inline size="small" /></summary>
           <ConfigTable
             title="Campos"
-            description="Propriedades aceitas neste nível. Campos dos níveis superiores são herdados."
             rows={scope.campos}
             columns={fieldColumns}
             createRow={createField}
@@ -361,9 +390,10 @@ const ScopeEditor = ({
             readOnly={readOnly}
             errorPath={`${pathKey}.campos`}
           />
+          </ScopeTableGroup>
+          <ScopeTableGroup><summary>Faixas e escalas · {scope.faixas.length}<FieldHelp label="Faixas e escalas" help={itemCatalogHelp.faixas} inline size="small" /></summary>
           <ConfigTable
             title="Faixas e escalas"
-            description="Limites conhecidos e valor de referência usados pelo runtime e pelos gráficos."
             rows={scope.faixas}
             columns={rangeColumns}
             createRow={createRange}
@@ -373,9 +403,10 @@ const ScopeEditor = ({
             readOnly={readOnly}
             errorPath={`${pathKey}.faixas`}
           />
+          </ScopeTableGroup>
+          <ScopeTableGroup><summary>Referências · {scope.referencias.length}<FieldHelp label="Referências" help={itemCatalogHelp.referencias} inline size="small" /></summary>
           <ConfigTable
             title="Referências"
-            description="Opções mecânicas como tipos de dano, defesa, alcance, materiais e slots."
             rows={scope.referencias}
             columns={referenceColumns}
             createRow={createReference}
@@ -385,6 +416,7 @@ const ScopeEditor = ({
             readOnly={readOnly}
             errorPath={`${pathKey}.referencias`}
           />
+          </ScopeTableGroup>
         </ScopeTables>
 
         {childLevel && scope.filhos.length > 0 && (
@@ -394,6 +426,9 @@ const ScopeEditor = ({
               <ScopeEditor
                 key={`${pathKey}-${child.idSistemaItemEscopo || index}`}
                 scope={child}
+                outfits={outfits}
+                onCompatibility={onCompatibility}
+                autoOpen={childLevel === 'Categoria' && scope.filhos.length === 1}
                 path={[...path, index]}
                 depth={depth + 1}
                 readOnly={readOnly}
@@ -440,6 +475,7 @@ export const SystemItemCatalog = ({
         idSistemaVersao,
         { signal },
       ));
+      if (signal?.aborted) return;
       setCatalog(response);
       setSavedSnapshot(JSON.stringify(response));
     } catch (requestError) {
@@ -478,14 +514,14 @@ export const SystemItemCatalog = ({
     patch: (scope: SistemaItemEscopoRuntime) => SistemaItemEscopoRuntime,
   ) => {
     setCatalog((current) => current
-      ? { ...current, tipos: updateAtPath(current.tipos, path, patch) }
+      ? { ...current, tipos: reconcileOutfitLinks(current.tipos, updateAtPath(current.tipos, path, patch), true) }
       : current);
     setValidationError(null);
   }, []);
 
   const removeScope = useCallback((path: number[]) => {
     setCatalog((current) => current
-      ? { ...current, tipos: removeAtPath(current.tipos, path) }
+      ? { ...current, tipos: reconcileOutfitLinks(current.tipos, removeAtPath(current.tipos, path)) }
       : current);
     setValidationError(null);
   }, []);
@@ -500,7 +536,9 @@ export const SystemItemCatalog = ({
           if (!level) return scope;
           return {
             ...scope,
-            filhos: [...scope.filhos, createScope(level, scope.filhos.length + 1, scope)],
+            filhos: [...scope.filhos, { ...createScope(level, scope.filhos.length + 1, scope),
+              ...(level === 'Arquetipo' && current.tipos[path[0]].codigo.trim().toUpperCase() === 'TRAJE'
+                ? { arquetiposCompativeis: [] } : {}) }],
           };
         }),
       };
@@ -547,14 +585,19 @@ export const SystemItemCatalog = ({
     onQuickSaveChange?.({ versionId: idSistemaVersao, dirty, saving, save });
   }, [onQuickSaveChange, idSistemaVersao, dirty, saving, save]);
 
+  const outfits = useMemo(() => outfitArchetypes(catalog?.tipos ?? [], true), [catalog]);
+  const onCompatibility = (path: number[], selected: string[]) => {
+    setCatalog(current => current ? { ...current, tipos: setOutfitCompatibility(current.tipos, path, selected) } : current);
+    setValidationError(null);
+  };
+
   return (
-    <CatalogPanel theme={theme} neon={neon}>
+    <FieldHelpProvider resolve={resolveItemCatalogHelp} theme={theme} neon={neon}><CatalogPanel theme={theme} neon={neon}>
       <CatalogHeader>
         <div>
-          <h3><Inventory2OutlinedIcon /> Catálogo versionado de itens</h3>
+          <h3><Inventory2OutlinedIcon /> Catálogo versionado de itens<FieldHelp label="Catálogo versionado de itens" help={itemCatalogHelp.catalogo} inline /></h3>
           <p>
-            Organize tipos, categorias e arquétipos. Campos, faixas e referências são herdados
-            pelos níveis abaixo e consumidos pelos formulários e páginas no runtime.
+            Escolha um tipo de item para organizar suas opções e regras nesta versão.
           </p>
         </div>
         <div className="catalog-header-actions">
@@ -569,7 +612,7 @@ export const SystemItemCatalog = ({
             <RefreshIcon /> Recarregar
           </ActionButton>
           {!readOnly && (
-            <ActionButton type="button" theme={theme} neon={neon} $compact onClick={addType} disabled={loading}>
+            <ActionButton type="button" theme={theme} neon={neon} $compact onClick={addType} disabled={loading || saving}>
               <AddIcon /> Novo tipo
             </ActionButton>
           )}
@@ -588,7 +631,7 @@ export const SystemItemCatalog = ({
         )}
         {!loading && !error && catalog && catalog.tipos.length === 0 && (
           <CatalogNotice>
-            Nenhum tipo configurado nesta versão. O runtime manterá os fallbacks legados até o catálogo ser preenchido.
+            Nenhum tipo configurado nesta versão. As opções padrão continuam disponíveis até você configurar este catálogo.
           </CatalogNotice>
         )}
         {!loading && !error && catalog && catalog.tipos.length > 0 && (
@@ -597,9 +640,11 @@ export const SystemItemCatalog = ({
               <ScopeEditor
                 key={scope.idSistemaItemEscopo || index}
                 scope={scope}
+                outfits={outfits}
+                onCompatibility={onCompatibility}
                 path={[index]}
                 depth={0}
-                readOnly={readOnly}
+                readOnly={readOnly || saving}
                 theme={theme}
                 neon={neon}
                 onPatch={patchScope}
@@ -641,6 +686,6 @@ export const SystemItemCatalog = ({
           </CatalogFooter>
         )}
       </CatalogBody>
-    </CatalogPanel>
+    </CatalogPanel></FieldHelpProvider>
   );
 };

@@ -46,21 +46,24 @@ export const VictoryPanel = styled.section<{ $neon: boolean }>`
   animation: ${reveal} .6s ease-out both;
   ${({ $neon }) => $neon && css`box-shadow: 0 0 28px rgba(0, 220, 255, .3),
     0 24px 70px rgba(0, 0, 0, .58), inset 0 0 45px rgba(0, 208, 255, .12);`}
+  :root[data-motion='reduced'] & {
+    &, &::before, * { animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+  }
+`;
+
+// Both the scan and frame follow the complete content, not the scroll viewport height.
+export const VictoryContent = styled.div`
+  position: relative;
+  padding: clamp(24px, 5vw, 52px);
   &::before {
     content: ''; position: absolute; inset: 0; pointer-events: none;
     background: linear-gradient(transparent 43%, rgba(74, 250, 255, .07) 50%, transparent 57%);
     background-size: 100% 220%;
     animation: ${scan} 7s linear infinite;
   }
-  :root[data-motion='reduced'] & {
-    &, &::before, * { animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+  :root[data-motion='reduced'] &::before {
+    animation-duration: .01ms !important; animation-iteration-count: 1 !important;
   }
-`;
-
-// The decoration follows the complete content, not the scroll viewport height.
-export const VictoryContent = styled.div`
-  position: relative;
-  padding: clamp(24px, 5vw, 52px);
   &::after {
     content: ''; position: absolute; inset: 7px; border: 1px solid rgba(95, 238, 255, .14);
     clip-path: polygon(0 0, 24% 0, 24% 2px, 76% 2px, 76% 0, 100% 0,

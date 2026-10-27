@@ -17,6 +17,8 @@ export interface RunInventoryEntry extends GameRunActionSelection {
   weight: number | null;
   value: number | null;
   subtype: string;
+  outfitArchetype?: string;
+  outfitCategory?: string;
   quantity: number;
   baseItemId: string | null;
   stackSignature: string;
@@ -40,6 +42,8 @@ export interface RunInventoryEntry extends GameRunActionSelection {
   defenseRemaining: { escudo: number; protecao: number };
   defenseEquipped: boolean;
   passiveBonuses?: Record<string, number>;
+  /** Signed configured values for inspection only; executable damage/defense above keep their safe bounds. */
+  configuredStats?: Pick<RunInventoryEntry, 'damageByRange' | 'defense'>;
   engineerUpgrades?: number;
   manaPerUse?: number;
   cooldownTurns?: number;
@@ -56,6 +60,10 @@ const field = (value: Record<string, unknown>, key: string) =>
 const numeric = (value: unknown): number => {
   const parsed = typeof value === 'number' || typeof value === 'string' ? Number(value) : 0;
   return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;
+};
+const signedNumeric = (value: unknown): number => {
+  const parsed = typeof value === 'number' || typeof value === 'string' ? Number(value) : 0;
+  return Number.isFinite(parsed) ? parsed : 0;
 };
 const entries = (raw: unknown): unknown[] => {
   let value = raw;
@@ -191,8 +199,9 @@ export const parseRunInventoryEntries = (raw: unknown, tipo: RunInventoryKind): 
     const ranged = attributes ? String(field(attributes, 'modoModificadores') ?? '').toUpperCase() === 'DISTANCIA' ||
       (!field(attributes, 'modoModificadores') && rangedTypes.has(weaponRuleCode(String(field(attributes, 'tipoArma') ?? '')))) : false;
     const damageRanges = object(attributes && field(attributes, 'danoPorAlcance'));
-    const base = numeric(attributes && field(attributes,
-      subtype === 'outro' || tipo === 'MAGIA' || tipo === 'SKILL' ? 'dano' : 'danoBase'));
+    const configuredBase = attributes && field(attributes,
+      subtype === 'outro' || tipo === 'MAGIA' || tipo === 'SKILL' ? 'dano' : 'danoBase');
+    const base = numeric(configuredBase);
     const accessories = field(attributes ?? {}, 'acessorios');
     const modifierSources = [object(attributes && field(attributes, 'modificadores')),
       ...(Array.isArray(accessories) ? accessories : [])
@@ -207,6 +216,9 @@ export const parseRunInventoryEntries = (raw: unknown, tipo: RunInventoryKind): 
     const damage = (range: string) => Math.max(0,
       (range === 'base' ? base : damageRanges && field(damageRanges, range) != null
         ? numeric(field(damageRanges, range)) : base) + modifiers);
+    const configuredDamage = (range: string) => (range === 'base' ? signedNumeric(configuredBase)
+      : damageRanges && field(damageRanges, range) != null
+        ? signedNumeric(field(damageRanges, range)) : signedNumeric(configuredBase)) + modifiers;
     const staminaModifiers = modifierSources.reduce((sum, modifier) =>
       sum + (Number(field(modifier ?? {}, 'estamina')) || 0), 0);
     const quantityLimits: RunActionQuantityLimit[] = [];
@@ -253,6 +265,8 @@ export const parseRunInventoryEntries = (raw: unknown, tipo: RunInventoryKind): 
         : field(attributes, 'gastoEstaminaPorAtaque'))) + staminaModifiers),
       damageByRange: { base: damage('base'), curta: damage('curta'), media: damage('media'), longa: damage('longa') },
       weaponType: String(field(attributes ?? {}, 'tipoArma') ?? ''),
+      outfitArchetype: String(field(attributes ?? {}, 'codigoArquetipo') ?? '').trim() || String(field(attributes ?? {}, 'tipoTraje') ?? ''),
+      outfitCategory: String(field(attributes ?? {}, 'codigoCategoria') ?? ''),
       fireMode,
       hasDeclaredTest,
       ranged,
@@ -266,6 +280,13 @@ export const parseRunInventoryEntries = (raw: unknown, tipo: RunInventoryKind): 
       conditions,
       passiveBonuses: tipo === 'PROTESE' ? Object.fromEntries(Object.entries(object(field(attributes ?? {}, 'bonus')) ?? {})
         .map(([key, value]) => [key, Number(value)]).filter(([, value]) => Number.isFinite(value) && value !== 0)) : undefined,
+      configuredStats: tipo === 'PROTESE' ? {
+        damageByRange: { base: configuredDamage('base'), curta: configuredDamage('curta'),
+          media: configuredDamage('media'), longa: configuredDamage('longa') },
+        defense: { escudo: signedNumeric(attributes && field(attributes, 'escudoBase')),
+          protecao: signedNumeric(attributes && field(attributes, 'protecaoBase')),
+          armadura: signedNumeric(attributes && field(attributes, 'armaduraBase')) },
+      } : undefined,
       defense: {
         escudo: numeric(attributes && field(attributes, subtype === 'traje' || tipo === 'PROTESE' ? 'escudoBase' : 'escudo')),
         protecao: numeric(attributes && field(attributes, subtype === 'traje' || tipo === 'PROTESE' ? 'protecaoBase' : 'protecao')),

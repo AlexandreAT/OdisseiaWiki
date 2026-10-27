@@ -23,6 +23,7 @@ export interface GameBattleEvent {
     kind: string;
     actionId?: string;
     actionName?: string;
+    sourceType?: string | null;
     quantity?: number;
     directUse?: boolean;
     mode?: string;

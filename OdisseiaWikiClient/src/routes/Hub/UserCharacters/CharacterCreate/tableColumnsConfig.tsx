@@ -16,6 +16,7 @@ import { SistemaRuntimeContexto } from '../../../../models/SistemaRpg';
 import { getRuntimeMagicTypeOptions } from '../../../../utils/systemRuntimeCharacter';
 import { buildCharacterEntryCatalog, SistemaItemFormCatalog } from '../../../../utils/systemItemFormCatalog';
 
+const characterEntryEditorWidth = '1320px';
 const characterEntryImageCropPreset: CropPreset = {
   mode: 'single',
   aspectRatio: 1,
@@ -203,7 +204,7 @@ const ItemAtributosEditor = memo(({
           onSubmit={() => setOpen(false)}
           theme={theme}
           neon={neon}
-          width="1100px"
+          width={characterEntryEditorWidth}
           mobileInset
         >
           <ItemTableGeneralAttributes theme={theme} neon={neon}>
@@ -268,6 +269,7 @@ const SkillAtributosEditor = memo(({
           onSubmit={() => setOpen(false)}
           theme={theme}
           neon={neon}
+          width={characterEntryEditorWidth}
           mobileInset
         >
           <CharacterEntryImageUploader row={row} onRowChange={onRowChange} theme={theme} neon={neon} />
@@ -312,6 +314,7 @@ const MagiaAtributosEditor = memo(({
           onSubmit={() => setOpen(false)}
           theme={theme}
           neon={neon}
+          width={characterEntryEditorWidth}
           mobileInset
         >
           <CharacterEntryImageUploader row={row} onRowChange={onRowChange} theme={theme} neon={neon} />

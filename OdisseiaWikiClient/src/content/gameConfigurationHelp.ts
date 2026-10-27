@@ -10,6 +10,7 @@ export const gameConfigurationHelp = {
   spellCooldown: explain('spellCooldown', 'Espera entre usos', 'Turnos de espera depois de usar a magia. Zero não exige espera. Para usar este campo, ative o cooldown de poderes no Sistema.'),
   spellRecovery: explain('spellRecovery', 'Recuperação direta', 'Recupera ao usar, sem teste de acerto. Para recuperar por vários turnos ou após acertar, adicione uma condição de recuperação.'),
   weaponUpgrades: explain('weaponUpgrades', 'Melhorias por arma', 'Limite total de melhorias nesta arma. Configure também o dano por melhoria. Zero nos dois campos desativa o serviço; o preço zero é gratuito.'),
+  engineerRepair: explain('engineerRepair', 'Preço do conserto por 10%', 'Cobra por blocos de 10% da proteção e escudo faltantes do item: 25% custa 3 blocos. Vazio desativa; zero é gratuito.'),
   systemVersion: explain('systemVersion', 'Versão do Sistema', 'Escolha as regras usadas por este jogo. Uma nova publicação não muda as runs já iniciadas.'),
   sourceVersion: explain('sourceVersion', 'Versão de origem', 'Copia a configuração desta versão para um novo rascunho. A publicação antiga continua disponível para suas runs.'),
   repairProtection: explain('repairProtection', 'Consertar proteção', 'Ao visitar a Base, recupera a proteção dos itens carregados. Não recupera escudo.'),

@@ -18,7 +18,8 @@ export const UpgradeArrow = styled.button`
 `;
 export const RewardsBody = styled.div`
   display: grid; gap: 18px; padding: 6px 4px 20px; color: var(--lightGray, #e4edf3);
-  h3 { margin: 0; color: var(--clearneonBlue); }
+  > section > h3 { margin: 0 0 14px; color: var(--clearneonBlue);
+    font: 400 clamp(1.05rem, 2vw, 1.3rem)/1.4 'Cyberpunk Is Not Dead', sans-serif; letter-spacing: .04em; }
   p { margin: 0; line-height: 1.5; }
   .points { color: var(--neonYellow); }
 `;
@@ -26,6 +27,7 @@ export const AttributeGrid = styled.div`
   display: grid; grid-template-columns: repeat(auto-fit, minmax(112px, 1fr)); gap: 18px 12px;
   .attribute-tile { position: relative; min-width: 0; display: grid; justify-items: center; }
   .attribute-hex { position: relative; width: min(100%, 142px); aspect-ratio: 1.15;
+    container-type: inline-size;
     display: grid; place-content: center; justify-items: center; gap: 6px;
     color: var(--clearneonBlue); background: color-mix(in srgb, var(--clearneonBlue) 55%, transparent);
     clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
@@ -34,17 +36,25 @@ export const AttributeGrid = styled.div`
     background: rgba(0, 18, 29, .94);
     clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
   }
-  .attribute-code { font-weight: 800; letter-spacing: .11em; font-size: 1.04rem; }
-  .attribute-value { display: flex; align-items: center; justify-content: center; gap: 4px;
-    font-size: 1.5rem; line-height: 1; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .attribute-code { font: 700 1rem/1.3 'Orbitron', sans-serif; letter-spacing: .06em; }
+  .attribute-value { position: relative; display: inline-block;
+    font: 700 min(1.5rem, calc(40cqi / var(--attribute-number-units, 2.1)))/1 'Orbitron', sans-serif;
+    font-variant-numeric: tabular-nums; }
   button { border: 0; background: none; cursor: pointer; }
   .attribute-info { color: var(--clearneonBlue); min-height: 30px; display: inline-grid; place-items: center; }
   .attribute-info:hover, .attribute-info:focus-visible { filter: drop-shadow(0 0 6px currentColor); }
-  .attribute-up { color: var(--neonYellow); padding: 0; display: inline-grid; place-items: center;
+  .attribute-up { position: absolute; left: calc(100% + 5px); top: 50%; translate: 0 -50%;
+    color: var(--neonYellow); padding: 0; display: inline-grid; place-items: center;
     animation: ${pulse} 1.45s ease-in-out infinite; }
-  .attribute-up svg { font-size: 1.35rem; filter: drop-shadow(0 0 3px currentColor); }
+  .attribute-up svg { font-size: .9em; filter: drop-shadow(0 0 3px currentColor); }
   .attribute-up:hover, .attribute-up:focus-visible { filter: drop-shadow(0 0 8px var(--neonYellow)); }
   .attribute-up:disabled { opacity: .4; cursor: wait; }
+  .attribute-modifier { position: absolute; right: calc(100% + 6px); top: 50%; transform: translateY(-50%);
+    padding: 5px 0; font: 500 .5em/1 'Orbitron', sans-serif; color: var(--clearneonBlue);
+    white-space: nowrap; opacity: .8; }
+  .attribute-modifier[data-negative='true'] { color: var(--clearneonPink); }
+  .attribute-modifier:hover, .attribute-modifier:focus-visible { opacity: 1; }
+  .attribute-modifier:focus-visible { outline: 1px solid currentColor; outline-offset: 2px; }
   :root[data-motion='reduced'] & { .attribute-up { animation: none; } }
 `;
 export const AttributePopover = styled.div<{ $top: number; $left: number }>`

@@ -12,7 +12,7 @@ import {
   performGameRunMediumRest,
   updateGameRunLoadout, updateGameRunWeaponOrder,
   updateGameRunConditionOrigin,
-  enterGameRunVendor, buyGameRunVendorItem, leaveGameRunVendor, transferGameRunStashItem, sellGameRunVendorItems,
+  enterGameRunVendor, buyGameRunVendorItem, leaveGameRunVendor, transferGameRunStashItem, sellGameRunVendorItems, repairGameRunDefense,
   changeGameRunProtectedItem,
   visitGameRunNpc,
 } from '../../../services/gameRunService';
@@ -612,6 +612,8 @@ export const useGameRun = () => {
     economyBusy,
     upgradeWeapon: (itemId: string) => economyAction(`upgrade:${itemId}`, (active, request) =>
       upgradeGameRunWeapon(active.idGameRun, { ...request, itemId })),
+    repairDefense: (itemId: string) => economyAction(`repair:${itemId}`, (active, request) =>
+      repairGameRunDefense(active.idGameRun, { ...request, itemId })),
     changeProtectedItem: (itemId: string, action: import('../../../models/GameRun').ProtectedDepositAction) =>
       economyAction(`protected:${itemId}:${action}`, (active, request) =>
         changeGameRunProtectedItem(active.idGameRun, { ...request, itemId, action })),

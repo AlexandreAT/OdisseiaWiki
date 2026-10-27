@@ -201,7 +201,7 @@ public sealed class GameBattlePreviewFactory
                 fallbackModifier),
             ranges,
             config.PreviewUseTotalForRanges,
-            ResolvePlayerDamage(ranges, fallbackDamage, config.PreviewPlayerDamageByResult)) { IsFallback = true });
+            ResolvePlayerDamage(ranges, fallbackDamage, config.PreviewPlayerDamageByResult)) { IsFallback = true, SourceType = "ATAQUE" });
 
         if (enemyConfig.MaxVida <= 0 || enemyConfig.Defesa < 0 ||
             enemyConfig.MaxMana < 0 || enemyConfig.MaxEstamina < 0 ||
@@ -250,7 +250,7 @@ public sealed class GameBattlePreviewFactory
                 ranges, config.PreviewUseTotalForRanges, enemyDamage,
                 ManaCost: enemyConfig.CustoManaAtaque,
                 StaminaCost: enemyConfig.CustoEstaminaAtaque)
-            { AttributeCode = enemyConfig.AttackAttributeCode });
+            { AttributeCode = enemyConfig.AttackAttributeCode, SourceType = "ATAQUE", Image = enemyConfig.Image });
         }
 
         var player = new GameBattleActorSpec(
@@ -494,6 +494,8 @@ public sealed class GameBattlePreviewFactory
                 StaminaCost: IsFirearmType(weaponType) ? 0 : Math.Max(0, staminaCost),
                 Magazine: magazine)
             {
+                Image = GameBattleMedia.ReadImage(item),
+                SourceType = "ARMA",
                 UsesUntilRest = Math.Clamp(ReadInt(Property(item, "atributos"), "capacidadeUso") ?? 0, 0, 100000),
                 InitialUsesRemaining = ReadInt(Property(item, "atributos"), "capacidadeUsoRestante"),
                 Conditions = ResolveConditions(resolved, version),
@@ -682,6 +684,8 @@ public sealed class GameBattlePreviewFactory
                 CooldownTurns: Math.Max(0, ReadInt(resolved.Snapshot.Valores, "cooldownTurnosProposto") ?? 0),
                 Magazine: magazine)
             {
+                Image = GameBattleMedia.ReadImage(item),
+                SourceType = type == "ITEM" && string.Equals(ReadString(item.Value, "tipo"), "arma", StringComparison.OrdinalIgnoreCase) ? "ARMA" : type,
                 Conditions = ResolveConditions(resolved, version),
                 RemovesConditions = ResolveConditionRemovals(resolved, version),
                 AttributeCode = resolved.Snapshot.Valores.TryGetValue("atributo", out string? selectedAttribute)
@@ -849,6 +853,8 @@ public sealed class GameBattlePreviewFactory
             new Dictionary<string, int>(), ManaCost: manaCost, StaminaCost: staminaCost,
             CooldownTurns: cooldown)
         {
+            Image = GameBattleMedia.ReadImage(item),
+            SourceType = type,
             Utility = new GameBattleUtilitySpec(quantity, life, mana, stamina),
             Conditions = conditions,
             UsesUntilRest = Math.Clamp(ReadInt(attributes, "capacidadeUso") ?? 0, 0, 100000),
@@ -875,7 +881,7 @@ public sealed class GameBattlePreviewFactory
         string? ResultCode = null, IReadOnlyDictionary<int, int>? EffectValues = null,
         GameplayResistanceTestDto? ResistanceTest = null);
 
-    private static IReadOnlyList<GameBattleActiveCondition> ReadActiveConditions(
+    internal static IReadOnlyList<GameBattleActiveCondition> ReadActiveConditions(
         GameRunCharacterSnapshotDto snapshot, SistemaVersao version)
     {
         JsonElement? source = Property(snapshot.Status, "condicoesJogo");

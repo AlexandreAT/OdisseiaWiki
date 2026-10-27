@@ -22,6 +22,7 @@ export interface GameModeAreaOption {
   offers?: GameModeVendorOffer[];
   offerCount?: number;
   upgrade?: GameModeEngineerUpgrade | null;
+  repairPricePer10Percent?: number | null;
 }
 
 export interface GameModeArea {

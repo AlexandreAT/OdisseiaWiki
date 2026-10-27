@@ -45,7 +45,7 @@ const CheckBoxComponent = ({
     return (
         <ContainerController width={width} height={height} title={title}>
             <InputCheckbox
-                typeStyle={typeStyle}
+                $neon={neon}
                 checked={isChecked}
                 onChange={handleChange}
                 id={id}

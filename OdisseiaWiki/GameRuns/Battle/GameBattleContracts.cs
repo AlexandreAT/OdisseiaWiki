@@ -78,6 +78,9 @@ public sealed record GameBattleActiveCondition(
 {
     public int? RemainingMinutes { get; init; }
     public string? SourceItemId { get; init; }
+    public string? SourceName { get; init; }
+    public string? SourceImage { get; init; }
+    public string? SourceType { get; init; }
     public int? OverrideValue { get; init; }
     public IReadOnlyDictionary<int, int> EffectValues { get; init; } = new Dictionary<int, int>();
 }
@@ -128,6 +131,8 @@ public sealed record GameBattleActionSpec(
     int CooldownTurns = 0,
     GameBattleMagazineSpec? Magazine = null)
 {
+    public string? Image { get; init; }
+    public string? SourceType { get; init; }
     public string? AttributeCode { get; init; }
     public IReadOnlyList<GameBattleConditionApplication> Conditions { get; init; } = [];
     public IReadOnlyList<string> RemovesConditions { get; init; } = [];
@@ -216,6 +221,7 @@ public sealed record GameBattleResult(
     IReadOnlyList<GameBattleActorState> Actors,
     IReadOnlyList<GameBattleEvent> Events);
 
+[JsonConverter(typeof(GameBattleEventJsonConverter))]
 public sealed record GameBattleEvent(
     int Sequence,
     int SchemaVersion,
@@ -279,6 +285,8 @@ public sealed record InitiativeRolledPayload(string Formula, IReadOnlyList<int> 
 public sealed record TurnStartedPayload(int ActorTurn) : GameBattleEventPayload;
 public sealed record ActionSelectedPayload(string ActionId, string ActionName, bool Reload) : GameBattleEventPayload
 {
+    public string? Image { get; init; }
+    public string? SourceType { get; init; }
     public bool Reaction { get; init; }
     public int Quantity { get; init; } = 1;
     public bool DirectUse { get; init; }
@@ -306,11 +314,18 @@ public sealed record ConditionAppliedPayload(string Code, string Name, int Value
     public bool Stackable { get; init; }
 }
 public sealed record ConditionEffectPayload(string Code, string Name, string Operation, string Resource,
-    int Value, string Moment, int? Before = null, int? After = null) : GameBattleEventPayload;
-public sealed record ConditionExpiredPayload(string Code, string Name, string Reason) : GameBattleEventPayload;
+    int Value, string Moment, int? Before = null, int? After = null) : GameBattleEventPayload
+{
+    public string? Image { get; init; }
+}
+public sealed record ConditionExpiredPayload(string Code, string Name, string Reason) : GameBattleEventPayload
+{
+    public string? Image { get; init; }
+}
 public sealed record ResistanceRolledPayload(string Code, IReadOnlyList<int> Dice, string AttributeCode,
     int Modifier, int Total, int Difficulty, bool Passed) : GameBattleEventPayload
 {
+    public string? Image { get; init; }
     public IReadOnlyList<int>? AlternativeDice { get; init; }
     public GameplayRollMode Mode { get; init; } = GameplayRollMode.Normal;
 }

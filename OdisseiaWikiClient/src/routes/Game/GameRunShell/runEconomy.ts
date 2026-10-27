@@ -40,6 +40,18 @@ export function createRunSaleLines(entry: RunInventoryEntry, all: RunInventoryEn
   return remaining === 0 && lines.length <= 100 ? lines : [];
 }
 
+/** A checked card sells its whole visible stack, atomically, within the command's limits. */
+export function createRunBulkSale(entries: RunInventoryEntry[], all: RunInventoryEntry[], discountPercent: number) {
+  const groups = entries.map(entry => createRunSaleLines(entry, all, entry.quantity));
+  const lines = groups.flat();
+  const complete = groups.every(group => group.length > 0);
+  const unique = new Set(lines.map(line => line.itemId)).size === lines.length;
+  const total = entries.reduce((sum, entry) => sum + runSaleUnitPrice(entry.value, discountPercent) * entry.quantity, 0);
+  const units = entries.reduce((sum, entry) => sum + entry.quantity, 0);
+  const valid = entries.length > 0 && complete && unique && lines.length <= 100 && total <= 1_000_000_000;
+  return { lines: valid ? lines : [], total, units, count: entries.length, valid };
+}
+
 export const canAccessRunStash = (run: GameRunDto): boolean => {
   if (!RUN_DEPOSIT_ENABLED) return false;
   if (run.status !== 'Ativa' && run.status !== 'Vitoria') return false;

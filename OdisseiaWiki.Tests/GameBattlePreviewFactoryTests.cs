@@ -405,7 +405,7 @@ public sealed class GameBattlePreviewFactoryTests
                 Status = original.EstadoAtual.Status,
                 Inventario = Json("[]"),
                 Magia = Json("""
-                    [{"id":"fogo-1","nome":"Chama","tipo":"ataque","custo":"2",
+                    [{"id":"fogo-1","nome":"Chama","tipo":"ataque","custo":"2","imagem":"/assets/chama.png",
                       "atributos":{"dano":15,"acerto":"1D20"}}]
                     """),
             },
@@ -417,13 +417,15 @@ public sealed class GameBattlePreviewFactoryTests
         Assert.Equal("magia:fogo-1", actor.Actions[0].Id);
         Assert.Equal(15, actor.Actions[0].DamageByResultCode["ACERTO"]);
         Assert.False(actor.Actions[0].IsFallback);
+        Assert.Equal("/assets/chama.png", actor.Actions[0].Image);
+        Assert.Equal("MAGIA", actor.Actions[0].SourceType);
     }
 
     [Fact]
     public void Build_ConsumivelDeCuraEquipadoUsaQuantidadeDaCopiaESemDado()
     {
         GameRunDto original = Run("""
-            [{"id":"seringa","idItemBase":19,"nome":"Seringa","tipo":"consumiveis",
+            [{"id":"seringa","idItemBase":19,"nome":"Seringa","tipo":"consumiveis","imagem":"/assets/seringa.png",
               "quantidade":2,"atributos":{"restaura":{"vida":25}}}]
             """);
         GameRunDto run = new()
@@ -440,6 +442,8 @@ public sealed class GameBattlePreviewFactoryTests
         Assert.Empty(action.Roll.Groups);
         Assert.Equal(2, action.Utility?.InitialQuantity);
         Assert.Equal(25, action.Utility?.RestoreLife);
+        Assert.Equal("/assets/seringa.png", action.Image);
+        Assert.Equal("ITEM", action.SourceType);
     }
 
     [Fact]
@@ -987,6 +991,7 @@ public sealed class GameBattlePreviewFactoryTests
         Assert.Equal(3, result.Actions.Single().ManaCost);
         Assert.Equal(2, result.Actions.Single().StaminaCost);
         Assert.Equal("/uploads/sentinela.png", result.Image);
+        Assert.Equal("/uploads/sentinela.png", result.Actions.Single().Image);
     }
 
     [Fact]

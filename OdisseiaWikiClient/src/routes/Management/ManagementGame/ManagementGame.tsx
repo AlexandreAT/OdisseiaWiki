@@ -331,7 +331,7 @@ export const ManagementGame = ({ theme, neon, mesaId, onDirtyChange }: Props) =>
                 onChange={event => {
                   const options = [...area.options];
                   options[optionIndex] = { ...option, npcCode: option.npcCode || crypto.randomUUID(),
-                    npcType: event.target.value as typeof option.npcType, offers: [], upgrade: null };
+                    npcType: event.target.value as typeof option.npcType, offers: [], upgrade: null, repairPricePer10Percent: null };
                   state.updateArea(index, { options });
                 }} />
               <GameAdminWeightRow><label><input type="checkbox" checked={option.npcLocked === true} disabled={!editable}

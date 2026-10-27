@@ -2,6 +2,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import type { PropsWithChildren } from 'react';
 import { RunOverlayDialog } from './GameRunShell.style';
 import type { RunInventoryEntry } from './runInventoryEntries';
+import { inventoryThemeStyle } from '../../../utils/inventoryTheme';
 import { ActionDialogBody, ActionDialogClose, ActionDialogFrame, ActionDialogHeader, ActionDialogMeta } from './RunInventoryActionDialog.style';
 
 interface Props {
@@ -12,12 +13,12 @@ interface Props {
 }
 
 export function RunInventoryActionDialog({ entry, neon, onClose, aboveModal = false, children }: PropsWithChildren<Props>) {
-  return <RunOverlayDialog open onClose={onClose} maxWidth="xs" fullWidth
+  return <RunOverlayDialog open onClose={onClose} maxWidth="xs" fullWidth style={inventoryThemeStyle(entry.tipo, neon)}
     aria-labelledby="run-inventory-action-title" sx={aboveModal ? { zIndex: 11000 } : undefined}
     onKeyDownCapture={aboveModal ? (event) => {
       if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); onClose(); }
     } : undefined}>
-    <ActionDialogFrame neon={neon}>
+    <ActionDialogFrame neon={neon} color="var(--inventory-accent)">
       <ActionDialogHeader>
         <div>
           <h3 id="run-inventory-action-title">{entry.name}</h3>

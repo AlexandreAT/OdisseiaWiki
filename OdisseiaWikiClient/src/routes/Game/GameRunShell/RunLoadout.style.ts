@@ -4,15 +4,15 @@ import HudCornerThin from '../../../assets/svg/HudCornerThin.svg';
 import { GameNotice } from '../GameShared.style';
 
 export const ConditionOriginCard = styled.div`
-  border: 1px solid rgba(77, 238, 234, .32);
+  border: 1px solid color-mix(in srgb, var(--inventory-accent, #4deeea) 32%, transparent);
   border-radius: 5px;
   background: rgba(8, 28, 43, .56);
   > button {
     display: flex; align-items: center; justify-content: space-between; gap: 8px;
     width: 100%; padding: 10px; border: 0; background: transparent;
     color: #d9f4ff; text-align: left; cursor: pointer;
-    strong { color: var(--clearneonBlue); font-size: .72rem; text-transform: uppercase; }
-    &:hover, &:focus-visible { background: rgba(77, 238, 234, .1); }
+    strong { color: var(--inventory-accent, var(--clearneonBlue)); font-size: .72rem; text-transform: uppercase; }
+    &:hover, &:focus-visible { background: color-mix(in srgb, var(--inventory-accent, #4deeea) 10%, transparent); }
   }
 `;
 
@@ -59,14 +59,14 @@ export const LoadoutSectionTitle = styled.h3`
   gap: 7px;
   margin: 0;
   padding-bottom: 7px;
-  border-bottom: 1px solid rgba(77, 238, 234, .25);
-  color: #e3faff;
+  border-bottom: 1px solid color-mix(in srgb, var(--inventory-accent, #4deeea) 25%, transparent);
+  color: var(--inventory-accent, #e3faff);
   font-family: 'Orbitron', sans-serif;
   font-size: .82rem;
   font-weight: 600;
   letter-spacing: .035em;
   line-height: 1.35;
-  span { color: var(--clearneonBlue); font-variant-numeric: tabular-nums; }
+  span { color: var(--inventory-accent, var(--clearneonBlue)); font-variant-numeric: tabular-nums; }
 `;
 
 export const LoadoutNote = styled.p`
@@ -79,8 +79,8 @@ export const LoadoutNote = styled.p`
 export const LoadoutEmpty = styled.p`
   margin: 0;
   padding: 10px 11px;
-  border-left: 2px solid rgba(77, 238, 234, .55);
-  background: linear-gradient(90deg, rgba(77, 238, 234, .085), transparent);
+  border-left: 2px solid color-mix(in srgb, var(--inventory-accent, #4deeea) 55%, transparent);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--inventory-accent, #4deeea) 8.5%, transparent), transparent);
   color: #bbd4db;
   font-size: .8rem;
   line-height: 1.5;
@@ -95,11 +95,11 @@ export const LoadoutCarry = styled.div`
   gap: 3px 8px;
   margin-top: 3px;
   padding-top: 11px;
-  border-top: 1px solid rgba(77, 238, 234, .18);
+  border-top: 1px solid color-mix(in srgb, var(--inventory-accent, #4deeea) 18%, transparent);
   color: #a4bcc7;
   font-size: .77rem;
   strong {
-    color: var(--clearneonBlue);
+    color: var(--inventory-accent, var(--clearneonBlue));
     font-family: 'Orbitron', sans-serif;
     font-size: .76rem;
     font-variant-numeric: tabular-nums;
@@ -111,12 +111,25 @@ export const LoadoutTabs = styled.div`
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 5px;
   button {
-    min-width: 0; padding: 9px 4px; border: 1px solid rgba(0, 185, 238, .35);
+    min-width: 0; padding: 9px 4px; border: 1px solid color-mix(in srgb, var(--inventory-accent, #00b9ee) 35%, transparent);
     background: rgba(0, 14, 28, .7); color: #b9d1da; font: inherit;
     font-size: .75rem; cursor: pointer;
+    transition: color 180ms ease, border-color 180ms ease, background 180ms ease, box-shadow 180ms ease;
   }
-  button[aria-selected='true'] { border-color: var(--clearneonBlue); color: var(--clearneonBlue); background: rgba(0, 160, 220, .13); }
+  button:hover:not(:disabled), button:focus-visible {
+    color: var(--inventory-tab-accent, var(--inventory-accent, var(--clearneonBlue)));
+    border-color: var(--inventory-tab-accent, var(--inventory-accent, var(--clearneonBlue)));
+    background: color-mix(in srgb, var(--inventory-tab-accent, var(--inventory-accent, #4deeea)) 16%, rgba(0, 14, 28, .7));
+    box-shadow: inset 0 0 12px color-mix(in srgb, var(--inventory-tab-glow, var(--inventory-glow, transparent)) 16%, transparent);
+  }
+  button[aria-selected='true'] {
+    border-color: var(--inventory-tab-accent, var(--inventory-accent, var(--clearneonBlue)));
+    color: var(--inventory-tab-accent, var(--inventory-accent, var(--clearneonBlue)));
+    background: color-mix(in srgb, var(--inventory-tab-accent, var(--inventory-accent, #00a7d6)) 13%, transparent);
+  }
   button:focus-visible { outline: 2px solid white; outline-offset: 2px; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  :root[data-motion='reduced'] & button { transition: none; }
 `;
 
 export const LoadoutGrid = styled.div`
@@ -129,7 +142,7 @@ export const LoadoutGrid = styled.div`
   overflow-y: auto;
   padding: 7px;
   scrollbar-width: thin;
-  scrollbar-color: rgba(77, 238, 234, .55) rgba(2, 13, 26, .7);
+  scrollbar-color: color-mix(in srgb, var(--inventory-accent, #4deeea) 55%, transparent) rgba(2, 13, 26, .7);
   @media (max-width: 700px) {
     grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
     max-height: 40vh;
@@ -142,7 +155,7 @@ export const BurstShotQuantity = styled.span`
   width: 100%;
   min-height: 38px;
   padding: 0 9px;
-  border: 1px solid rgba(77, 238, 234, .5);
+  border: 1px solid color-mix(in srgb, var(--inventory-accent, #4deeea) 50%, transparent);
   background: #061622;
   color: #d9f4ff;
   font: inherit;
@@ -164,13 +177,14 @@ export const BurstShotQuantity = styled.span`
 `;
 
 export const LoadoutCard = styled.button<{ $neon: boolean }>`
+  --loadout-card-shape: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
   position: relative;
   isolation: isolate;
   min-width: 0;
   display: grid;
   align-content: start;
   gap: 0;
-  padding: 5px;
+  padding: 0;
   border: 0;
   background: transparent;
   color: #d9f4ff;
@@ -182,29 +196,40 @@ export const LoadoutCard = styled.button<{ $neon: boolean }>`
     position: absolute;
     z-index: -1;
     inset: 0;
-    border: 1px solid rgba(77, 238, 234, .35);
-    clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
-    background: linear-gradient(155deg, rgba(12, 52, 73, .92), rgba(1, 10, 22, .96));
+    border: 1px solid color-mix(in srgb, var(--inventory-accent, #4deeea) 35%, transparent);
+    clip-path: var(--loadout-card-shape);
+    background: linear-gradient(155deg, var(--inventory-card-tint, rgba(12, 52, 73, .92)), rgba(1, 10, 22, .96));
     transition: border-color 180ms ease, background 180ms ease;
   }
   &[data-action-equipped='true']::before {
-    border: 2px solid rgba(117, 248, 245, .94);
-    background: linear-gradient(155deg, rgba(15, 64, 82, .96), rgba(1, 16, 30, .98));
-    box-shadow: inset 0 0 0 1px rgba(77, 238, 234, .28);
+    border: 2px solid color-mix(in srgb, var(--inventory-accent, #75f8f5) 94%, transparent);
+    background: linear-gradient(155deg, var(--inventory-equipped-tint, rgba(15, 64, 82, .96)), rgba(1, 16, 30, .98));
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--inventory-accent, #4deeea) 28%, transparent);
   }
   &[aria-pressed='true'] {
     &::before {
-      border-color: var(--clearneonBlue);
-      background: linear-gradient(155deg, rgba(12, 74, 96, .96), rgba(1, 16, 29, .98));
-      box-shadow: inset 0 0 0 1px var(--clearneonBlue);
+      border-color: var(--inventory-accent, var(--clearneonBlue));
+      background: linear-gradient(155deg, var(--inventory-selected-tint, rgba(12, 74, 96, .96)), rgba(1, 16, 29, .98));
+      box-shadow: inset 0 0 0 1px var(--inventory-accent, var(--clearneonBlue));
     }
   }
   &:hover:not(:disabled), &:focus-visible {
-    filter: ${({ $neon }) => $neon ? 'drop-shadow(0 0 6px rgba(77, 238, 234, .65))' : 'brightness(1.12)'};
-    &::before { border-color: var(--clearneonBlue); }
+    filter: ${({ $neon }) => $neon ? 'drop-shadow(0 0 6px color-mix(in srgb, var(--inventory-accent, #4deeea) 65%, transparent))' : 'brightness(1.12)'};
+    &::before { border-color: var(--inventory-accent, var(--clearneonBlue)); }
   }
   &:disabled { opacity: .45; cursor: default; }
   &:focus-visible { outline: 2px solid white; outline-offset: 2px; }
+`;
+
+/** Clip actual content, not the SVG/glow layer around the button. */
+export const LoadoutCardContent = styled.span`
+  display: grid;
+  align-content: start;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 5px;
+  clip-path: var(--loadout-card-shape);
 `;
 
 export const LoadoutCardCorner = styled.span<{ $position: 'top-right' | 'bottom-left'; $neon: boolean }>`
@@ -214,9 +239,9 @@ export const LoadoutCardCorner = styled.span<{ $position: 'top-right' | 'bottom-
   width: 60px;
   height: 60px;
   pointer-events: none;
-  background: var(--clearneonBlue);
+  background: var(--inventory-accent, var(--clearneonBlue));
   opacity: ${({ $neon }) => $neon ? 1 : .8};
-  filter: ${({ $neon }) => $neon ? 'drop-shadow(0 0 4px var(--clearneonBlue))' : 'none'};
+  filter: ${({ $neon }) => $neon ? 'drop-shadow(0 0 4px var(--inventory-accent, var(--clearneonBlue)))' : 'none'};
   -webkit-mask: url("${HudCornerThin}") center / contain no-repeat;
   mask: url("${HudCornerThin}") center / contain no-repeat;
   ${({ $position }) => $position === 'top-right'
@@ -231,9 +256,9 @@ export const LoadoutCardMedia = styled.span`
   display: grid;
   place-items: center;
   overflow: hidden;
-  border: 1px solid rgba(77, 238, 234, .2);
+  border: 1px solid color-mix(in srgb, var(--inventory-accent, #4deeea) 20%, transparent);
   background: rgba(0, 6, 15, .85);
-  color: var(--clearneonBlue);
+  color: var(--inventory-accent, var(--clearneonBlue));
   /* The square reserves the space, not the intrinsic size of a lazy image. */
   img {
     position: absolute;
@@ -253,7 +278,7 @@ export const LoadoutCardCaption = styled.span`
   gap: 3px;
   min-height: 52px;
   padding: 7px 5px 5px;
-  border-top: 1px solid rgba(77, 238, 234, .28);
+  border-top: 1px solid color-mix(in srgb, var(--inventory-accent, #4deeea) 28%, transparent);
   strong {
     display: -webkit-box;
     overflow: hidden;
@@ -269,10 +294,10 @@ export const LoadoutCardCaption = styled.span`
 export const LoadoutSlots = styled.ol`
   display: grid; gap: 8px; padding: 0; margin: 0; list-style: none;
   li { min-height: 54px; display: flex; align-items: center; gap: 8px; padding: 8px;
-    border: 1px solid rgba(77, 238, 234, .27); background: rgba(4, 23, 38, .7); }
-  li > strong { color: var(--clearneonBlue); width: 22px; text-align: center; }
+    border: 1px solid color-mix(in srgb, var(--inventory-accent, #4deeea) 27%, transparent); background: rgba(4, 23, 38, .7); }
+  li > strong { color: var(--inventory-accent, var(--clearneonBlue)); width: 22px; text-align: center; }
   li > span { min-width: 0; flex: 1; overflow-wrap: anywhere; font-size: .84rem; }
-  li button { border: 0; background: transparent; color: var(--clearneonBlue); cursor: pointer;
+  li button { border: 0; background: transparent; color: var(--inventory-accent, var(--clearneonBlue)); cursor: pointer;
     display: grid; place-items: center; padding: 5px; }
   li button:disabled { opacity: .4; cursor: default; }
   li button:focus-visible { outline: 2px solid white; }
@@ -286,11 +311,11 @@ export const EquippedGear = styled(LoadoutSlots)`
 
 export const LoadoutSelection = styled.div`
   display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
-  padding: 8px 0; border-top: 1px solid rgba(77, 238, 234, .24);
+  padding: 8px 0; border-top: 1px solid color-mix(in srgb, var(--inventory-accent, #4deeea) 24%, transparent);
   strong { flex: 1; min-width: 120px; font-size: .85rem; }
   small { color: #a9c0cc; }
   label { color: #b9d1da; font-size: .78rem; }
-  select { min-height: 36px; padding: 5px 8px; border: 1px solid rgba(77, 238, 234, .5);
+  select { min-height: 36px; padding: 5px 8px; border: 1px solid color-mix(in srgb, var(--inventory-accent, #4deeea) 50%, transparent);
     background: #061622; color: #d9f4ff; font: inherit; font-size: .8rem; }
   select:focus-visible { outline: 2px solid white; }
 `;
@@ -301,11 +326,11 @@ export const ConsumableAction = styled.div`
   gap: 8px;
   width: 100%;
   padding-top: 8px;
-  border-top: 1px solid rgba(77, 238, 234, .2);
+  border-top: 1px solid color-mix(in srgb, var(--inventory-accent, #4deeea) 20%, transparent);
   small { color: #a9c0cc; font-size: .75rem; }
   label { display: flex; align-items: center; gap: 10px; color: #bad5df; font-size: .8rem; }
   input[type='number'] { width: 68px; min-height: 36px; padding: 5px 8px;
-    border: 1px solid var(--clearneonBlue); border-radius: 4px;
+    border: 1px solid var(--inventory-accent, var(--clearneonBlue)); border-radius: 4px;
     background: rgba(0, 14, 26, .85); color: #fff; font: inherit; }
 `;
 
@@ -325,7 +350,7 @@ export const ConsumableRestoration = styled.div`
 export const LoadoutActions = styled.div`
   ${cyberButtonActionRow}
   justify-content: flex-end; gap: 10px;
-  padding-top: 12px; border-top: 1px solid rgba(77, 238, 234, .2);
+  padding-top: 12px; border-top: 1px solid color-mix(in srgb, var(--inventory-accent, #4deeea) 20%, transparent);
   @media (max-width: 600px) {
     flex-direction: column;
     align-items: stretch;
@@ -355,20 +380,20 @@ export const LoadoutItemActions = styled.div`
 
 export const LoadoutModalActions = styled(LoadoutItemActions)`
   padding-top: 11px;
-  border-top: 1px solid rgba(77, 238, 234, .2);
+  border-top: 1px solid color-mix(in srgb, var(--inventory-accent, #4deeea) 20%, transparent);
 `;
 
 export const LoadoutDefensePanel = styled.section`
   display: grid;
   gap: 10px;
   padding: 12px;
-  border: 1px solid rgba(77, 238, 234, .26);
+  border: 1px solid color-mix(in srgb, var(--inventory-accent, #4deeea) 26%, transparent);
   border-radius: 5px;
   background: linear-gradient(140deg, rgba(9, 45, 63, .48), rgba(2, 14, 27, .6));
   min-width: 0;
 
   > strong {
-    color: var(--clearneonBlue);
+    color: var(--inventory-accent, var(--clearneonBlue));
     font-family: 'Orbitron', sans-serif;
     font-size: .68rem;
     letter-spacing: .1em;
@@ -398,7 +423,7 @@ export const LoadoutDefenseStats = styled.div`
 export const LoadoutDefenseNote = styled.p`
   margin: 0;
   padding-top: 8px;
-  border-top: 1px solid rgba(77, 238, 234, .16);
+  border-top: 1px solid color-mix(in srgb, var(--inventory-accent, #4deeea) 16%, transparent);
   color: #9db6c2;
   font-size: .75rem;
   line-height: 1.45;
@@ -418,6 +443,6 @@ export const LoadoutAttackPreview = styled.div`
     font-family: 'Orbitron', sans-serif;
     font-size: .95rem;
     font-weight: 600;
-    color: var(--clearneonBlue);
+    color: var(--inventory-accent, var(--clearneonBlue));
   }
 `;

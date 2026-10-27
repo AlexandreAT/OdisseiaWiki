@@ -83,11 +83,15 @@ public sealed class SistemaRuntimeFallbackDto
 
 public sealed class SistemaItensConfigDto
 {
+    // Read-only runtime metadata, including inactive entries omitted from the public tree.
+    public bool RegrasTrajeConfiguradas { get; set; }
+    public List<string> ArquetiposTrajeConhecidos { get; set; } = new();
     public List<SistemaItemEscopoDto> Tipos { get; set; } = new();
 }
 
 public sealed class SistemaItemEscopoDto
 {
+    public List<string>? ArquetiposCompativeis { get; set; }
     public int IdSistemaItemEscopo { get; set; }
     public int? IdEscopoPai { get; set; }
     public SistemaItemEscopoNivel Nivel { get; set; }

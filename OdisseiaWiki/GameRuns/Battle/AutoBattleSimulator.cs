@@ -149,7 +149,7 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                         actionIndex == rest.AfterActionIndex)
                     {
                         Emit(GameBattleEventTypes.ActionSelected, actor.Spec.Id, null,
-                            new ActionSelectedPayload("descanso", "Descanso curto", false));
+                            new ActionSelectedPayload("descanso", "Descanso curto", false) { SourceType = "DESCANSO" });
                         Emit(GameBattleEventTypes.RestPerformed, actor.Spec.Id, null,
                             new RestPerformedPayload("descanso"));
                         Recover(actor, "hitPoints", rest.Life, rest.Percentage);
@@ -207,7 +207,8 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                         new ActionSelectedPayload(action.Spec.Id,
                             openingOpportunity ? $"Oportunidade · {action.Spec.Name}" :
                             reaction ? $"Revidar · {action.Spec.Name}" : action.Spec.Name, false)
-                        { Reaction = reaction, Quantity = quantity,
+                        { Image = action.Spec.Image, SourceType = action.Spec.SourceType,
+                          Reaction = reaction, Quantity = quantity,
                           DirectUse = action.Spec.Utility is not null });
                     if (action.Spec.ManaCost > 0)
                     {
@@ -373,7 +374,7 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                     if (!reload.Spec.Magazine.UnlimitedReserve) reload.Reserve -= amount;
                     Emit(GameBattleEventTypes.ActionSelected, actor.Spec.Id, null,
                         new ActionSelectedPayload(reload.Spec.Id, reload.Spec.Name, true)
-                        { Reaction = reaction });
+                        { Reaction = reaction, Image = reload.Spec.Image, SourceType = reload.Spec.SourceType });
                     Emit(GameBattleEventTypes.ReloadPerformed, actor.Spec.Id, null,
                         new ReloadPerformedPayload(reload.Spec.Id, loadedBefore, reload.Loaded, reload.Reserve));
                     EmitChange("loadedAmmo", loadedBefore, reload.Loaded, reload.Spec.Id, actor.Spec.Id, null);
@@ -531,7 +532,7 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                         Emit(GameBattleEventTypes.ResistanceRolled, recipient.Spec.Id, source.Spec.Id,
                             new ResistanceRolledPayload(rule.Code, dice, resistance.AttributeCode,
                                 modifier, total, resistance.Difficulty, passed)
-                            { AlternativeDice = alternativeDice, Mode = mode });
+                            { AlternativeDice = alternativeDice, Mode = mode, Image = rule.Image });
                         ReportContributions(recipient, effect =>
                             (effect.Operacao is "MODIFICAR_ROLAGEM" or "MODIFICAR_ATRIBUTO") &&
                             (effect.Recurso == "TODOS" || effect.Recurso.Equals(resistance.AttributeCode, StringComparison.OrdinalIgnoreCase)) ||
@@ -543,6 +544,7 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                     if (previous >= 0 && !rule.Stackable) recipient.ActiveConditions.RemoveAt(previous);
                     recipient.ActiveConditions.Add(new GameBattleActiveCondition(rule, value, turns, hours)
                     { RemainingMinutes = hours.HasValue ? checked(hours.Value * 60) : null,
+                      SourceName = action.Spec.Name, SourceImage = action.Spec.Image, SourceType = action.Spec.SourceType,
                       OverrideValue = origin.Value, EffectValues = origin.EffectValues });
                     Emit(GameBattleEventTypes.ConditionApplied, source.Spec.Id, recipient.Spec.Id,
                         new ConditionAppliedPayload(rule.Code, rule.Name, value, turns, hours)
@@ -628,7 +630,7 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
         void ReportConditionEffect(ActorState target, GameBattleConditionRule rule, SistemaCondicaoEfeito effect,
             int? before = null, int? after = null) => Emit(GameBattleEventTypes.ConditionEffect,
                 target.Spec.Id, target.Spec.Id, new ConditionEffectPayload(rule.Code, rule.Name,
-                    effect.Operacao, effect.Recurso, effect.Valor, effect.Momento, before, after));
+                    effect.Operacao, effect.Recurso, effect.Valor, effect.Momento, before, after) { Image = rule.Image });
 
         void ClampToConditionLimits(ActorState target)
         {
@@ -665,7 +667,7 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                 {
                     actor.ActiveConditions.RemoveAt(index);
                     Emit(GameBattleEventTypes.ConditionExpired, actor.Spec.Id, null,
-                        new ConditionExpiredPayload(active.Rule.Code, active.Rule.Name, "DURACAO"));
+                        new ConditionExpiredPayload(active.Rule.Code, active.Rule.Name, "DURACAO") { Image = active.Rule.Image });
                 }
                 else actor.ActiveConditions[index] = active with { RemainingTurns = remaining };
             }
@@ -683,7 +685,7 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                     code.Trim().Equals(recoveryCode, StringComparison.OrdinalIgnoreCase))) continue;
                 actor.ActiveConditions.RemoveAt(index);
                 Emit(GameBattleEventTypes.ConditionExpired, actor.Spec.Id, null,
-                    new ConditionExpiredPayload(active.Rule.Code, active.Rule.Name, reason));
+                    new ConditionExpiredPayload(active.Rule.Code, active.Rule.Name, reason) { Image = active.Rule.Image });
             }
         }
 
@@ -721,7 +723,7 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                         {
                             actor.ActiveConditions.Remove(existing);
                             Emit(GameBattleEventTypes.ConditionExpired, actor.Spec.Id, null,
-                                new ConditionExpiredPayload(existing.Rule.Code, existing.Rule.Name, "GATILHO_CESSOU"));
+                                new ConditionExpiredPayload(existing.Rule.Code, existing.Rule.Name, "GATILHO_CESSOU") { Image = existing.Rule.Image });
                         }
                         continue;
                     }
@@ -925,7 +927,7 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
         throw new InvalidOperationException("A rolagem ficou fora das faixas configuradas.");
     }
 
-    private static IEnumerable<SistemaCondicaoEfeito> EffectiveEffects(GameBattleActiveCondition condition)
+    internal static IEnumerable<SistemaCondicaoEfeito> EffectiveEffects(GameBattleActiveCondition condition)
     {
         IReadOnlyList<SistemaCondicaoEfeito> effects = condition.Rule.Effects.Count > 0
             ? condition.Rule.Effects

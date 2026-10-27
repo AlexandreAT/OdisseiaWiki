@@ -11,6 +11,8 @@ public class ConditionImageTests
     [InlineData("{}", null)]
     [InlineData("{\"imagem\":\"/assets/condicao.png\",\"efeitos\":[]}", "/assets/condicao.png")]
     [InlineData("{\"imagem\":\"https://example.com/condicao.png\"}", "https://example.com/condicao.png")]
+    [InlineData("{\"imagem\":\"assets_dynamic/condicao.png\"}", "/assets_dynamic/condicao.png")]
+    [InlineData("{\"imagem\":\"assets/condicao.png\"}", "/assets/condicao.png")]
     [InlineData("{\"imagem\":\"javascript:alert(1)\"}", null)]
     [InlineData("{\"imagem\":\"//untrusted/image.png\"}", null)]
     [InlineData("invalid", null)]

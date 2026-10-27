@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { build } from 'esbuild';
 import React, { createRef, useState } from 'react';
 import { act, create } from 'react-test-renderer';
+import { renderToStaticMarkup } from 'react-dom/server';
 
 const bundle = await build({
   stdin: { contents: `export * from './src/components/Generic/InputText/InputText';
@@ -13,6 +14,9 @@ const bundle = await build({
     export * from './src/components/Generic/Select/Select';
     export { LabelSpan as SelectLabelSpan } from './src/components/Generic/Select/Select.style';
     export * from './src/components/Generic/CheckBox/CheckBox';
+    export {InputCheckbox} from './src/components/Generic/CheckBox/CheckBox.style';
+    export {InventoryCardSelection} from './src/routes/Game/GameRunShell/RunInventoryCardSelection.style';
+    export {ServerStyleSheet} from 'styled-components';
     export * from './src/components/Generic/CheckSelect/CheckSelect';
     export * from './src/routes/Management/ManagementSystem/components/ConfigTable/ConfigTable';`, loader: 'ts', resolveDir: process.cwd() },
   plugins: [{ name: 'baseline-control', setup(builder) {
@@ -40,6 +44,84 @@ before(() => { globalThis.document = { addEventListener() {}, removeEventListene
 after(() => { if (previousDocument === undefined) delete globalThis.document; else globalThis.document = previousDocument; });
 const base = { theme: 'dark', neon: 'off', label: 'Campo' };
 const change = (value) => ({ target: { value }, currentTarget: { value }, nativeEvent: { isComposing: false } });
+
+test('checkbox padrão usa dois tons escuros e borda/glow azul somente com neon ligado', () => {
+  for (const neon of ['on', 'off']) {
+    const sheet = new api.ServerStyleSheet();
+    try {
+      renderToStaticMarkup(sheet.collectStyles(React.createElement(api.InputCheckbox, { $neon: neon, checked: true, readOnly: true })));
+      const css = sheet.getStyleTags();
+      assert.match(css, /background-color:var\(--deepgrey\)/);
+      assert.match(css, /:checked\{background-color:var\(--black\)/);
+      assert.match(css, /flex:0 0 20px;width:20px;height:20px/);
+      assert.match(css, /:checked::after\{[^}]*border:solid var\(--neonBlue\)/);
+      assert.match(css, /:focus-visible\{outline:2px solid var\(--whitesmoke\)/);
+      assert.match(css, /:disabled\{opacity:\.45;cursor:not-allowed/);
+      assert.match(css, /data-motion='reduced'[^}]*transition:none/);
+      if (neon === 'on') {
+        assert.match(css, /:checked\{[^}]*border-color:var\(--whitesmoke\);box-shadow:0 0 4px var\(--neonBlue\),inset 0 0 3px var\(--neonBlue\)/);
+      } else {
+        assert.match(css, /:checked\{[^}]*border-color:var\(--neonBlue\);box-shadow:none/);
+        assert.doesNotMatch(css, /inset|drop-shadow|0 0 4px/);
+      }
+      assert.doesNotMatch(css, /inset 0px 0px 5px|#[0-9a-f]{3,8}/i);
+    } finally { sheet.seal(); }
+  }
+});
+
+test('checkbox do card tem apenas o quadrado nativo, sem moldura/fundo/sombra no posicionador', () => {
+  const sheet = new api.ServerStyleSheet();
+  try {
+    renderToStaticMarkup(sheet.collectStyles(React.createElement(api.InventoryCardSelection)));
+    const css = sheet.getStyleTags();
+    assert.match(css, /top:18px;right:18px/);
+    assert.match(css, /width:20px;height:20px/);
+    assert.doesNotMatch(css, /border:|border-radius:|background:|box-shadow:/);
+    assert.match(css, /label\{position:absolute/);
+  } finally { sheet.seal(); }
+});
+
+test('checkbox mantém label, estado controlado/interno, callback atual e neon no input sem prop DOM extra', () => {
+  let renderer; const calls = [];
+  try {
+    act(() => { renderer = create(React.createElement(api.CheckBox, { label: 'Selecionar', neon: 'off' })); });
+    const id = renderer.root.findByType('input').props.id;
+    assert.equal(renderer.root.findByType('label').props.htmlFor, id);
+    act(() => renderer.root.findByType('input').props.onChange({ target: { checked: true } }));
+    assert.equal(renderer.root.findByType('input').props.checked, true);
+    act(() => renderer.update(React.createElement(api.CheckBox, { label: 'Selecionar', neon: 'on', checked: false,
+      onChange: value => calls.push(['primeiro', value]) })));
+    assert.equal(renderer.root.findByType(api.InputCheckbox).props.$neon, 'on');
+    assert.equal(renderer.root.findByType('input').props.$neon, undefined);
+    assert.equal(renderer.root.findByType('input').props.checked, false);
+    act(() => renderer.update(React.createElement(api.CheckBox, { label: 'Selecionar', neon: 'off', checked: false,
+      onChange: value => calls.push(['atual', value]) })));
+    act(() => renderer.root.findByType('input').props.onChange({ target: { checked: true } }));
+    assert.deepEqual(calls, [['atual', true]]);
+    assert.equal(renderer.root.findByType('input').props.checked, false);
+    assert.equal(renderer.root.findByType('input').props.id, id);
+    act(() => renderer.update(React.createElement(api.CheckBox, { label: 'Selecionar', neon: 'off', disabled: true })));
+    assert.equal(renderer.root.findByType('input').props.disabled, true);
+  } finally { if (renderer) act(() => renderer.unmount()); }
+});
+
+test('checkbox das tabelas acompanha neon mesmo com linhas memoizadas e preserva edição/readonly', () => {
+  const rows = [{ ativo: true }], changes = [], props = { title: 'Opções', rows,
+    columns: [{ key: 'ativo', label: 'Ativo', type: 'checkbox' }], createRow: () => ({ ativo: false }),
+    onChange: value => changes.push(value), theme: 'dark', neon: 'off', errorPath: 'opcoes' };
+  let renderer;
+  try {
+    act(() => { renderer = create(React.createElement(api.ConfigTable, props)); });
+    assert.equal(renderer.root.findByType(api.InputCheckbox).props.$neon, 'off');
+    act(() => renderer.update(React.createElement(api.ConfigTable, { ...props, neon: 'on' })));
+    assert.equal(renderer.root.findByType(api.InputCheckbox).props.$neon, 'on');
+    assert.equal(renderer.root.findByType('input').props['aria-label'], 'Ativo');
+    act(() => renderer.root.findByType('input').props.onChange({ target: { checked: false } }));
+    assert.deepEqual(changes, [[{ ativo: false }]]);
+    act(() => renderer.update(React.createElement(api.ConfigTable, { ...props, readOnly: true })));
+    assert.equal(renderer.root.findByType('input').props.disabled, true);
+  } finally { if (renderer) act(() => renderer.unmount()); }
+});
 
 test('uma tecla em 100 campos só refaz o controle alterado, mesmo com callbacks inline', (t) => {
   const countUpdatedControls = (Control) => {

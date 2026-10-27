@@ -89,6 +89,8 @@ export const EnemyGroup = styled.div`
   display: grid;
   align-content: start;
   gap: 8px;
+  /* Vertical scrolling must not create a horizontal scrollbar during the card's hit shake. */
+  overflow-x: hidden;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--clearneonBlue) transparent;

@@ -210,6 +210,7 @@ public sealed class GameRunMapNodeDto
 public sealed class GameRunMapNodePayloadDto
 {
     public GameModeEngineerUpgradeDto? Upgrade { get; init; }
+    public int? RepairPricePer10Percent { get; init; }
     public string? NpcCode { get; init; }
     public string? NpcType { get; init; }
     public bool NpcLocked { get; init; }

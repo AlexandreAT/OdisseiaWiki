@@ -29,6 +29,9 @@ public class SistemaItemEscopo
 
     public bool Ativo { get; set; } = true;
 
+    // Null preserves rules published before outfit compatibility existed; [] permits no pairing.
+    public string? CompatibilidadeTrajeJson { get; set; }
+
     public virtual SistemaVersao SistemaVersao { get; set; } = null!;
 
     public virtual SistemaItemEscopo? EscopoPai { get; set; }

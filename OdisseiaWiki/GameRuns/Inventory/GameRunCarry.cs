@@ -370,6 +370,9 @@ public static class GameRunCarry
             { RemainingMinutes = unit.Equals("Hora", StringComparison.OrdinalIgnoreCase) && duration.HasValue
                 ? checked(duration.Value * 60) : null,
               SourceItemId = trigger == "AO_EQUIPAR" ? itemId : null,
+              SourceName = item["nome"]?.ToString(),
+              SourceImage = GameBattleMedia.ReadImage(JsonSerializer.SerializeToElement(item)),
+              SourceType = item["tipo"]?.ToString() == "implante" ? "PROTESE" : "ITEM",
               OverrideValue = source["valor"] is null ? null : value,
               EffectValues = perEffectValues };
             active.Add(JsonSerializer.SerializeToNode(condition,

@@ -106,6 +106,52 @@ public sealed partial class GameplayMariaDbIntegrationTests
             seed.Player.Idusuario, false, CancellationToken.None));
         Assert.Equal("GAME_MESA", Assert.Single(await management.ListAdventuresAsync(
             seed.Mesa.Idmesa, seed.Owner.Idusuario, false, CancellationToken.None)).Codigo);
+
+        // A customized System and a second Mesa must not leak catalog entries across scopes.
+        var system = await context.SistemasRpg.SingleAsync();
+        system.Codigo = "MEU_RPG";
+        var otherMesa = new Mesa { Nome = "Outra mesa", IdusuarioCriacao = seed.Player.Idusuario,
+            IdSistemaVersao = seed.Mesa.IdSistemaVersao, LimiteJogadores = 4 };
+        context.Mesas.Add(otherMesa);
+        var race = new Raca { Nome = "Raça do catálogo" };
+        context.Racas.Add(race);
+        await context.SaveChangesAsync();
+        var otherScope = new WikiEscopo { Tipo = WikiEscopoTipo.Mesa,
+            Chave = $"MESA:{otherMesa.Idmesa}", IdMesa = otherMesa.Idmesa };
+        context.WikiEscopos.Add(otherScope);
+        await context.SaveChangesAsync();
+        context.Itens.Add(new Item { Iditem = "item-outra-mesa", Nome = "Privado de outra mesa",
+            Tipo = ItemTipo.Outro, IdWikiEscopo = otherScope.IdWikiEscopo, Visivel = true });
+        var original = new Personagen { Nome = "NPC oficial", Idraca = race.Idraca,
+            IdWikiEscopo = WikiEscopo.IdOficial, StatusJson = """{"status":{"vida":100}}""" };
+        context.Personagens.Add(original);
+        await context.SaveChangesAsync();
+        var copy = new Personagen { Nome = "NPC derivado da wiki", Idraca = race.Idraca,
+            IdOrigemGlobal = original.Idpersonagem, IdWikiEscopo = scope.IdWikiEscopo,
+            IdSistemaRpg = system.IdSistemaRpg, StatusJson = """{"status":{"vida":200}}""" };
+        var foreign = new Personagen { Nome = "NPC privado de outra mesa", Idraca = race.Idraca,
+            IdWikiEscopo = otherScope.IdWikiEscopo, StatusJson = "{}" };
+        context.Personagens.AddRange(copy, foreign);
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        var scopedLoot = await repository.GetLootItemsAsync(seed.Mesa.Idmesa, seed.Mesa.IdSistemaVersao.Value, default);
+        Assert.Equal("loot-mesa", Assert.Single(scopedLoot).Iditem);
+        var npcs = await repository.GetNpcCandidatesAsync(seed.Mesa.Idmesa, seed.Mesa.IdSistemaVersao.Value, default);
+        Assert.Equal(copy.Idpersonagem, Assert.Single(npcs).Idpersonagem);
+        Assert.Null(await repository.GetNpcAsync(original.Idpersonagem, seed.Mesa.Idmesa, seed.Mesa.IdSistemaVersao.Value, default));
+        Assert.Null(await repository.GetNpcAsync(foreign.Idpersonagem, seed.Mesa.Idmesa, seed.Mesa.IdSistemaVersao.Value, default));
+        var snapshotSource = await repository.GetNpcAsync(copy.Idpersonagem, seed.Mesa.Idmesa, seed.Mesa.IdSistemaVersao.Value, default);
+        Assert.NotNull(snapshotSource);
+        snapshotSource.StatusJson = "{}";
+        scopedLoot[0].Nome = "Mudança somente na cópia lida";
+        Assert.Empty(context.ChangeTracker.Entries());
+        await context.SaveChangesAsync();
+        await using var verify = database.CreateContext();
+        Assert.Equal(100, JsonNode.Parse((await verify.Personagens.FindAsync(original.Idpersonagem))!.StatusJson!)!["status"]!["vida"]!.GetValue<int>());
+        Assert.Equal(200, JsonNode.Parse((await verify.Personagens.FindAsync(copy.Idpersonagem))!.StatusJson!)!["status"]!["vida"]!.GetValue<int>());
+        Assert.Equal("Copia", (await verify.Itens.FindAsync("loot-mesa"))!.Nome);
+        Assert.Equal("Original", (await verify.Itens.FindAsync("loot-global"))!.Nome);
     }
 
     [Fact]
@@ -294,6 +340,11 @@ public sealed partial class GameplayMariaDbIntegrationTests
         Assert.Equal(2, await verify.GameRunCommands.CountAsync(item => item.IdGameRun == runId));
         using JsonDocument initial = JsonDocument.Parse(saved.SnapshotInicialJson);
         Assert.Equal(0, initial.RootElement.GetProperty("inventario").GetArrayLength());
+        var original = await verify.PersonagemJogadores.AsNoTracking().SingleAsync(item =>
+            item.IdpersonagemJogador == seed.Character!.IdpersonagemJogador);
+        Assert.True(JsonNode.DeepEquals(JsonNode.Parse(seed.Character!.StatusJson!), JsonNode.Parse(original.StatusJson!)));
+        Assert.Equal(seed.Character.InventarioJson, original.InventarioJson);
+        Assert.Equal(0, original.RevisaoRuntime);
     }
 
     [Fact]

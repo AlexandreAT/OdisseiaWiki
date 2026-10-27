@@ -1,4 +1,5 @@
 import SearchIcon from '@mui/icons-material/Search';
+import { InputCheckbox } from '../../../components/Generic/CheckBox/CheckBox.style';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { AnimatedBackground } from '../../../components/Generic/AnimatedBackground/AnimatedBackground';
@@ -49,7 +50,7 @@ const MesaSearch = () => {
             portal
           />
           <CheckFilter>
-            <input type="checkbox" checked={state.availableOnly} onChange={(event) => state.setAvailableOnly(event.target.checked)} />
+            <InputCheckbox $neon={neon} checked={state.availableOnly} onChange={(event) => state.setAvailableOnly(event.target.checked)} />
             Apenas com vagas
           </CheckFilter>
         </SearchToolbar>
