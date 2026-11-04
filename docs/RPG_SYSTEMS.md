@@ -6,6 +6,8 @@ O módulo de sistemas de RPG transforma regras hoje espalhadas entre o livro, o 
 
 Esta primeira base não é uma engine universal capaz de interpretar texto livre. Ela organiza dados e regras conhecidas, oferece contratos tipados e preserva fallbacks para os comportamentos legados enquanto cada fluxo passa a consumir a configuração nova.
 
+Para preparar o VTT, consulte o [levantamento completo de configurações e capacidades](VTT_SYSTEM_CAPABILITIES.md) e o [índice campo a campo dos contratos](VTT_SYSTEM_FIELD_INDEX.md). Eles distinguem cadastro, execução na Mesa/ficha/run, limites atuais e critérios de compatibilidade com Sistemas personalizados.
+
 ## Conceitos principais
 
 ### Sistema
