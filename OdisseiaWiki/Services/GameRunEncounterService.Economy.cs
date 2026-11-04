@@ -134,7 +134,9 @@ public sealed partial class GameRunEncounterService
                 if (node is null || !GameRunNpcs.HasCatalog(node) || GameRunNpcs.NeedsRescue(node) ||
                     node.Type == "NPC" && node.Payload?.NpcServiceVisited != true || node.State != "SELECIONADO")
                     return GameRunOperationResult<GameRunDto>.Fail("VENDEDOR_INDISPONIVEL", "Não há vendedor aberto.");
-                map = CompleteServiceNode(run, map, node);
+                var version = await _systems.GetVersionAsync(run.IdSistemaVersao, includeConfiguration: true);
+                if (version is null) return GameRunOperationResult<GameRunDto>.Fail("SISTEMA_INDISPONIVEL", "Sistema indisponível.");
+                map = CompleteServiceNode(run, map, node, version);
                 run.MapaJson = JsonSerializer.Serialize(map, JsonOptions);
                 run.NoAtualId = null;
                 run.Revisao++;

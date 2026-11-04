@@ -19,8 +19,16 @@ import type {
 } from '../models/GameRun';
 import type { GameBattlePreview } from '../models/GameBattlePreview';
 import type { GameAdventure } from '../models/GameModeManagement';
+import type { GameRunStatistics, GameRunVictoryStatisticsPage } from '../models/GameRunStatistics';
 
 const basePath = '/game-runs';
+
+export const getGameRunStatistics = async (characterId?: number, signal?: AbortSignal): Promise<GameRunStatistics> =>
+  (await api.get<GameRunStatistics>(`${basePath}/statistics`, { params: { characterId }, signal })).data;
+
+export const getGameRunVictories = async (options: { characterId?: number; before?: number; limit?: number } = {},
+  signal?: AbortSignal): Promise<GameRunVictoryStatisticsPage> =>
+  (await api.get<GameRunVictoryStatisticsPage>(`${basePath}/statistics/victories`, { params: options, signal })).data;
 
 export const upgradeGameRunWeapon = async (id: number, payload: GameRunMutationRequest & { itemId: string }): Promise<GameRunDto> =>
   (await api.post<GameRunDto>(`${basePath}/${id}/npc/upgrade`, payload)).data;
@@ -161,6 +169,16 @@ export const resolveGameRunEvent = async (
 ): Promise<GameRunBaseResolution> => {
   const response = await api.post<GameRunBaseResolution>(
     `${basePath}/${id}/nodes/${encodeURIComponent(nodeId)}/event`, payload);
+  return response.data;
+};
+
+export const beginGameRunStory = async (id: number, nodeId: string, payload: GameRunMutationRequest): Promise<GameRunDto> => {
+  const response = await api.post<GameRunDto>(`${basePath}/${id}/nodes/${encodeURIComponent(nodeId)}/story`, payload);
+  return response.data;
+};
+
+export const chooseGameRunStory = async (id: number, nodeId: string, payload: GameRunMutationRequest & { choiceCode: string }): Promise<GameRunDto> => {
+  const response = await api.post<GameRunDto>(`${basePath}/${id}/nodes/${encodeURIComponent(nodeId)}/story/choice`, payload);
   return response.data;
 };
 

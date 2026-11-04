@@ -2,6 +2,29 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { parseRunInventoryEntries, stackRunConsumables } from '../src/routes/Game/GameRunShell/runInventoryEntries.ts';
 
+test('cadência limita rajadas sem confundir munição por ataque e pausa não inutiliza o equipamento', () => {
+  const [entry] = parseRunInventoryEntries([{ id: 'gun', nome: 'Rajadeira', tipo: 'arma', atributos: {
+    tipoArma: 'rifle_assalto', modoDisparo: 'RAJADA', cadencia: 2, custoMunicaoRajada: 10,
+    capacidadeMunicao: 60, capacidadeUso: 4, capacidadeUsoRestante: 0,
+  } }], 'ITEM');
+  assert.equal(entry.maxAttacks, 2);
+  assert.equal(entry.ammoPerUse, 10);
+  assert.equal(entry.fireMode, 'RAJADA');
+  assert.equal(entry.availableUses, 0);
+  assert.ok(entry.quantityLimits.some(limit => limit.reason === 'Cadência por turno' && limit.max === 2));
+});
+
+test('cadência zero mantém limites do item; arma sem munição continua sujeita à pausa', () => {
+  const [entry] = parseRunInventoryEntries([{ id: 'flame', nome: 'Chamas', tipo: 'arma', atributos: {
+    tipoArma: 'dano_continuo', modoDisparo: 'TIRO', cadencia: 0, capacidadeMunicao: 0,
+    capacidadeUso: 3, limiteAtaquesPorTurno: 2, danoPorAlcance: { emArea: 100 },
+  } }], 'ITEM');
+  assert.equal(entry.maxAttacks, 2);
+  assert.equal(entry.controlsAmmo, false);
+  assert.equal(entry.areaDamage, 100);
+  assert.ok(entry.quantityLimits.some(limit => limit.reason === 'Usos até a pausa'));
+});
+
 test('prótese conserva bônus, alcance, teste e defesa restante sem confundir com consumível', () => {
   const [entry] = parseRunInventoryEntries({ implantes: [{ id: 'torso', nome: 'Torso', tipo: 'implante', atributos: {
     bonus: { vida: 200, precisao: 2 }, protecaoBase: 300, escudoBase: 50, armaduraBase: 5,

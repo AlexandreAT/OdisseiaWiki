@@ -1,5 +1,9 @@
 import styled from 'styled-components';
-import { cyberButtonActionRow } from '../HighlightButton/HighlightButton.styles';
+import {
+  ButtonClipController,
+  ButtonContentContainer,
+  cyberButtonActionRow,
+} from '../HighlightButton/HighlightButton.styles';
 import { CropShape } from './types';
 
 interface Props {
@@ -223,6 +227,15 @@ export const ButtonsContainer = styled.div`
   ${cyberButtonActionRow}
   gap: 10px;
   justify-content: flex-end;
+
+  > ${ButtonClipController} {
+    flex-shrink: 0;
+  }
+
+  > ${ButtonClipController} > ${ButtonContentContainer} {
+    white-space: nowrap;
+    overflow-wrap: normal;
+  }
 `;
 
 export const HiddenCanvas = styled.canvas`

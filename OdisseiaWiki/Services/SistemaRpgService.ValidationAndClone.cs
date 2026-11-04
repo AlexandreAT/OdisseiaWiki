@@ -170,6 +170,11 @@ public sealed partial class SistemaRpgService
     private static List<string> ValidarCombate(SistemaCombateConfigDto dto)
     {
         List<string> erros = new();
+        if (dto.DanoAreaPorResultado is null || dto.DanoAreaPorResultado.Any(rule =>
+            string.IsNullOrWhiteSpace(rule.CodigoResultado) || rule.Percentual is < 0 or > 10000 ||
+            !dto.ResultadosDado.Any(result => result.CodigoResultado.Trim().Equals(rule.CodigoResultado.Trim(), StringComparison.OrdinalIgnoreCase))) ||
+            dto.DanoAreaPorResultado.Select(rule => rule.CodigoResultado.Trim().ToUpperInvariant()).Distinct().Count() != dto.DanoAreaPorResultado.Count)
+            erros.Add("O dano em área precisa ter resultados publicados únicos e percentuais de 0 a 10000.");
         if (dto.EstaminaPorAtaqueAdicional is < 0 or > 1000)
             erros.Add("O custo de estamina por ataque adicional deve estar entre 0 e 1000.");
         if (dto.LimitesAcoesPorArma is null || dto.LimitesAcoesPorArma.Any(rule =>

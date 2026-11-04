@@ -6,6 +6,24 @@ const bundle = await build({ entryPoints: ['src/routes/Game/BattleReplay/battleP
 const { activeBattleActor, battleWinner, buildBattleBeats, latestBattleImpact, visibleActorConditions, visibleActorDefense, visibleActorResource } =
   await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
 
+test('ataque em área mostra dano e absorção de cada inimigo com um único dado e consumo', () => {
+  const event = (type, payload, targetId = 'first') => ({ sequence: 1, round: 1, type, payload, actorId: 'hero', targetId });
+  const preview = { personagem: { id: 'hero', nome: 'Herói' }, oponente: { id: 'first', nome: 'Caçador 1' },
+    oponentes: [{ id: 'first', nome: 'Caçador 1' }, { id: 'second', nome: 'Caçador 2' }],
+    resultado: { events: [event('ACTION_SELECTED', { actionName: 'Morteiro', quantity: 2 }),
+      event('RESOURCE_CHANGED', { resource: 'loadedAmmo', before: 60, after: 40 }, null),
+      event('DICE_ROLLED', { resultCode: 'ERRO', resultName: 'Erro', roll: { valorNatural: 5 } }),
+      event('DAMAGE_CALCULATED', { damage: 20 }), event('DEFENSE_APPLIED', { absorbed: 5 }),
+      event('DAMAGE_CALCULATED', { damage: 20 }, 'second'), event('DEFENSE_APPLIED', { absorbed: 10 }, 'second')] } };
+  const [beat] = buildBattleBeats(preview);
+  assert.equal(beat.action.damage, 25);
+  assert.equal(beat.action.ammoRemaining, 40);
+  assert.deepEqual(beat.action.areaTargets, [{ name: 'Caçador 1', damage: 15, absorbed: 5 },
+    { name: 'Caçador 2', damage: 10, absorbed: 10 }]);
+  assert.match(beat.text, /em área: Caçador 1: 15 de dano.*Caçador 2: 10 de dano/);
+  assert.equal(beat.action.failed, true);
+});
+
 test('impasse e limite técnico não anunciam vencedor mesmo em um replay antigo com winnerActorId', () => {
   for (const endReason of ['NoDamage', 'EventLimit']) {
     const preview = { personagem: { id: 'hero', nome: 'Gunthar' }, oponente: { id: 'enemy', nome: 'Caçador' },

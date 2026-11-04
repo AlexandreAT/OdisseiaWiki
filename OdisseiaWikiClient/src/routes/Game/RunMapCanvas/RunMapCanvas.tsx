@@ -1,7 +1,7 @@
 import { useId, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import type { GameRunMap, GameRunMapNode, GameRunModeConfig } from '../../../models/GameRun';
 import { normalizeImagePath } from '../../Wiki/utils/imagePathHelper';
-import { MapDrawing, MapWrap } from './RunMapCanvas.style';
+import { MapDrawing, MapWrap, MapTextRoutes } from './RunMapCanvas.style';
 import { getVisibleRunMap } from './visibleRunMap';
 import { mapConnectionRoute, mapLaserBranch, mapRoundedBorderLength } from './runMapGeometry';
 
@@ -159,6 +159,9 @@ export const RunMapCanvas = ({ map, config, neon, active, acting, onSelect }: Pr
               width={radius * 2} height={radius * 2} preserveAspectRatio="xMidYMid slice"
               clipPath={`url(#${imageClipId})`} pointerEvents="none" />}
             <circle className="node-portrait-border" cx={x} cy={y - 11} r={radius} />
+            {!node.image && node.type === 'SURPRESA' && <text className="story-node-icon" x={x} y={y - 2} textAnchor="middle" aria-hidden="true">?</text>}
+            {!node.image && node.type === 'MISSAO' && <path className="story-node-flag" transform={`translate(${x - 8}, ${y - 24})`}
+              d="M 0 28 V 0 H 20 L 14 7 L 20 14 H 0" pointerEvents="none" aria-hidden="true" />}
             {node.type === 'NPC' && node.payload?.npcLocked && !node.payload.npcRescued &&
               <g className="npc-lock" transform={`translate(${x + radius - 8}, ${y + 5})`} pointerEvents="none" aria-hidden="true">
                 <path className="npc-lock-frame" d="M -7 -11 H 7 L 11 -7 V 7 L 7 11 H -7 L -11 7 V -7 Z" />
@@ -219,5 +222,15 @@ export const RunMapCanvas = ({ map, config, neon, active, acting, onSelect }: Pr
         </g>;
       })()}
     </MapDrawing>
+    <MapTextRoutes>
+      <summary>Rotas em texto · {nodes.filter(available).length} disponíveis</summary>
+      <ol>{nodes.filter(node => visualState(node) !== 'IGNORADO' && node.type !== 'INICIO').map(node => <li key={node.id}>
+        <button type="button" disabled={!selectable(node)} onClick={() => onSelect(node.id)}>
+          {nameOf(node)} · {labels[visualState(node)]}
+        </button>
+        {node.connections.length > 0 && <small>Leva a: {node.connections.map(id => byId.get(id)).filter(Boolean)
+          .map(target => nameOf(target!)).join(' · ')}</small>}
+      </li>)}</ol>
+    </MapTextRoutes>
   </MapWrap>;
 };

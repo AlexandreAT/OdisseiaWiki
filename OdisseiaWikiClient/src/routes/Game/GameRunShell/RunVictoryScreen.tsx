@@ -11,6 +11,8 @@ import { useMotionReduced } from '../../../hooks/useMotionPreference';
 import { normalizeImagePath } from '../../Wiki/utils/imagePathHelper';
 import { battleWinner } from '../BattleReplay/battleOutcome';
 import { RunVictoryProtectedItems } from './RunVictoryProtectedItems';
+import { RunStoryJournal } from './RunStoryJournal';
+import { runResultPresentation } from '../../../utils/gameStory';
 
 function useAnimatedNumber(target: number): number {
   const [value, setValue] = useState(0);
@@ -37,6 +39,7 @@ export function RunVictoryScreen({ run, battles, theme, neon, onClose, onHistory
   onClose: () => void; onHistory: () => void;
 }) {
   const { defeated, areas, items, xp } = summarizeRunVictory(run, battles);
+  const result = runResultPresentation(run.status);
   const enemies = summarizeDefeatedEnemies(battles);
   const earnedCurrency = battles.reduce((total, { battle }) => total +
     (battleWinner(battle) === battle.personagem.id ? Math.max(0, battle.moedaConcedida ?? 0) : 0), 0);
@@ -49,11 +52,11 @@ export function RunVictoryScreen({ run, battles, theme, neon, onClose, onHistory
   return <RunTrainingDialog open onClose={onClose} aria-labelledby="victory-title" maxWidth="md" fullWidth>
     <VictoryPanel $neon={neon === 'on'}>
       <VictoryContent>
-      <VictoryClose type="button" aria-label="Fechar vitória" onClick={onClose}><CloseIcon /></VictoryClose>
+      <VictoryClose type="button" aria-label="Fechar resultado" onClick={onClose}><CloseIcon /></VictoryClose>
       <VictoryHero>
-        <small>Jornada concluída · Modo {run.numeroVersaoModo}</small>
-        <h2 id="victory-title" data-text="Parabéns!">Parabéns!</h2>
-        <p>{run.estadoAtual.nome} venceu esta jornada.</p>
+        <small>{result.label} · Modo {run.numeroVersaoModo}</small>
+        <h2 id="victory-title" data-text={result.title}>{result.title}</h2>
+        <p>{run.estadoAtual.nome} {result.description}</p>
       </VictoryHero>
       <VictoryStats>{[first, second, third, fourth].map((number, index) =>
         <VictoryStat key={labels[index]} $index={index}>
@@ -71,11 +74,14 @@ export function RunVictoryScreen({ run, battles, theme, neon, onClose, onHistory
           <header><SavingsOutlinedIcon aria-hidden="true" /><h3>Economia da jornada</h3></header>
           <VictoryEconomy>
             <div><dt>Ganhos em combates</dt><dd>+{earnedCurrency.toLocaleString('pt-BR')}<small>moedas</small></dd></div>
+            {(run.estadoAtual.story?.length ?? 0) > 0 && <div><dt>Eventos e missões (saldo)</dt><dd>
+              {(run.estadoAtual.story ?? []).reduce((sum, record) => sum + record.currency, 0).toLocaleString('pt-BR')}<small>moedas</small></dd></div>}
             <div><dt>Saldo final da jornada</dt><dd>{(run.estadoAtual.economy?.balance ?? 0).toLocaleString('pt-BR')}<small>moedas</small></dd></div>
           </VictoryEconomy>
         </VictoryDetail>
         <RunVictoryProtectedItems run={run} theme={theme} neon={neon} />
       </VictoryDetails>
+      <RunStoryJournal records={run.estadoAtual.story ?? []} ended />
       <VictoryActions>
         <CyberButton theme={theme} neon={neon} text="Ver combates" colorType="secondary"
           width="180px" onClick={onHistory} />

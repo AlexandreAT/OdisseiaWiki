@@ -337,6 +337,7 @@ export interface SistemaTipoDefesa {
 }
 
 export interface ConfiguracaoCombateSistema {
+  danoAreaPorResultado?: { codigoResultado: string; percentual: number }[];
   usaIniciativa: boolean;
   formulaIniciativa?: string;
   segundosPorTurno: number;

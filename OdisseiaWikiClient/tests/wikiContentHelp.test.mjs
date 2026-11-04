@@ -102,8 +102,8 @@ test('explicações diferenciam descrição, recuperação imediata, duração e
 });
 
 test('cadência, custo de munição e limites do Sistema não são apresentados como a mesma regra', () => {
-  assert.match(getWikiContentHelp('equipment', 'Cadência por turno').text, /não é o teto de tiros por turno/);
-  assert.match(getWikiContentHelp('equipment', 'Cadência por turno').text, /rolagem manual/);
+  assert.match(getWikiContentHelp('equipment', 'Cadência por turno').text, /Máximo de tiros ou rajadas/);
+  assert.match(getWikiContentHelp('equipment', 'Cadência por turno').text, /Não é a quantidade de balas/);
   assert.match(getWikiContentHelp('equipment', 'Munição por tiro').text, /três tiros no turno gastam três balas/);
   assert.match(getWikiContentHelp('equipment', 'Munição por rajada').text, /Vazio ou zero usa a cadência/);
   assert.match(getWikiContentHelp('equipment', 'Limite de tiros por turno (0 = livre)').text, /Sistema permite 5/);

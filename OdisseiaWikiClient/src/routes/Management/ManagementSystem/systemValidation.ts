@@ -322,6 +322,15 @@ const getDiceMaximum = (dice: string): number | null => {
 
 const validateCombat = (config: ConfiguracaoCombateSistema): SistemaValidationErrors => {
   const errors: SistemaValidationErrors = {};
+  const areaResults = new Set<string>();
+  (config.danoAreaPorResultado ?? []).forEach((rule, index) => {
+    const code = rule.codigoResultado.trim().toUpperCase();
+    if (!code || areaResults.has(code) || !config.resultadosDado.some((result) => result.codigoResultado.trim().toUpperCase() === code))
+      errors[`danoAreaPorResultado.${index}.codigoResultado`] = 'Escolha um resultado do Sistema, sem repetir.';
+    areaResults.add(code);
+    if (!Number.isFinite(rule.percentual) || rule.percentual < 0 || rule.percentual > 10000)
+      errors[`danoAreaPorResultado.${index}.percentual`] = 'Informe de 0 a 10000%. Ex.: 150 = uma vez e meia o dano.';
+  });
   if (!Number.isInteger(config.estaminaPorAtaqueAdicional ?? 0) ||
       (config.estaminaPorAtaqueAdicional ?? 0) < 0 || (config.estaminaPorAtaqueAdicional ?? 0) > 1000)
     errors.estaminaPorAtaqueAdicional = 'Informe de 0 a 1000 de estamina por ataque adicional.';

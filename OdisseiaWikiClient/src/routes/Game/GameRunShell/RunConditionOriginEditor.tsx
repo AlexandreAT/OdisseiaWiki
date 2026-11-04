@@ -8,6 +8,7 @@ import { CyberButton } from '../../../components/Generic/HighlightButton/Highlig
 import { GameHint } from '../GameShared.style';
 import type { RunConditionOrigin, RunInventoryEntry } from './runInventoryEntries';
 import { ConditionOriginCard, ConditionOriginFields } from './RunLoadout.style';
+import { useRunInventoryAutoSave } from './useRunInventoryAutoSave';
 
 type OriginChange = Omit<GameRunConditionOriginRequest, 'revisaoEsperada' | 'chaveIdempotencia'>;
 
@@ -26,6 +27,8 @@ export function RunConditionOriginEditor({ entry, condition, systemVersionId, di
   const [naturalText, setNaturalText] = useState((condition.resultadosNaturais ?? []).join(', '));
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState('');
+  const [dirty, setDirty] = useState(false);
+  const autoSave = useRunInventoryAutoSave(!disabled && !busy, onSave);
   const [rule, setRule] = useState<SistemaCondicao | undefined>();
   const [attributes, setAttributes] = useState<{ value: string; label: string }[]>([]);
   useEffect(() => {
@@ -43,55 +46,67 @@ export function RunConditionOriginEditor({ entry, condition, systemVersionId, di
   const natural = draft.gatilho === 'RESULTADO_NATURAL';
   const defaultTarget = entry.subtype === 'consumiveis' ||
     entry.subtype === 'outro' && entry.damageByRange.base === 0 ? 'USUARIO' : 'ALVO';
-  const naturalTokens = naturalText.split(',').map((part) => part.trim()).filter(Boolean);
-  const naturalResults = naturalTokens.map(Number);
-  const update = (change: Partial<RunConditionOrigin>) => setDraft((current) => ({ ...current, ...change }));
+  const update = (change: Partial<RunConditionOrigin>, immediate = false) => {
+    const next = { ...draft, ...change };
+    setDraft(next);
+    setDirty(true);
+    setMessage('');
+    if (immediate) void save(next, naturalText, true);
+  };
   const number = (value: string) => value === '' ? undefined : Number(value);
-  const save = async () => {
-    if (natural && naturalResults.some((value) => !Number.isInteger(value) || value < 1 || value > 20)) {
-      setMessage('Use apenas resultados inteiros de 1 a 20.'); return;
+  const save = async (value = draft, text = naturalText, hasChanges = dirty): Promise<boolean> => {
+    if (!hasChanges) return true;
+    if (disabled || busy || autoSave.pending) return false;
+    const isNatural = value.gatilho === 'RESULTADO_NATURAL';
+    const naturalResults = text.split(',').map(part => part.trim()).filter(Boolean).map(Number);
+    if (isNatural && naturalResults.some(result => !Number.isInteger(result) || result < 1 || result > 20)) {
+      setMessage('Use apenas resultados inteiros de 1 a 20.'); return false;
     }
-    if (draft.gatilho === 'RESULTADO_CLASSIFICADO' && !draft.codigoResultado?.trim()) {
-      setMessage('Escolha o código de um resultado publicado pelo Sistema.'); return;
+    if (value.gatilho === 'RESULTADO_CLASSIFICADO' && !value.codigoResultado?.trim()) {
+      setMessage('Escolha o código de um resultado publicado pelo Sistema.'); return false;
     }
-    if (natural && !draft.resultadoNaturalMinimo && !draft.resultadoNaturalMaximo &&
+    if (isNatural && !value.resultadoNaturalMinimo && !value.resultadoNaturalMaximo &&
       naturalResults.length === 0) {
-      setMessage('Informe um resultado natural ou um intervalo do D20.'); return;
+      setMessage('Informe um resultado natural ou um intervalo do D20.'); return false;
     }
-    if (draft.resultadoNaturalMinimo && draft.resultadoNaturalMaximo &&
-      draft.resultadoNaturalMinimo > draft.resultadoNaturalMaximo) {
-      setMessage('O início do intervalo deve ser menor que o fim.'); return;
+    if (value.resultadoNaturalMinimo && value.resultadoNaturalMaximo &&
+      value.resultadoNaturalMinimo > value.resultadoNaturalMaximo) {
+      setMessage('O início do intervalo deve ser menor que o fim.'); return false;
     }
-    if (draft.testeResistencia && (draft.testeResistencia.dados < 1 ||
-      draft.testeResistencia.faces < 2 || !attributes.some((attribute) =>
-        attribute.value.toUpperCase() === draft.testeResistencia?.atributo.toUpperCase()))) {
-      setMessage('Escolha dados e um atributo válido do Sistema para o teste de reação.'); return;
+    if (value.testeResistencia && (value.testeResistencia.dados < 1 ||
+      value.testeResistencia.faces < 2 || !attributes.some((attribute) =>
+        attribute.value.toUpperCase() === value.testeResistencia?.atributo.toUpperCase()))) {
+      setMessage('Escolha dados e um atributo válido do Sistema para o teste de reação.'); return false;
     }
-    const ok = await onSave({
+    const ok = await autoSave.save({
       tipo: entry.tipo, idInstancia: entry.idInstancia, indice: condition.index,
-      codigo: condition.codigo, gatilho: draft.gatilho ?? 'ACERTO',
-      codigoResultado: draft.gatilho === 'RESULTADO_CLASSIFICADO' ? draft.codigoResultado?.trim() : null,
-      alvo: draft.alvo ?? defaultTarget,
-      valor: draft.valor ?? null, duracao: draft.duracao ?? null,
-      valoresEfeitos: draft.valoresEfeitos ?? {},
-      testeResistencia: draft.testeResistencia ?? null,
-      unidadeDuracao: draft.unidadeDuracao ?? null,
-      resultadoNaturalMinimo: natural ? draft.resultadoNaturalMinimo ?? null : null,
-      resultadoNaturalMaximo: natural ? draft.resultadoNaturalMaximo ?? null : null,
-      resultadosNaturais: natural ? naturalResults : [],
+      codigo: condition.codigo, gatilho: value.gatilho ?? 'ACERTO',
+      codigoResultado: value.gatilho === 'RESULTADO_CLASSIFICADO' ? value.codigoResultado?.trim() : null,
+      alvo: value.alvo ?? defaultTarget,
+      valor: value.valor ?? null, duracao: value.duracao ?? null,
+      valoresEfeitos: value.valoresEfeitos ?? {},
+      testeResistencia: value.testeResistencia ?? null,
+      unidadeDuracao: value.unidadeDuracao ?? null,
+      resultadoNaturalMinimo: isNatural ? value.resultadoNaturalMinimo ?? null : null,
+      resultadoNaturalMaximo: isNatural ? value.resultadoNaturalMaximo ?? null : null,
+      resultadosNaturais: isNatural ? naturalResults : [],
     });
-    if (ok) { setMessage('Condição salva nesta cópia da run.'); setOpen(false); }
+    if (ok) { setDirty(false); setMessage('Alterações aplicadas nesta cópia da run.'); }
+    return ok;
   };
   return <ConditionOriginCard>
-    <button type="button" aria-expanded={open} onClick={() => { setOpen(!open); setMessage(''); }}>
+    <button type="button" aria-expanded={open} onClick={() => {
+      if (!open) { setOpen(true); setMessage(''); }
+      else void save().then(ok => { if (ok) setOpen(false); });
+    }}>
       <span>Condição · {condition.name}</span><strong>{open ? 'Fechar' : 'Configurar'}</strong>
     </button>
-    {open && <ConditionOriginFields>
+    {open && <ConditionOriginFields onBlur={() => void save()}>
       <GameHint>Estes ajustes pertencem só a esta cópia da run. A regra do Sistema continua a definir os efeitos.</GameHint>
       <label>Aplicar quando
         <select value={draft.gatilho ?? 'ACERTO'} disabled={disabled} onChange={(event) => update({
           gatilho: event.target.value as RunConditionOrigin['gatilho'],
-        })}>
+        }, true)}>
           <option value="ACERTO" title={getSystemOptionDescription('conditionTrigger', 'ACERTO')}>Acertar</option>
           <option value="RESULTADO_NATURAL" title={getSystemOptionDescription('conditionTrigger', 'RESULTADO_NATURAL')}>Resultado natural do D20</option>
           <option value="RESULTADO_CLASSIFICADO" title={getSystemOptionDescription('conditionTrigger', 'RESULTADO_CLASSIFICADO')}>Resultado classificado pelo Sistema</option>
@@ -102,7 +117,7 @@ export function RunConditionOriginEditor({ entry, condition, systemVersionId, di
       </label>
       {draft.gatilho === 'RESULTADO_CLASSIFICADO' && <label>Resultado publicado
         {results.length ? <select value={draft.codigoResultado ?? ''} disabled={disabled}
-          onChange={(event) => update({ codigoResultado: event.target.value })}>
+          onChange={(event) => update({ codigoResultado: event.target.value }, true)}>
           <option value="">Selecione</option>{results.map((result) => <option key={result.value}
             value={result.value}>{result.label}</option>)}
         </select> : <input type="text" value={draft.codigoResultado ?? ''} disabled={disabled}
@@ -110,7 +125,7 @@ export function RunConditionOriginEditor({ entry, condition, systemVersionId, di
       </label>}
       <label>Quem recebe
         <select value={draft.alvo ?? defaultTarget} disabled={disabled}
-          onChange={(event) => update({ alvo: event.target.value as RunConditionOrigin['alvo'] })}>
+          onChange={(event) => update({ alvo: event.target.value as RunConditionOrigin['alvo'] }, true)}>
           <option value="ALVO" title={getSystemOptionDescription('conditionTarget', 'ALVO')}>Alvo da ação</option>
           <option value="USUARIO" title={getSystemOptionDescription('conditionTarget', 'USUARIO')}>Quem usa</option>
           <option value="TODOS_INIMIGOS" title={getSystemOptionDescription('conditionTarget', 'TODOS_INIMIGOS')}>Todos os inimigos</option>
@@ -120,7 +135,7 @@ export function RunConditionOriginEditor({ entry, condition, systemVersionId, di
         disabled={disabled} text={draft.testeResistencia ? 'Remover teste de reação' : 'Exigir teste de reação'}
         onClick={() => update({ testeResistencia: draft.testeResistencia ? undefined : {
           dados: 1, faces: 6, atributo: attributes[0]?.value ?? '', dificuldade: 4,
-        } })} />
+        } }, true)} />
       {draft.testeResistencia && <>
         <GameHint>Quem alcançar a dificuldade evita a condição, sem gastar o próprio turno.</GameHint>
         <ConditionOriginFields $columns={2}>
@@ -135,7 +150,7 @@ export function RunConditionOriginEditor({ entry, condition, systemVersionId, di
           <label>Atributo do afetado <select value={draft.testeResistencia.atributo}
             disabled={disabled} onChange={(event) => update({ testeResistencia: {
               ...draft.testeResistencia!, atributo: event.target.value,
-            } })}>
+            } }, true)}>
             <option value="">Selecione</option>{attributes.map((attribute) => <option key={attribute.value}
               value={attribute.value}>{attribute.label}</option>)}
           </select></label>
@@ -153,7 +168,7 @@ export function RunConditionOriginEditor({ entry, condition, systemVersionId, di
         <label style={{ gridColumn: '1 / -1' }}>Resultados isolados (opcional, separados por vírgula)
           <input type="text" value={naturalText} disabled={disabled}
             placeholder="Ex.: 19, 20"
-            onChange={(event) => setNaturalText(event.target.value)} />
+            onChange={(event) => { setNaturalText(event.target.value); setDirty(true); setMessage(''); }} />
         </label>
       </ConditionOriginFields>}
       <ConditionOriginFields $columns={2}>
@@ -178,15 +193,15 @@ export function RunConditionOriginEditor({ entry, condition, systemVersionId, di
       </label>)}
       <label>Unidade da duração
         <select value={draft.unidadeDuracao ?? ''} disabled={disabled}
-          onChange={(event) => update({ unidadeDuracao: event.target.value as RunConditionOrigin['unidadeDuracao'] || undefined })}>
+          onChange={(event) => update({ unidadeDuracao: event.target.value as RunConditionOrigin['unidadeDuracao'] || undefined }, true)}>
           <option value="">Padrão do Sistema</option>
           <option value="Turno" title={getSystemOptionDescription('durationUnit', 'Turno')}>Turnos</option>
           <option value="Hora" title={getSystemOptionDescription('durationUnit', 'Hora')}>Horas de jogo</option>
         </select>
       </label>
       {message && <GameHint role="status">{message}</GameHint>}
-      <CyberButton theme={theme} neon={neon} width="100%" height="38px" text="Salvar condição"
-        loading={busy} disabled={disabled || busy} onClick={() => void save()} />
+      {autoSave.error && <GameHint role="alert">{autoSave.error}</GameHint>}
+      <GameHint role="status">{busy || autoSave.pending ? 'Aplicando alterações...' : 'Os ajustes são aplicados ao sair do campo.'}</GameHint>
     </ConditionOriginFields>}
   </ConditionOriginCard>;
 }

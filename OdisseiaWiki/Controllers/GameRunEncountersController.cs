@@ -112,6 +112,26 @@ public sealed class GameRunEncountersController : ControllerBase
         return result.Sucesso ? Ok(result.Dados) : Failure(result.Codigo, result.Mensagem);
     }
 
+    [HttpPost("nodes/{noId}/story")]
+    [RequestSizeLimit(32 * 1024)]
+    public async Task<IActionResult> BeginStory(long idGameRun, string noId, GameRunMutationRequestDto request, CancellationToken token)
+    {
+        int? userId = User.GetUserId();
+        if (userId is null) return Unauthorized();
+        var result = await _service.BeginStoryAsync(idGameRun, noId, userId.Value, request, token);
+        return result.Sucesso ? Ok(result.Dados) : Failure(result.Codigo, result.Mensagem);
+    }
+
+    [HttpPost("nodes/{noId}/story/choice")]
+    [RequestSizeLimit(32 * 1024)]
+    public async Task<IActionResult> ChooseStory(long idGameRun, string noId, GameStoryRequestDto request, CancellationToken token)
+    {
+        int? userId = User.GetUserId();
+        if (userId is null) return Unauthorized();
+        var result = await _service.ChooseStoryAsync(idGameRun, noId, userId.Value, request, token);
+        return result.Sucesso ? Ok(result.Dados) : Failure(result.Codigo, result.Mensagem);
+    }
+
     [HttpGet("attributes")]
     public async Task<IActionResult> GetAttributes(long idGameRun, CancellationToken token)
     {

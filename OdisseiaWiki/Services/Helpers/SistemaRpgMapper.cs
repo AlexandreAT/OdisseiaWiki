@@ -259,6 +259,7 @@ internal static class SistemaRpgMapper
             SegundosPorTurno = regras.SegundosPorTurno,
             EstaminaPorAtaqueAdicional = regras.EstaminaPorAtaqueAdicional,
             LimitesAcoesPorArma = regras.LimitesAcoesPorArma ?? new(),
+            DanoAreaPorResultado = regras.DanoAreaPorResultado ?? new(),
             RegraDeclaracaoAcoes = regras.RegraDeclaracaoAcoes,
             ResultadosDado = entity.ResultadosDado.OrderBy(r => r.Ordem).Select(r => new SistemaResultadoDadoDto
             {

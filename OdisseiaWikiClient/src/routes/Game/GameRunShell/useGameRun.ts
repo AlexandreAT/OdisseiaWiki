@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { GameRunActionSelection, GameRunBaseResolution, GameRunBattleRecord, GameRunConsumeItemResult, GameRunDto, GameRunEncounterSetup, GameRunMediumRestResolution, GameRunConditionOriginRequest, GameRunMutationRequest } from '../../../models/GameRun';
 import {
+  beginGameRunStory, chooseGameRunStory,
   upgradeGameRunWeapon,
   abandonGameRun, enterGameRunBase, getGameRun, getGameRunBattles,
   consumeGameRunItem,
@@ -257,7 +258,7 @@ export const useGameRun = () => {
       savingWeapons || savingLoadout) return;
     const node = currentRun.mapa.nodes.find((entry) => entry.id === nodeId);
     if (currentRun.noAtualId !== null || node?.state !== 'DISPONIVEL' ||
-      !['COMBATE', 'ELITE', 'BOSS', 'CACADA', 'BASE', 'DESCANSO', 'EVENTO', 'ATALHO', 'AREA_SECRETA', 'VENDEDOR', 'NPC'].includes(node.type)) return;
+      !['COMBATE', 'ELITE', 'BOSS', 'CACADA', 'BASE', 'DESCANSO', 'EVENTO', 'ATALHO', 'AREA_SECRETA', 'VENDEDOR', 'NPC', 'SURPRESA', 'MISSAO'].includes(node.type)) return;
     encounterInFlight.current = true;
     setActing(true);
     setActionError(null);
@@ -271,6 +272,13 @@ export const useGameRun = () => {
       };
     pendingEncounter.current = pending;
     try {
+      if (['SURPRESA', 'MISSAO'].includes(node.type) || node.type === 'EVENTO' && (node.payload?.choices?.length ?? 0) > 0) {
+        setRun(await beginGameRunStory(pending.runId, pending.nodeId, {
+          revisaoEsperada: pending.revision, chaveIdempotencia: pending.selectKey,
+        }));
+        setBaseResult(null); setMediumRestResult(null); pendingEncounter.current = null;
+        return;
+      }
       if (node.type === 'NPC') {
         const result = await visitGameRunNpc(pending.runId, pending.nodeId, {
           revisaoEsperada: pending.revision, chaveIdempotencia: pending.selectKey,
@@ -327,7 +335,7 @@ export const useGameRun = () => {
   const resumeEncounter = async () => {
     if (!currentRun || currentRun.status !== 'Ativa' || !currentRun.noAtualId || acting || savingWeapons || savingLoadout ||
       currentRun.mapa.nodes.some((node) => node.id === currentRun.noAtualId &&
-        (node.type === 'VENDEDOR' || node.type === 'NPC'))) return;
+        ['VENDEDOR', 'NPC', 'EVENTO', 'MISSAO'].includes(node.type))) return;
     setActing(true);
     setActionError(null);
     const pending = pendingAction.current?.revision === currentRun.revisao
@@ -529,13 +537,13 @@ export const useGameRun = () => {
     pendingAbandon.current = pending;
 
     try {
-      await abandonGameRun(currentRun.idGameRun, {
+      const abandoned = await abandonGameRun(currentRun.idGameRun, {
         revisaoEsperada: pending.revision,
         chaveIdempotencia: pending.key,
       });
       pendingAbandon.current = null;
       setAbandonDialogOpen(false);
-      navigate('/jogo', { replace: true });
+      setRun(abandoned);
     } catch (requestError: unknown) {
       const status = (requestError as { response?: { status?: number } } | null)?.response?.status;
       if (status === 409) {
@@ -602,12 +610,17 @@ export const useGameRun = () => {
       pendingEconomy.current = null;
       return true;
     } catch (reason: unknown) {
-      await handleActionError(reason, 'Não foi possível atualizar a economia desta run.');
+      await handleActionError(reason, 'Não foi possível concluir esta ação da jornada.');
       return false;
     } finally { economyInFlight.current = false; setEconomyBusy(false); }
   };
 
   return {
+    chooseStory: async (choiceCode: string) => {
+      if (!currentRun?.noAtualId) return false;
+      return economyAction(`story:${currentRun.noAtualId}:${choiceCode}`, (run, payload) =>
+        chooseGameRunStory(run.idGameRun, run.noAtualId!, { ...payload, choiceCode }));
+    },
     run: currentRun,
     economyBusy,
     upgradeWeapon: (itemId: string) => economyAction(`upgrade:${itemId}`, (active, request) =>

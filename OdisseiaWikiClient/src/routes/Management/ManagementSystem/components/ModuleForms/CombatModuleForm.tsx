@@ -200,6 +200,29 @@ export const CombatModuleForm = ({
     />
 
     <ConfigTable
+      title="Dano em área por resultado"
+      description="Percentual do Dano em Área da arma aplicado a cada inimigo. 0 não causa dano; 10 causa 10%; 100 é o dano normal; 200 é o dobro. Sem regra, acertos causam 100% e erros 0%. Não muda os ataques de alvo único."
+      rows={value.danoAreaPorResultado ?? []}
+      columns={[
+        { key: 'codigoResultado', label: 'Resultado do teste', type: 'text', maxLength: 50,
+          suggestions: [...new Map(value.resultadosDado.filter((row) => row.codigoResultado).map((row) =>
+            [row.codigoResultado, { value: row.codigoResultado, label: row.nomeResultado || row.codigoResultado }])).values()] },
+        { key: 'percentual', label: 'Dano (%)', type: 'number', min: 0, max: 10000 },
+      ]}
+      createRow={() => ({ codigoResultado: '', percentual: 100 })}
+      onChange={(danoAreaPorResultado) => onChange({ ...value, danoAreaPorResultado })}
+      theme={theme} neon={neon} readOnly={readOnly} errors={errors} errorPath="danoAreaPorResultado"
+      toolbar={!readOnly && !(value.danoAreaPorResultado?.length) && value.resultadosDado.length > 0 ? (
+        <button type="button" onClick={() => onChange({ ...value, danoAreaPorResultado:
+          [...new Map(value.resultadosDado.filter((row) => row.codigoResultado).map((row) => [row.codigoResultado, row])).values()]
+            .map((row) => ({ codigoResultado: row.codigoResultado, percentual: row.codigoResultado.includes('CRITICO') && resultSuccess(row) ? 200
+              : row.codigoResultado.includes('PRECISO') && resultSuccess(row) ? 150 : resultSuccess(row) ? 100 : 0 })) })}>
+          Adicionar resultados do Sistema
+        </button>
+      ) : undefined}
+    />
+
+    <ConfigTable
       title="Tipos de dano"
       description="Catálogo de dano e comportamento frente às camadas defensivas."
       rows={value.tiposDano}

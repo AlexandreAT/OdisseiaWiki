@@ -10,7 +10,7 @@ using Xunit;
 
 namespace OdisseiaWiki.Tests;
 
-public sealed class GameplayOfflineSimulationTests
+public sealed partial class GameplayOfflineSimulationTests
 {
     [Fact]
     public async Task SimulateAsync_OfflineGenerico_RolaSemPersistir()

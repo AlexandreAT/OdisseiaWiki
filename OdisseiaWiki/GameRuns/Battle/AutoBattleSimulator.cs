@@ -71,15 +71,19 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                 if (actor.HitPoints == 0 || target is null || target.HitPoints == 0)
                     continue;
                 int targetIndex = Array.IndexOf(actors, target);
+                bool hasAreaAttack = actor.Actions.Any(action => action.Spec.TargetsAllEnemies);
+                IEnumerable<ActorState> possibleDefenders = hasAreaAttack && actorIndex == 0
+                    ? actors.Skip(1) : [target];
 
                 // Reserve enough room for every event this turn can emit and BATTLE_ENDED.
                 // The bound also covers an unavailable event for every action and every cooldown.
                 int worstCaseTurnEvents = (pendingReaction[actorIndex] ? 2 : 1) *
                     (12 + 2 * actor.Actions.Count +
+                     (hasAreaAttack ? 10 * (actors.Length - 2) : 0) +
                      (actor.Actions.Any(action => action.Spec.Utility is not null) ? actor.Actions.Count : 0) +
                      (actor.Spec.Rest is null ? 0 : 4 + 3 * actor.Actions.Count) +
                      actor.ActiveConditions.Sum(condition => 4 + 6 * EffectiveEffects(condition).Count()) +
-                     target.ActiveConditions.Sum(condition => 2 * EffectiveEffects(condition).Count()) +
+                     possibleDefenders.Sum(defender => defender.ActiveConditions.Sum(condition => 2 * EffectiveEffects(condition).Count())) +
                      actor.Actions.Sum(action => action.Spec.Conditions.Sum(condition =>
                          (10 + 6 * Math.Max(1, condition.Rule.Effects.Count)) *
                          (condition.Target == "TODOS_INIMIGOS" ? actors.Length - 1 : 1))) +
@@ -135,10 +139,17 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                     }
                 }
                 bool acted = false;
+                bool completingPauseCycle = actor.PauseCycleNextIndex.HasValue;
+                int selectedActionIndex = -1;
                 ActionState? reloadCandidate = null;
                 bool skipRest = actor.SkipRestNextTurn;
                 if (!reaction) actor.SkipRestNextTurn = false;
                 int startIndex = !reaction && skipRest ? actor.Spec.Rest?.AfterActionIndex ?? 0 : 0;
+                if (completingPauseCycle) startIndex = actor.PauseCycleNextIndex!.Value;
+                // A completed priority cycle must still be able to reload an earlier
+                // weapon, before repeating utilities or renewing a paused backup.
+                if (completingPauseCycle)
+                    reloadCandidate = actor.Actions.Take(startIndex).FirstOrDefault(CanReload);
                 // Utilities run once per priority cycle. A second scan only starts a new cycle
                 // after every equipped alternative has been checked, never in place of a reload.
                 for (int selectionPass = 0; selectionPass < 2; selectionPass++)
@@ -175,6 +186,7 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                         foreach (ActionState candidate in actor.Actions)
                             candidate.UtilityUsedInCycle = false;
                         actor.SkipRestNextTurn = true;
+                        selectedActionIndex = actionIndex - 1;
                         acted = true;
                         break;
                     }
@@ -203,6 +215,7 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
 
                     int staminaCost = checked(action.Spec.StaminaCost * quantity +
                         action.Spec.AdditionalAttackStaminaCost * (quantity - 1));
+                    selectedActionIndex = actionIndex;
                     Emit(GameBattleEventTypes.ActionSelected, actor.Spec.Id, target.Spec.Id,
                         new ActionSelectedPayload(action.Spec.Id,
                             openingOpportunity ? $"Oportunidade · {action.Spec.Name}" :
@@ -229,7 +242,11 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                         EmitChange("loadedAmmo", before, action.Loaded, action.Spec.Id, actor.Spec.Id, null);
                     }
                     if (action.Spec.UsesUntilRest > 0)
+                    {
                         action.UsesRemaining -= quantity;
+                        if (action.UsesRemaining == 0 && !actor.PauseCycleNextIndex.HasValue)
+                            actor.PauseCycleNextIndex = actionIndex + 1;
+                    }
 
                     if (action.Spec.Utility is { } utility)
                     {
@@ -295,27 +312,33 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                             Critical = range.Critical,
                             CriticalFailure = range.CriticalFailure,
                         });
-                    Emit(GameBattleEventTypes.DamageCalculated, actor.Spec.Id, target.Spec.Id,
-                        new DamageCalculatedPayload(action.Spec.Id, range.Code, damage));
                     if (range.CriticalFailure && GrantsCounterattack(range.EffectJson))
                         pendingReaction[targetIndex] = true;
 
-                    if (damage > 0)
+                    ActorState[] livingBeforeAttack = actors.Where(candidate => candidate.HitPoints > 0).ToArray();
+                    ActorState[] damageTargets = action.Spec.TargetsAllEnemies
+                        ? (actorIndex == 0 ? actors.Skip(1) : actors.Take(1))
+                            .Where(candidate => candidate.HitPoints > 0).ToArray()
+                        : [target];
+                    foreach (ActorState damageTarget in damageTargets)
                     {
-                        int hitPointsBefore = target.HitPoints;
-                        int shieldBefore = target.Shield;
-                        int protectionBefore = target.Protection;
-                        int remaining = ApplyDefenses(target, damage, actor.Spec.Id);
+                        Emit(GameBattleEventTypes.DamageCalculated, actor.Spec.Id, damageTarget.Spec.Id,
+                            new DamageCalculatedPayload(action.Spec.Id, range.Code, damage));
+                        if (damage == 0) continue;
+                        int hitPointsBefore = damageTarget.HitPoints;
+                        int shieldBefore = damageTarget.Shield;
+                        int protectionBefore = damageTarget.Protection;
+                        int remaining = ApplyDefenses(damageTarget, damage, actor.Spec.Id);
                         if (remaining > 0)
                         {
-                            int before = target.HitPoints;
-                            target.HitPoints = Math.Max(0, before - remaining);
-                            EmitChange("hitPoints", before, target.HitPoints,
-                                action.Spec.Id, actor.Spec.Id, target.Spec.Id);
+                            int before = damageTarget.HitPoints;
+                            damageTarget.HitPoints = Math.Max(0, before - remaining);
+                            EmitChange("hitPoints", before, damageTarget.HitPoints,
+                                action.Spec.Id, actor.Spec.Id, damageTarget.Spec.Id);
                         }
-                        turnHadProgress |= target.HitPoints != hitPointsBefore ||
-                            target.Shield != shieldBefore ||
-                            target.Protection != protectionBefore;
+                        turnHadProgress |= damageTarget.HitPoints != hitPointsBefore ||
+                            damageTarget.Shield != shieldBefore ||
+                            damageTarget.Protection != protectionBefore;
                     }
 
                     ReportContributions(actor, effect =>
@@ -326,7 +349,8 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                         ReportContributions(actor, effect => effect.Operacao == "MODIFICAR_DANO" &&
                             effect.Recurso == "TODOS", "NO_DANO");
                     if (damage > 0)
-                        ReportContributions(target, effect => effect.Operacao == "MODIFICAR_DEFESA", "NA_DEFESA");
+                        foreach (ActorState damageTarget in damageTargets)
+                            ReportContributions(damageTarget, effect => effect.Operacao == "MODIFICAR_DEFESA", "NA_DEFESA");
 
                     // Uma origem em área ainda alcança os outros inimigos vivos quando
                     // o alvo primário cai pelo dano da mesma ação.
@@ -334,16 +358,17 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                     if (action.Spec.RemovesConditions.Count > 0 && SuccessfulRange(range))
                         RemoveConditions(actor, "MAGIA", "Magia", action.Spec.RemovesConditions);
 
-                    if (target.HitPoints == 0)
+                    foreach (ActorState defeated in livingBeforeAttack.Where(candidate => candidate.HitPoints == 0))
                     {
-                        Emit(GameBattleEventTypes.ActorDefeated, target.Spec.Id, null,
-                            new ActorDefeatedPayload(target.Spec.Id));
-                        if (targetIndex == 0 || actors.Skip(1).All(candidate => candidate.HitPoints == 0))
-                        {
-                            winnerId = actor.Spec.Id;
-                            reason = GameBattleEndReason.ActorDefeated;
-                            finished = true;
-                        }
+                        Emit(GameBattleEventTypes.ActorDefeated, defeated.Spec.Id, null,
+                            new ActorDefeatedPayload(defeated.Spec.Id));
+                    }
+                    if (actors[0].HitPoints == 0 || actors.Skip(1).All(candidate => candidate.HitPoints == 0))
+                    {
+                        winnerId = actors[0].HitPoints == 0
+                            ? actors.Skip(1).FirstOrDefault(candidate => candidate.HitPoints > 0)?.Spec.Id : actors[0].Spec.Id;
+                        reason = GameBattleEndReason.ActorDefeated;
+                        finished = true;
                     }
                     if (action.Spec.CooldownTurns > 0)
                     {
@@ -363,6 +388,7 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
 
                 if (!acted && reloadCandidate is { Spec.Magazine: not null } reload)
                 {
+                    selectedActionIndex = actor.Actions.ToList().IndexOf(reload);
                     foreach (ActionState candidate in actor.Actions)
                         candidate.UtilityUsedInCycle = false;
                     int loadedBefore = reload.Loaded;
@@ -380,6 +406,28 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                     EmitChange("loadedAmmo", loadedBefore, reload.Loaded, reload.Spec.Id, actor.Spec.Id, null);
                     EmitChange("reserveAmmo", reserveBefore, reload.Reserve, reload.Spec.Id, actor.Spec.Id, null);
                     acted = true;
+                }
+
+                // Pausing advances through each lower-priority action once, rather than
+                // permanently exhausting the weapon or restarting priority every turn.
+                // Reaching the end (or the fallback) renews uses for the following turn.
+                if (completingPauseCycle)
+                {
+                    int next = selectedActionIndex < 0 ? actor.Actions.Count : selectedActionIndex + 1;
+                    if (next >= actor.Actions.Count || selectedActionIndex < startIndex ||
+                        selectedActionIndex >= 0 && actor.Actions[selectedActionIndex].Spec.IsFallback)
+                    {
+                        foreach (ActionState paused in actor.Actions.Where(candidate => candidate.Spec.UsesUntilRest > 0 && candidate.UsesRemaining == 0))
+                            paused.UsesRemaining = paused.Spec.UsesUntilRest;
+                        actor.PauseCycleNextIndex = null;
+                        foreach (ActionState candidate in actor.Actions) candidate.UtilityUsedInCycle = false;
+                    }
+                    else actor.PauseCycleNextIndex = next;
+                }
+                else if (!acted || selectedActionIndex >= 0 && actor.Actions[selectedActionIndex].Spec.IsFallback)
+                {
+                    foreach (ActionState paused in actor.Actions.Where(candidate => candidate.Spec.UsesUntilRest > 0 && candidate.UsesRemaining == 0))
+                        paused.UsesRemaining = paused.Spec.UsesUntilRest;
                 }
 
                 if (!acted)
@@ -849,6 +897,10 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
         return quantity;
     }
 
+    private static bool CanReload(ActionState action) => action.Spec.Magazine is { } magazine &&
+        magazine.ReloadWhenEmpty && action.Loaded < magazine.AmmoPerUse &&
+        (magazine.UnlimitedReserve || action.Reserve > 0);
+
     private static string? UnavailableReason(ActorState actor, ActionState action, int quantity)
     {
         if (action.NextAvailableTurn > actor.TurnCount)
@@ -867,7 +919,7 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
                 (utility.RestoreStamina == 0 || actor.Stamina >= actor.EffectiveMaximum("ESTAMINA")))
                 return "RECURSOS_CHEIOS";
         }
-        if (action.Spec.UsesUntilRest > 0 && action.UsesRemaining == 0)
+        if (action.Spec.UsesUntilRest > 0 && action.UsesRemaining == 0 && !CanReload(action))
             return "USES";
         if (quantity == 0 && action.Spec.Magazine is { } magazine &&
             (!magazine.ReloadWhenEmpty || (!magazine.UnlimitedReserve && action.Reserve == 0)))
@@ -1089,6 +1141,7 @@ public sealed class AutoBattleSimulator : IAutoBattleSimulator
         public int TurnCount { get; set; }
         public int TurnsToSkip { get; set; }
         public bool SkipRestNextTurn { get; set; }
+        public int? PauseCycleNextIndex { get; set; }
         public IReadOnlyList<ActionState> Actions { get; }
         public List<GameBattleActiveCondition> ActiveConditions { get; }
 

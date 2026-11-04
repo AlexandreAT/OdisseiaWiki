@@ -2977,19 +2977,20 @@ public sealed class GameplayEngineService : IGameplayEngineService
 
             bool failed = NormalizeCode(source.CodigoResultado).Contains("FALHA", StringComparison.Ordinal) ||
                 NormalizeCode(source.CodigoResultado).Contains("ERRO", StringComparison.Ordinal);
-            if (!failed)
+            bool area = origin.Valores.GetValueOrDefault("ataqueEmArea") == "true";
+            if (!failed || area)
             {
-                int? damage = ReadSnapshotInt(origin, "danoPorAcertoProposto")
+                int? damage = area ? AreaProposalDamage(source) : ReadSnapshotInt(origin, "danoPorAcertoProposto")
                     ?? ReadSnapshotInt(origin, "danoProposto");
                 if (damage is > 0)
                 {
-                    int hits = Math.Max(1, ReadSnapshotInt(origin, "acertosResolvidos") ?? 1);
+                    int hits = area ? 1 : Math.Max(1, ReadSnapshotInt(origin, "acertosResolvidos") ?? 1);
                     bool validDamage = TryMultiplyEffectValue(damage.Value, hits, out int totalDamage);
                     effects.Add(new GameplayEffectProposalDto
                     {
                         Codigo = "APLICAR_DANO",
                         Tipo = "DANO",
-                        Nome = validDamage ? $"Aplicar {totalDamage} de dano" : "Dano fora do limite",
+                        Nome = validDamage ? $"Aplicar {totalDamage} de dano{(area ? " em área" : "")}" : "Dano fora do limite",
                         Alvo = "ALVO",
                         CodigoRecurso = "VIDA",
                         Operacao = "SUBTRAIR",
@@ -3009,6 +3010,23 @@ public sealed class GameplayEngineService : IGameplayEngineService
             .Select(group => group.First())
             .ToArray();
         return CopyRoll(source, distinct);
+    }
+
+    private static int AreaProposalDamage(GameplayRollResultDto roll)
+    {
+        if (roll.RolagensIndividuais.Count > 0)
+        {
+            long total = roll.RolagensIndividuais.Sum(single => (long)AreaProposalDamage(single));
+            return total > MaxManualAbsoluteValue ? int.MaxValue : (int)total;
+        }
+        if (roll.OrigemAcao?.Valores.GetValueOrDefault("danoAreaResultadosJson") is not { } json || roll.CodigoResultado is null)
+            return 0;
+        try
+        {
+            var values = JsonSerializer.Deserialize<Dictionary<string, int>>(json);
+            return Math.Max(0, values?.FirstOrDefault(pair => pair.Key.Equals(roll.CodigoResultado, StringComparison.OrdinalIgnoreCase)).Value ?? 0);
+        }
+        catch (JsonException) { return 0; }
     }
 
     private static void AddSnapshotCost(

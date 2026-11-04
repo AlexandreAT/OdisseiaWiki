@@ -137,6 +137,7 @@ public sealed record GameBattleActionSpec(
     public IReadOnlyList<GameBattleConditionApplication> Conditions { get; init; } = [];
     public IReadOnlyList<string> RemovesConditions { get; init; } = [];
     public bool IsFallback { get; init; }
+    public bool TargetsAllEnemies { get; init; }
     public int AttacksPerTurn { get; init; } = 1;
     public int AdditionalAttackStaminaCost { get; init; }
     public int UsesUntilRest { get; init; }

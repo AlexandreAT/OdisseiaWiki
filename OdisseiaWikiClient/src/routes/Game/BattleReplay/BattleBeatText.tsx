@@ -24,11 +24,14 @@ export function BattleBeatText({ beat, rolling = false, speed = 1 }: {
       <OutcomeText $tone={action.tone} $critical={action.critical}>{action.result}</OutcomeText>
       {' (D20 '}<OutcomeNumber $tone={action.tone} $critical={action.critical}>{action.die}</OutcomeNumber>
       {action.advantageDice?.length ? ', vantagem' : ''}{')'}
-      {action.damage > 0 && <>
+      {action.areaTargets ? <>{', em área: '}{action.areaTargets.map((target, index) => <Fragment key={index}>
+        {index > 0 && '; '}{target.name}{': '}<DamageText $tone={action.tone}>{target.damage} de dano</DamageText>
+        {target.absorbed > 0 && ` (${target.absorbed} absorvido)`}
+      </Fragment>)}</> : action.damage > 0 && <>
         {', '}<DamageText $tone={action.tone}>{action.damage} de dano</DamageText>
         {action.absorbed > 0 && ` (${action.absorbed} absorvido)`}
       </>}
-      {action.blocked && `, dano bloqueado (${action.absorbed} absorvido)`}
+      {!action.areaTargets && action.blocked && `, dano bloqueado (${action.absorbed} absorvido)`}
       {action.resourceEffects.length > 0 && <> · {action.resourceEffects.map((effect, index) => <Fragment key={index}>
         {index > 0 && ', '}<BattleSourceText text={effect} sources={conditions} />
       </Fragment>)}</>}

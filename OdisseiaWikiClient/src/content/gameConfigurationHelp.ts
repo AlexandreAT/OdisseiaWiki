@@ -6,6 +6,15 @@ const explain = (key: string, title: string, text: string): FieldHelpContent => 
 });
 
 export const gameConfigurationHelp = {
+  storyChoices: explain('storyChoices', 'Escolhas do evento', 'Cada escolha aplica só o que foi configurado. Deixe uma opção sem custo para o jogador sempre poder continuar.'),
+  storyCost: explain('storyCost', 'Custo da escolha', 'Pago uma vez, antes dos efeitos. Precisa haver recursos suficientes; o custo de vida não pode matar o personagem.'),
+  storyOutcome: explain('storyOutcome', 'Efeitos e recompensas', 'Recursos mudam diretamente, sem passar pelas defesas. Positivos recuperam; negativos podem matar. Itens vão à mochila. A ficha original não muda.'),
+  storyPercentage: explain('storyPercentage', 'Recursos em percentual', 'Vida, mana e estamina usam uma porcentagem do máximo atual, respeitando condições. Moedas e XP continuam valores fixos.'),
+  storyCondition: explain('storyCondition', 'Condição da escolha', 'Usa a condição desta versão do Sistema. Duração e valor vazios usam seus padrões. Não há teste de acerto no evento.'),
+  storyItems: explain('storyItems', 'Itens da recompensa', 'Entrega estas quantidades ao concluir. Só aceita itens visíveis compatíveis da Wiki desta Mesa; não é um sorteio.'),
+  missionTarget: explain('missionTarget', 'Área da missão', 'Crie uma área secundária e escolha aqui. Concluir seu último ponto dá a recompensa e retorna à rota anterior. Não pode ser um final secreto.'),
+  missionDecline: explain('missionDecline', 'Permitir recusar', 'O jogador pode deixar a missão para trás sem pagar nem receber recompensa. Desmarcado, a entrada precisa ser gratuita.'),
+  surpriseResults: explain('surpriseResults', 'Encontro desconhecido', 'Você só descobre o que existe neste ponto depois de escolher esse caminho. Configure os possíveis encontros e a chance de cada um. Recarregar não troca o encontro revelado.'),
   spellLevel: explain('spellLevel', 'Nível para aprender', 'O personagem precisa ter este nível na run para comprar a magia. Ela não altera a ficha original.'),
   spellCooldown: explain('spellCooldown', 'Espera entre usos', 'Turnos de espera depois de usar a magia. Zero não exige espera. Para usar este campo, ative o cooldown de poderes no Sistema.'),
   spellRecovery: explain('spellRecovery', 'Recuperação direta', 'Recupera ao usar, sem teste de acerto. Para recuperar por vários turnos ou após acertar, adicione uma condição de recuperação.'),

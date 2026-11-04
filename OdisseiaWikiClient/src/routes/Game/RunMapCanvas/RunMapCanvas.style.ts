@@ -30,6 +30,20 @@ export const MapWrap = styled.div`
   min-width: 0;
 `;
 
+export const MapTextRoutes = styled.details`
+  width: 100%; max-width: 700px; box-sizing: border-box; margin: 12px auto 0; padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--clearneonBlue) 25%, transparent);
+  background: color-mix(in srgb, var(--black) 50%, transparent); color: var(--lightGrey);
+  summary { cursor: pointer; color: var(--clearneonBlue); line-height: 1.6; }
+  ol { display: grid; gap: 12px; margin: 16px 0 0; padding-left: 24px; }
+  button { background: transparent; border: 0; color: var(--clearneonBlue); text-align: left; cursor: pointer;
+    font: inherit; padding: 6px; overflow-wrap: anywhere; }
+  button:disabled { color: var(--lightGrey); cursor: default; }
+  button:not(:disabled):hover { text-decoration: underline; }
+  button:focus-visible, summary:focus-visible { outline: 2px solid var(--clearneonBlue); outline-offset: 3px; }
+  small { display: block; line-height: 1.5; overflow-wrap: anywhere; }
+`;
+
 export const MapDrawing = styled.svg<{ $neon: boolean }>`
   position: relative;
   z-index: 1;
@@ -46,6 +60,8 @@ export const MapDrawing = styled.svg<{ $neon: boolean }>`
     opacity: .7;
     transition: stroke 180ms ease, stroke-width 180ms ease, opacity 180ms ease, filter 180ms ease;
   }
+  .story-node-icon { font: 500 30px 'Orbitron', sans-serif; fill: var(--clearneonBlue); pointer-events: none; }
+  .story-node-flag { fill: none; stroke: var(--clearneonPurple); stroke-width: 2; stroke-linejoin: round; }
   .map-edge[data-route-state='possible'] {
     stroke: var(--clearneonBlue);
     stroke-width: 2;

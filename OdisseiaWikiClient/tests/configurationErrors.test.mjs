@@ -16,6 +16,23 @@ const condition = { codigo: 'DEPENDENCIA', nome: 'Dependência de mana', tipo: '
   codigoRecurso: 'MANA', operacaoEfeito: 'REDUZIR_LIMITE_PERCENTUAL', valorEfeito: 30,
   momentoEfeito: 'ENQUANTO_ATIVA', codigoRecursoGatilho: 'MANA', operadorGatilho: '<=', valorGatilho: 0 };
 
+test('dano em área aceita percentuais e resultados do Sistema, mas rejeita duplicados e valores inválidos', () => {
+  const config = { usaIniciativa: false, segundosPorTurno: 6, limitesAcoesPorArma: [], tiposDano: [], tiposDefesa: [],
+    resultadosDado: [{ codigoTeste: 'ATAQUE', nomeTeste: 'Ataque', dado: 'D20', quantidadeDados: 1, resultadoMinimo: 1, resultadoMaximo: 20,
+      codigoResultado: 'CUSTOM', nomeResultado: 'Resultado próprio' }],
+    danoAreaPorResultado: [{ codigoResultado: 'CUSTOM', percentual: 150 }] };
+  assert.deepEqual(validateSistemaModule('combate', config), {});
+  for (const percentual of [-1, 10001, NaN]) {
+    const errors = validateSistemaModule('combate', { ...config, danoAreaPorResultado: [{ codigoResultado: 'CUSTOM', percentual }] });
+    assert.ok(errors['danoAreaPorResultado.0.percentual']);
+  }
+  for (const codigoResultado of ['CUSTOM', 'FORA']) {
+    const errors = validateSistemaModule('combate', { ...config, danoAreaPorResultado: [...config.danoAreaPorResultado,
+      { codigoResultado, percentual: 10 }] });
+    assert.ok(errors['danoAreaPorResultado.1.codigoResultado']);
+  }
+});
+
 test('recuperação por descanso normal ou longo aceita duração em horas sem exigir expiração', () => {
   for (const regraRemocao of ['DESCANSO_NORMAL', 'DESCANSO_NORMAL;CURA', 'DESCANSO_NORMAL_OU_LONGO;CURA']) {
     const config = { condicoes: [{ ...condition, regraRemocao }], descansos: [], morte: null };

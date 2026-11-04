@@ -273,15 +273,15 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
                     do
                     {
                         portalId = map.SecretReturnNodeId;
-                        map = GameRunMapGenerator.ReturnFromSecret(map);
+                        map = ReturnFromSecondaryArea(run, map, version);
                         GameRunMapNodeDto portal = map.Nodes.Single(parent => parent.Id == portalId);
                         run.Fase = portal.Fase;
-                        if (portal.Connections.Count > 0 || map.ParentNodes is null || map.IsSecretFinal) break;
+                        if (StoryLifeLost(run) || portal.Connections.Count > 0 || map.ParentNodes is null || map.IsSecretFinal) break;
                     } while (true);
                 }
                 run.MapaJson = JsonSerializer.Serialize(map, JsonOptions);
                 run.NoAtualId = null;
-                if (result.WinnerActorId != "player")
+                if (result.WinnerActorId != "player" || StoryLifeLost(run))
                 {
                     run.Status = GameRunStatus.Derrota;
                     run.EncerradaEmUtc = now;
@@ -792,6 +792,8 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
                     node?.Type is not ("BASE" or "DESCANSO" or "EVENTO" or "ATALHO" or "AREA_SECRETA") || node.State != "DISPONIVEL")
                     return GameRunOperationResult<GameRunBaseResolutionDto>.Fail(
                         "BASE_INDISPONIVEL", "Esta opção não está disponível.");
+                if (node.Type == "EVENTO" && node.Payload?.Choices is { Count: > 0 })
+                    return GameRunOperationResult<GameRunBaseResolutionDto>.Fail("ESCOLHA_OBRIGATORIA", "Abra o evento e escolha uma opção para continuar.");
 
                 string updated = run.EstadoAtualJson;
                 (int vida, int mana, int estamina) recovery = (0, 0, 0);
@@ -868,6 +870,8 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
                     }
                 }
                 string? returnPortalId = null;
+                string stateBeforeNavigation = run.EstadoAtualJson;
+                run.EstadoAtualJson = updated;
                 try
                 {
                     GameRunMapGenerator.Select(map, noId);
@@ -895,20 +899,22 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
                         do
                         {
                             returnPortalId = map.SecretReturnNodeId;
-                            map = GameRunMapGenerator.ReturnFromSecret(map);
+                            var missionVersion = await _systems.GetVersionAsync(run.IdSistemaVersao, includeConfiguration: true)
+                                ?? throw new InvalidOperationException("Sistema indisponível para concluir a área.");
+                            map = ReturnFromSecondaryArea(run, map, missionVersion);
                             GameRunMapNodeDto portal = map.Nodes.Single(parent => parent.Id == returnPortalId);
-                            if (portal.Connections.Count > 0 || map.ParentNodes is null || map.IsSecretFinal) break;
+                            if (StoryLifeLost(run) || portal.Connections.Count > 0 || map.ParentNodes is null || map.IsSecretFinal) break;
                         } while (true);
                     }
                 }
                 catch (Exception error) when (error is JsonException or InvalidOperationException or
                     ArgumentException or OverflowException)
                 {
+                    run.EstadoAtualJson = stateBeforeNavigation;
                     return GameRunOperationResult<GameRunBaseResolutionDto>.Fail(
                         "DESCANSO_INDISPONIVEL", error.Message);
                 }
 
-                run.EstadoAtualJson = updated;
                 run.MapaJson = JsonSerializer.Serialize(map, JsonOptions);
                 GameRunMapNodeDto? returnPortal = returnPortalId is null ? null :
                     map.Nodes.Single(parent => parent.Id == returnPortalId);
@@ -922,6 +928,7 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
                     run.Status = GameRunStatus.Vitoria;
                     run.EncerradaEmUtc = DateTime.UtcNow;
                 }
+                if (StoryLifeLost(run)) { run.Status = GameRunStatus.Derrota; run.EncerradaEmUtc = DateTime.UtcNow; }
                 run.Revisao++;
                 run.AtualizadaEmUtc = DateTime.UtcNow;
                 var response = new GameRunBaseResolutionDto(
@@ -1168,7 +1175,7 @@ public sealed partial class GameRunEncounterService : IGameRunEncounterService
     private async Task SaveCommand<T>(GameRun run, int userId, GameRunMutationRequestDto request,
         string type, string hash, T response, CancellationToken token)
     {
-        if (run.Status == GameRunStatus.Vitoria)
+        if (run.Status != GameRunStatus.Ativa)
         {
             using var state = JsonDocument.Parse(run.EstadoAtualJson);
             if (!state.RootElement.TryGetProperty("protectedDepositAtEnd", out _))

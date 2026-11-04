@@ -103,10 +103,10 @@ public sealed partial class GameRunEncounterService
                 }
                 GameRunNpcs.ApplyMemory(map, state, run.GameModeVersion.Codigo, version.IdSistemaRpg);
                 payload.NpcServiceVisited = !rescue;
-                if (rescue || payload.NpcType == "MEDICO") map = CompleteServiceNode(run, map, node);
+                run.EstadoAtualJson = updated;
+                if (rescue || payload.NpcType == "MEDICO") map = CompleteServiceNode(run, map, node, version);
                 else { run.NoAtualId = nodeId; run.Fase = node.Fase; }
                 run.MapaJson = JsonSerializer.Serialize(map, JsonOptions);
-                run.EstadoAtualJson = updated;
                 run.Revisao++;
                 run.AtualizadaEmUtc = DateTime.UtcNow;
                 var response = new GameRunBaseResolutionDto(GameRunService.Map(run), nodeId, node.Name, life, mana, stamina)
@@ -119,20 +119,20 @@ public sealed partial class GameRunEncounterService
         catch (KeyNotFoundException) { return MissingUser<GameRunBaseResolutionDto>(); }
     }
 
-    private static GameRunMapDto CompleteServiceNode(GameRun run, GameRunMapDto map, GameRunMapNodeDto node)
+    private static GameRunMapDto CompleteServiceNode(GameRun run, GameRunMapDto map, GameRunMapNodeDto node, SistemaVersao version)
     {
-        GameRunMapGenerator.Complete(map, node.Id);
+        GameRunMapGenerator.Complete(map, node.Id, unlockChildren: !StoryLifeLost(run));
         var completed = node;
-        while (completed.Connections.Count == 0 && map.ParentNodes is not null && !map.IsSecretFinal)
+        while (!StoryLifeLost(run) && completed.Connections.Count == 0 && map.ParentNodes is not null && !map.IsSecretFinal)
         {
             string portalId = map.SecretReturnNodeId!;
-            map = GameRunMapGenerator.ReturnFromSecret(map);
+            map = ReturnFromSecondaryArea(run, map, version);
             completed = map.Nodes.Single(parent => parent.Id == portalId);
         }
         run.Fase = completed.Fase;
-        if (completed.Connections.Count == 0)
+        if (StoryLifeLost(run) || completed.Connections.Count == 0)
         {
-            run.Status = GameRunStatus.Vitoria;
+            run.Status = StoryLifeLost(run) ? GameRunStatus.Derrota : GameRunStatus.Vitoria;
             run.EncerradaEmUtc = DateTime.UtcNow;
         }
         run.NoAtualId = null;

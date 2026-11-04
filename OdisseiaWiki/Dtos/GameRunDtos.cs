@@ -191,24 +191,31 @@ public sealed class GameRunMapNodeDto
 {
     public string Id { get; init; } = string.Empty;
     public string Name { get; set; } = string.Empty;
-    public string? Image { get; init; }
+    public string? Image { get; set; }
     public string? AreaImage { get; init; }
     public string? AreaName { get; init; }
     public string? AreaCode { get; init; }
-    public string? Description { get; init; }
+    public string? Description { get; set; }
     public int Fase { get; init; }
     public int Layer { get; init; }
     public int Position { get; init; }
     public long Seed { get; init; }
-    public string Type { get; init; } = string.Empty;
+    public string Type { get; set; } = string.Empty;
     public string State { get; set; } = string.Empty;
-    public IReadOnlyList<string> Connections { get; init; } = [];
+    public IReadOnlyList<string> Connections { get; set; } = [];
     public GameRunMapNodePayloadDto? Payload { get; set; }
     public bool Revealed { get; init; }
 }
 
 public sealed class GameRunMapNodePayloadDto
 {
+    public List<GameStoryChoiceDto> Choices { get; init; } = [];
+    public GameStoryMissionDto? Mission { get; init; }
+    public List<GameModeAreaOptionDto> SurpriseOptions { get; init; } = [];
+    public int? SurpriseOptionIndex { get; init; }
+    public bool SurpriseRevealed { get; set; }
+    public string? StoryChoice { get; set; }
+    public bool MissionCompleted { get; set; }
     public GameModeEngineerUpgradeDto? Upgrade { get; init; }
     public int? RepairPricePer10Percent { get; init; }
     public string? NpcCode { get; init; }
@@ -245,6 +252,7 @@ public sealed class GameRunSystemSnapshotDto
 
 public sealed class GameRunCharacterSnapshotDto
 {
+    public IReadOnlyList<GameStoryRecordDto> Story { get; init; } = [];
     public GameRunEconomyDto? Economy { get; init; }
     public System.Text.Json.JsonElement? Carga { get; init; }
     public System.Text.Json.JsonElement? LimitesCondicoes { get; init; }

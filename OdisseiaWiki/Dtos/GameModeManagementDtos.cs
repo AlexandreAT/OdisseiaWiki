@@ -50,6 +50,9 @@ public sealed class GameModeAreaDto
 
 public sealed class GameModeAreaOptionDto
 {
+    public List<GameStoryChoiceDto> Choices { get; set; } = [];
+    public GameStoryMissionDto? Mission { get; set; }
+    public List<GameModeAreaOptionDto> SurpriseOptions { get; set; } = [];
     public string? NpcCode { get; set; }
     public string? NpcType { get; set; }
     public bool NpcLocked { get; set; }

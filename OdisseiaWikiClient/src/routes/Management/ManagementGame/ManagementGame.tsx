@@ -19,6 +19,7 @@ import { ManagementGameEncounterCatalog } from './ManagementGameEncounterCatalog
 import { ManagementGamePowers } from './ManagementGamePowers';
 import { ManagementGameVendorOffers } from './ManagementGameVendorOffers';
 import { ManagementGameNpcServices } from './ManagementGameNpcServices';
+import { ManagementGameStoryEditor } from './ManagementGameStoryEditor';
 import {
   GameAdminActions, GameAdminCard, GameAdminDraftActions, GameAdminFields, GameAdminFrame,
   GameAdminGrid, GameAdminHeader, GameAdminHint, GameAdminImage, GameAdminRoute, GameAdminRouteImageHeader, GameAdminSection,
@@ -34,6 +35,7 @@ const routeCrop: CropPreset = { mode: 'single', aspectRatio: 1,
 const nodeCountOptions = Array.from({ length: 22 }, (_, index) => ({
   value: index + 3, label: `${index + 3} nós`,
 }));
+const nonCombatTypes = ['EVENTO', 'DESCANSO', 'ATALHO', 'CACADA', 'AREA_SECRETA', 'VENDEDOR', 'NPC', 'SURPRESA', 'MISSAO'];
 
 interface Props { theme: 'dark' | 'light'; neon: 'on' | 'off'; mesaId?: number;
   onDirtyChange?: (dirty: boolean) => void }
@@ -242,7 +244,7 @@ export const ManagementGame = ({ theme, neon, mesaId, onDirtyChange }: Props) =>
     {activeTab === 'areas' && <GameAdminSection>
       <h2>Áreas e rotas</h2>
       <GameAdminGrid>{editor.areas.map((area, index) => <GameAdminCard key={area.code} neon={neon === 'on'}>
-        <h3>{area.isSecret ? 'Área secreta' : `Fase ${editor.areas.slice(0, index + 1).filter((entry) => !entry.isSecret).length}`} · {area.name || 'Sem nome'}</h3>
+        <h3>{area.isSecret ? 'Área secundária · secreta ou missão' : `Fase ${editor.areas.slice(0, index + 1).filter((entry) => !entry.isSecret).length}`} · {area.name || 'Sem nome'}</h3>
         <GameAdminFields>
           {!area.isSecret && <InputText theme={theme} neon={neon} label="Ordem da fase" width="100%"
             type="number" help={help.areaOrder}
@@ -279,7 +281,7 @@ export const ManagementGame = ({ theme, neon, mesaId, onDirtyChange }: Props) =>
               ...(area.useBase === false ? [] : [{ value: 'BASE', label: area.baseName || 'Base' }]),
               ...area.options.map((option, optionIndex) => ({
                 value: `ROTA:${optionIndex}`,
-                label: `${optionIndex + 1}. ${['EVENTO', 'DESCANSO', 'ATALHO', 'CACADA', 'AREA_SECRETA', 'VENDEDOR', 'NPC'].includes(option.type)
+                label: `${optionIndex + 1}. ${nonCombatTypes.includes(option.type)
                   ? option.label || option.type : editor.encounters[option.encounterCode]?.mapName || option.type}`,
               }))]}
             onChange={(event) => state.updateArea(index, { finalOption: event.target.value })} />
@@ -301,6 +303,7 @@ export const ManagementGame = ({ theme, neon, mesaId, onDirtyChange }: Props) =>
             options={[{ value: 'COMBATE', label: 'Combate' }, { value: 'ELITE', label: 'Elite' },
               { value: 'BOSS', label: 'Chefe' }, { value: 'DESCANSO', label: 'Descanso' },
               { value: 'EVENTO', label: 'Evento narrativo' },
+              { value: 'SURPRESA', label: 'Encontro desconhecido' }, { value: 'MISSAO', label: 'Missão' },
               { value: 'VENDEDOR', label: 'Mercador' },
               { value: 'NPC', label: 'NPC' },
               { value: 'ATALHO', label: 'Atalho' }, { value: 'CACADA', label: 'Caçada' },
@@ -309,7 +312,10 @@ export const ManagementGame = ({ theme, neon, mesaId, onDirtyChange }: Props) =>
               const options = [...area.options];
               const type = event.target.value as GameModeAreaOption['type'];
               options[optionIndex] = { ...option, type,
-                encounterCode: ['EVENTO', 'DESCANSO', 'ATALHO', 'CACADA', 'AREA_SECRETA', 'VENDEDOR', 'NPC'].includes(type) ? '' :
+                choices: type === 'EVENTO' ? option.choices ?? [] : [],
+                mission: type === 'MISSAO' ? option.mission ?? null : null,
+                surpriseOptions: type === 'SURPRESA' ? option.surpriseOptions ?? [] : [],
+                encounterCode: nonCombatTypes.includes(type) ? '' :
                   (editor.encounters[option.encounterCode] ? option.encounterCode : ''),
                 encounterCodes: type === 'CACADA' ? option.encounterCodes ?? [] : [],
                 secretAreaCode: type === 'AREA_SECRETA' ? option.secretAreaCode ?? '' : null,
@@ -317,12 +323,12 @@ export const ManagementGame = ({ theme, neon, mesaId, onDirtyChange }: Props) =>
                 offers: type === 'VENDEDOR' || type === 'NPC' ? option.offers ?? [] : [],
                 npcCode: type === 'NPC' ? option.npcCode || crypto.randomUUID() : option.npcCode,
                 npcType: type === 'NPC' ? option.npcType ?? 'MERCADOR' : option.npcType,
-                label: ['EVENTO', 'DESCANSO', 'ATALHO', 'CACADA', 'AREA_SECRETA', 'VENDEDOR', 'NPC'].includes(type)
-                  ? option.label || (({ EVENTO: 'Evento', DESCANSO: 'Descanso', ATALHO: 'Atalho', CACADA: 'Caçada', AREA_SECRETA: 'Passagem secreta', VENDEDOR: 'Mercador', NPC: 'NPC' } as Record<string, string>)[type] ?? type)
+                label: nonCombatTypes.includes(type)
+                  ? option.label || (({ EVENTO: 'Evento', DESCANSO: 'Descanso', ATALHO: 'Atalho', CACADA: 'Caçada', AREA_SECRETA: 'Passagem secreta', VENDEDOR: 'Mercador', NPC: 'NPC', SURPRESA: 'Encontro desconhecido', MISSAO: 'Missão' } as Record<string, string>)[type] ?? type)
                   : option.label };
               state.updateArea(index, { options });
             }} />
-          {['EVENTO', 'DESCANSO', 'ATALHO', 'CACADA', 'AREA_SECRETA', 'VENDEDOR', 'NPC'].includes(option.type) ? <>
+          {nonCombatTypes.includes(option.type) ? <>
             {option.type === 'NPC' && <>
               <Select theme={theme} neon={neon} label="Serviço do NPC" width="100%" portal disabled={!editable} help={help.npcService}
                 value={option.npcType ?? 'MERCADOR'} allowEmptyOption={false}
@@ -350,13 +356,18 @@ export const ManagementGame = ({ theme, neon, mesaId, onDirtyChange }: Props) =>
                 options[optionIndex] = { ...option, label: event.target.value };
                 state.updateArea(index, { options });
               }} />
-            {option.type === 'EVENTO' && <InputText theme={theme} neon={neon} help={help.eventText}
+            {['EVENTO', 'MISSAO', 'SURPRESA'].includes(option.type) && <InputText theme={theme} neon={neon} help={help.eventText}
               label="Texto do evento para o jogador" width="100%"
               value={option.description ?? ''} disabled={!editable}
               onChange={(event) => {
                 const options = [...area.options];
                 options[optionIndex] = { ...option, description: event.target.value };
                 state.updateArea(index, { options });
+              }} />}
+            {['EVENTO', 'MISSAO', 'SURPRESA'].includes(option.type) && <ManagementGameStoryEditor option={option}
+              areas={editor.areas} encounters={editor.encounters} theme={theme} neon={neon} editable={!!editable}
+              mesaId={mesaId} systemVersionId={editor.idSistemaVersao} onChange={value => {
+                const options = [...area.options]; options[optionIndex] = value; state.updateArea(index, { options });
               }} />}
             {option.type === 'EVENTO' && <InputText theme={theme} neon={neon}
               label="Tempo de jogo do evento (minutos)" width="100%" type="number" help={help.gameMinutes}
@@ -436,12 +447,12 @@ export const ManagementGame = ({ theme, neon, mesaId, onDirtyChange }: Props) =>
                 state.updateArea(index, { options });
               }} />Único</label>
             <FieldHelp label="Único" help={help.routeUnique} theme={theme} neon={neon} inline size="small" /></span>
-            {!['EVENTO', 'DESCANSO', 'ATALHO', 'CACADA', 'AREA_SECRETA', 'VENDEDOR', 'NPC'].includes(option.type) && <GameAdminDelete type="button" disabled={!editable || area.options.length <= 1}
+            {!nonCombatTypes.includes(option.type) && <GameAdminDelete type="button" disabled={!editable || area.options.length <= 1}
               title={area.options.length <= 1 ? 'Cada área precisa de ao menos uma rota' : 'Excluir rota'}
               aria-label={`Excluir rota ${optionIndex + 1} de ${area.name}`}
               onClick={() => state.removeRoute(index, optionIndex)}><DeleteOutlineIcon /></GameAdminDelete>}
           </GameAdminRouteControls>
-          {(['EVENTO', 'DESCANSO', 'ATALHO', 'CACADA', 'AREA_SECRETA', 'VENDEDOR', 'NPC'].includes(option.type)) &&
+          {nonCombatTypes.includes(option.type) &&
             <GameAdminImage data-route-image>
               <GameAdminRouteImageHeader $neon={neon === 'on'}>
                 <span>{option.type === 'VENDEDOR' || option.type === 'NPC' ? 'Avatar do NPC' : 'Imagem da opção'}</span>
@@ -468,14 +479,15 @@ export const ManagementGame = ({ theme, neon, mesaId, onDirtyChange }: Props) =>
           <CyberButton theme={theme} neon={neon} colorType="secondary" text="Remover área"
             width="165px" disabled={!editable || (!area.isSecret &&
               editor.areas.filter((entry) => !entry.isSecret).length <= 1) ||
-              editor.areas.some((entry) => entry.options.some((option) => option.secretAreaCode === area.code))}
+              editor.areas.some((entry) => entry.options.flatMap(option => [option, ...(option.surpriseOptions ?? [])])
+                .some(option => option.secretAreaCode === area.code || option.mission?.areaCode === area.code))}
             onClick={() => state.removeArea(index)} />
         </GameAdminActions>
       </GameAdminCard>)}</GameAdminGrid>
       <GameAdminActions><CyberButton theme={theme} neon={neon} text="Adicionar área" width="165px"
         disabled={!editable || editor.areas.filter((area) => !area.isSecret).length >= 5}
         onClick={state.addArea} />
-        <CyberButton theme={theme} neon={neon} text="Área secreta" width="165px"
+        <CyberButton theme={theme} neon={neon} text="Área secundária" width="190px"
           disabled={!editable || editor.areas.filter((area) => area.isSecret).length >= 4}
           onClick={state.addSecretArea} /></GameAdminActions>
     </GameAdminSection>}

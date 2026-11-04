@@ -8,7 +8,7 @@ using Xunit;
 
 namespace OdisseiaWiki.Tests;
 
-public sealed class AutoBattleSimulatorTests
+public sealed partial class AutoBattleSimulatorTests
 {
     [Theory]
     [InlineData("INICIO_TURNO")]
@@ -271,9 +271,8 @@ public sealed class AutoBattleSimulatorTests
         var stun = new GameBattleConditionRule("CONCUSSAO", "Concussão", "", "", 0,
             "", false, true, "DURACAO")
         { Effects = [new SistemaCondicaoEfeito("PERDER_TURNOS", "TURNO", 1, "AO_APLICAR")] };
-        GameBattleActionSpec grenade = Action("granada", 0) with
+        GameBattleActionSpec grenade = UtilityAction("granada", new GameBattleUtilitySpec(1)) with
         {
-            UsesUntilRest = 1,
             Conditions = [new GameBattleConditionApplication(stun, null, 2, "Turno", "AO_USAR", [])
             {
                 Target = "TODOS_INIMIGOS",
@@ -287,7 +286,7 @@ public sealed class AutoBattleSimulatorTests
         GameBattleInput input = Battle(Actor("hero", 100, grenade), firstEnemy, maxRounds: 1)
             with { AdditionalEnemies = [secondEnemy] };
 
-        GameBattleResult result = _simulator.Simulate(input, new SequenceRandomSource(11, 2, 2, 11));
+        GameBattleResult result = _simulator.Simulate(input, new SequenceRandomSource(2, 2, 11));
 
         ResistanceRolledPayload[] reactions = result.Events.Where(item =>
             item.Type == GameBattleEventTypes.ResistanceRolled)
@@ -313,9 +312,8 @@ public sealed class AutoBattleSimulatorTests
         { Effects = [new SistemaCondicaoEfeito("VANTAGEM", "TODOS", 0, "ENQUANTO_ATIVA")] };
         var blindness = new GameBattleConditionRule("CEGUEIRA", "Cegueira", "", "", 0,
             "", false, true, "DURACAO");
-        GameBattleActionSpec grenade = Action("granada", 0) with
+        GameBattleActionSpec grenade = UtilityAction("granada", new GameBattleUtilitySpec(1)) with
         {
-            UsesUntilRest = 1,
             Conditions = [new GameBattleConditionApplication(blindness, null, 2, "Turno", "AO_USAR", [])
             {
                 Target = "TODOS_INIMIGOS",
@@ -327,7 +325,7 @@ public sealed class AutoBattleSimulatorTests
 
         GameBattleResult result = _simulator.Simulate(
             Battle(Actor("hero", 100, grenade), enemy, maxRounds: 1),
-            new SequenceRandomSource(11, 1, 6, 11));
+            new SequenceRandomSource(1, 6, 11));
 
         ResistanceRolledPayload reaction = Assert.IsType<ResistanceRolledPayload>(result.Events
             .Single(item => item.Type == GameBattleEventTypes.ResistanceRolled).Payload);

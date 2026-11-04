@@ -126,6 +126,8 @@ export interface ArmaAtributos {
     preciso?: number;
   };
   cadencia?: number;
+  /** Tiros individuais ou rajadas completas; independente do limite por turno. */
+  modoDisparo?: 'TIRO' | 'RAJADA';
   limiteAtaquesPorTurno?: number;
   limiteTirosPorTurno?: number;
   limiteRajadasPorTurno?: number;

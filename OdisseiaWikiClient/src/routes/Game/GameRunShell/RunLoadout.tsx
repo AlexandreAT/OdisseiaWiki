@@ -5,7 +5,7 @@ import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { GameRunActionSelection, GameRunConsumeItemResult, GameRunDto, GameRunConditionOriginRequest } from '../../../models/GameRun';
 import type { ConfiguracaoCombateSistema } from '../../../models/SistemaRpg';
 import { obterConfiguracaoCombateSistemaRpg } from '../../../services/sistemasRpgService';
@@ -14,7 +14,7 @@ import { GameEyebrow, GameHint, GameNotice, GameSectionTitle } from '../GameShar
 import { InventoryThemeDialog, InventoryThemePanel } from './RunInventoryTheme.style';
 import { inventoryThemeStyle } from '../../../utils/inventoryTheme';
 import { InventoryClose, InventoryHeader, InventoryToggle } from './RunInventory.style';
-import { BurstShotQuantity, EquippedGear, LoadoutActions, LoadoutAttackPreview, LoadoutBody, LoadoutCarry, LoadoutColumn, LoadoutDefenseNote, LoadoutDefensePanel, LoadoutDefenseStats, LoadoutEmpty, LoadoutGrid, LoadoutLimitNotice, LoadoutModalActions, LoadoutNote, LoadoutSectionTitle, LoadoutSlots } from './RunLoadout.style';
+import { EquippedGear, LoadoutAttackPreview, LoadoutBody, LoadoutCarry, LoadoutColumn, LoadoutDefenseNote, LoadoutDefensePanel, LoadoutDefenseStats, LoadoutEmpty, LoadoutGrid, LoadoutLimitNotice, LoadoutModalActions, LoadoutNote, LoadoutSectionTitle, LoadoutSlots } from './RunLoadout.style';
 import { RunInventoryCard } from './RunInventoryCard';
 import { RunInventoryActionDialog } from './RunInventoryActionDialog';
 import { RunProsthesisBonuses } from './RunProsthesisBonuses';
@@ -25,6 +25,7 @@ import { RunInventoryTypeFilter } from './RunInventoryTypeFilter';
 import { RunInventoryTabs } from './RunInventoryTabs';
 import { RunInventoryEmptyState } from './RunInventoryEmptyState';
 import { useRunOutfitCompatibility } from './useRunOutfitCompatibility';
+import { useRunInventoryAutoSave } from './useRunInventoryAutoSave';
 import { describeConsumableResult, isUsableConsumable } from './runConsumableUtils';
 import { maxRunAttackQuantity, parseRunInventoryEntries, runAdditionalAttackStaminaCost, runAttackStaminaCost, runConfiguredAttackLimit, runInventoryKey, runSystemQuantityLimit, stackRunConsumables, type RunInventoryEntry, type RunInventoryKind } from './runInventoryEntries';
 
@@ -64,23 +65,21 @@ export function RunLoadout({ run, theme, neon, saving, busy, error, onSave, onUs
     ...parseRunInventoryEntries(run.estadoAtual.inventario, 'ITEM'), ...parseRunInventoryEntries(run.estadoAtual.implantes, 'PROTESE'),
     ...parseRunInventoryEntries(run.estadoAtual.magia, 'MAGIA'), ...parseRunInventoryEntries(run.estadoAtual.skills, 'SKILL'),
   ]), [run.estadoAtual.inventario, run.estadoAtual.implantes, run.estadoAtual.magia, run.estadoAtual.skills]);
-  const savedDefenseIds = storedEntries.filter(entry => entry.defenseEquipped && (entry.tipo === 'PROTESE' ||
+  const defenseIds = storedEntries.filter(entry => entry.defenseEquipped && (entry.tipo === 'PROTESE' ||
     entry.tipo === 'ITEM' && (entry.subtype === 'traje' || entry.subtype === 'outro' && Object.values(entry.defense).some(value => value > 0))))
     .map(entry => entry.idInstancia).sort();
-  const savedDefenseKey = JSON.stringify(savedDefenseIds);
-  const [defenseIds, setDefenseIds] = useState<string[]>(savedDefenseIds);
-  useEffect(() => { setDefenseIds(JSON.parse(savedDefenseKey)); }, [savedDefenseKey]);
-  const all = useMemo(() => storedEntries.map(entry => entry.tipo === 'ITEM' || entry.tipo === 'PROTESE'
-    ? { ...entry, defenseEquipped: defenseIds.includes(entry.idInstancia) } : entry), [storedEntries, defenseIds]);
+  const all = storedEntries;
   const byKey = useMemo(() => new Map(all.map(entry => [key(entry), entry])), [all]);
   const [tab, setTab] = useState<Kind>('ITEM');
   const [typeFilter, setTypeFilter] = useState('');
   const [selected, setSelected] = useState<string | null>(null);
+  const selectedRef = useRef(selected);
+  useEffect(() => { selectedRef.current = selected; }, [selected]);
   const [draftRange, setDraftRange] = useState<GameRunActionSelection['alcance']>(null);
   const [draftCount, setDraftCount] = useState(1);
   const [lastUse, setLastUse] = useState<string | null>(null);
   const [dropPending, setDropPending] = useState(false);
-  const [actions, setActions] = useState<GameRunActionSelection[]>(run.acoesEquipadas ?? []);
+  const actions = run.acoesEquipadas ?? [];
   const [combatRules, setCombatRules] = useState<ConfiguracaoCombateSistema | null>(null);
   const [rulesError, setRulesError] = useState(false);
   useEffect(() => {
@@ -92,11 +91,10 @@ export function RunLoadout({ run, theme, neon, saving, busy, error, onSave, onUs
     }).catch(() => { if (active) setRulesError(true); });
     return () => { active = false; };
   }, [run.idSistemaVersao]);
-  useEffect(() => { setActions(run.acoesEquipadas ?? []); }, [run.acoesEquipadas]);
-  const canEdit = run.status === 'Ativa' && run.noAtualId === null && !saving && !busy;
-  const changed = JSON.stringify(actions) !== JSON.stringify(run.acoesEquipadas ?? []) ||
-    JSON.stringify([...defenseIds].sort()) !== savedDefenseKey;
-  const canDrop = canEdit && !changed;
+  const available = run.status === 'Ativa' && run.noAtualId === null && !saving && !busy;
+  const autoSave = useRunInventoryAutoSave(available, onSave);
+  const canEdit = available && !autoSave.pending;
+  const canDrop = canEdit;
   const tabItems = all.filter((entry) => entry.tipo === tab);
   const items = tabItems.filter((entry) => !typeFilter || entry.subtype === typeFilter);
   const active = selected ? byKey.get(selected) : undefined;
@@ -124,10 +122,8 @@ export function RunLoadout({ run, theme, neon, saving, busy, error, onSave, onUs
   const staminaMax = active ? maxRunAttackQuantity({ ...active, maxAttacks: 100 }, currentStamina,
     combatRules?.estaminaPorAtaqueAdicional ?? 0) : 0;
   const effectiveCount = draftCount;
-  const burstTens = active?.ranged && active.fireMode === 'RAJADA' && active.ammoPerUse % 10 === 0
-    ? active.ammoPerUse / 10 : 0;
-  const baseDamage = active ? active.damageByRange[
-    draftRange === 'MEDIA' ? 'media' : draftRange === 'LONGA' ? 'longa' : active.ranged ? 'curta' : 'base'] : 0;
+  const baseDamage = active?.areaDamage ?? (active ? active.damageByRange[
+    draftRange === 'MEDIA' ? 'media' : draftRange === 'LONGA' ? 'longa' : active.ranged ? 'curta' : 'base'] : 0);
   const systemAdditionalStamina = combatRules?.estaminaPorAtaqueAdicional ?? 0;
   const staminaCost = active && combatRules
     ? runAttackStaminaCost(active, effectiveCount, systemAdditionalStamina) : null;
@@ -148,13 +144,20 @@ export function RunLoadout({ run, theme, neon, saving, busy, error, onSave, onUs
     setDropPending(false);
   };
   const updateAction = (change: Partial<GameRunActionSelection>) => {
-    if (equipped) setActions((current) => current.map((action) =>
-      key(action) === selected ? { ...action, ...change } : action));
+    if (!equipped) return;
+    const saved = actions.find(action => key(action) === selected)!;
+    if (Object.entries(change).every(([field, value]) => saved[field as keyof GameRunActionSelection] === value)) return;
+    void autoSave.save(actions.map(action => key(action) === selected ? { ...action, ...change } : action), defenseIds)
+      .then(ok => {
+        if (!ok && selectedRef.current === key(saved)) {
+          setDraftCount(saved.quantidadeAtaques ?? 1);
+          setDraftRange(saved.alcance ?? null);
+        }
+      });
   };
   const updateCount = (count: number) => {
     const quantity = Math.min(maxAttacks, Math.max(1, Math.trunc(Number.isFinite(count) ? count : 1)));
     setDraftCount(quantity);
-    updateAction({ quantidadeAtaques: quantity });
   };
   const status = run.estadoAtual.status?.status;
   const capacityValue = status?.capacidadeCarga;
@@ -169,31 +172,18 @@ export function RunLoadout({ run, theme, neon, saving, busy, error, onSave, onUs
     if (!over || !canEdit || dragged.id === over.id) return;
     const from = actions.findIndex((entry) => key(entry) === dragged.id);
     const to = actions.findIndex((entry) => key(entry) === over.id);
-    if (from >= 0 && to >= 0) setActions(arrayMove(actions, from, to));
-  };
-  const saveActions = () => {
-    if (!combatRules) return;
-    const invalid = actions.find((action) => {
-      const entry = byKey.get(key(action));
-      return entry && (action.quantidadeAtaques ?? 1) > runConfiguredAttackLimit(entry, combatRules);
-    });
-    if (invalid) {
-      const entry = byKey.get(key(invalid))!;
-      setTab(entry.tipo);
-      choose(entry);
-      return;
-    }
-    void onSave(actions, defenseIds);
+    if (from >= 0 && to >= 0) void autoSave.save(arrayMove(actions, from, to), defenseIds);
   };
 
-  return <InventoryThemeDialog open onClose={changed || saving ? undefined : onClose} style={inventoryThemeStyle(tab, neon === 'on')}
+  return <InventoryThemeDialog open onClose={autoSave.pending || saving ? undefined : onClose} style={inventoryThemeStyle(tab, neon === 'on')}
     aria-labelledby="run-loadout-title" maxWidth="lg" fullWidth>
     <InventoryThemePanel neon={neon === 'on'} color="var(--inventory-accent)">
       <InventoryHeader><div><GameEyebrow>Equipamento da jornada</GameEyebrow>
         <GameSectionTitle id="run-loadout-title">Inventário da run</GameSectionTitle></div>
-        <InventoryClose type="button" disabled={changed || saving} aria-label="Fechar inventário" onClick={onClose}><CloseIcon /></InventoryClose>
+        <InventoryClose type="button" disabled={autoSave.pending || saving} aria-label="Fechar inventário" onClick={onClose}><CloseIcon /></InventoryClose>
       </InventoryHeader>
-      {error && <GameNotice $danger role="alert" style={{ whiteSpace: 'pre-line' }}>{error}</GameNotice>}
+      {(error || autoSave.error) && <GameNotice $danger role="alert" style={{ whiteSpace: 'pre-line' }}>{error || autoSave.error}</GameNotice>}
+      {autoSave.pending && <GameHint role="status">Atualizando inventário...</GameHint>}
       {!combatRules && !rulesError && <GameHint>Carregando regras de combate...</GameHint>}
       {rulesError && <GameNotice $danger role="alert">Não foi possível carregar as regras de combate desta versão do Sistema. Reabra o inventário para tentar novamente.</GameNotice>}
       {lastUse && <GameNotice role="status">{lastUse}</GameNotice>}
@@ -217,12 +207,8 @@ export function RunLoadout({ run, theme, neon, saving, busy, error, onSave, onUs
               condition={condition} systemVersionId={run.idSistemaVersao} theme={theme} neon={neon}
               results={[...new Map((combatRules?.resultadosDado ?? []).map((row) =>
                 [row.codigoResultado, { value: row.codigoResultado, label: row.nomeResultado || row.codigoResultado }])).values()]}
-              disabled={!canEdit || changed} busy={usingItemId === active.idInstancia}
-              onSave={async (origin) => {
-                const ok = await onConfigureCondition(origin);
-                if (ok) setSelected(null);
-                return ok;
-              }} />)}
+              disabled={!canEdit} busy={usingItemId === active.idInstancia}
+              onSave={onConfigureCondition} />)}
             {defensiveEquipment && Object.values(active.defense).some(value => value > 0) && <LoadoutDefensePanel aria-label="Defesas do equipamento">
               <strong>Defesas do equipamento</strong>
               {active.defense.protecao > 0 && <RunResourceBar label="Proteção restante"
@@ -244,6 +230,7 @@ export function RunLoadout({ run, theme, neon, saving, busy, error, onSave, onUs
                 {active.maxAttacks > 1 && <label>Ataques por turno (máx. {maxAttacks})
                   <input type="number" min={1} max={Math.max(1, maxAttacks)} value={effectiveCount}
                     disabled={!canEdit || maxAttacks < 1 || !combatRules}
+                    onBlur={() => updateAction({ quantidadeAtaques: draftCount })}
                     onChange={event => updateCount(Number(event.target.value))} />
                 </label>}
               </>}
@@ -259,22 +246,18 @@ export function RunLoadout({ run, theme, neon, saving, busy, error, onSave, onUs
                 </select>
               </label>
               <label>{active.ranged && active.fireMode === 'RAJADA'
-                ? `Tiros por turno (rajadas de ${active.ammoPerUse} · máx. ${maxAttacks * active.ammoPerUse})`
+                ? `Rajadas por turno (máx. ${maxAttacks})`
                 : `${active.ranged ? 'Tiros' : 'Golpes'} por turno (máx. ${maxAttacks})`}
-                {burstTens > 0 ? <BurstShotQuantity>
-                  <input type="number" min={burstTens} step={burstTens}
-                    max={Math.max(burstTens, maxAttacks * burstTens)} value={effectiveCount * burstTens}
-                    aria-label="Dezenas de tiros por turno" disabled={!canEdit || maxAttacks < 1 || !combatRules}
-                    onChange={(event) => updateCount(Number(event.target.value) / burstTens)} />
-                  <span aria-hidden="true">0</span>
-                </BurstShotQuantity> : <input type="number" min={1} max={Math.max(1, maxAttacks)} value={effectiveCount}
+                <input type="number" min={1} max={Math.max(1, maxAttacks)} value={effectiveCount}
                   disabled={!canEdit || maxAttacks < 1 || !combatRules}
-                  onChange={(event) => updateCount(Number(event.target.value))} />}
+                  onBlur={() => updateAction({ quantidadeAtaques: draftCount })}
+                  onChange={(event) => updateCount(Number(event.target.value))} />
               </label>
+              {active.ranged && active.controlsAmmo && <GameHint>Cada {active.fireMode === 'RAJADA' ? 'rajada' : 'tiro'} gasta {active.ammoPerUse} de munição. A recarga não é bloqueada pelo limite de ataques.</GameHint>}
               </>}
               {!utilityConfiguration && <LoadoutAttackPreview aria-live="polite">
                 <span>Uma rolagem</span>
-                <span>Dano base <strong>{baseDamage > 0 ? (baseDamage * effectiveCount).toLocaleString('pt-BR') : '—'}</strong></span>
+                <span>{active.areaDamage ? 'Dano base por inimigo' : 'Dano base'} <strong>{baseDamage > 0 ? (baseDamage * effectiveCount).toLocaleString('pt-BR') : '—'}</strong></span>
                 {active.ranged && <span>{active.fireMode === 'RAJADA' ? 'Rajadas' : 'Tiros'} <strong>{effectiveCount}</strong></span>}
                 {active.ranged && active.controlsAmmo && <span>Munição <strong>{active.ammoPerUse * effectiveCount}</strong></span>}
                 <span>Estamina <strong>{staminaCost === null ? '—' : staminaCost.toLocaleString('pt-BR')}</strong></span>
@@ -302,9 +285,8 @@ export function RunLoadout({ run, theme, neon, saving, busy, error, onSave, onUs
               <strong>Sistema:</strong> {systemQuantityLimit.reason} permite até {systemQuantityLimit.max} {systemQuantityLimit.max === 1 ? 'uso' : 'usos'} por ação.
             </LoadoutLimitNotice>}
             {attackConfiguration && !utilityConfiguration && active?.availableUses !== null && active?.availableUses !== undefined && active.availableUses < configuredMax &&
-              <LoadoutLimitNotice $danger={draftCount > active.availableUses}
-                role={draftCount > active.availableUses ? 'alert' : 'status'}>
-                <strong>Item:</strong> restam {active.availableUses} {active.availableUses === 1 ? 'uso' : 'usos'} até o próximo descanso.
+              <LoadoutLimitNotice $danger={false} role="status">
+                <strong>Item:</strong> {active.availableUses === 0 ? 'arma em pausa' : `restam ${active.availableUses} ${active.availableUses === 1 ? 'uso' : 'usos'} até a pausa`}. Depois de percorrer as próximas ações, a arma volta a funcionar.
               </LoadoutLimitNotice>}
             {attackConfiguration && !utilityConfiguration && active && staminaMax < configuredMax && <LoadoutLimitNotice $danger={draftCount > staminaMax}
               role={draftCount > staminaMax ? 'alert' : 'status'}>
@@ -318,7 +300,7 @@ export function RunLoadout({ run, theme, neon, saving, busy, error, onSave, onUs
               <strong>Personagem:</strong> a mana atual permite até {manaMax} usos nesta ação.
             </LoadoutLimitNotice>}
             {isUsableConsumable(active) && !dropPending && <RunConsumableAction key={active.idInstancia} entry={active} run={run} theme={theme} neon={neon}
-              disabled={!canEdit || changed} using={usingItemId === active.idInstancia}
+              disabled={!canEdit} using={usingItemId === active.idInstancia}
               onUse={(quantity) => void onUseItem(active.idInstancia, quantity).then((result) => {
                 if (result) { setLastUse(describeConsumableResult(result)); setSelected(null); }
               })}
@@ -332,14 +314,16 @@ export function RunLoadout({ run, theme, neon, saving, busy, error, onSave, onUs
                 width="calc(100% - 15px)" height="40px" text={equipped ? 'Desequipar' : 'Equipar'}
                 disabled={!canEdit || (!equipped && (!combatRules || maxAttacks === 0 || attackCount >= 5))}
                 onClick={() => {
-                  if (active.tipo === 'PROTESE') setDefenseIds(current => equipped
-                    ? current.filter(id => id !== active.idInstancia) : [...new Set([...current, active.idInstancia])]);
-                  setActions(equipped
+                  const nextDefenseIds = active.tipo === 'PROTESE' ? equipped
+                    ? defenseIds.filter(id => id !== active.idInstancia) : [...new Set([...defenseIds, active.idInstancia])]
+                    : defenseIds;
+                  void autoSave.save(equipped
                     ? actions.filter((entry) => key(entry) !== selected)
                     : [...actions, { tipo: active.tipo, idInstancia: active.idInstancia,
                       alcance: draftRange, quantidadeAtaques: effectiveCount,
-                      modoDisparo: null }]);
-                  setSelected(null);
+                      modoDisparo: null }], nextDefenseIds).then(ok => {
+                        if (ok) setSelected(current => current === key(active) ? null : current);
+                      });
                 }} />}
               {defensiveEquipment && !(active.tipo === 'PROTESE' && attackConfiguration) && <CyberButton theme={theme} neon={neon}
                 colorType={active.defenseEquipped ? 'secondary' : 'primary'}
@@ -351,9 +335,10 @@ export function RunLoadout({ run, theme, neon, saving, busy, error, onSave, onUs
                   const conflict = active.defenseEquipped ? null : outfitRules.check(active, all, defenseIds);
                   if (conflict) { setEquipmentError(conflict); return; }
                   setEquipmentError(null);
-                  setDefenseIds(current => active.defenseEquipped ? current.filter(id => id !== active.idInstancia)
-                    : [...current, active.idInstancia]);
-                  setSelected(null);
+                  void autoSave.save(actions, active.defenseEquipped ? defenseIds.filter(id => id !== active.idInstancia)
+                    : [...defenseIds, active.idInstancia]).then(ok => {
+                      if (ok) setSelected(current => current === key(active) ? null : current);
+                    });
                 }} />}
               {active.tipo === 'ITEM' && (!isUsableConsumable(active) || defensiveEquipment || attackConfiguration) &&
                 <CyberButton theme={theme} neon={neon}
@@ -389,14 +374,14 @@ export function RunLoadout({ run, theme, neon, saving, busy, error, onSave, onUs
                     if (selectedEntry) choose(selectedEntry);
                   }}
                   remove={() => {
-                    setActions(actions.filter((candidate) => key(candidate) !== key(action)));
-                    if (action.tipo === 'PROTESE') setDefenseIds(current => current.filter(id => id !== action.idInstancia));
+                    void autoSave.save(actions.filter((candidate) => key(candidate) !== key(action)),
+                      action.tipo === 'PROTESE' ? defenseIds.filter(id => id !== action.idInstancia) : defenseIds);
                   }} />;
               })}</LoadoutSlots>
             </SortableContext>
           </DndContext>
           {!hasRest && <InventoryToggle type="button" disabled={!canEdit}
-            onClick={() => setActions([...actions, { tipo: 'DESCANSO', idInstancia: 'descanso-simples', quantidadeAtaques: 1 }])}>
+            onClick={() => void autoSave.save([...actions, { tipo: 'DESCANSO', idInstancia: 'descanso-simples', quantidadeAtaques: 1 }], defenseIds)}>
             Adicionar descanso
           </InventoryToggle>}
           {attackCount === 0 && <LoadoutEmpty><strong>Nenhum ataque equipado.</strong> Você usará o ataque de reserva no combate.</LoadoutEmpty>}
@@ -421,19 +406,14 @@ export function RunLoadout({ run, theme, neon, saving, busy, error, onSave, onUs
                 <SettingsOutlinedIcon fontSize="small" /></button>}
             <button type="button" disabled={!canEdit}
               onClick={() => {
-                setDefenseIds(current => current.filter(id => id !== entry.idInstancia));
-                if (entry.tipo === 'PROTESE') setActions(current => current.filter(action => key(action) !== key(entry)));
+                void autoSave.save(entry.tipo === 'PROTESE' ? actions.filter(action => key(action) !== key(entry)) : actions,
+                  defenseIds.filter(id => id !== entry.idInstancia));
               }} aria-label={`Retirar ${entry.name}`} title={`Retirar ${entry.name}`}>
               <DeleteOutlineIcon fontSize="small" /></button>
           </li>)}</EquippedGear>
           {equippedGear.length === 0 && <LoadoutEmpty><strong>Nada equipado aqui.</strong> Trajes, próteses e outros itens de defesa aparecerão nesta lista.</LoadoutEmpty>}
         </LoadoutColumn>
       </LoadoutBody>
-      {changed && <LoadoutActions><CyberButton theme={theme} neon={neon} colorType="secondary"
-        width="140px" text="Desfazer" disabled={saving}
-        onClick={() => { setActions(run.acoesEquipadas ?? []); setDefenseIds(savedDefenseIds); }} />
-        <CyberButton theme={theme} neon={neon} width="180px" text="Salvar equipamento"
-          loading={saving} disabled={!canEdit || !combatRules} onClick={saveActions} /></LoadoutActions>}
     </InventoryThemePanel>
   </InventoryThemeDialog>;
 }

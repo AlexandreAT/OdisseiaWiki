@@ -379,6 +379,7 @@ public sealed partial class SistemaRpgService
             SegundosPorTurno = dto.SegundosPorTurno,
             EstaminaPorAtaqueAdicional = dto.EstaminaPorAtaqueAdicional,
             LimitesAcoesPorArma = dto.LimitesAcoesPorArma,
+            DanoAreaPorResultado = dto.DanoAreaPorResultado,
             RegraDeclaracaoAcoes = Limpar(dto.RegraDeclaracaoAcoes),
         }, 5);
         await SalvarRascunhoAsync(versao);

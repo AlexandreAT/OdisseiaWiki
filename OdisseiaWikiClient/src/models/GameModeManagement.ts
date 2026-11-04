@@ -1,3 +1,5 @@
+import type { GameStoryChoice, GameStoryMission } from './GameStory';
+
 export interface GameModeVendorOffer { itemId: string; price: number; stock: number; weight?: number;
   minLevel?: number;
   snapshot?: { nome: string; tipo: string; imagem?: string | null; valor?: number | null;
@@ -6,7 +8,10 @@ export interface GameModeVendorOffer { itemId: string; price: number; stock: num
 export interface GameModeEngineerUpgrade { damage: number; price: number; maxUpgrades: number }
 
 export interface GameModeAreaOption {
-  type: 'COMBATE' | 'ELITE' | 'BOSS' | 'DESCANSO' | 'EVENTO' | 'ATALHO' | 'CACADA' | 'AREA_SECRETA' | 'VENDEDOR' | 'NPC';
+  type: 'COMBATE' | 'ELITE' | 'BOSS' | 'DESCANSO' | 'EVENTO' | 'ATALHO' | 'CACADA' | 'AREA_SECRETA' | 'VENDEDOR' | 'NPC' | 'SURPRESA' | 'MISSAO';
+  choices?: GameStoryChoice[];
+  mission?: GameStoryMission | null;
+  surpriseOptions?: GameModeAreaOption[];
   npcCode?: string | null;
   npcType?: 'MERCADOR' | 'MEDICO' | 'SABIO' | 'ENGENHEIRO' | null;
   npcLocked?: boolean;
