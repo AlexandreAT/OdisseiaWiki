@@ -30,11 +30,8 @@ public sealed partial class GameRunEncounterService
     private async Task CaptureProtectedDepositAtEnd(GameRun run, SistemaVersao version, CancellationToken token)
     {
         var memory = await _runs.GetCharacterMemoryAsync(run.IdUsuario, run.IdPersonagemJogadorOrigem, token);
-        var deposit = GameProtectedDeposit.View(GameCharacterMilestones.Read(memory?.EstadoJson),
+        run.EstadoAtualJson = GameProtectedDeposit.CaptureAtEnd(run.EstadoAtualJson, GameCharacterMilestones.Read(memory?.EstadoJson),
             run.GameModeVersion.Codigo, version.IdSistemaRpg, run.IdSistemaVersao, run.GameModeVersion.ConfiguracaoJson);
-        var snapshot = System.Text.Json.Nodes.JsonNode.Parse(run.EstadoAtualJson)!.AsObject();
-        snapshot["protectedDepositAtEnd"] = System.Text.Json.JsonSerializer.SerializeToNode(deposit, JsonOptions);
-        run.EstadoAtualJson = snapshot.ToJsonString(JsonOptions);
     }
 
     public async Task<GameRunOperationResult<GameRunDto>> ChangeProtectedItemAsync(long runId, int userId,

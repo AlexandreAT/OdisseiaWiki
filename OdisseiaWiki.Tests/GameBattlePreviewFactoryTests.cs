@@ -13,7 +13,7 @@ using Xunit;
 
 namespace OdisseiaWiki.Tests;
 
-public sealed class GameBattlePreviewFactoryTests
+public sealed partial class GameBattlePreviewFactoryTests
 {
     private readonly GameBattlePreviewFactory _factory = new(new GameplayActionResolver());
 
@@ -885,8 +885,9 @@ public sealed class GameBattlePreviewFactoryTests
                 """,
         });
 
-        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => _factory.Build(run, version));
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => _factory.CanExecuteSelectedAction(run, version, run.AcoesEquipadas![0]));
         Assert.StartsWith("Sistema:", error.Message);
+        Assert.Equal(2, _factory.Build(run, version).Input.FirstActor.Actions[0].AttacksPerTurn);
     }
 
     [Fact]
@@ -906,12 +907,13 @@ public sealed class GameBattlePreviewFactoryTests
             AcoesEquipadas = [new() { Tipo = "ITEM", IdInstancia = "pistola", Alcance = "CURTA", QuantidadeAtaques = 3 }],
         };
 
-        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => _factory.Build(run, Version()));
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => _factory.CanExecuteSelectedAction(run, Version(), run.AcoesEquipadas![0]));
         Assert.StartsWith("Item:", error.Message);
+        Assert.Equal(2, _factory.Build(run, Version()).Input.FirstActor.Actions[0].AttacksPerTurn);
     }
 
     [Fact]
-    public void Build_CadenciaPadraoNaoLimitaTirosQuandoPentePermite()
+    public void Build_CadenciaPorTurnoLimitaTirosMesmoComMunicaoDisponivel()
     {
         GameRunDto original = Run("""
             [{"id":"pistola","nome":"Pistola","tipo":"arma",
@@ -926,11 +928,9 @@ public sealed class GameBattlePreviewFactoryTests
             AcoesEquipadas = [new() { Tipo = "ITEM", IdInstancia = "pistola", Alcance = "CURTA", QuantidadeAtaques = 10 }],
         };
 
-        GameBattleActionSpec action = _factory.Build(run, Version()).Input.FirstActor.Actions[0];
-
-        Assert.Equal(10, action.AttacksPerTurn);
-        Assert.Equal(1, action.Magazine?.AmmoPerUse);
-        Assert.Single(action.Roll.Groups);
+        var error = Assert.Throws<InvalidOperationException>(() => _factory.CanExecuteSelectedAction(run, Version(), run.AcoesEquipadas![0]));
+        Assert.Contains("limite de 1", error.Message);
+        Assert.Equal(1, _factory.Build(run, Version()).Input.FirstActor.Actions[0].AttacksPerTurn);
     }
 
     [Fact]
@@ -960,8 +960,9 @@ public sealed class GameBattlePreviewFactoryTests
 
         Assert.Equal(4, _factory.Build(run, version).Input.FirstActor.Actions[0].AttacksPerTurn);
         run.AcoesEquipadas[0].QuantidadeAtaques = 5;
-        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => _factory.Build(run, version));
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => _factory.CanExecuteSelectedAction(run, version, run.AcoesEquipadas![0]));
         Assert.StartsWith("Sistema:", error.Message);
+        Assert.Equal(4, _factory.Build(run, version).Input.FirstActor.Actions[0].AttacksPerTurn);
     }
 
     [Fact]

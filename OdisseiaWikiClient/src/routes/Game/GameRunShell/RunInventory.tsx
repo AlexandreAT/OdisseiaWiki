@@ -10,7 +10,6 @@ import { CyberButton } from '../../../components/Generic/HighlightButton/Highlig
 import { obterConfiguracaoCombateSistemaRpg } from '../../../services/sistemasRpgService';
 import { normalizeImagePath } from '../../Wiki/utils/imagePathHelper';
 import { GameEyebrow, GameHint, GameNotice, GameSectionTitle } from '../GameShared.style';
-import { RunFooterActions } from './GameRunShell.style';
 import { InventoryThemeDialog, InventoryThemePanel } from './RunInventoryTheme.style';
 import { inventoryThemeStyle } from '../../../utils/inventoryTheme';
 import { RunInventoryCard } from './RunInventoryCard';
@@ -21,10 +20,11 @@ import { RunInventoryTypeFilter } from './RunInventoryTypeFilter';
 import { RunInventoryTabs } from './RunInventoryTabs';
 import { RunInventoryEmptyState } from './RunInventoryEmptyState';
 import { useRunOutfitCompatibility } from './useRunOutfitCompatibility';
+import { useRunInventoryAutoSave } from './useRunInventoryAutoSave';
 import { describeConsumableResult, isUsableConsumable } from './runConsumableUtils';
 import {
   InventoryContent, InventoryControls, InventoryGroup, InventoryHeader, InventoryImage,
-  InventoryItem, InventoryItemInfo, InventoryList, InventorySaveActions, InventoryClose, OtherInventoryList,
+  InventoryItem, InventoryItemInfo, InventoryList, InventoryClose, OtherInventoryList,
 } from './RunInventory.style';
 import { LoadoutGrid, LoadoutItemActions } from './RunLoadout.style';
 import { parseRunInventoryEntries, runInventoryKey, stackRunConsumables, type RunInventoryKind } from './runInventoryEntries';
@@ -148,43 +148,39 @@ export const RunInventory = ({ run, theme, neon, saving, busy, error, onSave, on
   const weapons = useMemo(() => items.filter((item) => item.type === 'arma' && item.id), [items]);
   const weaponIds = useMemo(() => weapons.map((item) => item.id!), [weapons]);
   const duplicateIds = new Set(weaponIds).size !== weaponIds.length;
-  const [order, setOrder] = useState<string[]>(() => run.ordemArmas?.length ? run.ordemArmas : weaponIds);
+  const order = run.ordemArmas?.length ? run.ordemArmas : weaponIds;
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  useEffect(() => {
-    setOrder(run.ordemArmas?.length ? run.ordemArmas : weaponIds);
-  }, [run.ordemArmas, weaponIds]);
-
   const weaponById = useMemo(() => new Map(weapons.map((item) => [item.id!, item])), [weapons]);
   const otherItems = items.filter((item) => !item.id);
-  const canEdit = run.status === 'Ativa' && run.noAtualId === null && !busy && !saving && !duplicateIds;
-  const canConsume = run.status === 'Ativa' && run.noAtualId === null && !busy && !saving;
-  const canDrop = run.status === 'Ativa' && run.noAtualId === null && !busy && !saving;
-  const changed = JSON.stringify(order) !== JSON.stringify(run.ordemArmas?.length ? run.ordemArmas : weaponIds);
-  const move = (from: number, to: number) => setOrder((current) => arrayMove(current, from, to));
+  const available = run.status === 'Ativa' && run.noAtualId === null && !busy && !saving;
+  const autoSave = useRunInventoryAutoSave(available && !duplicateIds, onSave);
+  const canConsume = available && !autoSave.pending;
+  const canEdit = canConsume && !duplicateIds;
+  const canDrop = canConsume;
   const onDragEnd = ({ active, over }: DragEndEvent) => {
     if (!over || active.id === over.id || !canEdit) return;
     const from = order.indexOf(String(active.id));
     const to = order.indexOf(String(over.id));
-    if (from >= 0 && to >= 0) move(from, to);
+    if (from >= 0 && to >= 0) void autoSave.save(arrayMove(order, from, to));
   };
 
-  return <InventoryThemeDialog open onClose={changed || saving ? undefined : onClose} style={inventoryThemeStyle(tab, neon === 'on')}
+  return <InventoryThemeDialog open onClose={autoSave.pending || saving ? undefined : onClose} style={inventoryThemeStyle(tab, neon === 'on')}
     aria-labelledby="run-inventory-title" maxWidth="md" fullWidth>
     <InventoryThemePanel neon={neon === 'on'} color="var(--inventory-accent)">
     <InventoryHeader>
       <div><GameEyebrow>Equipamento da jornada</GameEyebrow>
         <GameSectionTitle id="run-inventory-title">Inventário da run</GameSectionTitle></div>
-      <InventoryClose type="button" disabled={changed || saving}
-        title={changed ? 'Salve ou desfaça a ordem antes de fechar' : undefined}
+      <InventoryClose type="button" disabled={autoSave.pending || saving}
         aria-label="Fechar inventário" onClick={onClose}>
         <CloseIcon />
       </InventoryClose>
     </InventoryHeader>
-    {error && <GameNotice $danger role="alert">{error}</GameNotice>}
+    {(error || autoSave.error) && <GameNotice $danger role="alert">{error || autoSave.error}</GameNotice>}
+    {autoSave.pending && <GameHint role="status">Atualizando inventário...</GameHint>}
     {lastUse && <GameNotice role="status">{lastUse}</GameNotice>}
     <InventoryContent>
       <InventoryGroup>
@@ -204,13 +200,9 @@ export const RunInventory = ({ run, theme, neon, saving, busy, error, onSave, on
           {selectedEntry.conditions.map((condition) => <RunConditionOriginEditor
             key={`${selectedEntry.tipo}:${selectedEntry.idInstancia}:${condition.index}`}
             entry={selectedEntry} condition={condition} systemVersionId={run.idSistemaVersao} theme={theme} neon={neon} results={conditionResults}
-            disabled={!canEdit || changed} busy={usingItemId === selectedEntry.idInstancia}
-            onSave={async (origin) => {
-              const ok = await onConfigureCondition(origin);
-              if (ok) setSelected(null);
-              return ok;
-            }} />)}
-          <RunConsumableAction key={selectedEntry.idInstancia} entry={selectedEntry} run={run} theme={theme} neon={neon} disabled={!canConsume || changed}
+            disabled={!canEdit} busy={usingItemId === selectedEntry.idInstancia}
+            onSave={onConfigureCondition} />)}
+          <RunConsumableAction key={selectedEntry.idInstancia} entry={selectedEntry} run={run} theme={theme} neon={neon} disabled={!canConsume}
             using={usingItemId === selectedEntry.idInstancia}
             onUse={(quantity) => void onUseItem(selectedEntry.idInstancia, quantity).then((result) => {
               if (result) { setLastUse(describeConsumableResult(result)); setSelected(null); }
@@ -225,7 +217,7 @@ export const RunInventory = ({ run, theme, neon, saving, busy, error, onSave, on
               width="calc(100% - 15px)" height="40px"
               text={selectedEntry.tipo === 'PROTESE' ? selectedEntry.defenseEquipped ? 'Retirar prótese' : 'Instalar prótese'
                 : selectedEntry.defenseEquipped ? 'Retirar defesa' : 'Equipar defesa'}
-              disabled={!canConsume || changed || usingItemId === selectedEntry.idInstancia}
+              disabled={!canConsume || usingItemId === selectedEntry.idInstancia}
               loading={usingItemId === selectedEntry.idInstancia}
               onClick={() => {
                 const conflict = selectedEntry.defenseEquipped ? null : outfitRules.check(selectedEntry, allEntries,
@@ -268,16 +260,6 @@ export const RunInventory = ({ run, theme, neon, saving, busy, error, onSave, on
               })}</InventoryList>
             </SortableContext>
           </DndContext>}
-        {changed && <RunFooterActions>
-          <GameHint>A nova ordem só valerá para os próximos combates após ser salva.</GameHint>
-          <InventorySaveActions>
-            <CyberButton theme={theme} neon={neon} colorType="secondary" width="140px"
-              text="Desfazer" disabled={saving}
-              onClick={() => setOrder(run.ordemArmas?.length ? run.ordemArmas : weaponIds)} />
-            <CyberButton theme={theme} neon={neon} width="180px" text="Salvar ordem"
-              loading={saving} disabled={!canEdit} onClick={() => void onSave(order)} />
-          </InventorySaveActions>
-        </RunFooterActions>}
       </InventoryGroup>
       {otherItems.length > 0 && <InventoryGroup>
         <h3>Itens sem identificador</h3>

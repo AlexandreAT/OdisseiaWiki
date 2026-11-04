@@ -10,6 +10,7 @@ const bundle = await build({
   stdin: { contents: `export * from './src/components/Generic/HighlightButton/HighlightButton';
     export * from './src/components/Generic/HighlightButton/HighlightButton.styles';
     export * from './src/components/Generic/HighlightButton/buttonGeometry';
+    export { ButtonsContainer as CropButtonsContainer } from './src/components/Generic/ImageUploader/ImageCropperModal.style';
     export * from './src/utils/systemItemFormCatalog';
     export * from './src/routes/Hub/UserCharacters/CharacterCreate/tableColumnsConfig';
     export { InputText } from './src/components/Generic/InputText/InputText';
@@ -47,6 +48,29 @@ const base = { theme: 'dark', neon: 'off' };
 const text = node => typeof node === 'string' ? node : (node.children ?? []).map(text).join('');
 const button = (renderer, label) => renderer.root.findAllByType('button').find(node => text(node) === label);
 
+test('editar cadência não altera o custo de munição de uma rajada legada', () => {
+  let renderer, current;
+  function Form() {
+    const [value, setValue] = useState({ tipoArma: 'rifle_assalto', cadencia: 10, custoMunicaoRajada: 0,
+      capacidadeMunicao: 60, danoBase: 100 });
+    current = value;
+    return React.createElement(api.atributosFormMap.arma, { ...base, value, onChange: setValue });
+  }
+  act(() => { renderer = create(React.createElement(Form)); });
+  const field = label => renderer.root.findAllByType(api.InputText).find(node => node.props.label === label);
+  assert.equal(field('Munição por ataque').props.value, 10);
+  act(() => field('Cadência máxima por turno (0 = livre)').props.onChange({ target: { value: '2' } }));
+  assert.equal(current.cadencia, 2);
+  assert.equal(current.modoDisparo, 'RAJADA');
+  assert.equal(current.custoMunicaoRajada, 10);
+  assert.equal(current.danoBase, 100);
+  assert.equal(field('Munição por ataque').props.value, 10);
+  act(() => field('Munição por ataque').props.onChange({ target: { value: '5' } }));
+  assert.equal(current.cadencia, 2);
+  assert.equal(current.custoMunicaoRajada, 5);
+  act(() => renderer.unmount());
+});
+
 test('todas as variações de itens, magias e skills reutilizam a ajuda padrão nos campos técnicos', () => {
   const helpIds = (Component, props) => {
     let renderer;
@@ -71,7 +95,7 @@ test('todas as variações de itens, magias e skills reutilizam a ajuda padrão 
   assert.ok(testFields.includes('wiki.content.test.total'));
   assert.ok(testFields.includes('wiki.content.test.attribute'));
   const weapon = helpIds(api.atributosFormMap.arma, { value: { controlaMunicao: true }, managementLayout: true });
-  for (const field of ['cadence', 'ammunition', 'magazine', 'currentAmmo', 'ammoPerShot', 'ammoPerBurst',
+  for (const field of ['cadence', 'ammunition', 'magazine', 'currentAmmo', 'ammoPerAttack', 'fireMode',
     'attackLimit', 'shotLimit', 'burstLimit']) assert.ok(weapon.includes(`wiki.content.equipment.${field}`), field);
 });
 
@@ -160,6 +184,30 @@ test('botão sem tamanho explícito acompanha textos longos e cresce se precisar
     assert.match(css, /width:fit-content/);
     assert.match(css, /min-width:115px/);
     assert.match(css, /min-height:50px/);
+  } finally { console.error = previous; sheet.seal(); }
+});
+
+test('ações do recorte acompanham o texto sem comprimir ou quebrar os rótulos', () => {
+  const source = readFileSync('src/components/Generic/ImageUploader/ImageCropperModal.tsx', 'utf8');
+  const actions = source.slice(source.indexOf('<ButtonsContainer>'), source.indexOf('</ButtonsContainer>'));
+  assert.doesNotMatch(actions, /\bwidth=/);
+  const sheet = new api.ServerStyleSheet();
+  const previous = console.error;
+  console.error = () => {};
+  try {
+    const markup = renderToStaticMarkup(sheet.collectStyles(React.createElement(api.CropButtonsContainer, null,
+      ...['Resetar', 'Cancelar', 'Confirmar'].map(label => React.createElement(api.CyberButton,
+        { ...base, key: label, text: label, colorType: label === 'Confirmar' ? 'primary' : 'secondary' })))));
+    for (const label of ['Resetar', 'Cancelar', 'Confirmar']) {
+      assert.ok(actions.includes(`text="${label}"`));
+      assert.ok(markup.includes(label));
+    }
+    const css = sheet.getStyleTags();
+    assert.match(css, /width:fit-content/);
+    assert.match(css, /flex-shrink:0/);
+    assert.match(css, /white-space:nowrap;overflow-wrap:normal/);
+    assert.match(css, /@media\s*\(max-width:\s*768px\)/);
+    assert.match(css, /flex:1 1 auto;width:100%/);
   } finally { console.error = previous; sheet.seal(); }
 });
 

@@ -28,6 +28,15 @@ public static class GameProtectedDeposit
                 item.SystemVersionId == versionId, item.Snapshot.DeepClone().AsObject())).ToArray());
     }
 
+    public static string CaptureAtEnd(string snapshot, GameCharacterMilestones memory, string gameCode,
+        int systemId, int versionId, string configuration)
+    {
+        var root = JsonNode.Parse(snapshot)!.AsObject();
+        if (root.ContainsKey("protectedDepositAtEnd")) return snapshot;
+        root["protectedDepositAtEnd"] = JsonSerializer.SerializeToNode(View(memory, gameCode, systemId, versionId, configuration), Options);
+        return root.ToJsonString(Options);
+    }
+
     public static string Change(string snapshot, GameCharacterMilestones memory, string gameCode,
         int systemId, int versionId, string configuration, string itemId, string action)
     {

@@ -39,8 +39,16 @@ public static class GameModeRouteValidation
             if (option.Image?.Length > 500)
                 return $"{route}: envie a imagem novamente; o endereço deve ter no máximo 500 caracteres.";
             if (option.Type is not ("COMBATE" or "ELITE" or "BOSS" or "EVENTO" or "DESCANSO" or
-                "ATALHO" or "CACADA" or "AREA_SECRETA" or "VENDEDOR" or "NPC"))
+                "ATALHO" or "CACADA" or "AREA_SECRETA" or "VENDEDOR" or "NPC" or "SURPRESA" or "MISSAO"))
                 return $"{route}: selecione um tipo de rota válido.";
+            string? storyError = GameStoryRules.Validate(option, areas);
+            if (storyError is not null) return $"{route}: {storyError}";
+            if (option.Type == "SURPRESA")
+            {
+                var resultArea = new GameModeAreaDto { Name = $"{route}, resultado", Options = option.SurpriseOptions };
+                string? resultError = Validate(resultArea, encounterCodes, areas);
+                if (resultError is not null) return resultError;
+            }
             if (option.Type is "COMBATE" or "ELITE" or "BOSS")
                 continue;
             if (string.IsNullOrWhiteSpace(option.Label) || option.Label.Length > 100)

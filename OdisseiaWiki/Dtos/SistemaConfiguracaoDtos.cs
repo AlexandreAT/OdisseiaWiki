@@ -65,6 +65,7 @@ public sealed class SistemaCombateConfigDto
     public int SegundosPorTurno { get; set; } = 6;
     public int EstaminaPorAtaqueAdicional { get; set; }
     public List<SistemaLimiteAcoesArmaDto> LimitesAcoesPorArma { get; set; } = new();
+    public List<SistemaDanoAreaResultadoDto> DanoAreaPorResultado { get; set; } = new();
     public string? RegraDeclaracaoAcoes { get; set; }
     public List<SistemaResultadoDadoDto> ResultadosDado { get; set; } = new();
     public List<SistemaTipoDanoDto> TiposDano { get; set; } = new();
@@ -77,6 +78,12 @@ public sealed class SistemaLimiteAcoesArmaDto
     public int MaximoTiros { get; set; }
     public int MaximoRajadas { get; set; }
     public int MaximoGolpes { get; set; }
+}
+
+public sealed class SistemaDanoAreaResultadoDto
+{
+    public string CodigoResultado { get; set; } = string.Empty;
+    public decimal Percentual { get; set; } = 100;
 }
 
 public sealed class SistemaPoderesConfigDto

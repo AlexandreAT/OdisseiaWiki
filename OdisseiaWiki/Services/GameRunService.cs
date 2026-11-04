@@ -214,6 +214,7 @@ public sealed class GameRunService : IGameRunService
                 run.Revisao++;
                 run.AtualizadaEmUtc = now;
                 run.EncerradaEmUtc = now;
+                await CaptureEndRecapAsync(run, cancellationToken);
                 await _repository.SaveChangesAsync(cancellationToken);
 
                 GameRunDto response = Map(run);
@@ -458,6 +459,7 @@ public sealed class GameRunService : IGameRunService
             previousRun.Revisao++;
             previousRun.AtualizadaEmUtc = newRun.CriadaEmUtc;
             previousRun.EncerradaEmUtc = newRun.CriadaEmUtc;
+            await CaptureEndRecapAsync(previousRun, cancellationToken);
             await _repository.SaveChangesAsync(cancellationToken);
         }
 
@@ -478,6 +480,16 @@ public sealed class GameRunService : IGameRunService
         }, cancellationToken);
         await _repository.SaveChangesAsync(cancellationToken);
         return GameRunOperationResult<GameRunDto>.Ok(response);
+    }
+
+    private async Task CaptureEndRecapAsync(GameRun run, CancellationToken token)
+    {
+        if (_systemRepository is null) return;
+        var version = await _systemRepository.GetVersionAsync(run.IdSistemaVersao, includeConfiguration: true);
+        if (version is null) return;
+        var memory = await _repository.GetCharacterMemoryAsync(run.IdUsuario, run.IdPersonagemJogadorOrigem, token);
+        run.EstadoAtualJson = GameProtectedDeposit.CaptureAtEnd(run.EstadoAtualJson, GameCharacterMilestones.Read(memory?.EstadoJson),
+            run.GameModeVersion.Codigo, version.IdSistemaRpg, run.IdSistemaVersao, run.GameModeVersion.ConfiguracaoJson);
     }
 
     private static GameRunOperationResult<GameRunDto> Replay(

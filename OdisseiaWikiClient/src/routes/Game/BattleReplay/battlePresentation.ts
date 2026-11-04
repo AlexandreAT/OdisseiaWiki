@@ -180,6 +180,7 @@ export interface BattleActionDisplay {
   die: number | string;
   advantageDice?: { value: number; selected: boolean }[];
   damage: number;
+  areaTargets?: { name: string; damage: number; absorbed: number }[];
   absorbed: number;
   blocked: boolean;
   resourceEffects: string[];
@@ -262,13 +263,20 @@ const actionPresentation = (preview: GameBattlePreview, event: GameBattleEvent, 
     }))) : undefined;
   const code = roll.payload.resultCode?.toUpperCase() ?? '';
   const classification = roll.payload.resultName?.trim().toLocaleLowerCase('pt-BR') || resultLabel(code);
-  const damage = following.find((item) => item.type === 'DAMAGE_CALCULATED')?.payload.damage ?? 0;
+  const damageEvents = following.filter((item) => item.type === 'DAMAGE_CALCULATED');
+  const damage = damageEvents.reduce((total, item) => total + (item.payload.damage ?? 0), 0);
+  const areaTargets = damageEvents.length > 1 ? damageEvents.map((event) => {
+    const absorbed = following.filter((item) => item.type === 'DEFENSE_APPLIED' && item.targetId === event.targetId)
+      .reduce((sum, item) => sum + (item.payload.absorbed ?? 0), 0);
+    return { name: actorName(preview, event.targetId), damage: Math.max(0, (event.payload.damage ?? 0) - absorbed), absorbed };
+  }) : undefined;
   const absorbed = following.filter((item) => item.type === 'DEFENSE_APPLIED')
     .reduce((total, item) => total + (item.payload.absorbed ?? 0), 0);
   // O HP do alvo é limitado a zero no evento de recurso. O dano do golpe,
   // porém, não deve ser reduzido só porque o alvo tinha menos vida restante.
   const dealtDamage = Math.max(0, damage - absorbed);
-  const effect = dealtDamage > 0 ? `, ${dealtDamage} de dano${absorbed ? ` (${absorbed} absorvido)` : ''}`
+  const effect = areaTargets ? `, em área: ${areaTargets.map((target) => `${target.name}: ${target.damage} de dano${target.absorbed ? ` (${target.absorbed} absorvido)` : ''}`).join('; ')}`
+    : dealtDamage > 0 ? `, ${dealtDamage} de dano${absorbed ? ` (${absorbed} absorvido)` : ''}`
     : damage > 0 && absorbed > 0 ? `, dano bloqueado (${absorbed} absorvido)` : '';
   const criticalSuccess = roll.payload.critical ?? (code === 'CRITICO' || code === 'ACERTO_CRITICO');
   const criticalFailure = roll.payload.criticalFailure ?? (code === 'FALHA_CRITICA' || code === 'ERRO_CRITICO');
@@ -292,6 +300,7 @@ const actionPresentation = (preview: GameBattlePreview, event: GameBattleEvent, 
       die,
       advantageDice,
       damage: dealtDamage,
+      areaTargets,
       absorbed,
       blocked: dealtDamage === 0 && damage > 0 && absorbed > 0,
       resourceEffects,

@@ -82,8 +82,10 @@ public sealed partial class GameModeManagementService : IGameModeManagementServi
     private async Task<string?> FreezeVendorOffersAsync(IEnumerable<GameModeAreaDto> areas,
         CancellationToken token, int? idMesa, int idSistemaVersao)
     {
-        var routes = areas.SelectMany(area => area.Options.Select((option, index) =>
-            new { Area = area.Name, Option = option, Index = index + 1 })).ToArray();
+        var routes = areas.SelectMany(area => area.Options.SelectMany((option, index) =>
+            new[] { (Option: option, Index: index + 1, Result: 0) }.Concat(option.SurpriseOptions.Select((result, resultIndex) =>
+                (Option: result, Index: index + 1, Result: resultIndex + 1))))
+            .Select(route => new { Area = area.Name, route.Option, route.Index, route.Result })).ToArray();
         var options = routes.Select(route => route.Option).ToArray();
         var sages = routes.Where(route => route.Option.Type == "NPC" && route.Option.NpcType == "SABIO").ToArray();
         if (sages.Length > 0)
@@ -100,7 +102,8 @@ public sealed partial class GameModeManagementService : IGameModeManagementServi
                     {
                         string? name = offer.Snapshot?["nome"]?.ToString();
                         string label = string.IsNullOrWhiteSpace(name) ? "sem nome" : name;
-                        errors.Add($"• {route.Area}, rota {route.Index} ({route.Option.Label}), magia {index + 1} ({label}): {error.Message}");
+                        string resultLocation = route.Result > 0 ? $", resultado {route.Result}" : "";
+                        errors.Add($"• {route.Area}, rota {route.Index}{resultLocation} ({route.Option.Label}), magia {index + 1} ({label}): {error.Message}");
                     }
                 }
             if (errors.Count > 0) return "Revise as magias dos Sábios:\n" + string.Join("\n", errors);
@@ -433,6 +436,8 @@ public sealed partial class GameModeManagementService : IGameModeManagementServi
         if (error is not null) return GameRunOperationResult<GameModeEditorDto>.Fail("LOOT_INVALIDO", error);
         error = await FreezeVendorOffersAsync(update.Areas, cancellationToken, idMesa, draft.IdSistemaVersao);
         if (error is not null) return GameRunOperationResult<GameModeEditorDto>.Fail("OFERTA_INVALIDA", error);
+        error = await FreezeStoryAsync(update.Areas, draft.IdSistemaVersao, idMesa, cancellationToken);
+        if (error is not null) return GameRunOperationResult<GameModeEditorDto>.Fail("EVENTO_INVALIDO", error);
 
         JsonObject config = JsonNode.Parse(draft.ConfiguracaoJson)?.AsObject()
             ?? throw new JsonException("A configuração do rascunho é inválida.");
@@ -489,6 +494,8 @@ public sealed partial class GameModeManagementService : IGameModeManagementServi
         if (error is not null) return GameRunOperationResult<GameModeEditorDto>.Fail("LOOT_INVALIDO", error);
         error = await FreezeVendorOffersAsync(editor.Areas, cancellationToken, idMesa, draft.IdSistemaVersao);
         if (error is not null) return GameRunOperationResult<GameModeEditorDto>.Fail("OFERTA_INVALIDA", error);
+        error = await FreezeStoryAsync(editor.Areas, draft.IdSistemaVersao, idMesa, cancellationToken);
+        if (error is not null) return GameRunOperationResult<GameModeEditorDto>.Fail("EVENTO_INVALIDO", error);
         foreach (GameBattleEncounterConfig encounter in editor.Encounters.Values)
         {
             if (encounter.Enemy?.NpcId is not int npcId) continue;
@@ -751,9 +758,11 @@ public sealed partial class GameModeManagementService : IGameModeManagementServi
              powers.Select(power => power.Id).Distinct(StringComparer.OrdinalIgnoreCase).Count() != powers.Count))
             return "Cadastre até 40 skills e ultimates com identificadores únicos, nome e nível mínimo válidos.";
         if (update.Areas is null || update.Areas.Count is < 1 or > 9 ||
-            update.Encounters is null || update.Encounters.Count is < 1 or > 80)
+            update.Encounters is null || update.Encounters.Count is < 1 or > 80 ||
+            update.Areas.Any(area => area is null || area.Options is null ||
+                area.Options.Any(option => option is null || option.SurpriseOptions?.Any(result => result is null) == true)))
             return "Configure áreas e ao menos um encontro.";
-        if (update.Areas.SelectMany(area => area.Options ?? []).Where(option => option.Type == "NPC")
+        if (GameStoryRules.Routes(update.Areas).Where(option => option.Type == "NPC")
             .GroupBy(option => option.NpcCode).Any(group => group.Select(option => (option.NpcType, option.NpcLocked)).Distinct().Count() > 1))
             return "O mesmo NPC deve manter seu serviço e configuração de bloqueio em todas as áreas.";
         if (update.Areas.Count(area => !area.IsSecret) is < 1 or > GameRunMapGenerator.MaxNormalAreas ||
@@ -782,8 +791,10 @@ public sealed partial class GameModeManagementService : IGameModeManagementServi
             if (visiting.Contains(code)) return true;
             if (!visited.Add(code)) return false;
             visiting.Add(code);
-            foreach (GameModeAreaOptionDto option in secretAreas[code].Options.Where(option => option.Type == "AREA_SECRETA"))
-                if (option.SecretAreaCode is { } target && secretAreas.ContainsKey(target) && HasSecretCycle(target))
+            foreach (GameModeAreaOptionDto option in GameStoryRules.Routes([secretAreas[code]])
+                .Where(option => option.Type is "AREA_SECRETA" or "MISSAO"))
+                if ((option.Type == "MISSAO" ? option.Mission?.AreaCode : option.SecretAreaCode) is { } target &&
+                    secretAreas.ContainsKey(target) && HasSecretCycle(target))
                     return true;
             visiting.Remove(code);
             return false;

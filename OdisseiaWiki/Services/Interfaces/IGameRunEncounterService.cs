@@ -4,6 +4,8 @@ namespace OdisseiaWiki.Services.Interfaces;
 
 public interface IGameRunEncounterService
 {
+    Task<GameRunOperationResult<GameRunDto>> BeginStoryAsync(long runId, string nodeId, int userId, GameRunMutationRequestDto request, CancellationToken token);
+    Task<GameRunOperationResult<GameRunDto>> ChooseStoryAsync(long runId, string nodeId, int userId, GameStoryRequestDto request, CancellationToken token);
     Task<GameRunOperationResult<GameRunDto>> UpgradeWeaponAsync(long runId, int userId, GameRunVendorPurchaseRequestDto request, CancellationToken token);
     Task<GameRunOperationResult<GameRunBaseResolutionDto>> VisitNpcAsync(long runId, string nodeId, int userId, GameRunMutationRequestDto request, CancellationToken token);
     Task<GameRunProtectedDepositDto?> GetProtectedDepositAsync(long runId, int userId, CancellationToken token);

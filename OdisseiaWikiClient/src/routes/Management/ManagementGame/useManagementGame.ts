@@ -8,6 +8,7 @@ import {
   saveGameAdventureDraft, publishGameAdventureDraft, getGameAdventureSystemVersions,
 } from '../../../services/gameModeManagementService';
 import { getApiErrorMessage } from '../../../utils/apiError';
+import { storyRoutes } from '../../../utils/gameStory';
 
 const copy = (editor: GameModeEditor): GameModeEditor => structuredClone(editor);
 const editableSnapshot = (value: GameModeEditor | null) => value && JSON.stringify({
@@ -240,8 +241,7 @@ export const useManagementGame = (mesaId?: number) => {
   };
   const removeEncounter = (code: string) => setEditor((current) => {
     if (!current || Object.keys(current.encounters).length <= 1 ||
-      current.areas.some((area) => area.options.some((option) =>
-        option.encounterCode === code || option.encounterCodes?.includes(code)))) return current;
+      storyRoutes(current.areas).some(option => option.encounterCode === code || option.encounterCodes?.includes(code))) return current;
     const encounters = { ...current.encounters };
     delete encounters[code];
     return { ...current, encounters };
@@ -340,8 +340,8 @@ export const useManagementGame = (mesaId?: number) => {
     removeArea: (index: number) => setEditor((current) => {
       if (!current || (!current.areas[index]?.isSecret &&
         current.areas.filter((area) => !area.isSecret).length <= 1) ||
-        current.areas.some((area) => area.options.some((option) =>
-          option.secretAreaCode === current.areas[index]?.code))) return current;
+        storyRoutes(current.areas).some(option => option.secretAreaCode === current.areas[index]?.code ||
+          option.mission?.areaCode === current.areas[index]?.code)) return current;
       const areas = current.areas.filter((_, areaIndex) => areaIndex !== index);
       return { ...current, areas };
     }),

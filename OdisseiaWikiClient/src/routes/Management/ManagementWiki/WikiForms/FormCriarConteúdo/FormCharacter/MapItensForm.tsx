@@ -418,12 +418,15 @@ export const ArmaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme,
     ...initialValue,
     danoPorAlcance: initialValue.danoPorAlcance ?? {},
     cadencia: initialValue.cadencia ?? initialValue.ataquesPorTurno ?? 1,
+    modoDisparo: initialValue.modoDisparo ?? (initialValue.teste?.modosDisparo?.length === 1
+      ? initialValue.teste.modosDisparo[0] as 'TIRO' | 'RAJADA'
+      : (initialValue.cadencia ?? 0) >= 10 || (initialValue.custoMunicaoRajada ?? 0) > 0 && !initialValue.custoMunicaoTiro ? 'RAJADA' : 'TIRO'),
     capacidadeUso: initialValue.capacidadeUso ?? 0,
     capacidadeMunicao: initialValue.capacidadeMunicao ?? initialValue.municao?.capacidade ?? 0,
     controlaMunicao: initialValue.controlaMunicao ?? false,
     municaoAtual: initialValue.municaoAtual ?? initialValue.municao?.atual ?? initialValue.capacidadeMunicao ?? initialValue.municao?.capacidade ?? 0,
     custoMunicaoTiro: initialValue.custoMunicaoTiro ?? 1,
-    custoMunicaoRajada: initialValue.custoMunicaoRajada ?? 0,
+    custoMunicaoRajada: initialValue.custoMunicaoRajada || initialValue.cadencia || 1,
     gastoEstaminaPorAtaque: initialValue.gastoEstaminaPorAtaque ?? 0,
     bonus: initialValue.bonus ?? [],
     especial: initialValue.especial ?? '',
@@ -436,6 +439,9 @@ export const ArmaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme,
 
     if (key === 'cadencia') {
       updated.ataquesPorTurno = val as number | undefined;
+    }
+    if (key === 'modoDisparo' && local.teste) {
+      updated.teste = { ...local.teste, modosDisparo: [String(val)] };
     }
 
     if (key === 'capacidadeMunicao') {
@@ -485,9 +491,17 @@ export const ArmaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme,
 
       <ManagementAttributeGroup enabled={managementLayout} title="Uso e combate" theme={theme} neon={neon}>
         <AttributeRow $columns={3}>
-          <InputText label="Cadência por turno" type="number" theme={theme} neon={neon} value={local.cadencia ?? ''} onChange={e => handleChange('cadencia', e.target.value === '' ? undefined : Number(e.target.value))} />
+          <InputText label="Cadência máxima por turno (0 = livre)" type="number" min={0} max={100} theme={theme} neon={neon} value={local.cadencia ?? ''} onChange={e => handleChange('cadencia', e.target.value === '' ? undefined : Number(e.target.value))} />
           <InputText label="Usos até a pausa" type="number" theme={theme} neon={neon} value={local.capacidadeUso ?? ''} onChange={e => handleChange('capacidadeUso', e.target.value === '' ? undefined : Number(e.target.value))} />
           <InputText label="Capacidade de munição" type="number" theme={theme} neon={neon} value={local.capacidadeMunicao ?? ''} onChange={e => handleChange('capacidadeMunicao', e.target.value === '' ? undefined : Number(e.target.value))} />
+        </AttributeRow>
+        <AttributeRow $columns={2}>
+          <Select label="Tipo de disparo" theme={theme} neon={neon} value={local.modoDisparo ?? 'TIRO'}
+            options={[{ value: 'TIRO', label: 'Tiro individual' }, { value: 'RAJADA', label: 'Rajada' }]}
+            onChange={e => handleChange('modoDisparo', e.target.value as 'TIRO' | 'RAJADA')} width="100%" />
+          <InputText label="Munição por ataque" type="number" min={1} theme={theme} neon={neon}
+            value={local.modoDisparo === 'RAJADA' ? local.custoMunicaoRajada : local.custoMunicaoTiro}
+            onChange={e => handleChange(local.modoDisparo === 'RAJADA' ? 'custoMunicaoRajada' : 'custoMunicaoTiro', e.target.value === '' ? undefined : Number(e.target.value))} />
         </AttributeRow>
         <AttributeRow $columns={3}>
           <InputText label="Limite de ataques por turno (0 = livre)" type="number" theme={theme} neon={neon} value={local.limiteAtaquesPorTurno ?? ''} onChange={e => handleChange('limiteAtaquesPorTurno', e.target.value === '' ? undefined : Number(e.target.value))} />
@@ -507,8 +521,6 @@ export const ArmaAtributosForm: React.FC<BaseProps> = ({ value, onChange, theme,
         {local.controlaMunicao && (
           <AttributeRow $columns={3}>
             <InputText label="Munição atual" type="number" theme={theme} neon={neon} value={local.municaoAtual ?? ''} onChange={e => handleChange('municaoAtual', e.target.value === '' ? undefined : Number(e.target.value))} />
-            <InputText label="Munição por tiro" type="number" theme={theme} neon={neon} value={local.custoMunicaoTiro ?? ''} onChange={e => handleChange('custoMunicaoTiro', e.target.value === '' ? undefined : Number(e.target.value))} />
-            <InputText label="Munição por rajada" type="number" theme={theme} neon={neon} value={local.custoMunicaoRajada ?? ''} onChange={e => handleChange('custoMunicaoRajada', e.target.value === '' ? undefined : Number(e.target.value))} />
           </AttributeRow>
         )}
       </ManagementAttributeGroup>

@@ -143,6 +143,7 @@ export const GameplaySheetActionDialog = ({
   const spec = useMemo(() => actionTest(source), [source]);
   const weapon = source?.item?.tipo === 'arma';
   const ranged = isRangedWeapon(source?.item);
+  const fixedFireMode = (source?.item?.atributos as { modoDisparo?: string } | undefined)?.modoDisparo;
   const [attribute, setAttribute] = useState('');
   const [mode, setMode] = useState<GameplayRollMode>('Normal');
   const [visibility, setVisibility] = useState<GameplayVisibility>('PublicaMesa');
@@ -183,7 +184,7 @@ export const GameplaySheetActionDialog = ({
       value,
       label: value === 'REVIDAR' ? 'Revidar' : value === 'DEFENDER' ? 'Defender' : 'Atacar',
     }));
-  }, [ranged, spec]);
+  }, [spec]);
   const rangeOptions = useMemo(() => (
     (Array.isArray(spec?.alcances) && spec.alcances.length > 0 ? spec.alcances : ['CURTA', 'MEDIA', 'LONGA'])
       .map((value) => normalizeCode(value))
@@ -191,11 +192,11 @@ export const GameplaySheetActionDialog = ({
       .map((value) => ({ value, label: optionLabel(value) }))
   ), [spec?.alcances]);
   const fireModeOptions = useMemo(() => (
-    (Array.isArray(spec?.modosDisparo) && spec.modosDisparo.length > 0 ? spec.modosDisparo : ['TIRO', 'RAJADA'])
+    (fixedFireMode ? [fixedFireMode] : Array.isArray(spec?.modosDisparo) && spec.modosDisparo.length > 0 ? spec.modosDisparo : ['TIRO', 'RAJADA'])
       .map((value) => normalizeCode(value))
       .filter(Boolean)
       .map((value) => ({ value, label: optionLabel(value) }))
-  ), [spec?.modosDisparo]);
+  ), [fixedFireMode, spec?.modosDisparo]);
 
   useEffect(() => {
     if (!open) return;

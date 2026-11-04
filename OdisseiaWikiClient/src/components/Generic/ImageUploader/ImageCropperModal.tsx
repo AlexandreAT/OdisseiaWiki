@@ -386,7 +386,6 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
             neon={neon}
             colorType="secondary"
             text="Resetar"
-            width="100px"
           />
           <CyberButton
             type="button"
@@ -395,7 +394,6 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
             neon={neon}
             colorType="secondary"
             text="Cancelar"
-            width="100px"
           />
           <CyberButton
             type="button"
@@ -404,7 +402,6 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
             neon={neon}
             colorType="primary"
             text="Confirmar"
-            width="100px"
           />
         </ButtonsContainer>
       </ModalContainer>

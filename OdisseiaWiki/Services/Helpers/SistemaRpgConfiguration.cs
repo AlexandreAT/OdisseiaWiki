@@ -164,6 +164,7 @@ internal static partial class SistemaRpgConfiguration
         public int SegundosPorTurno { get; set; } = 6;
         public int EstaminaPorAtaqueAdicional { get; set; }
         public List<SistemaLimiteAcoesArmaDto> LimitesAcoesPorArma { get; set; } = new();
+        public List<SistemaDanoAreaResultadoDto> DanoAreaPorResultado { get; set; } = new();
         public string? RegraDeclaracaoAcoes { get; set; }
     }
 

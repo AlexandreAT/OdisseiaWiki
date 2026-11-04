@@ -28,6 +28,7 @@ export interface RunInventoryEntry extends GameRunActionSelection {
   ammoPerUse: number;
   ammoCapacity: number;
   controlsAmmo: boolean;
+  areaDamage?: number;
   staminaPerUse: number;
   damageByRange: { base: number; curta: number; media: number; longa: number };
   weaponType: string;
@@ -236,8 +237,9 @@ export const parseRunInventoryEntries = (raw: unknown, tipo: RunInventoryKind): 
         source: 'Item', reason: 'Carregador sem capacidade configurada', max: 0,
       });
       if (usesUntilRest > 0) quantityLimits.push({
-        source: 'Item', reason: 'Usos por descanso', max: usesUntilRest,
+        source: 'Item', reason: 'Usos até a pausa', max: usesUntilRest,
       });
+      if (ranged) addItemLimit(numeric(attributes && (field(attributes, 'cadencia') ?? field(attributes, 'ataquesPorTurno'))), 'Cadência por turno');
       addItemLimit(numeric(attributes && field(attributes, 'limiteAtaquesPorTurno')), 'Ataques por turno');
       if (ranged) addItemLimit(numeric(attributes && field(attributes,
         fireMode === 'RAJADA' ? 'limiteRajadasPorTurno' : 'limiteTirosPorTurno')),
@@ -256,10 +258,11 @@ export const parseRunInventoryEntries = (raw: unknown, tipo: RunInventoryKind): 
       baseItemId: baseItemId == null ? null : String(baseItemId),
       stackSignature: JSON.stringify(Object.fromEntries(Object.entries(attributes ?? {})
         .filter(([key]) => key.toLowerCase() !== '__vistaexplodida'))),
-      maxAttacks: Math.max(0, Math.min(maxAttacks, ranged ? magazineLimit : 100,
-        usesUntilRest > 0 ? remainingUses : 100)),
+      maxAttacks: Math.max(0, Math.min(maxAttacks, ranged ? magazineLimit : 100)),
       quantityLimits, availableUses: usesUntilRest > 0 ? remainingUses : null,
       ammoPerUse, ammoCapacity: capacity, controlsAmmo,
+      areaDamage: numeric(damageRanges && field(damageRanges, 'emArea')) > 0
+        ? Math.max(0, numeric(damageRanges && field(damageRanges, 'emArea')) + modifiers) : undefined,
       staminaPerUse: Math.max(0, numeric(attributes && (tipo === 'MAGIA' || tipo === 'SKILL'
         ? field(attributes, 'custoEstamina') ?? field(attributes, 'gastoEstamina') ?? field(item, 'custoEstamina') ?? field(item, 'gastoEstamina')
         : field(attributes, 'gastoEstaminaPorAtaque'))) + staminaModifiers),

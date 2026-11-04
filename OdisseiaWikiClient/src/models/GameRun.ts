@@ -25,6 +25,7 @@ export interface GameCharacterOption {
 }
 
 export interface GameRunCharacterSnapshot {
+  story?: import('./GameStory').GameStoryRecord[];
   economy?: { balance: number; stash: import('./Itens').Item[] } | null;
   carga?: { pesoAtual: number; capacidade: number; penalidadePercentual: number; sobrecarregado: boolean } | null;
   loot?: GameRunLoot | null;
@@ -147,6 +148,8 @@ export interface GameRunMapNode {
   state: 'DISPONIVEL' | 'SELECIONADO' | 'CONCLUIDO' | 'BLOQUEADO' | 'IGNORADO';
   connections: string[];
   payload: { encounterCode?: string | null; secretAreaCode?: string | null;
+    choices?: import('./GameStory').GameStoryChoice[]; mission?: import('./GameStory').GameStoryMission | null;
+    surpriseRevealed?: boolean; surpriseOptionIndex?: number | null; storyChoice?: string | null; missionCompleted?: boolean;
     npcCode?: string | null; npcType?: 'MERCADOR' | 'MEDICO' | 'SABIO' | 'ENGENHEIRO' | null; npcLocked?: boolean;
     upgrade?: import('./GameModeManagement').GameModeEngineerUpgrade | null;
     repairPricePer10Percent?: number | null;

@@ -597,6 +597,8 @@ public class Program
         services.AddScoped<IMesaRepository, MesaRepository>();
         services.AddScoped<IGameplayEngineRepository, GameplayEngineRepository>();
         services.AddScoped<IGameRunRepository, GameRunRepository>();
+        services.AddScoped<IGameRunStatisticsRepository, GameRunStatisticsRepository>();
+        services.AddScoped<IGameRunStatisticsService, GameRunStatisticsService>();
         services.AddScoped<IGameModeManagementRepository, GameModeManagementRepository>();
         services.AddScoped<IMesaEntidadeConfigRepository, MesaEntidadeConfigRepository>();
         services.AddScoped<IInfoLoreRepository, InfoLoreRepository>();

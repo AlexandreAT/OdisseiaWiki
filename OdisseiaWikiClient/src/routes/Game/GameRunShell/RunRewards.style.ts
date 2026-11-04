@@ -44,9 +44,9 @@ export const AttributeGrid = styled.div`
   .attribute-info { color: var(--clearneonBlue); min-height: 30px; display: inline-grid; place-items: center; }
   .attribute-info:hover, .attribute-info:focus-visible { filter: drop-shadow(0 0 6px currentColor); }
   .attribute-up { position: absolute; left: calc(100% + 5px); top: 50%; translate: 0 -50%;
-    color: var(--neonYellow); padding: 0; display: inline-grid; place-items: center;
+    color: var(--neonYellow); padding: 0; display: inline-grid; place-items: center; font: inherit;
     animation: ${pulse} 1.45s ease-in-out infinite; }
-  .attribute-up svg { font-size: .9em; filter: drop-shadow(0 0 3px currentColor); }
+  .attribute-up svg { font-size: 1em; filter: drop-shadow(0 0 3px currentColor); }
   .attribute-up:hover, .attribute-up:focus-visible { filter: drop-shadow(0 0 8px var(--neonYellow)); }
   .attribute-up:disabled { opacity: .4; cursor: wait; }
   .attribute-modifier { position: absolute; right: calc(100% + 6px); top: 50%; transform: translateY(-50%);

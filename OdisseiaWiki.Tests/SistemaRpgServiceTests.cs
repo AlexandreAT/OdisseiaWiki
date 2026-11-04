@@ -10,7 +10,7 @@ using Xunit;
 
 namespace OdisseiaWiki.Tests;
 
-public sealed class SistemaRpgServiceTests
+public sealed partial class SistemaRpgServiceTests
 {
     [Theory]
     [InlineData("RESISTENCIA", 2)]

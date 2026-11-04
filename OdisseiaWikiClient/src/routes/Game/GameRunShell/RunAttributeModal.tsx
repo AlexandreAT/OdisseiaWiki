@@ -89,7 +89,7 @@ export function RunAttributeModal({ run, theme, neon, onUpdate, onClose }: {
                   {options.pontos > 0 && attribute.valor < attribute.limite &&
                     <button className="attribute-up" type="button" disabled={busy}
                       aria-label={`Aumentar ${attribute.nome}`} onClick={() => void upgrade(attribute.codigo)}>
-                      <UpgradeIcon fontSize="small" />
+                      <UpgradeIcon fontSize="inherit" />
                     </button>}
                 </span>
               </div>

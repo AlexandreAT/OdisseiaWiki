@@ -486,7 +486,8 @@ public sealed class GameplayActionResolver
                 request.ParametrosAcao,
                 attributes,
                 test,
-                displayName);
+                displayName,
+                version);
             if (!weaponResult.Sucesso || weaponResult.Dados is null)
                 return ConvertFailure<WeaponContext, GameplayResolvedAction>(weaponResult);
 
@@ -500,6 +501,8 @@ public sealed class GameplayActionResolver
             if (weapon.FireMode is not null) values["modoDisparo"] = weapon.FireMode;
             if (weapon.DamagePerHit.HasValue)
                 values["danoPorAcertoProposto"] = weapon.DamagePerHit.Value.ToString(CultureInfo.InvariantCulture);
+            if (ReadInt(GetObject(attributes, "danoPorAlcance"), "emArea") is > 0)
+                values["ataqueEmArea"] = "true";
             if (weapon.StaminaPerUse.HasValue)
                 values["estaminaPorUsoProposta"] = weapon.StaminaPerUse.Value.ToString(CultureInfo.InvariantCulture);
             if (weapon.AmmoCost.HasValue)
@@ -758,6 +761,12 @@ public sealed class GameplayActionResolver
         values["quantidadeDados"] = resultRows[0].QuantidadeDados.ToString(CultureInfo.InvariantCulture);
         if (!string.IsNullOrWhiteSpace(itemBaseId))
             values[sourceType is "SKILL" or "MAGIA" ? "idPoderBase" : "idItemBase"] = itemBaseId;
+        if (values.TryGetValue("ataqueEmArea", out string? areaFlag) && areaFlag == "true" &&
+            values.TryGetValue("danoPorAcertoProposto", out string? areaText) && int.TryParse(areaText, out int areaBase))
+        {
+            try { values["danoAreaResultadosJson"] = JsonSerializer.Serialize(GameplayAreaDamage.Resolve(version, ranges, areaBase)); }
+            catch (InvalidOperationException error) { return Failure("DANO_AREA_INVALIDO", error.Message); }
+        }
 
         return GameplayOperationResult<GameplayResolvedAction>.Ok(new GameplayResolvedAction(
             actionCode,
@@ -793,7 +802,8 @@ public sealed class GameplayActionResolver
         GameplayActionParametersDto? parameters,
         JsonObject? attributes,
         GameplayStoredTestSpec test,
-        string weaponName)
+        string weaponName,
+        SistemaVersao version)
     {
         if (attributes is null)
             return Failure<WeaponContext>("ARMA_SEM_ATRIBUTOS", "A arma não possui atributos suficientes para este teste.");
@@ -839,14 +849,14 @@ public sealed class GameplayActionResolver
             if (!allowedRanges.Contains(range, StringComparer.Ordinal))
                 return Failure<WeaponContext>("ALCANCE_OBRIGATORIO", "Escolha um alcance permitido pela configuração desta arma.");
             int cadence = ReadInt(attributes, "cadencia") ?? ReadInt(attributes, "ataquesPorTurno") ?? 1;
-            cadence = Math.Clamp(cadence, 1, 100);
-            if (quantity > cadence)
+            cadence = Math.Clamp(cadence, 0, 100);
+            if (cadence > 0 && quantity > cadence)
             {
                 return Failure<WeaponContext>(
                     "QUANTIDADE_ACIMA_CADENCIA",
                     "A quantidade escolhida excede a cadência configurada para a arma.");
             }
-            fireMode = NormalizeCode(parameters?.ModoDisparo);
+            fireMode = NormalizeCode(parameters?.ModoDisparo ?? ReadString(attributes, "modoDisparo"));
             if (fireMode.Length == 0) fireMode = quantity > 1 ? "RAJADA" : "TIRO";
             string[] allowedFireModes = test.ModosDisparo?
                 .Select(NormalizeCode)
@@ -856,6 +866,10 @@ public sealed class GameplayActionResolver
                 ?? new[] { "TIRO", "RAJADA" };
             if (!allowedFireModes.Contains(fireMode, StringComparer.Ordinal))
                 return Failure<WeaponContext>("MODO_DISPARO_INVALIDO", "Escolha um modo de disparo permitido pela configuração desta arma.");
+            int actionLimit = ReadInt(attributes, "limiteAtaquesPorTurno") ?? 0;
+            int modeLimit = ReadInt(attributes, fireMode == "RAJADA" ? "limiteRajadasPorTurno" : "limiteTirosPorTurno") ?? 0;
+            if (actionLimit > 0 && quantity > actionLimit || modeLimit > 0 && quantity > modeLimit)
+                return Failure<WeaponContext>("QUANTIDADE_ACIMA_LIMITE", "A quantidade escolhida excede o limite de ataques desta arma por turno.");
             modifierField = range.ToLowerInvariant();
         }
         else
@@ -864,6 +878,9 @@ public sealed class GameplayActionResolver
                 return Failure<WeaponContext>("QUANTIDADE_NAO_SUPORTADA", "Armas corpo a corpo usam uma ação por rolagem.");
             modifierField = operation == "REVIDAR" ? "revidar" : operation == "ATACAR" ? "ataque" : string.Empty;
         }
+        int systemLimit = ResolveSystemWeaponLimit(version, ReadString(attributes, "tipoArma"), mode == "DISTANCIA", fireMode);
+        if (systemLimit > 0 && quantity > systemLimit)
+            return Failure<WeaponContext>("QUANTIDADE_ACIMA_SISTEMA", "A quantidade escolhida excede o limite por turno deste tipo de arma no Sistema.");
 
         IReadOnlyList<WeaponModifierSource> modifierSources = GetWeaponModifierSources(attributes, mode, weaponName);
         int damageModifier = modifierSources.Sum(source => ReadInt(source.Modifiers, "dano") ?? 0);
@@ -892,6 +909,9 @@ public sealed class GameplayActionResolver
         int? baseDamage = mode == "DISTANCIA"
             ? ReadInt(GetObject(attributes, "danoPorAlcance"), RangeDamageProperty(range!)) ?? ReadInt(attributes, "danoBase")
             : ReadInt(attributes, "danoBase") ?? ReadInt(attributes, "dano");
+        // Area damage is an alternative attack, never extra damage charged per victim.
+        if (ReadInt(GetObject(attributes, "danoPorAlcance"), "emArea") is > 0 and var areaDamage)
+            baseDamage = areaDamage;
         int? damagePerHit = baseDamage.HasValue ? Math.Max(0, baseDamage.Value + damageModifier) : null;
         int? stamina = ReadInt(attributes, "gastoEstaminaPorAtaque");
         int? staminaPerUse = stamina.HasValue ? Math.Max(0, stamina.Value + staminaModifier) : null;
@@ -957,6 +977,17 @@ public sealed class GameplayActionResolver
             currentAmmo,
             effects,
             appliedAccessories));
+    }
+
+    internal static int ResolveSystemWeaponLimit(SistemaVersao version, string? weaponType, bool ranged, string? fireMode)
+    {
+        static string Normalize(string? code) => (code ?? "").Trim().ToLowerInvariant().Replace(' ', '_').Replace('-', '_');
+        var rules = SistemaRpgConfiguration.LerRegras<SistemaRpgConfiguration.RegrasCombate>(version, SistemaModuloTipo.Combate);
+        string type = Normalize(weaponType);
+        var rule = rules.LimitesAcoesPorArma?.FirstOrDefault(rule => Normalize(rule.TipoArma) == type);
+        if (rule is null && type is "pistola_revolver" or "smg" or "rifle_assalto" or "shotgun" or "rifle_atirador" or "rifle_precisao" or "arma_pesada" or "arma_pesada_area")
+            rule = rules.LimitesAcoesPorArma?.FirstOrDefault(rule => Normalize(rule.TipoArma) == "arma_de_fogo");
+        return ranged ? fireMode == "RAJADA" ? rule?.MaximoRajadas ?? 0 : rule?.MaximoTiros ?? 0 : rule?.MaximoGolpes ?? 0;
     }
 
     private static IReadOnlyList<WeaponModifierSource> GetWeaponModifierSources(

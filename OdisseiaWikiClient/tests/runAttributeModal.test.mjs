@@ -80,6 +80,7 @@ test('respostas antigas sem influências continuam mostrando natural e upgrade f
   let finish;globalThis.__attributeUpgrade=(...args)=>{calls.push(args);return new Promise(resolve=>{finish=resolve;});};
   await mount();assert.equal(renderer.root.findAllByProps({className:'attribute-modifier'}).length,0);
   const up=renderer.root.findByProps({'aria-label':'Aumentar Resistência'});
+  assert.equal(up.findByType('svg').props.fontSize,'inherit');
   act(()=>{up.props.onClick();up.props.onClick();});assert.equal(calls.length,1);
   assert.equal(calls[0][1].codigo,'resistencia');assert.equal(calls[0][1].revisaoEsperada,1);
   await act(async()=>finish({idGameRun:1,revisao:2}));
@@ -94,5 +95,7 @@ test('fontes e afastamento seguem o site; bônus e upgrade são absolutos, sem o
     const css=sheet.getStyleTags();assert.match(css,/Cyberpunk Is Not Dead/);assert.match(css,/Orbitron/);
     assert.match(css,/margin:0 0 14px/);assert.match(css,/right:calc\(100% \+ 6px\)/);assert.match(css,/left:calc\(100% \+ 5px\)/);
     assert.match(css,/container-type:inline-size/);assert.match(css,/40cqi/);assert.match(css,/grid-template-columns:repeat\(auto-fit/);
+    assert.match(css,/\.attribute-up\{[^}]*font:inherit/);
+    assert.match(css,/\.attribute-up svg\{font-size:1em/);
   }finally{sheet.seal();}
 });

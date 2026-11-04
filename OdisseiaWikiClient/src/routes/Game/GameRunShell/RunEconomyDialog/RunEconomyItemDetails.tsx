@@ -12,6 +12,7 @@ export function RunEconomyItemDetails({ entry }: { entry: RunInventoryEntry }) {
       <p>Até <strong>{entry.maxAttacks}</strong> ataques por turno{entry.cooldownTurns ? ` · espera de ${entry.cooldownTurns} turnos` : ''}</p>
     </>}
     {damage.base !== 0 && <p>Dano base <strong>{damage.base}</strong></p>}
+    {!!entry.areaDamage && <p>Dano em área <strong>{entry.areaDamage}</strong> por inimigo</p>}
     {entry.ranged && (['curta', 'media', 'longa'] as const).filter(range => damage[range] !== 0).map(range =>
       <p key={range}>Dano {({ curta: 'curto', media: 'médio', longa: 'longo' })[range]} <strong>{damage[range]}</strong></p>)}
     {defense.protecao !== 0 && <p>Proteção <strong>{defense.protecao < 0 ? defense.protecao : `${entry.defenseRemaining.protecao} / ${defense.protecao}`}</strong></p>}

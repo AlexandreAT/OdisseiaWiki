@@ -304,7 +304,8 @@ public sealed class GameRunMapGenerator
                                 widths[row + 1] == 1)
                             .Select(next => $"{prefix}fase-{stage + 1}-linha-{row + 2}-no-{next + 1}").ToArray();
                     string shortcutTarget = $"{prefix}fase-{stage + 1}-linha-{widths.Length}-no-1";
-                    if (option.Type == "ATALHO" && !last && !connections.Contains(shortcutTarget))
+                    if ((option.Type == "ATALHO" || option.Type == "SURPRESA" && option.SurpriseOptions.Any(result => result.Type == "ATALHO")) &&
+                        !last && !connections.Contains(shortcutTarget))
                         connections = [..connections, shortcutTarget];
                     nodes.Add(BuildExpandedNode(runSeed, encounters, area, option, id,
                         stage + 1, layerOffset + row + 1, position, connections,
@@ -382,7 +383,7 @@ public sealed class GameRunMapGenerator
         GameModeAreaDto area, GameModeAreaOptionDto option, string id, int fase, int layer,
         int position, IReadOnlyList<string> connections, string state)
     {
-        bool nonCombat = option.Type is "BASE" or "EVENTO" or "DESCANSO" or "ATALHO" or "AREA_SECRETA" or "VENDEDOR" or "NPC";
+        bool nonCombat = option.Type is "BASE" or "EVENTO" or "DESCANSO" or "ATALHO" or "AREA_SECRETA" or "VENDEDOR" or "NPC" or "MISSAO" or "SURPRESA";
         string? encounterCode = option.Type == "CACADA"
             ? option.EncounterCodes.Count == 0 ? null : option.EncounterCodes[
                 new Random(DeriveSeed(runSeed, $"{id}:cacada")).Next(option.EncounterCodes.Count)]
@@ -392,7 +393,7 @@ public sealed class GameRunMapGenerator
             throw new InvalidOperationException($"Uma rota de {area.Name} não possui encontro.");
         JsonElement encounter = nonCombat ? default : encounters.GetProperty(encounterCode!);
         string name = option.Type == "BASE" ? area.BaseName :
-            option.Type == "CACADA" ? option.Label ?? "Caçada" : nonCombat ? option.Label ?? option.Type :
+            option.Type == "CACADA" ? option.Label ?? "Caçada" : nonCombat ? option.Label ?? (option.Type == "SURPRESA" ? "Encontro desconhecido" : option.Type) :
             encounter.GetProperty("mapName").GetString() ?? option.Type;
         string? image = option.Type == "BASE" ? area.BaseImage :
             option.Type == "CACADA" ? option.Image : nonCombat ? option.Image :
@@ -407,12 +408,16 @@ public sealed class GameRunMapGenerator
             Fase = fase, Layer = layer, Position = position,
             Seed = DeriveSeed(runSeed, id), Type = option.Type, State = state,
             Connections = connections, Revealed = true,
-            Payload = option.Type == "AREA_SECRETA" ? new GameRunMapNodePayloadDto
+            // Keep one immutable source in the pinned mode, not a full hidden catalogue in every map node.
+            Payload = option.Type == "SURPRESA" ? new GameRunMapNodePayloadDto { SurpriseOptionIndex = area.Options.IndexOf(option) }
+            : option.Type == "MISSAO" ? new GameRunMapNodePayloadDto { Mission = option.Mission }
+            : option.Type == "AREA_SECRETA" ? new GameRunMapNodePayloadDto
             {
                 SecretAreaCode = option.SecretAreaCode,
             } : option.Type == "EVENTO" ? new GameRunMapNodePayloadDto
             {
                 GameMinutes = option.GameMinutes,
+                Choices = option.Choices,
             } : option.Type is "VENDEDOR" or "NPC" ? new GameRunMapNodePayloadDto
             {
                 NpcCode = option.Type == "NPC" ? option.NpcCode : null,
@@ -499,7 +504,7 @@ public sealed class GameRunMapGenerator
     public static GameRunMapDto EnterSecret(GameRunMapDto parent, GameRunMapDto secret,
         string portalNodeId)
     {
-        if (parent.Nodes.All(node => node.Id != portalNodeId || node.Type != "AREA_SECRETA"))
+        if (parent.Nodes.All(node => node.Id != portalNodeId || node.Type is not ("AREA_SECRETA" or "MISSAO")))
             throw new InvalidOperationException("A passagem secreta não está disponível.");
         return new GameRunMapDto
         {
@@ -577,5 +582,38 @@ public sealed class GameRunMapGenerator
     {
         byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes($"{seed}:{nodeId}"));
         return BinaryPrimitives.ReadInt32LittleEndian(hash.AsSpan(0, 4)) & int.MaxValue;
+    }
+
+    public static void RevealSurprise(GameRunMapDto map, GameRunMapNodeDto node, string configuration)
+    {
+        if (node.Type != "SURPRESA" || node.Payload is not { } payload)
+            throw new InvalidOperationException("Este encontro desconhecido não está disponível.");
+        using var document = JsonDocument.Parse(configuration);
+        var options = payload.SurpriseOptions;
+        if (payload.SurpriseOptionIndex is int index)
+        {
+            var areas = document.RootElement.GetProperty("areas").Deserialize<List<GameModeAreaDto>>(new JsonSerializerOptions(JsonSerializerDefaults.Web));
+            var source = areas?.SingleOrDefault(area => area.Code == node.AreaCode);
+            if (source is null || index < 0 || index >= source.Options.Count || source.Options[index].Type != "SURPRESA")
+                throw new InvalidOperationException("O resultado deste encontro desconhecido não existe na publicação da run.");
+            options = source.Options[index].SurpriseOptions;
+        }
+        if (options.Count == 0) throw new InvalidOperationException("Este encontro desconhecido não possui resultados publicados.");
+        var option = PickWeighted(options, new Random(DeriveSeed(node.Seed, "surprise")));
+        var replacement = BuildExpandedNode(node.Seed, document.RootElement.GetProperty("encounters"),
+            new GameModeAreaDto { Code = node.AreaCode ?? "", Name = node.AreaName ?? "", Image = node.AreaImage },
+            option, node.Id, node.Fase, node.Layer, node.Position, node.Connections, node.State);
+        Select(map, node.Id); // Choosing the mystery commits this branch before revealing its result.
+        node.Type = replacement.Type; node.Name = replacement.Name; node.Image = replacement.Image;
+        node.Description = replacement.Description;
+        node.Payload = replacement.Payload ?? new();
+        node.Payload.SurpriseRevealed = true;
+        if (node.Type != "ATALHO" && node.Connections.Count > 1)
+        {
+            // The hidden pool may reserve a shortcut edge. Ordinary results must not unlock it.
+            int nextLayer = map.Nodes.Where(child => node.Connections.Contains(child.Id)).Min(child => child.Layer);
+            node.Connections = node.Connections.Where(id => map.Nodes.Any(child => child.Id == id && child.Layer == nextLayer)).ToArray();
+        }
+        node.State = "DISPONIVEL";
     }
 }

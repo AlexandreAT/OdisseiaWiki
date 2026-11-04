@@ -172,7 +172,7 @@ public sealed class GameBattlePreviewFactory
 
         List<GameBattleActionSpec> playerActions = run.AcoesEquipadas is null
             ? BuildWeaponActions(run.EstadoAtual, run.OrdemArmas, version, config, ranges)
-            : BuildSelectedActions(run.EstadoAtual, run.AcoesEquipadas, version, config, ranges);
+            : BuildSelectedActions(run.EstadoAtual, run.AcoesEquipadas, version, config, ranges, enforceSelectedQuantity: false);
         GameBattleRestSpec? playerRest = null;
         if (run.AcoesEquipadas is { } selectedActions)
         {
@@ -227,7 +227,7 @@ public sealed class GameBattlePreviewFactory
                 Magia = ParseOptionalSnapshot(enemyConfig.MagiaJson),
             };
             enemyActions.AddRange(BuildSelectedActions(npcSnapshot, enemyConfig.Actions,
-                version, config, ranges));
+                version, config, ranges, enforceSelectedQuantity: false));
             if (enemyActions.Count != enemyConfig.Actions.Count)
                 throw new InvalidOperationException("Uma ação equipada do NPC não tem teste D20 e dano executáveis nesta versão.");
         }
@@ -489,13 +489,14 @@ public sealed class GameBattlePreviewFactory
                     ModifierDetails: resolved.Modifiers),
                 resolved.Ranges,
                 resolved.UseTotalForRanges,
-                ResolvePlayerDamage(resolved.Ranges, baseDamage,
+                ResolveWeaponDamage(resolved, version, baseDamage,
                     config.PreviewPlayerDamageByResult ?? throw new InvalidOperationException("O modo não define dano do personagem.")),
                 StaminaCost: IsFirearmType(weaponType) ? 0 : Math.Max(0, staminaCost),
                 Magazine: magazine)
             {
                 Image = GameBattleMedia.ReadImage(item),
                 SourceType = "ARMA",
+                TargetsAllEnemies = resolved.Snapshot.Valores.GetValueOrDefault("ataqueEmArea") == "true",
                 UsesUntilRest = Math.Clamp(ReadInt(Property(item, "atributos"), "capacidadeUso") ?? 0, 0, 100000),
                 InitialUsesRemaining = ReadInt(Property(item, "atributos"), "capacidadeUsoRestante"),
                 Conditions = ResolveConditions(resolved, version),
@@ -512,7 +513,8 @@ public sealed class GameBattlePreviewFactory
         SistemaVersao version,
         GameBattlePreviewConfig config,
         IReadOnlyList<GameplayResolvedResultRange> ranges,
-        ICollection<string>? validationErrors = null)
+        ICollection<string>? validationErrors = null,
+        bool enforceSelectedQuantity = true)
     {
         var character = new PersonagemJogador
         {
@@ -567,6 +569,8 @@ public sealed class GameBattlePreviewFactory
                 ? 100
                 : type == "MAGIA" ? Math.Clamp(ReadInt(attributes, "limiteAtaquesPorTurno") ?? 1, 1, 100) : 1;
             int cadence = Math.Clamp(ReadInt(attributes, "cadencia") ?? ReadInt(attributes, "ataquesPorTurno") ?? 1, 1, 100);
+            int turnCadence = Math.Clamp(ReadInt(attributes, "cadencia") ?? ReadInt(attributes, "ataquesPorTurno") ?? 0, 0, 100);
+            if (ranged && turnCadence > 0) maximum = Math.Min(maximum, turnCadence);
             int configuredAmmoCost = ReadInt(attributes,
                 fireMode == "RAJADA" ? "custoMunicaoRajada" : "custoMunicaoTiro") ?? 0;
             int ammoPerUse = configuredAmmoCost > 0 ? configuredAmmoCost
@@ -584,23 +588,20 @@ public sealed class GameBattlePreviewFactory
             int itemMaximum = maximum;
             var combatRules = SistemaRpgConfiguration.LerRegras<SistemaRpgConfiguration.RegrasCombate>(
                 version, SistemaModuloTipo.Combate);
-            SistemaLimiteAcoesArmaDto? systemLimit = combatRules.LimitesAcoesPorArma?.FirstOrDefault(rule =>
-                NormalizeWeaponType(rule.TipoArma) == NormalizeWeaponType(weaponType));
-            if (systemLimit is null && IsFirearmType(weaponType))
-                systemLimit = combatRules.LimitesAcoesPorArma?.FirstOrDefault(rule =>
-                    NormalizeWeaponType(rule.TipoArma) == "arma_de_fogo");
-            int configuredMaximum = ranged
-                ? fireMode == "RAJADA" ? systemLimit?.MaximoRajadas ?? 0 : systemLimit?.MaximoTiros ?? 0
-                : systemLimit?.MaximoGolpes ?? 0;
+            int configuredMaximum = GameplayActionResolver.ResolveSystemWeaponLimit(version, weaponType, ranged, fireMode);
             if (configuredMaximum > 0) maximum = Math.Min(maximum, configuredMaximum);
             if (count > maximum)
             {
                 string source = type is "MAGIA" or "SKILL" ? "Sistema"
                     : configuredMaximum > 0 && configuredMaximum == itemMaximum ? "Item/Sistema"
                     : configuredMaximum > 0 && configuredMaximum < itemMaximum ? "Sistema" : "Item";
-                throw new InvalidOperationException(
-                    $"{source}: " +
-                    $"a quantidade escolhida supera o limite de {maximum} por ação.");
+                if (enforceSelectedQuantity || maximum < 1)
+                    throw new InvalidOperationException(
+                        $"{source}: " +
+                        $"a quantidade escolhida supera o limite de {maximum} por ação.");
+                // Old loadouts must not lock an already-entered encounter after a bug fix.
+                // New selections are validated strictly; execution only caps the stored count.
+                count = maximum;
             }
             GameplayResolvedAction? resolved = null;
             foreach (string? range in type is "ITEM" or "PROTESE"
@@ -673,7 +674,7 @@ public sealed class GameBattlePreviewFactory
                     ModifierDetails: resolved.Modifiers),
                 resolved.Ranges, resolved.UseTotalForRanges,
                 baseDamage > 0
-                    ? ResolvePlayerDamage(resolved.Ranges, baseDamage,
+                    ? ResolveWeaponDamage(resolved, version, baseDamage,
                         config.PreviewPlayerDamageByResult!)
                     : resolved.Ranges.ToDictionary(range => range.Code, _ => 0,
                         StringComparer.OrdinalIgnoreCase),
@@ -686,6 +687,7 @@ public sealed class GameBattlePreviewFactory
             {
                 Image = GameBattleMedia.ReadImage(item),
                 SourceType = type == "ITEM" && string.Equals(ReadString(item.Value, "tipo"), "arma", StringComparison.OrdinalIgnoreCase) ? "ARMA" : type,
+                TargetsAllEnemies = resolved.Snapshot.Valores.GetValueOrDefault("ataqueEmArea") == "true",
                 Conditions = ResolveConditions(resolved, version),
                 RemovesConditions = ResolveConditionRemovals(resolved, version),
                 AttributeCode = resolved.Snapshot.Valores.TryGetValue("atributo", out string? selectedAttribute)
@@ -975,6 +977,14 @@ public sealed class GameBattlePreviewFactory
     private static bool IsFirearmType(string? type) => NormalizeWeaponType(type) is
         "pistola_revolver" or "smg" or "rifle_assalto" or "shotgun" or
         "rifle_atirador" or "rifle_precisao" or "arma_pesada" or "arma_pesada_area";
+
+    private static Dictionary<string, int> ResolveWeaponDamage(GameplayResolvedAction action,
+        SistemaVersao version, int baseDamage, IReadOnlyDictionary<string, GameBattleDamageModifier> modifiers)
+    {
+        if (action.Snapshot.Valores.GetValueOrDefault("ataqueEmArea") != "true")
+            return ResolvePlayerDamage(action.Ranges, baseDamage, modifiers);
+        return GameplayAreaDamage.Resolve(version, action.Ranges, baseDamage);
+    }
 
     private static Dictionary<string, int> ResolvePlayerDamage(
         IReadOnlyList<GameplayResolvedResultRange> ranges,

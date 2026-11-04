@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import BackpackOutlinedIcon from '@mui/icons-material/BackpackOutlined';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -12,6 +12,8 @@ import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
 import { RunAttributeModal } from './RunAttributeModal';
 import { RunLootModal } from './RunLootModal';
 import { RunVictoryScreen } from './RunVictoryScreen';
+import { RunStoryDialog } from './RunStoryDialog';
+import { RunStoryJournal } from './RunStoryJournal';
 import { RunResourceBar } from './RunResourceBar/RunResourceBar';
 import { ConditionBadges } from '../../../components/Gameplay/ConditionBadges/ConditionBadges';
 import { snapshotConditions } from '../../../components/Gameplay/ConditionBadges/conditionBadgeState';
@@ -54,6 +56,8 @@ import { canUpgradeGameRunMap, useGameRun } from './useGameRun';
 import { getGameRunMediumRestPreview } from '../../../services/gameRunService';
 import type { GameRunMediumRestPreview } from '../../../models/GameRun';
 import { getApiErrorMessage } from '../../../utils/apiError';
+import { activeStoryMissions } from '../../../utils/gameStory';
+import { useRunMissionScroll } from './useRunMissionScroll';
 
 
 const combatNodeTypes = new Set(['COMBATE', 'ELITE', 'BOSS', 'CACADA']);
@@ -106,12 +110,18 @@ export default function GameRunShell() {
   const combatNodeId = useRef<string | null>(null);
   const combatRewardPending = useRef(false);
   const previousBaseResult = useRef(state.baseResult);
+  const [dismissedStory, setDismissedStory] = useState<string | null>(null);
   const combatWasOpen = useRef(false);
+  const clearMapReturnScroll = useCallback(() => {
+    mapReturnPoint.current = null;
+    pendingMapReturn.current = null;
+  }, []);
+  useRunMissionScroll(run, clearMapReturnScroll);
 
   useEffect(() => {
-    if (!run || run.status !== 'Vitoria' || state.combatScene || state.lootSpeed !== null ||
+    if (!run || run.status === 'Ativa' || state.combatScene || state.lootSpeed !== null ||
       run.estadoAtual.loot?.roll === null) return;
-    const key = `game-run:${run.idGameRun}:victory-seen`;
+    const key = `game-run:${run.idGameRun}:${run.status === 'Vitoria' ? 'victory' : 'result'}-seen`;
     try { if (window.localStorage.getItem(key) === '1') return; }
     catch { /* Sem persistência local, a vitória ainda pode ser vista nesta sessão. */ }
     setVictoryOpen(true);
@@ -119,7 +129,7 @@ export default function GameRunShell() {
 
   const closeVictory = () => {
     if (run) {
-      try { window.localStorage.setItem(`game-run:${run.idGameRun}:victory-seen`, '1'); }
+      try { window.localStorage.setItem(`game-run:${run.idGameRun}:${run.status === 'Vitoria' ? 'victory' : 'result'}-seen`, '1'); }
       catch { /* A run permanece concluída no servidor. */ }
     }
     setVictoryOpen(false);
@@ -297,6 +307,7 @@ export default function GameRunShell() {
       name: attributeNames[code]?.[1] ?? code }));
   const activeConditions = snapshotConditions((current.status as typeof current.status & { condicoesJogo?: unknown }).condicoesJogo);
   const selectedNode = run.mapa.nodes.find((node) => node.id === run.noAtualId);
+  const storySelected = run.status === 'Ativa' && selectedNode?.state === 'SELECIONADO' && ['EVENTO', 'MISSAO'].includes(selectedNode.type);
   const vendorOpen = !!selectedNode && (selectedNode.type === 'VENDEDOR' || selectedNode.type === 'NPC' &&
     selectedNode.payload?.npcType === 'MERCADOR' && selectedNode.payload.npcServiceVisited === true) && selectedNode.state === 'SELECIONADO';
   const npcServiceOpen = selectedNode?.type === 'NPC' && selectedNode.state === 'SELECIONADO' &&
@@ -332,9 +343,15 @@ export default function GameRunShell() {
   };
   const canUpgradeMap = canUpgradeGameRunMap(run);
   const hasAvailableNode = run.mapa.nodes.some((node) => node.state === 'DISPONIVEL');
+  const revealedSurprise = run.status === 'Ativa' && !run.noAtualId
+    ? run.mapa.nodes.find(node => node.state === 'DISPONIVEL' && node.payload?.surpriseRevealed) : null;
+  const activeMissions = activeStoryMissions(run.mapa);
 
   return <GameRunPage $areaImage={areaImage}>
     {lootModal}
+    {storySelected && selectedNode && dismissedStory !== `${run.idGameRun}:${selectedNode.id}` &&
+      <RunStoryDialog run={run} node={selectedNode} theme={theme} neon={neon} busy={state.economyBusy}
+        error={state.actionError} onChoose={state.chooseStory} onClose={() => setDismissedStory(`${run.idGameRun}:${selectedNode.id}`)} />}
     {attributesOpen && <RunAttributeModal run={run} theme={theme} neon={neon}
       onUpdate={state.updateRewardRun} onClose={() => setAttributesOpen(false)} />}
     {run.estadoAtual.loot?.roll === null && <GameNotice>
@@ -422,10 +439,8 @@ export default function GameRunShell() {
           <strong>{run.status === 'Vitoria' ? 'Jornada vencida' :
             run.status === 'Derrota' ? 'Jornada encerrada' : 'Run abandonada'}</strong>
           <span>{state.battles.length} {state.battles.length === 1 ? 'combate' : 'combates'} ·
-            {' '}+{state.battles.reduce((total, record) => total + (record.battle.xpConcedido ?? 0), 0)} XP nesta run</span>
-          {run.status === 'Vitoria' && <button type="button" onClick={() => setVictoryOpen(true)}>
-            Rever vitória
-          </button>}
+            {' '}+{Math.max(current.status?.xpConquistadoRun ?? 0, state.battles.reduce((total, record) => total + (record.battle.xpConcedido ?? 0), 0))} XP nesta run</span>
+          <button type="button" onClick={() => setVictoryOpen(true)}>Rever resultado</button>
         </RunConclusion>}
         <RunActionRail aria-label="Ações da jornada">
           <button type="button" aria-label="Reiniciar run" title="Reiniciar run"
@@ -450,9 +465,13 @@ export default function GameRunShell() {
         </RunActionRail>
       </RunStickyHeader>
       <RunMapArea ref={mapAreaRef}>
+        {activeMissions.length > 0 && run.status === 'Ativa' && <GameNotice role="status">
+          Missão: {activeMissions.join(' → ')} · conclua esta área para receber a recompensa.
+        </GameNotice>}
+        {revealedSurprise && <GameNotice role="status">Encontro revelado: {revealedSurprise.name}. Selecione a rota para continuar.</GameNotice>}
         <RunMapCanvas map={run.mapa} config={run.configuracaoModo} neon={neonEnabled}
           active={run.status === 'Ativa' && run.noAtualId === null}
-          acting={state.acting || state.savingWeapons || state.savingLoadout || state.restarting}
+          acting={state.acting || state.economyBusy || state.savingWeapons || state.savingLoadout || state.restarting}
           onSelect={selectMapNode} />
       </RunMapArea>
       {state.acting && createPortal(<RunRouteBusy><LoadingIndicator label="Preparando rota" /></RunRouteBusy>, document.body)}
@@ -462,10 +481,11 @@ export default function GameRunShell() {
       </RunFooterActions>}
       {run.status === 'Ativa' && selectedNode?.state === 'SELECIONADO' && !vendorOpen && !npcServiceOpen && <RunFooterActions>
         <CyberButton theme={theme} neon={neon} width="180px" text="Retomar"
-          loading={state.acting} disabled={state.acting} onClick={() => void state.resumeEncounter()} />
+          loading={state.acting} disabled={state.acting} onClick={() => { if (storySelected) setDismissedStory(null); else void state.resumeEncounter(); }} />
       </RunFooterActions>}
       {run.status === 'Ativa' && !run.noAtualId && !hasAvailableNode && !canUpgradeMap &&
-        <GameHint>Este trecho terminou. Novas etapas chegam na próxima camada.</GameHint>}
+        <GameHint>Não há rota disponível neste trecho. Recarregue a jornada; se continuar assim, informe o responsável pelo jogo.</GameHint>}
+      <RunStoryJournal records={run.estadoAtual.story ?? []} ended={run.status !== 'Ativa'} />
     </RunHudPanel>
 
     {npcServiceOpen && <RunNpcServiceDialog run={run} theme={theme} neon={neon} busy={state.economyBusy} error={state.actionError}
@@ -480,7 +500,7 @@ export default function GameRunShell() {
         else setStashOpen(false);
       }} />}
 
-    {victoryOpen && run.status === 'Vitoria' && <RunVictoryScreen run={run} battles={state.battles}
+    {victoryOpen && run.status !== 'Ativa' && <RunVictoryScreen run={run} battles={state.battles}
       theme={theme} neon={neon} onClose={closeVictory}
       onHistory={() => { closeVictory(); setHistoryOpen(true); }} />}
     <RunTrainingDialog open={historyOpen} onClose={() => setHistoryOpen(false)}
